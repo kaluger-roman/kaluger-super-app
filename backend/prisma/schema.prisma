@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students Student[]
+  lessons  Lesson[]
+
+  @@map("users")
+}
+
+model Student {
+  id         String   @id @default(cuid())
+  name       String
+  email      String?
+  phone      String?
+  notes      String?
+  hourlyRate Float?
+  grade      Int? // Класс от 1 до 11
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tutorId String
+  tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  lessons Lesson[]
+
+  @@map("students")
+}
+
+model Lesson {
+  id                String       @id @default(cuid())
+  subject           Subject      @default(MATHEMATICS) // Предмет (Математика, Физика)
+  lessonType        LessonType   @default(SCHOOL) // Тип урока (ЕГЭ, ОГЭ, Олимпиады, Школа)
+  description       String?
+  startTime         DateTime
+  endTime           DateTime
+  price             Float?
+  isPaid            Boolean      @default(false)
+  homework          String?
+  notes             String?
+  grade             Int? // Оценка от 1 до 5
+  status            LessonStatus @default(SCHEDULED)
+  isRecurring       Boolean      @default(false) // Регулярное занятие
+  recurringParentId String? // ID родительского регулярного урока
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  tutorId String
+  tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Самосвязь для родительского урока
+  recurringParent   Lesson?  @relation("RecurringLessons", fields: [recurringParentId], references: [id])
+  recurringChildren Lesson[] @relation("RecurringLessons")
+
+  @@map("lessons")
+}
+
+enum LessonStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  IN_PROGRESS
+}
+
+enum Subject {
+  MATHEMATICS // Математика
+  PHYSICS // Физика
+}
+
+enum LessonType {
+  EGE // ЕГЭ
+  OGE // ОГЭ
+  OLYMPICS // Олимпиады
+  SCHOOL // Школа
+}
