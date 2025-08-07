@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import {
@@ -13,6 +14,8 @@ import {
   Typography,
   IconButton,
   Box,
+  Backdrop,
+  CircularProgress,
 } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -195,104 +198,151 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const isAuthenticated = useStore($isAuthenticated);
+  const location = useLocation();
 
   if (!isAuthenticated) {
+    // Store current location for redirect after login
+    if (
+      location.pathname !== "/" &&
+      location.pathname !== "/login" &&
+      location.pathname !== "/register"
+    ) {
+      sessionStorage.setItem(
+        "redirectAfterLogin",
+        location.pathname + location.search
+      );
+    }
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 };
 
-export const App: React.FC = () => {
+const AuthRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useStore($isAuthenticated);
 
+  if (isAuthenticated) {
+    // Redirect to stored location or home page
+    const redirectPath = sessionStorage.getItem("redirectAfterLogin") || "/";
+    sessionStorage.removeItem("redirectAfterLogin");
+    return <Navigate to={redirectPath} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppInitializer: React.FC = () => {
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
-    // Check for existing token and validate it
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      setAuthToken(token);
-      getProfileFx();
-    }
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        setAuthToken(token);
+        try {
+          await getProfileFx();
+        } catch (error) {
+          // Token is invalid, clear it
+          localStorage.removeItem("authToken");
+        }
+      }
+      setIsInitialized(true);
+    };
+
+    initializeAuth();
   }, []);
 
+  if (!isInitialized) {
+    return (
+      <Backdrop
+        open
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Auth routes */}
+      <Route
+        path="/login"
+        element={
+          <AuthRoute>
+            <AuthLayout>
+              <LoginForm />
+            </AuthLayout>
+          </AuthRoute>
+        }
+      />
+
+      <Route
+        path="/register"
+        element={
+          <AuthRoute>
+            <AuthLayout>
+              <RegisterForm />
+            </AuthLayout>
+          </AuthRoute>
+        }
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/students"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <StudentsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/lessons"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <LessonsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ReportsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+};
+
+export const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Router>
-          <Routes>
-            {/* Auth routes */}
-            <Route
-              path="/login"
-              element={
-                isAuthenticated ? (
-                  <Navigate to="/" replace />
-                ) : (
-                  <AuthLayout>
-                    <LoginForm />
-                  </AuthLayout>
-                )
-              }
-            />
-
-            <Route
-              path="/register"
-              element={
-                isAuthenticated ? (
-                  <Navigate to="/" replace />
-                ) : (
-                  <AuthLayout>
-                    <RegisterForm />
-                  </AuthLayout>
-                )
-              }
-            />
-
-            {/* Protected routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <DashboardPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/students"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <StudentsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/lessons"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <LessonsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ReportsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+          <AppInitializer />
         </Router>
         <NotificationProvider />
       </LocalizationProvider>

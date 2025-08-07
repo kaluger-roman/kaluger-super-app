@@ -1,50 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Paper, Typography, Alert, Box } from "@mui/material";
 import { useStore } from "effector-react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, validateEmail } from "../../../shared";
-import { registerUser, $userIsLoading } from "../../../entities";
+import {
+  registerUser,
+  $userIsLoading,
+  $authError,
+  $isAuthenticated,
+  clearAuthError,
+} from "../../../entities";
 
 export const RegisterForm: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   const isLoading = useStore($userIsLoading);
+  const authError = useStore($authError);
+  const isAuthenticated = useStore($isAuthenticated);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // Clear auth error when component mounts
+    clearAuthError();
+  }, []);
+
+  // Redirect after successful registration
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setValidationError("");
 
     if (!name || !email || !password || !confirmPassword) {
-      setError("Заполните все поля");
+      setValidationError("Заполните все поля");
       return;
     }
 
     if (!validateEmail(email)) {
-      setError("Введите корректный email");
+      setValidationError("Введите корректный email");
       return;
     }
 
     if (password.length < 8) {
-      setError("Пароль должен содержать минимум 8 символов");
+      setValidationError("Пароль должен содержать минимум 8 символов");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Пароли не совпадают");
+      setValidationError("Пароли не совпадают");
       return;
     }
 
-    try {
-      registerUser({ name, email, password });
-      navigate("/");
-    } catch (err) {
-      setError("Ошибка регистрации. Попробуйте снова.");
-    }
+    registerUser({ name, email, password });
   };
 
   return (
@@ -115,9 +130,9 @@ export const RegisterForm: React.FC = () => {
           required
         />
 
-        {error && (
+        {(validationError || authError) && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
+            {validationError || authError}
           </Alert>
         )}
 

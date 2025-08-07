@@ -1,33 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Paper, Typography, Alert, Box } from "@mui/material";
 import { useStore } from "effector-react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button } from "../../../shared";
-import { loginUser, $userIsLoading } from "../../../entities";
+import {
+  loginUser,
+  $userIsLoading,
+  $authError,
+  $isAuthenticated,
+  clearAuthError,
+} from "../../../entities";
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
 
   const isLoading = useStore($userIsLoading);
+  const authError = useStore($authError);
+  const isAuthenticated = useStore($isAuthenticated);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // Clear auth error when component mounts
+    clearAuthError();
+  }, []);
+
+  // Redirect after successful login
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirectPath = sessionStorage.getItem("redirectAfterLogin") || "/";
+      sessionStorage.removeItem("redirectAfterLogin");
+      navigate(redirectPath, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!email || !password) {
-      setError("Заполните все поля");
       return;
     }
 
-    try {
-      loginUser({ email, password });
-      navigate("/");
-    } catch (err) {
-      setError("Ошибка входа. Проверьте данные.");
-    }
+    loginUser({ email, password });
   };
 
   return (
@@ -79,9 +93,9 @@ export const LoginForm: React.FC = () => {
           required
         />
 
-        {error && (
+        {authError && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
+            {authError}
           </Alert>
         )}
 

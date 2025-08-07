@@ -10,6 +10,7 @@ export const registerUser = createEvent<{
 }>();
 export const logoutUser = createEvent();
 export const setAuthToken = createEvent<string>();
+export const clearAuthError = createEvent();
 
 // Effects
 export const loginFx = createEffect(
@@ -70,6 +71,17 @@ export const $isLoading = createStore(false)
     ],
     () => false
   );
+
+export const $authError = createStore<string | null>(null)
+  .on([loginFx.fail, registerFx.fail], (_, { error }) => {
+    const axiosError = error as any;
+    return (
+      axiosError?.response?.data?.error ||
+      axiosError?.message ||
+      "Произошла ошибка"
+    );
+  })
+  .on([loginFx, registerFx, clearAuthError], () => null);
 
 // Connect events to effects
 loginUser.watch(loginFx);
