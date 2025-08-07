@@ -129,9 +129,9 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
       case "RESCHEDULED":
         return "warning";
       case "IN_PROGRESS":
-        return "primary";
+        return "info";
       default:
-        return "primary";
+        return "default";
     }
   };
 

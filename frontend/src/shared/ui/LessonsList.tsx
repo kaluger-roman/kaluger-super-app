@@ -1,4 +1,4 @@
-import React, { useMemo, useState, Fragment } from "react";
+import React, { useMemo, useState, Fragment, useEffect } from "react";
 import {
   Box,
   Card,
@@ -9,6 +9,8 @@ import {
   Menu,
   MenuItem,
   Collapse,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   MoreVert as MoreVertIcon,
@@ -55,6 +57,9 @@ export const LessonsList: React.FC<LessonsListProps> = ({
   onCardClick,
   type,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
 
@@ -143,9 +148,9 @@ export const LessonsList: React.FC<LessonsListProps> = ({
       case "RESCHEDULED":
         return "warning";
       case "IN_PROGRESS":
-        return "primary";
+        return "info";
       default:
-        return "primary";
+        return "default";
     }
   };
 
@@ -379,7 +384,7 @@ export const LessonsList: React.FC<LessonsListProps> = ({
                           textShadow: "0 1px 2px rgba(0,0,0,0.3)",
                         }}
                       >
-                        📅 {month}
+                        📅&nbsp;&nbsp;&nbsp;{month}
                       </Typography>
                       {isMonthCollapsed ? (
                         <ExpandMore sx={{ color: "white" }} />
@@ -481,8 +486,14 @@ export const LessonsList: React.FC<LessonsListProps> = ({
 
                                       <Box
                                         display="flex"
-                                        alignItems="center"
                                         justifyContent="space-between"
+                                        flexDirection={
+                                          isMobile ? "column" : "row"
+                                        }
+                                        alignItems={
+                                          isMobile ? "flex-start" : "center"
+                                        }
+                                        gap={1}
                                       >
                                         <Typography
                                           variant="body2"
@@ -496,10 +507,17 @@ export const LessonsList: React.FC<LessonsListProps> = ({
                                           }
                                         </Typography>
 
-                                        <PaymentStatus
-                                          lesson={lesson}
-                                          onPaymentChange={onPaymentChange}
-                                        />
+                                        <Box
+                                          sx={{
+                                            minWidth: "fit-content",
+                                            width: isMobile ? "100%" : "auto",
+                                          }}
+                                        >
+                                          <PaymentStatus
+                                            lesson={lesson}
+                                            onPaymentChange={onPaymentChange}
+                                          />
+                                        </Box>
                                       </Box>
                                     </Box>
 
@@ -532,19 +550,27 @@ export const LessonsList: React.FC<LessonsListProps> = ({
           justifyContent="center"
           alignItems="center"
           width="100%"
+          sx={{ px: 2 }}
         >
-          <Chip
-            label="Регулярные уроки рассчитываются автоматически на три месяца вперед"
-            color="info"
-            variant="outlined"
+          <Typography
+            variant="body2"
+            color="text.secondary"
             sx={{
-              fontSize: "1rem",
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              textAlign: "center",
+              whiteSpace: "normal",
+              lineHeight: 1.4,
+              maxWidth: "100%",
               px: 2,
               py: 1,
-              background: "#e3f2fd",
-              borderColor: "#90caf9",
+              backgroundColor: "rgba(25, 118, 210, 0.08)",
+              borderRadius: 1,
+              border: "1px solid rgba(25, 118, 210, 0.23)",
             }}
-          />
+          >
+            ℹ️ Регулярные уроки рассчитываются автоматически на три месяца
+            вперед
+          </Typography>
         </Box>
       )}
 

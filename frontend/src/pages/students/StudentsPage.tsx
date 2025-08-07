@@ -8,15 +8,18 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Chip,
   Card,
   CardContent,
   IconButton,
   Divider,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
   MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
@@ -40,6 +43,10 @@ export const StudentsPage: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<Student | undefined>();
   const [viewingStudent, setViewingStudent] = useState<Student | undefined>();
 
+  // Context menu state
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -55,6 +62,45 @@ export const StudentsPage: React.FC = () => {
   useEffect(() => {
     loadStudents();
   }, []);
+
+  // Context menu handlers
+  const handleMenuClick = (
+    event: React.MouseEvent<HTMLElement>,
+    student: Student
+  ) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedStudent(student);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedStudent(null);
+  };
+
+  const handleEditFromMenu = () => {
+    if (selectedStudent) {
+      setEditingStudent(selectedStudent);
+      setIsDialogOpen(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleDeleteFromMenu = () => {
+    if (selectedStudent) {
+      setConfirmDialog({
+        open: true,
+        title: "Удалить ученика",
+        message:
+          "Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить.",
+        action: () => {
+          removeStudent(selectedStudent.id);
+          setConfirmDialog((prev) => ({ ...prev, open: false }));
+        },
+      });
+    }
+    handleMenuClose();
+  };
 
   const handleStudentClick = (student: Student) => {
     setViewingStudent(student);
@@ -192,11 +238,7 @@ export const StudentsPage: React.FC = () => {
                               </Box>
                               <IconButton
                                 size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingStudent(student);
-                                  setIsDialogOpen(true);
-                                }}
+                                onClick={(e) => handleMenuClick(e, student)}
                               >
                                 <MoreVertIcon />
                               </IconButton>
@@ -316,6 +358,22 @@ export const StudentsPage: React.FC = () => {
         message={confirmDialog.message}
         severity="error"
       />
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleEditFromMenu}>
+          <EditIcon sx={{ mr: 1 }} />
+          Редактировать
+        </MenuItem>
+        <MenuItem onClick={handleDeleteFromMenu} sx={{ color: "error.main" }}>
+          <DeleteIcon sx={{ mr: 1 }} />
+          Удалить
+        </MenuItem>
+      </Menu>
     </Container>
   );
 };
