@@ -7,6 +7,8 @@ import {
   Button,
   Typography,
   Box,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Warning as WarningIcon } from "@mui/icons-material";
 
@@ -31,6 +33,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "Отмена",
   severity = "warning",
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const getSeverityColor = () => {
     switch (severity) {
       case "error":
@@ -49,28 +54,41 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       maxWidth="xs"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: 2 },
+        sx: { 
+          borderRadius: 2,
+          m: isMobile ? 2 : 3,
+        },
       }}
     >
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <WarningIcon color={getSeverityColor()} />
-          <Typography variant="h6">{title}</Typography>
+          <Typography variant={isMobile ? "h6" : "h6"}>{title}</Typography>
         </Box>
       </DialogTitle>
 
       <DialogContent>
-        <Typography variant="body1">{message}</Typography>
+        <Typography variant={isMobile ? "body2" : "body1"}>{message}</Typography>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button onClick={onClose} variant="outlined">
+      <DialogActions sx={{ 
+        p: 3, 
+        pt: 1,
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? 1 : 0,
+      }}>
+        <Button 
+          onClick={onClose} 
+          variant="outlined"
+          fullWidth={isMobile}
+        >
           {cancelText}
         </Button>
         <Button
           onClick={onConfirm}
           variant="contained"
           color={getSeverityColor()}
+          fullWidth={isMobile}
         >
           {confirmText}
         </Button>

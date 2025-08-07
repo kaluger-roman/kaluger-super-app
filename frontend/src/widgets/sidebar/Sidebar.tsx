@@ -8,8 +8,8 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Box,
   Divider,
+  Box,
   Avatar,
 } from "@mui/material";
 import {
@@ -100,12 +100,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
         <Typography
           variant="h6"
           noWrap
           component="div"
-          sx={{ fontWeight: 700, color: "primary.main" }}
+          sx={{
+            fontWeight: 700,
+            color: "primary.main",
+            fontSize: { xs: "1.1rem", sm: "1.25rem" },
+          }}
         >
           🎓 Kaluger Tutor
         </Typography>
@@ -134,14 +138,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <Box sx={{ p: 2 }}>
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-            <Avatar sx={{ bgcolor: "primary.main", width: 40, height: 40 }}>
+            <Avatar
+              sx={{
+                bgcolor: "primary.main",
+                width: { xs: 36, sm: 40 },
+                height: { xs: 36, sm: 40 },
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+              }}
+            >
               {getInitials(user.name)}
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
+                }}
+              >
                 {user.name}
               </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                }}
+              >
                 {user.email}
               </Typography>
             </Box>

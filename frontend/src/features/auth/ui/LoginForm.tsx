@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Paper, Typography, Alert, Box } from "@mui/material";
+import {
+  Paper,
+  Typography,
+  Alert,
+  Box,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import { useStore } from "effector-react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button } from "../../../shared";
@@ -19,6 +26,8 @@ export const LoginForm: React.FC = () => {
   const authError = useStore($authError);
   const isAuthenticated = useStore($isAuthenticated);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
     // Clear auth error when component mounts
@@ -47,11 +56,18 @@ export const LoginForm: React.FC = () => {
   return (
     <Paper
       elevation={3}
-      sx={{ p: 4, width: "100%", maxWidth: 440, borderRadius: 3 }}
+      sx={{
+        p: isMobile ? 3 : 4,
+        width: "100%",
+        maxWidth: 440,
+        borderRadius: 3,
+        maxHeight: isMobile ? "90vh" : "auto",
+        overflow: "auto",
+      }}
     >
-      <Box textAlign="center" mb={3}>
+      <Box textAlign="center" mb={isMobile ? 2 : 3}>
         <Typography
-          variant="h3"
+          variant={isMobile ? "h4" : "h3"}
           component="h1"
           gutterBottom
           sx={{ fontWeight: 700, color: "primary.main" }}
@@ -59,14 +75,17 @@ export const LoginForm: React.FC = () => {
           🎓
         </Typography>
         <Typography
-          variant="h4"
+          variant={isMobile ? "h5" : "h4"}
           component="h2"
           gutterBottom
           sx={{ fontWeight: 600 }}
         >
           Добро пожаловать!
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant={isMobile ? "body2" : "body1"}
+          color="text.secondary"
+        >
           Войдите в ваш аккаунт Kaluger Tutor
         </Typography>
       </Box>
@@ -77,10 +96,17 @@ export const LoginForm: React.FC = () => {
           label="Email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            // Очищаем ошибку при изменении формы
+            if (authError) {
+              clearAuthError();
+            }
+          }}
           margin="normal"
           required
           autoFocus
+          size={isMobile ? "small" : "medium"}
         />
 
         <TextField
@@ -88,9 +114,16 @@ export const LoginForm: React.FC = () => {
           label="Пароль"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            // Очищаем ошибку при изменении формы
+            if (authError) {
+              clearAuthError();
+            }
+          }}
           margin="normal"
           required
+          size={isMobile ? "small" : "medium"}
         />
 
         {authError && (
@@ -103,8 +136,12 @@ export const LoginForm: React.FC = () => {
           type="submit"
           fullWidth
           variant="contained"
-          size="large"
-          sx={{ mt: 3, py: 1.5, fontWeight: 600 }}
+          size={isMobile ? "medium" : "large"}
+          sx={{
+            mt: isMobile ? 2 : 3,
+            py: isMobile ? 1 : 1.5,
+            fontWeight: 600,
+          }}
           disabled={isLoading}
         >
           {isLoading ? "Вход..." : "Войти"}
@@ -113,8 +150,12 @@ export const LoginForm: React.FC = () => {
         <Button
           fullWidth
           variant="text"
-          size="large"
-          sx={{ mt: 2, color: "text.secondary" }}
+          size={isMobile ? "medium" : "large"}
+          sx={{
+            mt: isMobile ? 1 : 2,
+            color: "text.secondary",
+            fontSize: isMobile ? "0.875rem" : "1rem",
+          }}
           onClick={() => navigate("/register")}
         >
           Нет аккаунта? Зарегистрироваться

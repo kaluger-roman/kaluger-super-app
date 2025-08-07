@@ -77,8 +77,12 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: { borderRadius: 2 },
+        sx: { 
+          borderRadius: isMobile ? 0 : 2,
+          maxHeight: isMobile ? "100vh" : "90vh",
+        },
       }}
     >
       <DialogTitle>

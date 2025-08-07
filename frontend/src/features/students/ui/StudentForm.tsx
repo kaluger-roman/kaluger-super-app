@@ -118,7 +118,10 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         hourlyRate: formData.hourlyRate
           ? parseFloat(formData.hourlyRate)
           : undefined,
-        grade: formData.grade ? parseInt(formData.grade, 10) : undefined,
+        grade:
+          formData.grade && formData.grade !== ""
+            ? parseInt(formData.grade, 10)
+            : undefined,
         notes: formData.notes.trim() || undefined,
       };
 
@@ -181,9 +184,11 @@ export const StudentForm: React.FC<StudentFormProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: isMobile ? 0 : 2,
+          maxHeight: isMobile ? "100vh" : "90vh",
         },
       }}
     >
@@ -193,7 +198,12 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         </DialogTitle>
 
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={3} pt={1}>
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={isMobile ? 2 : 3}
+            pt={1}
+          >
             <TextField
               label="Имя студента"
               value={formData.name}
@@ -202,6 +212,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
               required
               autoFocus
               placeholder="Введите имя студента"
+              size={isMobile ? "small" : "medium"}
             />
 
             <TextField
@@ -211,6 +222,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
               onChange={handleChange("email")}
               fullWidth
               placeholder="student@example.com"
+              size={isMobile ? "small" : "medium"}
             />
 
             <TextField
@@ -219,6 +231,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
               onChange={handleChange("phone")}
               fullWidth
               placeholder="+7 (999) 999-99-99"
+              size={isMobile ? "small" : "medium"}
             />
 
             <TextField
@@ -233,14 +246,18 @@ export const StudentForm: React.FC<StudentFormProps> = ({
                 ),
               }}
               placeholder="1000"
+              size={isMobile ? "small" : "medium"}
             />
 
-            <FormControl fullWidth>
+            <FormControl fullWidth size={isMobile ? "small" : "medium"}>
               <InputLabel>Класс</InputLabel>
               <Select
                 value={formData.grade}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, grade: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    grade: e.target.value === "" ? "" : e.target.value,
+                  }))
                 }
                 label="Класс"
               >
@@ -259,8 +276,9 @@ export const StudentForm: React.FC<StudentFormProps> = ({
               onChange={handleChange("notes")}
               fullWidth
               multiline
-              rows={3}
+              rows={isMobile ? 2 : 3}
               placeholder="Дополнительная информация о студенте"
+              size={isMobile ? "small" : "medium"}
             />
           </Box>
         </DialogContent>

@@ -16,6 +16,8 @@ import {
   Box,
   Backdrop,
   CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -45,6 +47,8 @@ const DRAWER_WIDTH = 280;
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = useStore($user);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
@@ -52,50 +56,60 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         position="fixed"
         sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
           <IconButton
             color="inherit"
             edge="start"
             onClick={() => setSidebarOpen(true)}
-            sx={{ mr: 2 }}
+            sx={{ mr: { xs: 1, sm: 2 } }}
           >
             <MenuIcon />
           </IconButton>
 
           <Typography
-            variant="h5"
+            variant={isMobile ? "h6" : "h5"}
             noWrap
             component="div"
             sx={{
               flexGrow: 1,
               fontWeight: 700,
-              letterSpacing: 2,
+              letterSpacing: { xs: 1, sm: 2 },
               color: "white",
               textShadow: "0 2px 8px rgba(76, 110, 245, 0.18)",
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: { xs: 0.5, sm: 1 },
               userSelect: "none",
             }}
           >
             <Box
               component="span"
               sx={{
-                fontSize: 32,
-                mr: 1,
+                fontSize: { xs: 24, sm: 32 },
+                mr: { xs: 0.5, sm: 1 },
                 filter: "drop-shadow(0 2px 4px #764ba2aa)",
               }}
               aria-label="graduation cap"
             >
               🎓
             </Box>
-            Kaluger{" "}
-            <Box
-              component="span"
-              sx={{ color: "#42a5f5", ml: 0.5, fontSize: 28 }}
-            >
-              Tutor
-            </Box>
+            {isMobile ? (
+              "Kaluger"
+            ) : (
+              <>
+                Kaluger{" "}
+                <Box
+                  component="span"
+                  sx={{
+                    color: "#42a5f5",
+                    ml: 0.5,
+                    fontSize: { xs: 20, sm: 28 },
+                  }}
+                >
+                  Tutor
+                </Box>
+              </>
+            )}
           </Typography>
 
           {user && (
@@ -103,19 +117,19 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               display="flex"
               alignItems="center"
               sx={{
-                ml: 2,
-                px: 2,
+                ml: { xs: 1, sm: 2 },
+                px: { xs: 1, sm: 2 },
                 py: 0.5,
                 borderRadius: 2,
                 bgcolor: "rgba(255,255,255,0.08)",
                 boxShadow: 1,
-                gap: 1,
+                gap: { xs: 0.5, sm: 1 },
               }}
             >
               <Box
                 sx={{
-                  width: 32,
-                  height: 32,
+                  width: { xs: 28, sm: 32 },
+                  height: { xs: 28, sm: 32 },
                   borderRadius: "50%",
                   bgcolor: "#42a5f5",
                   color: "white",
@@ -123,10 +137,10 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 700,
-                  fontSize: 18,
+                  fontSize: { xs: 14, sm: 18 },
                   textTransform: "uppercase",
                   boxShadow: 2,
-                  mr: 1,
+                  mr: { xs: 0.5, sm: 1 },
                   letterSpacing: 1,
                   userSelect: "none",
                 }}
@@ -137,22 +151,24 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   .join("")
                   .slice(0, 2)}
               </Box>
-              <Typography
-                variant="body1"
-                sx={{
-                  fontWeight: 500,
-                  color: "white",
-                  textShadow: "0 1px 4px rgba(66,165,245,0.18)",
-                  letterSpacing: 0.5,
-                  maxWidth: 120,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-                title={user.name}
-              >
-                {user.name}
-              </Typography>
+              {!isMobile && (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    fontWeight: 500,
+                    color: "white",
+                    textShadow: "0 1px 4px rgba(66,165,245,0.18)",
+                    letterSpacing: 0.5,
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={user.name}
+                >
+                  {user.name}
+                </Typography>
+              )}
             </Box>
           )}
         </Toolbar>
@@ -169,7 +185,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         sx={{
           flexGrow: 1,
           width: "100%",
-          mt: 8, // Account for AppBar height
+          mt: { xs: 7, sm: 8 }, // Account for AppBar height
         }}
       >
         {children}
@@ -179,14 +195,25 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
     <Box
       sx={{
         minHeight: "100vh",
+        height: isMobile ? "100vh" : "auto", // Фиксированная высота на мобильных
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         bgcolor: "grey.50",
+        p: isMobile ? 1 : 3, // Уменьшаем отступы на мобильных
+        overflow: isMobile ? "hidden" : "auto", // Убираем прокрутку на мобильных
+        position: isMobile ? "fixed" : "static", // Фиксируем на мобильных
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       }}
     >
       {children}

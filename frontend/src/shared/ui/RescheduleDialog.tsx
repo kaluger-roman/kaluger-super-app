@@ -5,9 +5,11 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Box,
   Typography,
+  Box,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -30,6 +32,9 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
   lesson,
   isLoading = false,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  
   const [newStartTime, setNewStartTime] = useState<Date>(
     lesson ? new Date(lesson.startTime) : new Date()
   );
@@ -74,7 +79,19 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
   );
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="sm" 
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{
+        sx: { 
+          borderRadius: isMobile ? 0 : 2,
+          maxHeight: isMobile ? "100vh" : "90vh",
+        },
+      }}
+    >
       <DialogTitle>
         <Box>
           <Typography variant="h6" gutterBottom>
@@ -90,9 +107,9 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ px: isMobile ? 2 : 3 }}>
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-          <Box display="flex" flexDirection="column" gap={3} mt={2}>
+          <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3} mt={2}>
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 <strong>Текущее время:</strong>{" "}
@@ -110,6 +127,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                 textField: {
                   fullWidth: true,
                   error: !isValidTimeRange,
+                  size: isMobile ? "small" : "medium",
                 },
               }}
             />
@@ -126,6 +144,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                   helperText: isValidTimeRange
                     ? `Продолжительность: ${duration} мин.`
                     : "Время окончания должно быть позже времени начала",
+                  size: isMobile ? "small" : "medium",
                 },
               }}
             />
@@ -139,14 +158,24 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
         </LocalizationProvider>
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={handleClose} disabled={isLoading}>
+      <DialogActions sx={{ 
+        px: isMobile ? 2 : 3, 
+        py: isMobile ? 2 : 1.5,
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? 1 : 0,
+      }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={isLoading}
+          fullWidth={isMobile}
+        >
           Отмена
         </Button>
         <Button
           onClick={handleConfirm}
           variant="contained"
           disabled={!isValidTimeRange || isLoading}
+          fullWidth={isMobile}
         >
           {isLoading ? "Переношу..." : "Перенести урок"}
         </Button>

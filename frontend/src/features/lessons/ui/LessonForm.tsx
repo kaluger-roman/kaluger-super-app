@@ -190,13 +190,13 @@ export const LessonForm: React.FC<LessonFormProps> = ({
       const lessonData = {
         subject: formData.subject,
         lessonType: formData.lessonType,
-        description: formData.description,
+        description: formData.description || null,
         startTime: formData.startTime.toISOString(),
         endTime: formData.endTime.toISOString(),
-        price: formData.price ? Number(formData.price) : undefined,
+        price: formData.price ? Number(formData.price) : null,
         studentId: formData.studentId,
-        homework: formData.homework || undefined,
-        notes: formData.notes || undefined,
+        homework: formData.homework || null,
+        notes: formData.notes || null,
         isRecurring: formData.isRecurring,
         isPaid: formData.isPaid,
       };
@@ -258,20 +258,28 @@ export const LessonForm: React.FC<LessonFormProps> = ({
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: { borderRadius: 2 },
+        sx: {
+          borderRadius: isMobile ? 0 : 2,
+          maxHeight: isMobile ? "100vh" : "90vh",
+        },
       }}
     >
-      <DialogTitle>
+      <DialogTitle sx={{ pb: isMobile ? 1 : 2 }}>
         {lesson ? "Редактировать урок" : "Создать новый урок"}
       </DialogTitle>
 
       <form onSubmit={handleSubmit}>
-        <DialogContent>
+        <DialogContent sx={{ px: isMobile ? 2 : 3 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-            <Box display="flex" flexDirection="column" gap={3}>
+            <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3}>
               {/* Выбор ученика */}
-              <FormControl fullWidth error={!!errors.studentId}>
+              <FormControl
+                fullWidth
+                error={!!errors.studentId}
+                size={isMobile ? "small" : "medium"}
+              >
                 <InputLabel>Ученик *</InputLabel>
                 <Select
                   value={formData.studentId}
@@ -294,8 +302,12 @@ export const LessonForm: React.FC<LessonFormProps> = ({
               </FormControl>
 
               {/* Предмет и тип урока */}
-              <Box display="flex" gap={2}>
-                <FormControl fullWidth>
+              <Box
+                display="flex"
+                flexDirection={isMobile ? "column" : "row"}
+                gap={2}
+              >
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Предмет</InputLabel>
                   <Select
                     value={formData.subject}
@@ -311,7 +323,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                   </Select>
                 </FormControl>
 
-                <FormControl fullWidth>
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Тип урока</InputLabel>
                   <Select
                     value={formData.lessonType}
@@ -336,13 +348,18 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                 error={!!errors.description}
                 helperText={errors.description}
                 multiline
-                rows={2}
+                rows={isMobile ? 2 : 2}
                 fullWidth
                 disabled={isLoading}
+                size={isMobile ? "small" : "medium"}
               />
 
               {/* Время */}
-              <Box display="flex" gap={2}>
+              <Box
+                display="flex"
+                flexDirection={isMobile ? "column" : "row"}
+                gap={2}
+              >
                 <DateTimePicker
                   label="Время начала"
                   value={formData.startTime}
@@ -353,6 +370,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                       fullWidth: true,
                       error: !!errors.startTime,
                       helperText: errors.startTime,
+                      size: isMobile ? "small" : "medium",
                     },
                   }}
                 />
@@ -367,6 +385,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                       fullWidth: true,
                       error: !!errors.endTime,
                       helperText: errors.endTime,
+                      size: isMobile ? "small" : "medium",
                     },
                   }}
                 />
@@ -388,6 +407,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                 placeholder={selectedStudent?.hourlyRate?.toString()}
                 fullWidth
                 disabled={isLoading}
+                size={isMobile ? "small" : "medium"}
               />
 
               {/* Статус оплаты */}
@@ -431,6 +451,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                 rows={2}
                 fullWidth
                 disabled={isLoading}
+                size={isMobile ? "small" : "medium"}
               />
 
               <TextField
@@ -438,9 +459,10 @@ export const LessonForm: React.FC<LessonFormProps> = ({
                 value={formData.notes}
                 onChange={handleChange("notes")}
                 multiline
-                rows={2}
+                rows={isMobile ? 2 : 2}
                 fullWidth
                 disabled={isLoading}
+                size={isMobile ? "small" : "medium"}
               />
             </Box>
           </LocalizationProvider>
