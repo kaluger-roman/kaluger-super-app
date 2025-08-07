@@ -28,6 +28,7 @@ This is a tutor management application with:
 - Use spread operator for arrays and objects
 - For React components, use functional components with hooks
 - For functions use types of parameters, not type of function
+- Errors from backend send in Russian language
 
 ## Architecture
 

@@ -113,16 +113,16 @@ export const StudentForm: React.FC<StudentFormProps> = ({
     try {
       const studentData = {
         name: formData.name.trim(),
-        email: formData.email.trim() || undefined,
-        phone: formData.phone.trim() || undefined,
+        email: formData.email.trim() || "",
+        phone: formData.phone.trim() || "",
         hourlyRate: formData.hourlyRate
           ? parseFloat(formData.hourlyRate)
-          : undefined,
+          : null,
         grade:
           formData.grade && formData.grade !== ""
             ? parseInt(formData.grade, 10)
-            : undefined,
-        notes: formData.notes.trim() || undefined,
+            : null,
+        notes: formData.notes.trim() || "",
       };
 
       if (student) {
@@ -132,7 +132,16 @@ export const StudentForm: React.FC<StudentFormProps> = ({
           message: "Студент успешно обновлен",
         });
       } else {
-        await addStudent(studentData);
+        // For creation, don't send empty strings - use undefined
+        const createData = {
+          name: studentData.name,
+          email: studentData.email || undefined,
+          phone: studentData.phone || undefined,
+          hourlyRate: studentData.hourlyRate || undefined,
+          grade: studentData.grade || undefined,
+          notes: studentData.notes || undefined,
+        };
+        await addStudent(createData);
         showNotification({
           type: "success",
           message: "Студент успешно добавлен",

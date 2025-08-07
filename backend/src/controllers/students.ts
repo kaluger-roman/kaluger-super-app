@@ -21,7 +21,7 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
     res.json({ students });
   } catch (error) {
     console.error("Get students error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -43,13 +43,13 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ error: "Студент не найден" });
     }
 
     res.json({ student });
   } catch (error) {
     console.error("Get student error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -61,15 +61,17 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
 
     // Validation
     if (!name) {
-      return res.status(400).json({ error: "Name is required" });
+      return res.status(400).json({ error: "Имя обязательно для заполнения" });
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "Invalid email format" });
+      return res.status(400).json({ error: "Неверный формат email" });
     }
 
     if (hourlyRate && hourlyRate < 0) {
-      return res.status(400).json({ error: "Hourly rate must be positive" });
+      return res
+        .status(400)
+        .json({ error: "Почасовая ставка должна быть положительной" });
     }
 
     const student = await prisma.student.create({
@@ -84,12 +86,12 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({
-      message: "Student created successfully",
+      message: "Студент успешно создан",
       student,
     });
   } catch (error) {
     console.error("Create student error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -104,11 +106,13 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       updateData.email &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updateData.email)
     ) {
-      return res.status(400).json({ error: "Invalid email format" });
+      return res.status(400).json({ error: "Неверный формат email" });
     }
 
     if (updateData.hourlyRate && updateData.hourlyRate < 0) {
-      return res.status(400).json({ error: "Hourly rate must be positive" });
+      return res
+        .status(400)
+        .json({ error: "Почасовая ставка должна быть положительной" });
     }
 
     // Check if student exists and belongs to user
@@ -120,21 +124,46 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingStudent) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ error: "Студент не найден" });
+    }
+
+    // Prepare update data - convert empty strings to null for optional fields
+    const preparedData: any = { ...updateData };
+
+    if ("email" in updateData) {
+      preparedData.email = updateData.email === "" ? null : updateData.email;
+    }
+    if ("phone" in updateData) {
+      preparedData.phone = updateData.phone === "" ? null : updateData.phone;
+    }
+    if ("notes" in updateData) {
+      preparedData.notes = updateData.notes === "" ? null : updateData.notes;
+    }
+    if ("hourlyRate" in updateData) {
+      preparedData.hourlyRate =
+        updateData.hourlyRate === null || updateData.hourlyRate === undefined
+          ? null
+          : updateData.hourlyRate;
+    }
+    if ("grade" in updateData) {
+      preparedData.grade =
+        updateData.grade === null || updateData.grade === undefined
+          ? null
+          : updateData.grade;
     }
 
     const student = await prisma.student.update({
       where: { id },
-      data: updateData,
+      data: preparedData,
     });
 
     res.json({
-      message: "Student updated successfully",
+      message: "Студент успешно обновлен",
       student,
     });
   } catch (error) {
     console.error("Update student error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -152,16 +181,16 @@ export const deleteStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingStudent) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ error: "Студент не найден" });
     }
 
     await prisma.student.delete({
       where: { id },
     });
 
-    res.json({ message: "Student deleted successfully" });
+    res.json({ message: "Студент успешно удален" });
   } catch (error) {
     console.error("Delete student error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

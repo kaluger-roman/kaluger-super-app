@@ -15,12 +15,14 @@ export const authenticateToken = (
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ error: "Access token required" });
+    return res.status(401).json({ error: "Токен доступа обязателен" });
   }
 
   const payload = verifyToken(token);
   if (!payload) {
-    return res.status(403).json({ error: "Invalid or expired token" });
+    return res
+      .status(403)
+      .json({ error: "Недействительный или истекший токен" });
   }
 
   req.user = payload;

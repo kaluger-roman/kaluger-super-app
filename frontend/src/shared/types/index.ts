@@ -8,11 +8,11 @@ export type User = {
 export type Student = {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  hourlyRate?: number;
-  grade?: number; // Класс от 1 до 11
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  hourlyRate?: number | null;
+  grade?: number | null; // Класс от 1 до 11
   createdAt: string;
   updatedAt: string;
   lessons?: Lesson[];
@@ -64,11 +64,11 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
 
 export type CreateStudentDto = {
   name: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  hourlyRate?: number;
-  grade?: number; // Класс от 1 до 11
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  hourlyRate?: number | null;
+  grade?: number | null; // Класс от 1 до 11
 };
 
 export type UpdateStudentDto = Partial<CreateStudentDto>;

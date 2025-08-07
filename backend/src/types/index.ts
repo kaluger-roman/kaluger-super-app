@@ -11,11 +11,11 @@ export type LoginDto = {
 
 export type CreateStudentDto = {
   name: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  hourlyRate?: number;
-  grade?: number; // Класс от 1 до 11
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  hourlyRate?: number | null;
+  grade?: number | null; // Класс от 1 до 11
 };
 
 export type UpdateStudentDto = Partial<CreateStudentDto>;

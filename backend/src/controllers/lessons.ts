@@ -66,7 +66,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Get lessons error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -86,13 +86,13 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
     });
 
     if (!lesson) {
-      return res.status(404).json({ error: "Lesson not found" });
+      return res.status(404).json({ error: "Урок не найден" });
     }
 
     res.json({ lesson });
   } catch (error) {
     console.error("Get lesson error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -116,7 +116,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     if (!subject || !lessonType || !startTime || !endTime || !studentId) {
       return res.status(400).json({
         error:
-          "Subject, lesson type, start time, end time, and student ID are required",
+          "Предмет, тип урока, время начала, время окончания и ID студента обязательны",
       });
     }
 
@@ -126,17 +126,17 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     if (start >= end) {
       return res
         .status(400)
-        .json({ error: "End time must be after start time" });
+        .json({ error: "Время окончания должно быть позже времени начала" });
     }
 
     if (start < new Date()) {
       return res
         .status(400)
-        .json({ error: "Start time must be in the future" });
+        .json({ error: "Время начала должно быть в будущем" });
     }
 
     if (price && price < 0) {
-      return res.status(400).json({ error: "Price must be positive" });
+      return res.status(400).json({ error: "Цена должна быть положительной" });
     }
 
     // Check if student belongs to user
@@ -148,7 +148,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ error: "Студент не найден" });
     }
 
     if (isRecurring) {
@@ -213,7 +213,8 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
 
       if (lessons.length === 0) {
         return res.status(400).json({
-          error: "Cannot create recurring lessons due to scheduling conflicts",
+          error:
+            "Невозможно создать регулярные уроки из-за конфликтов в расписании",
         });
       }
 
@@ -242,7 +243,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
 
       res.status(201).json({
         lesson: firstLesson,
-        message: `Created ${createdLessons.count} recurring lessons`,
+        message: `Создано ${createdLessons.count} регулярных уроков`,
       });
     } else {
       // Check for scheduling conflicts for single lesson
@@ -267,7 +268,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
 
       if (conflicts.length > 0) {
         return res.status(400).json({
-          error: "Time slot conflicts with existing lesson",
+          error: "Временной слот конфликтует с существующим уроком",
         });
       }
 
@@ -300,7 +301,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     }
   } catch (error) {
     console.error("Create lesson error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -319,7 +320,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingLesson) {
-      return res.status(404).json({ error: "Lesson not found" });
+      return res.status(404).json({ error: "Урок не найден" });
     }
 
     // Validation for time updates
@@ -334,7 +335,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       if (start >= end) {
         return res
           .status(400)
-          .json({ error: "End time must be after start time" });
+          .json({ error: "Время окончания должно быть позже времени начала" });
       }
 
       // Check for scheduling conflicts (excluding current lesson)
@@ -359,16 +360,16 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       if (conflictingLesson) {
         return res
           .status(409)
-          .json({ error: "Time slot conflicts with existing lesson" });
+          .json({ error: "Временной слот конфликтует с существующим уроком" });
       }
     }
 
     if (updateData.price && updateData.price < 0) {
-      return res.status(400).json({ error: "Price must be positive" });
+      return res.status(400).json({ error: "Цена должна быть положительной" });
     }
 
     if (updateData.grade && (updateData.grade < 1 || updateData.grade > 5)) {
-      return res.status(400).json({ error: "Grade must be between 1 and 5" });
+      return res.status(400).json({ error: "Оценка должна быть от 1 до 5" });
     }
 
     const lesson = await prisma.lesson.update({
@@ -386,12 +387,12 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      message: "Lesson updated successfully",
+      message: "Урок успешно обновлен",
       lesson,
     });
   } catch (error) {
     console.error("Update lesson error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -410,7 +411,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingLesson) {
-      return res.status(404).json({ error: "Lesson not found" });
+      return res.status(404).json({ error: "Урок не найден" });
     }
 
     if (deleteAllFuture && existingLesson.isRecurring) {
@@ -429,18 +430,18 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
       });
 
       res.json({
-        message: "All future recurring lessons deleted successfully",
+        message: "Все будущие регулярные уроки успешно удалены",
       });
     } else {
       await prisma.lesson.delete({
         where: { id },
       });
 
-      res.json({ message: "Lesson deleted successfully" });
+      res.json({ message: "Урок успешно удален" });
     }
   } catch (error) {
     console.error("Delete lesson error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -474,6 +475,6 @@ export const getUpcomingLessons = async (req: AuthRequest, res: Response) => {
     res.json({ lessons });
   } catch (error) {
     console.error("Get upcoming lessons error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

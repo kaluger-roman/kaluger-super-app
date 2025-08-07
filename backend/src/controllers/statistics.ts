@@ -74,7 +74,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Get statistics error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
