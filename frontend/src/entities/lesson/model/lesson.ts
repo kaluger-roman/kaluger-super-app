@@ -5,6 +5,7 @@ import {
   CreateLessonDto,
   UpdateLessonDto,
 } from "../../../shared";
+import { showSuccess, showError } from "../../../shared/model/notifications";
 
 // Events
 export const loadLessons = createEvent<{
@@ -145,12 +146,35 @@ removeLesson.watch(removeLessonFx);
 // Auto-reload lessons after CRUD operations
 addLessonFx.doneData.watch(() => {
   loadLessons({});
+  showSuccess("Урок создан");
 });
 
 updateLessonFx.doneData.watch(() => {
   loadLessons({});
+  showSuccess("Урок обновлен");
 });
 
 removeLessonFx.doneData.watch(() => {
   loadLessons({});
+  showSuccess("Урок удален");
+});
+
+// Handle errors
+addLessonFx.failData.watch((error: any) => {
+  console.error("Add lesson error:", error);
+  const message = error?.response?.data?.message || "Ошибка при создании урока";
+  showError(message);
+});
+
+updateLessonFx.failData.watch((error: any) => {
+  console.error("Update lesson error:", error);
+  const message =
+    error?.response?.data?.message || "Ошибка при обновлении урока";
+  showError(message);
+});
+
+removeLessonFx.failData.watch((error: any) => {
+  console.error("Remove lesson error:", error);
+  const message = error?.response?.data?.message || "Ошибка при удалении урока";
+  showError(message);
 });

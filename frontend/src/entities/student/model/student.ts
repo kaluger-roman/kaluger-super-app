@@ -5,6 +5,7 @@ import {
   CreateStudentDto,
   UpdateStudentDto,
 } from "../../../shared";
+import { showSuccess, showError } from "../../../shared/model/notifications";
 
 // Events
 export const loadStudents = createEvent();
@@ -102,12 +103,31 @@ removeStudent.watch(removeStudentFx);
 // Auto-reload students after CRUD operations
 addStudentFx.doneData.watch(() => {
   loadStudents();
+  showSuccess("Студент добавлен");
 });
 
 updateStudentFx.doneData.watch(() => {
   loadStudents();
+  showSuccess("Студент обновлен");
 });
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
+  showSuccess("Студент удален");
+});
+
+// Handle errors
+addStudentFx.failData.watch((error) => {
+  console.error("Add student error:", error);
+  showError("Ошибка при добавлении студента");
+});
+
+updateStudentFx.failData.watch((error) => {
+  console.error("Update student error:", error);
+  showError("Ошибка при обновлении студента");
+});
+
+removeStudentFx.failData.watch((error) => {
+  console.error("Remove student error:", error);
+  showError("Ошибка при удалении студента");
 });

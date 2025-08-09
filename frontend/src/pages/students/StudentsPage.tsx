@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Container,
   Typography,
@@ -23,12 +23,7 @@ import {
 } from "@mui/icons-material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
-import {
-  $students,
-  $studentsIsLoading,
-  loadStudents,
-  removeStudent,
-} from "../../entities";
+import { $students, $studentsIsLoading, removeStudent } from "../../entities";
 import { Loading } from "../../shared";
 import { ConfirmDialog } from "../../shared/ui";
 import { StudentForm, StudentViewDialog } from "../../features/students";
@@ -58,10 +53,6 @@ export const StudentsPage: React.FC = () => {
     message: "",
     action: () => {},
   });
-
-  useEffect(() => {
-    loadStudents();
-  }, []);
 
   // Context menu handlers
   const handleMenuClick = (

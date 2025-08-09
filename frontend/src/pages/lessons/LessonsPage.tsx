@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Container, Typography, Box, Fab, Tabs, Tab } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useStore } from "effector-react";
 import {
   $lessons,
   $lessonsIsLoading,
-  loadLessons,
   removeLesson,
   updateLesson,
 } from "../../entities";
@@ -49,10 +48,6 @@ export const LessonsPage: React.FC = () => {
     message: "",
     action: () => {},
   });
-
-  useEffect(() => {
-    loadLessons({});
-  }, []);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Container,
   Typography,
@@ -16,22 +16,12 @@ import {
   Add as AddIcon,
   CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
-import {
-  $upcomingLessons,
-  $students,
-  loadUpcomingLessons,
-  loadStudents,
-} from "../../entities";
+import { $upcomingLessons, $students } from "../../entities";
 
 export const DashboardPage: React.FC = () => {
   const upcomingLessons = useStore($upcomingLessons);
   const students = useStore($students);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    loadUpcomingLessons();
-    loadStudents();
-  }, []);
 
   const formatLessonTime = (startTime: string, endTime: string) => {
     const start = new Date(startTime);

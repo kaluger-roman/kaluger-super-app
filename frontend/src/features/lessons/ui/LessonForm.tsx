@@ -38,7 +38,6 @@ import {
   updateLesson,
   $lessonsIsLoading,
 } from "../../../entities/lesson";
-import { showSuccess, showError } from "../../../shared/model/notifications";
 
 type LessonFormProps = {
   open: boolean;
@@ -204,18 +203,15 @@ export const LessonForm: React.FC<LessonFormProps> = ({
       if (lesson) {
         // Редактирование существующего урока
         updateLesson({ id: lesson.id, data: lessonData as UpdateLessonDto });
-        showSuccess("Урок обновлен");
       } else {
         // Создание нового урока
         addLesson(lessonData as CreateLessonDto);
-        showSuccess("Урок создан");
       }
 
       // Закрываем форму при успешном сохранении
       onClose();
     } catch (error) {
       console.error("Lesson form error:", error);
-      showError("Ошибка при сохранении урока");
     }
   };
 
@@ -232,12 +228,10 @@ export const LessonForm: React.FC<LessonFormProps> = ({
             id: lesson.id,
             data: { status: "CANCELLED" } as UpdateLessonDto,
           });
-          showSuccess("Урок отменен");
           setConfirmDialog((prev) => ({ ...prev, open: false }));
           onClose();
         } catch (error) {
           console.error("Cancel lesson error:", error);
-          showError("Ошибка при отмене урока");
           setConfirmDialog((prev) => ({ ...prev, open: false }));
         }
       },

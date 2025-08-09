@@ -31,6 +31,11 @@ import {
   getProfileFx,
   setAuthToken,
 } from "../entities";
+import { initializeApp, $appInitialized } from "../shared/model/appInit";
+import {
+  connectWebSocket,
+  disconnectWebSocket,
+} from "../shared/model/webSocket";
 import { LoginForm, RegisterForm } from "../features/auth";
 import {
   DashboardPage,
@@ -364,6 +369,19 @@ const AppInitializer: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const appInitialized = useStore($appInitialized);
+  const isAuthenticated = useStore($isAuthenticated);
+
+  // Initialize app data when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && !appInitialized) {
+      initializeApp();
+      connectWebSocket();
+    } else if (!isAuthenticated) {
+      disconnectWebSocket();
+    }
+  }, [isAuthenticated, appInitialized]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

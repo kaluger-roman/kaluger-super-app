@@ -14,7 +14,6 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { Student } from "../../../shared";
 import { ConfirmDialog } from "../../../shared/ui";
-import { useNotifications } from "../../../shared/lib";
 
 type StudentViewDialogProps = {
   open: boolean;
@@ -33,7 +32,6 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const { showSuccess } = useNotifications();
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -57,7 +55,6 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
         "Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить.",
       action: () => {
         onDelete();
-        showSuccess("Ученик удален");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
     });
@@ -79,7 +76,7 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: { 
+        sx: {
           borderRadius: isMobile ? 0 : 2,
           maxHeight: isMobile ? "100vh" : "90vh",
         },
