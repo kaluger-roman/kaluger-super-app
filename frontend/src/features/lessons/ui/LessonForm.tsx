@@ -164,7 +164,16 @@ export const LessonForm: React.FC<LessonFormProps> = ({
     }
 
     if (formData.startTime < new Date() && !lesson) {
-      newErrors.startTime = "Время начала не может быть в прошлом";
+      const now = new Date();
+      if (
+        formData.startTime.getFullYear() < now.getFullYear() ||
+        formData.startTime.getMonth() < now.getMonth() ||
+        formData.startTime.getDate() < now.getDate() ||
+        formData.startTime.getHours() < now.getHours() ||
+        formData.startTime.getMinutes() < now.getMinutes()
+      ) {
+        newErrors.startTime = "Время начала не может быть в прошлом";
+      }
     }
 
     if (

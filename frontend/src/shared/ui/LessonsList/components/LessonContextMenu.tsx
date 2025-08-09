@@ -13,7 +13,7 @@ type LessonContextMenuProps = {
   anchorEl: HTMLElement | null;
   selectedLesson: Lesson | null;
   onClose: () => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
   onCancel?: () => void;
   onRestore?: () => void;
@@ -32,10 +32,12 @@ export const LessonContextMenu: React.FC<LessonContextMenuProps> = ({
 }) => {
   return (
     <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={onClose}>
-      <MenuItem onClick={onEdit}>
-        <EditIcon sx={{ mr: 1 }} />
-        Редактировать
-      </MenuItem>
+      {onEdit && (
+        <MenuItem onClick={onEdit}>
+          <EditIcon sx={{ mr: 1 }} />
+          Редактировать
+        </MenuItem>
+      )}
       {onReschedule && (
         <MenuItem onClick={onReschedule}>
           <RescheduleIcon sx={{ mr: 1 }} />

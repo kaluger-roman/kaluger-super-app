@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { CreateLessonDto, UpdateLessonDto } from "../types";
 import { AuthRequest } from "../middleware/auth";
-import { updateLessonStatusesForUser } from "../services/lessonStatusUpdater";
+import { getWebSocketManager } from "../lib/wsManager";
 import prisma from "../lib/prisma";
 
 export const getLessons = async (req: AuthRequest, res: Response) => {
@@ -32,8 +32,14 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       where.studentId = studentId;
     }
 
-    if (status) {
-      where.status = status;
+    if (status && typeof status === "string") {
+      // Support multiple statuses separated by comma
+      const statuses = status.split(",").map((s: string) => s.trim());
+      if (statuses.length > 1) {
+        where.status = { in: statuses };
+      } else {
+        where.status = status;
+      }
     }
 
     const [lessons, total] = await Promise.all([
@@ -129,10 +135,12 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
         .json({ error: "Время окончания должно быть позже времени начала" });
     }
 
-    if (start < new Date()) {
-      return res
-        .status(400)
-        .json({ error: "Время начала должно быть в будущем" });
+    const now = new Date();
+    now.setSeconds(0, 0); // Убираем секунды и миллисекунды для точности
+    if (start < now) {
+      return res.status(400).json({
+        error: "Время начала должно быть в будущем",
+      });
     }
 
     if (price && price < 0) {
@@ -245,6 +253,16 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
         lesson: firstLesson,
         message: `Создано ${createdLessons.count} регулярных уроков`,
       });
+
+      // Отправляем WebSocket уведомление о статусе урока
+      const wsManager = getWebSocketManager();
+      if (wsManager && firstLesson) {
+        wsManager.broadcastLessonStatusUpdate(
+          firstLesson.id,
+          firstLesson.status,
+          userId!
+        );
+      }
     } else {
       // Check for scheduling conflicts for single lesson
       const conflicts = await prisma.lesson.findMany({
@@ -298,6 +316,16 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
       });
 
       res.status(201).json({ lesson });
+
+      // Отправляем WebSocket уведомление о статусе урока
+      const wsManager = getWebSocketManager();
+      if (wsManager) {
+        wsManager.broadcastLessonStatusUpdate(
+          lesson.id,
+          lesson.status,
+          userId!
+        );
+      }
     }
   } catch (error) {
     console.error("Create lesson error:", error);
@@ -390,6 +418,18 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       message: "Урок успешно обновлен",
       lesson,
     });
+
+    // Отправляем WebSocket уведомление о статусе урока только если статус изменился
+    if (updateData.status && updateData.status !== existingLesson.status) {
+      const wsManager = getWebSocketManager();
+      if (wsManager) {
+        wsManager.broadcastLessonStatusUpdate(
+          lesson.id,
+          lesson.status,
+          userId!
+        );
+      }
+    }
   } catch (error) {
     console.error("Update lesson error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
@@ -449,14 +489,12 @@ export const getUpcomingLessons = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const lessons = await prisma.lesson.findMany({
       where: {
         tutorId: userId,
         startTime: {
           gte: now,
-          lte: nextWeek,
         },
         status: { in: ["SCHEDULED", "RESCHEDULED"] },
       },

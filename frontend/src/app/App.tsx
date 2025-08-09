@@ -263,38 +263,7 @@ const AuthRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-const AppInitializer: React.FC = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        setAuthToken(token);
-        try {
-          await getProfileFx();
-        } catch (error) {
-          // Token is invalid, clear it
-          localStorage.removeItem("authToken");
-        }
-      }
-      setIsInitialized(true);
-    };
-
-    initializeAuth();
-  }, []);
-
-  if (!isInitialized) {
-    return (
-      <Backdrop
-        open
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      >
-        <CircularProgress color="inherit" />
-      </Backdrop>
-    );
-  }
-
+const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Auth routes */}
@@ -382,12 +351,29 @@ export const App: React.FC = () => {
     }
   }, [isAuthenticated, appInitialized]);
 
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        setAuthToken(token);
+        try {
+          await getProfileFx();
+        } catch (error) {
+          // Token is invalid, clear it
+          localStorage.removeItem("authToken");
+        }
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Router>
-          <AppInitializer />
+          <AppRoutes />
         </Router>
         <NotificationProvider />
       </LocalizationProvider>

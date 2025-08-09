@@ -149,18 +149,3 @@ export const sortMonths = (
     }
   });
 };
-
-export const sortDays = (
-  dayEntries: [string, any][],
-  type: "scheduled" | "completed"
-): [string, any][] => {
-  return dayEntries.sort(([a], [b]) => {
-    const aDate = new Date(a);
-    const bDate = new Date(b);
-    if (type === "scheduled") {
-      return aDate.getTime() - bDate.getTime();
-    } else {
-      return bDate.getTime() - aDate.getTime();
-    }
-  });
-};

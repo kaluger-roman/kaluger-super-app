@@ -67,9 +67,6 @@ export const DashboardPage: React.FC = () => {
             >
               Уроки
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {upcomingLessons.length} предстоящих
-            </Typography>
           </CardContent>
         </Card>
         <Card sx={{ cursor: "pointer" }} onClick={() => navigate("/students")}>

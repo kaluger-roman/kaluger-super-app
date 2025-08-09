@@ -8,11 +8,7 @@ import {
 import { showSuccess, showError } from "../../../shared/model/notifications";
 
 // Events
-export const loadLessons = createEvent<{
-  startDate?: string;
-  endDate?: string;
-  studentId?: string;
-  status?: string;
+export const loadCompletedLessons = createEvent<{
   page?: number;
   limit?: number;
 }>();
@@ -29,16 +25,12 @@ export const removeLesson = createEvent<{
 }>();
 
 // Effects
-export const loadLessonsFx = createEffect(
-  async (filters?: {
-    startDate?: string;
-    endDate?: string;
-    studentId?: string;
-    status?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    return await lessonsApi.getAll(filters);
+export const loadCompletedLessonsFx = createEffect(
+  async (filters?: { page?: number; limit?: number }) => {
+    return await lessonsApi.getAll({
+      ...filters,
+      status: "COMPLETED,CANCELLED",
+    });
   }
 );
 
@@ -74,8 +66,13 @@ export const removeLessonFx = createEffect(
 );
 
 // Stores
-export const $lessons = createStore<Lesson[]>([])
-  .on(loadLessonsFx.doneData, (_, { lessons }) => lessons)
+export const $completedLessons = createStore<Lesson[]>([]).on(
+  loadCompletedLessonsFx.doneData,
+  (_, { lessons }) => lessons
+);
+
+export const $upcomingLessons = createStore<Lesson[]>([])
+  .on(loadUpcomingLessonsFx.doneData, (_, lessons) => lessons)
   .on(addLessonFx.doneData, (lessons, newLesson) => [...lessons, newLesson])
   .on(updateLessonFx.doneData, (lessons, updatedLesson) =>
     lessons.map((lesson) =>
@@ -86,11 +83,6 @@ export const $lessons = createStore<Lesson[]>([])
     lessons.filter((lesson) => lesson.id !== removedId)
   );
 
-export const $upcomingLessons = createStore<Lesson[]>([]).on(
-  loadUpcomingLessonsFx.doneData,
-  (_, lessons) => lessons
-);
-
 export const $currentLesson = createStore<Lesson | null>(null)
   .on(loadLessonFx.doneData, (_, lesson) => lesson)
   .on(updateLessonFx.doneData, (current, updated) =>
@@ -98,17 +90,17 @@ export const $currentLesson = createStore<Lesson | null>(null)
   )
   .reset(removeLessonFx.doneData);
 
-export const $pagination = createStore({
+export const $completedPagination = createStore({
   total: 0,
   page: 1,
-  limit: 10,
+  limit: 50,
   totalPages: 0,
-}).on(loadLessonsFx.doneData, (_, { pagination }) => pagination);
+}).on(loadCompletedLessonsFx.doneData, (_, { pagination }) => pagination);
 
 export const $isLoading = createStore(false)
   .on(
     [
-      loadLessonsFx,
+      loadCompletedLessonsFx,
       loadLessonFx,
       loadUpcomingLessonsFx,
       addLessonFx,
@@ -119,13 +111,13 @@ export const $isLoading = createStore(false)
   )
   .on(
     [
-      loadLessonsFx.done,
+      loadCompletedLessonsFx.done,
       loadLessonFx.done,
       loadUpcomingLessonsFx.done,
       addLessonFx.done,
       updateLessonFx.done,
       removeLessonFx.done,
-      loadLessonsFx.fail,
+      loadCompletedLessonsFx.fail,
       loadLessonFx.fail,
       loadUpcomingLessonsFx.fail,
       addLessonFx.fail,
@@ -136,7 +128,7 @@ export const $isLoading = createStore(false)
   );
 
 // Connect events to effects
-loadLessons.watch(loadLessonsFx);
+loadCompletedLessons.watch(loadCompletedLessonsFx);
 loadLesson.watch(loadLessonFx);
 loadUpcomingLessons.watch(loadUpcomingLessonsFx);
 addLesson.watch(addLessonFx);
@@ -145,36 +137,35 @@ removeLesson.watch(removeLessonFx);
 
 // Auto-reload lessons after CRUD operations
 addLessonFx.doneData.watch(() => {
-  loadLessons({});
+  loadUpcomingLessons();
   showSuccess("Урок создан");
 });
 
 updateLessonFx.doneData.watch(() => {
-  loadLessons({});
+  loadUpcomingLessons();
   showSuccess("Урок обновлен");
 });
 
 removeLessonFx.doneData.watch(() => {
-  loadLessons({});
+  loadUpcomingLessons();
   showSuccess("Урок удален");
 });
 
 // Handle errors
 addLessonFx.failData.watch((error: any) => {
   console.error("Add lesson error:", error);
-  const message = error?.response?.data?.message || "Ошибка при создании урока";
+  const message = error?.response?.data?.error || "Ошибка при создании урока";
   showError(message);
 });
 
 updateLessonFx.failData.watch((error: any) => {
   console.error("Update lesson error:", error);
-  const message =
-    error?.response?.data?.message || "Ошибка при обновлении урока";
+  const message = error?.response?.data?.error || "Ошибка при обновлении урока";
   showError(message);
 });
 
 removeLessonFx.failData.watch((error: any) => {
   console.error("Remove lesson error:", error);
-  const message = error?.response?.data?.message || "Ошибка при удалении урока";
+  const message = error?.response?.data?.error || "Ошибка при удалении урока";
   showError(message);
 });

@@ -1,11 +1,13 @@
 import prisma from "../lib/prisma";
+import { getWebSocketManager } from "../lib/wsManager";
 
 export const updateLessonStatuses = async () => {
   const now = new Date();
+  const wsManager = getWebSocketManager();
 
   try {
-    // Update lessons to IN_PROGRESS if they have started
-    const startedLessons = await prisma.lesson.updateMany({
+    // Получаем уроки, которые должны стать IN_PROGRESS
+    const lessonsToStart = await prisma.lesson.findMany({
       where: {
         status: "SCHEDULED",
         startTime: {
@@ -15,78 +17,58 @@ export const updateLessonStatuses = async () => {
           gt: now,
         },
       },
-      data: {
-        status: "IN_PROGRESS",
-      },
     });
 
-    // Update lessons to COMPLETED if they have ended
-    const completedLessons = await prisma.lesson.updateMany({
+    // Получаем уроки, которые должны стать COMPLETED
+    const lessonsToComplete = await prisma.lesson.findMany({
       where: {
         status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
         endTime: {
           lte: now,
         },
       },
-      data: {
-        status: "COMPLETED",
-      },
     });
 
-    console.log(`Updated ${startedLessons.count} lessons to IN_PROGRESS`);
-    console.log(`Updated ${completedLessons.count} lessons to COMPLETED`);
+    // Обновляем статусы и отправляем WebSocket уведомления
+    for (const lesson of lessonsToStart) {
+      await prisma.lesson.update({
+        where: { id: lesson.id },
+        data: { status: "IN_PROGRESS" },
+      });
+
+      if (wsManager) {
+        wsManager.broadcastLessonStatusUpdate(
+          lesson.id,
+          "IN_PROGRESS",
+          lesson.tutorId
+        );
+      }
+    }
+
+    for (const lesson of lessonsToComplete) {
+      await prisma.lesson.update({
+        where: { id: lesson.id },
+        data: { status: "COMPLETED" },
+      });
+
+      if (wsManager) {
+        wsManager.broadcastLessonStatusUpdate(
+          lesson.id,
+          "COMPLETED",
+          lesson.tutorId
+        );
+      }
+    }
+
+    console.log(`Updated ${lessonsToStart.length} lessons to IN_PROGRESS`);
+    console.log(`Updated ${lessonsToComplete.length} lessons to COMPLETED`);
 
     return {
-      startedLessons: startedLessons.count,
-      completedLessons: completedLessons.count,
+      startedLessons: lessonsToStart.length,
+      completedLessons: lessonsToComplete.length,
     };
   } catch (error) {
     console.error("Error updating lesson statuses:", error);
-    throw error;
-  }
-};
-
-export const updateLessonStatusesForUser = async (userId: string) => {
-  const now = new Date();
-
-  try {
-    // Update lessons to IN_PROGRESS if they have started
-    const startedLessons = await prisma.lesson.updateMany({
-      where: {
-        tutorId: userId,
-        status: "SCHEDULED",
-        startTime: {
-          lte: now,
-        },
-        endTime: {
-          gt: now,
-        },
-      },
-      data: {
-        status: "IN_PROGRESS",
-      },
-    });
-
-    // Update lessons to COMPLETED if they have ended
-    const completedLessons = await prisma.lesson.updateMany({
-      where: {
-        tutorId: userId,
-        status: "IN_PROGRESS",
-        endTime: {
-          lte: now,
-        },
-      },
-      data: {
-        status: "COMPLETED",
-      },
-    });
-
-    return {
-      startedLessons: startedLessons.count,
-      completedLessons: completedLessons.count,
-    };
-  } catch (error) {
-    console.error("Error updating lesson statuses for user:", error);
     throw error;
   }
 };

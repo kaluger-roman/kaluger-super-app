@@ -1,11 +1,11 @@
 export { LessonCard } from "./ui/LessonCard";
 export {
-  $lessons,
+  $completedLessons,
   $upcomingLessons,
   $currentLesson,
-  $pagination,
+  $completedPagination,
   $isLoading as $lessonsIsLoading,
-  loadLessons,
+  loadCompletedLessons,
   loadLesson,
   loadUpcomingLessons,
   addLesson,

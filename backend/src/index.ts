@@ -3,7 +3,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cron from "node-cron";
+import { createServer } from "http";
 import prisma from "./lib/prisma";
+import { WebSocketManager } from "./lib/websocket";
+import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 
@@ -57,8 +60,16 @@ app.use("*", (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-const server = app.listen(PORT, () => {
+// Create HTTP server and WebSocket manager
+const server = createServer(app);
+const wsManager = new WebSocketManager(server);
+
+// Устанавливаем WebSocket менеджер для использования в других модулях
+setWebSocketManager(wsManager);
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
 
   // Setup cron job to process recurring lessons daily at 2 AM
   cron.schedule("0 2 * * *", async () => {

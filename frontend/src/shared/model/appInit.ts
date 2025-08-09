@@ -1,20 +1,14 @@
 import { createStore, createEvent, createEffect } from "effector";
 import { loadStudents } from "../../entities/student";
-import { loadLessons, loadUpcomingLessons } from "../../entities/lesson";
+import { loadUpcomingLessons } from "../../entities/lesson";
 
 // Events
 export const initializeApp = createEvent();
 
 // Effects
 export const initializeAppFx = createEffect(async () => {
-  // Загружаем данные параллельно
-  await Promise.all([loadStudents(), loadLessons({}), loadUpcomingLessons()]);
-
-  // Обновляем статусы уроков после загрузки
-  setTimeout(() => {
-    loadLessons({});
-    loadUpcomingLessons();
-  }, 1000);
+  // Загружаем только студентов и предстоящие уроки
+  await Promise.all([loadStudents(), loadUpcomingLessons()]);
 });
 
 // Stores

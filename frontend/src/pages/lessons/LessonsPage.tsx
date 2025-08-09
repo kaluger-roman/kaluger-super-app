@@ -1,10 +1,21 @@
-import React, { useState } from "react";
-import { Container, Typography, Box, Fab, Tabs, Tab } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import {
+  Container,
+  Typography,
+  Box,
+  Fab,
+  Tabs,
+  Tab,
+  Pagination,
+} from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useStore } from "effector-react";
 import {
-  $lessons,
+  $upcomingLessons,
+  $completedLessons,
+  $completedPagination,
   $lessonsIsLoading,
+  loadCompletedLessons,
   removeLesson,
   updateLesson,
 } from "../../entities";
@@ -20,7 +31,9 @@ import { useNotifications } from "../../shared/lib";
 import { LessonForm, LessonViewDialog } from "../../features/lessons";
 
 export const LessonsPage: React.FC = () => {
-  const lessons = useStore($lessons);
+  const upcomingLessons = useStore($upcomingLessons);
+  const completedLessons = useStore($completedLessons);
+  const completedPagination = useStore($completedPagination);
   const isLoading = useStore($lessonsIsLoading);
   const { showSuccess } = useNotifications();
 
@@ -35,6 +48,13 @@ export const LessonsPage: React.FC = () => {
   >();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+
+  // Load completed lessons when switching to completed tab
+  useEffect(() => {
+    if (currentTab === 1) {
+      loadCompletedLessons({ page: 1, limit: 50 });
+    }
+  }, [currentTab]);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -51,6 +71,13 @@ export const LessonsPage: React.FC = () => {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+  };
+
+  const handleCompletedPageChange = (
+    _event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    loadCompletedLessons({ page, limit: 50 });
   };
 
   const handleEditLesson = (lesson: Lesson) => {
@@ -70,6 +97,11 @@ export const LessonsPage: React.FC = () => {
       id: selectedLesson.id,
       deleteAllFuture,
     });
+
+    // Reload completed lessons if we're on the completed tab
+    if (currentTab === 1) {
+      loadCompletedLessons({ page: completedPagination.page, limit: 50 });
+    }
 
     setDeleteDialogOpen(false);
     setSelectedLesson(null);
@@ -232,7 +264,7 @@ export const LessonsPage: React.FC = () => {
 
       {currentTab === 0 && (
         <LessonsList
-          lessons={lessons}
+          lessons={upcomingLessons}
           onEdit={handleEditLesson}
           onDelete={handleDeleteLesson}
           onCancel={handleCancelLesson}
@@ -245,15 +277,27 @@ export const LessonsPage: React.FC = () => {
       )}
 
       {currentTab === 1 && (
-        <LessonsList
-          lessons={lessons}
-          onEdit={handleEditLesson}
-          onDelete={handleDeleteLesson}
-          onReschedule={handleRescheduleLesson}
-          onPaymentChange={handlePaymentChange}
-          onCardClick={handleCardClick}
-          type="completed"
-        />
+        <>
+          <LessonsList
+            lessons={completedLessons}
+            onEdit={handleEditLesson}
+            onDelete={handleDeleteLesson}
+            onPaymentChange={handlePaymentChange}
+            onCardClick={handleCardClick}
+            type="completed"
+          />
+          {completedPagination.totalPages > 1 && (
+            <Box display="flex" justifyContent="center" mt={3}>
+              <Pagination
+                count={completedPagination.totalPages}
+                page={completedPagination.page}
+                onChange={handleCompletedPageChange}
+                color="primary"
+                size="large"
+              />
+            </Box>
+          )}
+        </>
       )}
 
       {/* Floating Action Button */}

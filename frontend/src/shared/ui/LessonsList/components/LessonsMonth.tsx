@@ -3,7 +3,6 @@ import { Box, Typography, Collapse } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { Lesson } from "../../../types";
 import { LessonsDay } from "./LessonsDay";
-import { sortDays } from "../utils/lessonUtils";
 
 type LessonsMonthProps = {
   month: string;
@@ -26,8 +25,6 @@ export const LessonsMonth: React.FC<LessonsMonthProps> = ({
   onPaymentChange,
   type,
 }) => {
-  const sortedDays = sortDays(Object.entries(monthData), type);
-
   return (
     <Fragment>
       <Box
@@ -67,7 +64,7 @@ export const LessonsMonth: React.FC<LessonsMonthProps> = ({
         )}
       </Box>
       <Collapse in={!isCollapsed} timeout="auto" unmountOnExit>
-        {sortedDays.map(([day, dayLessons]) => (
+        {Object.entries(monthData).map(([day, dayLessons]) => (
           <LessonsDay
             key={day}
             day={day}

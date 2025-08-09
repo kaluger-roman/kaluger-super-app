@@ -4,7 +4,10 @@ import { updateLesson } from "../../entities/lesson";
 // Events
 export const connectWebSocket = createEvent();
 export const disconnectWebSocket = createEvent();
-export const handleLessonUpdate = createEvent<any>();
+export const handleLessonStatusUpdate = createEvent<{
+  lessonId: string;
+  status: string;
+}>();
 
 // Effects
 export const connectWebSocketFx = createEffect(() => {
@@ -27,8 +30,11 @@ export const connectWebSocketFx = createEffect(() => {
     try {
       const data = JSON.parse(event.data);
 
-      if (data.type === "lesson_updated") {
-        handleLessonUpdate(data.lesson);
+      if (data.type === "lesson_status_updated") {
+        handleLessonStatusUpdate({
+          lessonId: data.lessonId,
+          status: data.status,
+        });
       }
     } catch (error) {
       console.error("WebSocket message parsing error:", error);
@@ -82,11 +88,13 @@ disconnectWebSocket.watch(() => {
   disconnectWebSocketFx(connection);
 });
 
-// Handle lesson updates from WebSocket
-handleLessonUpdate.watch((lessonData) => {
-  // Обновляем урок в локальном стейте
+// Handle lesson status updates from WebSocket
+handleLessonStatusUpdate.watch(({ lessonId, status }) => {
+  // Обновляем только статус урока в локальном стейте
   updateLesson({
-    id: lessonData.id,
-    data: lessonData,
+    id: lessonId,
+    data: { status: status as any }, // Временно используем any, так как статус приходит как строка
   });
+
+  console.log(`Lesson ${lessonId} status updated to ${status} via WebSocket`);
 });
