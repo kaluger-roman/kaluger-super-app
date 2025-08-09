@@ -94,15 +94,11 @@ export const LessonsList: React.FC<LessonsListProps> = ({
         anchorEl={anchorEl}
         selectedLesson={selectedLesson}
         onClose={handleMenuClose}
-        onEdit={type === "scheduled" ? handleEdit : undefined}
+        onEdit={handleEdit}
         onDelete={handleDelete}
-        onCancel={type === "scheduled" && onCancel ? handleCancel : undefined}
-        onRestore={
-          type === "scheduled" && onRestore ? handleRestore : undefined
-        }
-        onReschedule={
-          type === "scheduled" && onReschedule ? handleReschedule : undefined
-        }
+        onCancel={handleCancel}
+        onRestore={handleRestore}
+        onReschedule={handleReschedule}
       />
     </Box>
   );
