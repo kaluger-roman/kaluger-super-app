@@ -29,6 +29,8 @@ This is a tutor management application with:
 - For React components, use functional components with hooks
 - For functions use types of parameters, not type of function
 - Errors from backend send in Russian language
+- Don't use `any` type, use `unknown` instead
+- Don't change the functionality and UI unless explicitly required
 
 ## Architecture
 
