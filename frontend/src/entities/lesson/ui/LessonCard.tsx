@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -22,8 +22,8 @@ import {
   formatDuration,
   RecurringLessonDeleteDialog,
 } from "../../../shared";
-import { removeLesson } from "../model/lesson";
-import { showSuccess, showError } from "../../../shared/model/notifications";
+import { removeLesson, closeLessonDialog } from "../model/lesson";
+import { showError } from "../../../shared/model/notifications";
 import { LessonForm } from "../../../features/lessons";
 
 type LessonCardProps = {
@@ -70,6 +70,15 @@ export const LessonCard: React.FC<LessonCardProps> = ({ lesson, onClick }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeLessonDialog.watch(() => {
+      setEditDialogOpen(false);
+      setDeleteDialogOpen(false);
+    });
+    return unsubscribe;
+  }, []);
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
@@ -92,8 +101,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({ lesson, onClick }) => {
   const handleConfirmDelete = async (deleteAllFuture: boolean = false) => {
     try {
       removeLesson({ id: lesson.id, deleteAllFuture });
-      showSuccess("Урок удален");
-      setDeleteDialogOpen(false);
+      // Не закрываем диалог здесь - он закроется автоматически при успехе
     } catch (error) {
       showError("Ошибка при удалении урока");
     }

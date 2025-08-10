@@ -24,6 +24,9 @@ export const removeLesson = createEvent<{
   deleteAllFuture?: boolean;
 }>();
 
+// События для управления попапами
+export const closeLessonDialog = createEvent();
+
 // Effects
 export const loadCompletedLessonsFx = createEffect(
   async (filters?: { page?: number; limit?: number }) => {
@@ -139,16 +142,19 @@ removeLesson.watch(removeLessonFx);
 addLessonFx.doneData.watch(() => {
   loadUpcomingLessons();
   showSuccess("Урок создан");
+  closeLessonDialog();
 });
 
 updateLessonFx.doneData.watch(() => {
   loadUpcomingLessons();
   showSuccess("Урок обновлен");
+  closeLessonDialog();
 });
 
 removeLessonFx.doneData.watch(() => {
   loadUpcomingLessons();
   showSuccess("Урок удален");
+  closeLessonDialog();
 });
 
 // Handle errors

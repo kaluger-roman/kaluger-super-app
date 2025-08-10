@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -23,7 +23,12 @@ import {
 } from "@mui/icons-material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
-import { $students, $studentsIsLoading, removeStudent } from "../../entities";
+import {
+  $students,
+  $studentsIsLoading,
+  removeStudent,
+  closeStudentDialog,
+} from "../../entities";
 import { Loading } from "../../shared";
 import { StudentDeleteDialog } from "../../shared/ui";
 import { StudentForm, StudentViewDialog } from "../../features/students";
@@ -44,6 +49,18 @@ export const StudentsPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<Student | null>(
     null
   );
+
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeStudentDialog.watch(() => {
+      setIsDialogOpen(false);
+      setIsViewDialogOpen(false);
+      setEditingStudent(undefined);
+      setViewingStudent(undefined);
+      setDeleteDialogOpen(null);
+    });
+    return unsubscribe;
+  }, []);
 
   // Context menu handlers
   const handleMenuClick = (
@@ -78,8 +95,7 @@ export const StudentsPage: React.FC = () => {
   const handleDeleteConfirm = () => {
     if (selectedStudent) {
       removeStudent(selectedStudent.id);
-      setDeleteDialogOpen(null);
-      setSelectedStudent(null);
+      // Диалоги закроются автоматически при успешном удалении
     }
   };
 
@@ -105,7 +121,7 @@ export const StudentsPage: React.FC = () => {
   const handleDeleteFromView = () => {
     if (viewingStudent) {
       removeStudent(viewingStudent.id);
-      handleCloseViewDialog();
+      // Диалог закроется автоматически при успешном удалении
     }
   };
 

@@ -18,6 +18,9 @@ export const updateStudent = createEvent<{
 }>();
 export const removeStudent = createEvent<string>();
 
+// События для управления попапами
+export const closeStudentDialog = createEvent();
+
 // Effects
 export const loadStudentsFx = createEffect(async () => {
   return await studentsApi.getAll();
@@ -105,17 +108,20 @@ removeStudent.watch(removeStudentFx);
 addStudentFx.doneData.watch(() => {
   loadStudents();
   showSuccess("Ученик добавлен");
+  closeStudentDialog();
 });
 
 updateStudentFx.doneData.watch(() => {
   loadStudents();
   showSuccess("Ученик обновлен");
+  closeStudentDialog();
 });
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
   loadUpcomingLessons();
   showSuccess("Ученик удален");
+  closeStudentDialog();
 });
 
 // Handle errors

@@ -27,6 +27,7 @@ import {
   updateStudent,
   removeStudent,
   $studentsIsLoading,
+  closeStudentDialog,
 } from "../../../entities";
 import { showNotification } from "../../../shared";
 import { StudentDeleteDialog } from "../../../shared/ui";
@@ -48,6 +49,14 @@ export const StudentForm: React.FC<StudentFormProps> = ({
   const isLoading = useStore($studentsIsLoading);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeStudentDialog.watch(() => {
+      onClose();
+    });
+    return unsubscribe;
+  }, [onClose]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -116,11 +125,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
       };
 
       if (student) {
-        await updateStudent({ id: student.id, data: studentData });
-        showNotification({
-          type: "success",
-          message: "Ученик успешно обновлен",
-        });
+        updateStudent({ id: student.id, data: studentData });
       } else {
         // For creation, don't send empty strings - use undefined
         const createData = {
@@ -131,21 +136,13 @@ export const StudentForm: React.FC<StudentFormProps> = ({
           grade: studentData.grade || undefined,
           notes: studentData.notes || undefined,
         };
-        await addStudent(createData);
-        showNotification({
-          type: "success",
-          message: "Ученик успешно добавлен",
-        });
+        addStudent(createData);
       }
 
-      onClose();
+      // Не закрываем диалог здесь - он закроется автоматически при успехе
     } catch (error) {
-      showNotification({
-        type: "error",
-        message: student
-          ? "Ошибка при обновлении студента"
-          : "Ошибка при добавлении студента",
-      });
+      // При ошибке диалог остается открытым
+      console.error("Student form submit error:", error);
     }
   };
 
@@ -158,13 +155,9 @@ export const StudentForm: React.FC<StudentFormProps> = ({
     if (!student) return;
 
     try {
-      await removeStudent(student.id);
-      showNotification({
-        type: "success",
-        message: "Ученик успешно удален",
-      });
+      removeStudent(student.id);
       setDeleteDialogOpen(false);
-      onClose();
+      // Не закрываем основной диалог здесь - он закроется автоматически при успехе
     } catch (error) {
       showNotification({
         type: "error",

@@ -44,7 +44,7 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
   const handleDeleteConfirm = () => {
     onDelete();
     setDeleteDialogOpen(false);
-    onClose();
+    // Не закрываем основной диалог здесь - он закроется автоматически при успехе
   };
 
   const formatDate = (dateString: string) => {

@@ -21,7 +21,6 @@ import {
 } from "@mui/icons-material";
 import { SUBJECT_LABELS, LESSON_TYPE_LABELS, Lesson } from "../../../shared";
 import { ConfirmDialog, PaymentStatus } from "../../../shared/ui";
-import { useNotifications } from "../../../shared/lib";
 
 type LessonViewDialogProps = {
   open: boolean;
@@ -48,7 +47,6 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const { showSuccess } = useNotifications();
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -72,7 +70,6 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
       message: "Вы уверены, что хотите отменить этот урок?",
       action: () => {
         onCancel();
-        showSuccess("Урок отменен");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
       severity: "warning",
@@ -86,7 +83,6 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
       message: "Вы уверены, что хотите восстановить этот урок?",
       action: () => {
         onRestore();
-        showSuccess("Урок восстановлен");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
       severity: "info",
@@ -101,8 +97,8 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
         "Вы уверены, что хотите удалить этот урок? Это действие нельзя отменить.",
       action: () => {
         onDelete();
-        showSuccess("Урок удален");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
+        // Не закрываем основной диалог здесь - он закроется автоматически при успехе
       },
       severity: "error",
     });

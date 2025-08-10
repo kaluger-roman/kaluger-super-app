@@ -37,6 +37,7 @@ import {
   addLesson,
   updateLesson,
   $lessonsIsLoading,
+  closeLessonDialog,
 } from "../../../entities/lesson";
 
 type LessonFormProps = {
@@ -82,6 +83,14 @@ export const LessonForm: React.FC<LessonFormProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeLessonDialog.watch(() => {
+      onClose();
+    });
+    return unsubscribe;
+  }, [onClose]);
 
   // Заполняем форму данными урока при редактировании
   useEffect(() => {
@@ -217,8 +226,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
         addLesson(lessonData as CreateLessonDto);
       }
 
-      // Закрываем форму при успешном сохранении
-      onClose();
+      // Не закрываем форму здесь - она закроется автоматически при успехе
     } catch (error) {
       console.error("Lesson form error:", error);
     }
@@ -238,7 +246,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
             data: { status: "CANCELLED" } as UpdateLessonDto,
           });
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          onClose();
+          // Не закрываем форму здесь - она закроется автоматически при успехе
         } catch (error) {
           console.error("Cancel lesson error:", error);
           setConfirmDialog((prev) => ({ ...prev, open: false }));

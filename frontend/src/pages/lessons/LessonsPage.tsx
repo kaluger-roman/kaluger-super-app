@@ -18,6 +18,7 @@ import {
   loadCompletedLessons,
   removeLesson,
   updateLesson,
+  closeLessonDialog,
 } from "../../entities";
 import {
   Loading,
@@ -27,7 +28,6 @@ import {
   RescheduleDialog,
 } from "../../shared";
 import { ConfirmDialog } from "../../shared/ui";
-import { useNotifications } from "../../shared/lib";
 import { LessonForm, LessonViewDialog } from "../../features/lessons";
 
 export const LessonsPage: React.FC = () => {
@@ -35,7 +35,6 @@ export const LessonsPage: React.FC = () => {
   const completedLessons = useStore($completedLessons);
   const completedPagination = useStore($completedPagination);
   const isLoading = useStore($lessonsIsLoading);
-  const { showSuccess } = useNotifications();
 
   const [currentTab, setCurrentTab] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,6 +54,21 @@ export const LessonsPage: React.FC = () => {
       loadCompletedLessons({ page: 1, limit: 50 });
     }
   }, [currentTab]);
+
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeLessonDialog.watch(() => {
+      setIsDialogOpen(false);
+      setIsViewDialogOpen(false);
+      setIsRescheduleDialogOpen(false);
+      setEditingLesson(undefined);
+      setViewingLesson(undefined);
+      setReschedulingLesson(undefined);
+      setDeleteDialogOpen(false);
+      setSelectedLesson(null);
+    });
+    return unsubscribe;
+  }, []);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -93,7 +107,7 @@ export const LessonsPage: React.FC = () => {
   const handleDeleteConfirm = async (deleteAllFuture?: boolean) => {
     if (!selectedLesson) return;
 
-    await removeLesson({
+    removeLesson({
       id: selectedLesson.id,
       deleteAllFuture,
     });
@@ -103,8 +117,7 @@ export const LessonsPage: React.FC = () => {
       loadCompletedLessons({ page: completedPagination.page, limit: 50 });
     }
 
-    setDeleteDialogOpen(false);
-    setSelectedLesson(null);
+    // Диалоги закроются автоматически при успешном удалении
   };
 
   const handleCancelLesson = (lesson: Lesson) => {
@@ -117,7 +130,6 @@ export const LessonsPage: React.FC = () => {
           id: lesson.id,
           data: { status: "CANCELLED" },
         });
-        showSuccess("Урок отменен");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
       severity: "warning",
@@ -134,7 +146,6 @@ export const LessonsPage: React.FC = () => {
           id: lesson.id,
           data: { status: "SCHEDULED" },
         });
-        showSuccess("Урок восстановлен");
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
       severity: "info",
@@ -161,7 +172,6 @@ export const LessonsPage: React.FC = () => {
           status: "RESCHEDULED",
         },
       });
-      showSuccess("Урок перенесен");
       setIsRescheduleDialogOpen(false);
       setReschedulingLesson(undefined);
     } catch (error) {
@@ -179,9 +189,6 @@ export const LessonsPage: React.FC = () => {
       id: lessonId,
       data: { isPaid },
     });
-    showSuccess(
-      isPaid ? "Урок отмечен как оплаченный" : "Урок отмечен как неоплаченный"
-    );
   };
 
   const handleCardClick = (lesson: Lesson) => {
@@ -230,7 +237,7 @@ export const LessonsPage: React.FC = () => {
 
   const handleDeleteFromView = () => {
     if (viewingLesson) {
-      setIsViewDialogOpen(false);
+      // Не закрываем диалог просмотра сразу, он закроется автоматически при успехе
       handleDeleteLesson(viewingLesson);
     }
   };
@@ -353,7 +360,6 @@ export const LessonsPage: React.FC = () => {
         }}
         onConfirm={handleDeleteConfirm}
         lesson={selectedLesson || undefined}
-        onSuccess={showSuccess}
         onError={(error) => {
           console.error("Ошибка при удалении урока:", error);
         }}

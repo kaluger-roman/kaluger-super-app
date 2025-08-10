@@ -8,4 +8,5 @@ export {
   addStudent,
   updateStudent,
   removeStudent,
+  closeStudentDialog,
 } from "./model/student";

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -20,8 +20,8 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { Student, formatCurrency } from "../../../shared";
-import { removeStudent } from "../model/student";
-import { showSuccess, showError } from "../../../shared/model/notifications";
+import { removeStudent, closeStudentDialog } from "../model/student";
+import { showError } from "../../../shared/model/notifications";
 import { StudentForm } from "../../../features/students";
 
 type StudentCardProps = {
@@ -36,6 +36,15 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Подписываемся на событие закрытия диалога
+  useEffect(() => {
+    const unsubscribe = closeStudentDialog.watch(() => {
+      setEditDialogOpen(false);
+      setDeleteDialogOpen(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -59,8 +68,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   const handleConfirmDelete = async () => {
     try {
       removeStudent(student.id);
-      showSuccess(`Ученик ${student.name} удален`);
-      setDeleteDialogOpen(false);
+      // Не закрываем диалог здесь - он закроется автоматически при успехе
     } catch (error) {
       showError("Ошибка при удалении ученика");
     }

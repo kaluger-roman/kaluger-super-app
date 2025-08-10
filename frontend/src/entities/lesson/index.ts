@@ -11,4 +11,5 @@ export {
   addLesson,
   updateLesson,
   removeLesson,
+  closeLessonDialog,
 } from "./model/lesson";
