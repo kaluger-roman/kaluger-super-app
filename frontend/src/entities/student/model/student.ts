@@ -6,6 +6,7 @@ import {
   UpdateStudentDto,
 } from "../../../shared";
 import { showSuccess, showError } from "../../../shared/model/notifications";
+import { loadUpcomingLessons } from "../../lesson/model/lesson";
 
 // Events
 export const loadStudents = createEvent();
@@ -55,8 +56,8 @@ export const $students = createStore<Student[]>([])
       student.id === updatedStudent.id ? updatedStudent : student
     )
   )
-  .on(removeStudentFx.doneData, (students, removedId) =>
-    students.filter((student) => student.id !== removedId)
+  .on(removeStudentFx.doneData, (students, result) =>
+    students.filter((student) => student.id !== result)
   );
 
 export const $currentStudent = createStore<Student | null>(null)
@@ -113,6 +114,7 @@ updateStudentFx.doneData.watch(() => {
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
+  loadUpcomingLessons();
   showSuccess("Студент удален");
 });
 

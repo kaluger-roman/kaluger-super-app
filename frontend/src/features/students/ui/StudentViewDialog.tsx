@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { Student } from "../../../shared";
-import { ConfirmDialog } from "../../../shared/ui";
+import { StudentDeleteDialog } from "../../../shared/ui";
 
 type StudentViewDialogProps = {
   open: boolean;
@@ -33,31 +33,18 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    action: () => void;
-  }>({
-    open: false,
-    title: "",
-    message: "",
-    action: () => {},
-  });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (!student) return null;
 
   const handleDelete = () => {
-    setConfirmDialog({
-      open: true,
-      title: "Удалить ученика",
-      message:
-        "Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить.",
-      action: () => {
-        onDelete();
-        setConfirmDialog((prev) => ({ ...prev, open: false }));
-      },
-    });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    onDelete();
+    setDeleteDialogOpen(false);
+    onClose();
   };
 
   const formatDate = (dateString: string) => {
@@ -69,146 +56,150 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 2,
-          maxHeight: isMobile ? "100vh" : "90vh",
-        },
-      }}
-    >
-      <DialogTitle>
-        <Typography variant="h6">Ученик</Typography>
-      </DialogTitle>
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: isMobile ? 0 : 2,
+            maxHeight: isMobile ? "100vh" : "90vh",
+          },
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h6">Ученик</Typography>
+        </DialogTitle>
 
-      <DialogContent>
-        <Box display="flex" flexDirection="column" gap={3}>
-          {/* Основная информация */}
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              👤 {student.name}
-            </Typography>
-            {student.grade && (
-              <Typography variant="body1" color="text.secondary" gutterBottom>
-                🎓 {student.grade} класс
-              </Typography>
-            )}
-            {student.hourlyRate && (
-              <Typography variant="body1" gutterBottom>
-                💰 {student.hourlyRate} ₽/час
-              </Typography>
-            )}
-          </Box>
-
-          {(student.email || student.phone) && <Divider />}
-
-          {/* Контактная информация */}
-          {(student.email || student.phone) && (
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3}>
+            {/* Основная информация */}
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                📞 Контакты
+              <Typography variant="h6" gutterBottom>
+                👤 {student.name}
               </Typography>
-              {student.email && (
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Email: {student.email}
+              {student.grade && (
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  🎓 {student.grade} класс
                 </Typography>
               )}
-              {student.phone && (
-                <Typography variant="body2" color="text.secondary">
-                  Телефон: {student.phone}
+              {student.hourlyRate && (
+                <Typography variant="body1" gutterBottom>
+                  💰 {student.hourlyRate} ₽/час
                 </Typography>
               )}
             </Box>
-          )}
 
-          {student.notes && <Divider />}
+            {(student.email || student.phone) && <Divider />}
 
-          {/* Заметки */}
-          {student.notes && (
+            {/* Контактная информация */}
+            {(student.email || student.phone) && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  📞 Контакты
+                </Typography>
+                {student.email && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Email: {student.email}
+                  </Typography>
+                )}
+                {student.phone && (
+                  <Typography variant="body2" color="text.secondary">
+                    Телефон: {student.phone}
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+            {student.notes && <Divider />}
+
+            {/* Заметки */}
+            {student.notes && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  🗒️ Заметки
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {student.notes}
+                </Typography>
+              </Box>
+            )}
+
+            <Divider />
+
+            {/* Дополнительная информация */}
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                🗒️ Заметки
+                ℹ️ Информация
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Добавлен: {formatDate(student.createdAt)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {student.notes}
+                Обновлен: {formatDate(student.updatedAt)}
               </Typography>
             </Box>
-          )}
-
-          <Divider />
-
-          {/* Дополнительная информация */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              ℹ️ Информация
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Добавлен: {formatDate(student.createdAt)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Обновлен: {formatDate(student.updatedAt)}
-            </Typography>
           </Box>
-        </Box>
-      </DialogContent>
+        </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            justifyContent: "space-between",
-            width: "100%",
-            gap: isMobile ? 2 : 0,
-          }}
-        >
-          <Box>
-            <Button
-              onClick={handleDelete}
-              variant="outlined"
-              color="error"
-              size="small"
-              startIcon={<DeleteIcon />}
-              fullWidth={isMobile}
-            >
-              Удалить
-            </Button>
-          </Box>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
           <Box
             sx={{
               display: "flex",
               flexDirection: isMobile ? "column" : "row",
-              gap: 1,
+              justifyContent: "space-between",
+              width: "100%",
+              gap: isMobile ? 2 : 0,
             }}
           >
-            <Button onClick={onClose} variant="outlined" fullWidth={isMobile}>
-              Закрыть
-            </Button>
-            <Button
-              onClick={onEdit}
-              variant="contained"
-              startIcon={<EditIcon />}
-              fullWidth={isMobile}
+            <Box>
+              <Button
+                onClick={handleDelete}
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteIcon />}
+                fullWidth={isMobile}
+              >
+                Удалить
+              </Button>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row",
+                gap: 1,
+              }}
             >
-              Редактировать
-            </Button>
+              <Button onClick={onClose} variant="outlined" fullWidth={isMobile}>
+                Закрыть
+              </Button>
+              <Button
+                onClick={onEdit}
+                variant="contained"
+                startIcon={<EditIcon />}
+                fullWidth={isMobile}
+              >
+                Редактировать
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </DialogActions>
+        </DialogActions>
+      </Dialog>
 
-      <ConfirmDialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
-        onConfirm={confirmDialog.action}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        severity="error"
+      <StudentDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        student={student}
       />
-    </Dialog>
+    </>
   );
 };

@@ -25,7 +25,7 @@ import { Add as AddIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
 import { $students, $studentsIsLoading, removeStudent } from "../../entities";
 import { Loading } from "../../shared";
-import { ConfirmDialog } from "../../shared/ui";
+import { StudentDeleteDialog } from "../../shared/ui";
 import { StudentForm, StudentViewDialog } from "../../features/students";
 import type { Student } from "../../shared";
 
@@ -41,18 +41,9 @@ export const StudentsPage: React.FC = () => {
   // Context menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    action: () => void;
-  }>({
-    open: false,
-    title: "",
-    message: "",
-    action: () => {},
-  });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<Student | null>(
+    null
+  );
 
   // Context menu handlers
   const handleMenuClick = (
@@ -79,18 +70,17 @@ export const StudentsPage: React.FC = () => {
 
   const handleDeleteFromMenu = () => {
     if (selectedStudent) {
-      setConfirmDialog({
-        open: true,
-        title: "Удалить ученика",
-        message:
-          "Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить.",
-        action: () => {
-          removeStudent(selectedStudent.id);
-          setConfirmDialog((prev) => ({ ...prev, open: false }));
-        },
-      });
+      setDeleteDialogOpen(selectedStudent);
     }
     handleMenuClose();
+  };
+
+  const handleDeleteConfirm = () => {
+    if (selectedStudent) {
+      removeStudent(selectedStudent.id);
+      setDeleteDialogOpen(null);
+      setSelectedStudent(null);
+    }
   };
 
   const handleStudentClick = (student: Student) => {
@@ -341,13 +331,11 @@ export const StudentsPage: React.FC = () => {
         onDelete={handleDeleteFromView}
       />
 
-      <ConfirmDialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
-        onConfirm={confirmDialog.action}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        severity="error"
+      <StudentDeleteDialog
+        open={Boolean(deleteDialogOpen)}
+        onClose={() => setDeleteDialogOpen(null)}
+        onConfirm={handleDeleteConfirm}
+        student={deleteDialogOpen || undefined}
       />
 
       {/* Context Menu */}

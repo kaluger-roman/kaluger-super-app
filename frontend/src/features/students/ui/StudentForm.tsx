@@ -29,7 +29,7 @@ import {
   $studentsIsLoading,
 } from "../../../entities";
 import { showNotification } from "../../../shared";
-import { ConfirmDialog } from "../../../shared/ui";
+import { StudentDeleteDialog } from "../../../shared/ui";
 import type { Student } from "../../../shared";
 
 type StudentFormProps = {
@@ -47,17 +47,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isLoading = useStore($studentsIsLoading);
 
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    action: () => void;
-  }>({
-    open: false,
-    title: "",
-    message: "",
-    action: () => {},
-  });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -159,32 +149,29 @@ export const StudentForm: React.FC<StudentFormProps> = ({
     }
   };
 
-  const handleDeleteStudent = async () => {
+  const handleDeleteStudent = () => {
+    if (!student) return;
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (!student) return;
 
-    setConfirmDialog({
-      open: true,
-      title: "Удалить ученика",
-      message:
-        "Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить.",
-      action: async () => {
-        try {
-          await removeStudent(student.id);
-          showNotification({
-            type: "success",
-            message: "Студент успешно удален",
-          });
-          setConfirmDialog((prev) => ({ ...prev, open: false }));
-          onClose();
-        } catch (error) {
-          showNotification({
-            type: "error",
-            message: "Ошибка при удалении студента",
-          });
-          setConfirmDialog((prev) => ({ ...prev, open: false }));
-        }
-      },
-    });
+    try {
+      await removeStudent(student.id);
+      showNotification({
+        type: "success",
+        message: "Студент успешно удален",
+      });
+      setDeleteDialogOpen(false);
+      onClose();
+    } catch (error) {
+      showNotification({
+        type: "error",
+        message: "Ошибка при удалении студента",
+      });
+      setDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -351,13 +338,11 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         </DialogActions>
       </form>
 
-      <ConfirmDialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
-        onConfirm={confirmDialog.action}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        severity="error"
+      <StudentDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        student={student}
       />
     </Dialog>
   );

@@ -7,6 +7,7 @@ export { NotificationProvider } from "./NotificationProvider";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { RecurringLessonDeleteDialog } from "./RecurringLessonDeleteDialog";
 export { LessonDeleteDialog } from "./LessonDeleteDialog";
+export { StudentDeleteDialog } from "./StudentDeleteDialog";
 export { RescheduleDialog } from "./RescheduleDialog";
 export { CompletedLessonsAccordion } from "./CompletedLessonsAccordion";
 export { RecurringLessonBadge } from "./RecurringLessonBadge";
