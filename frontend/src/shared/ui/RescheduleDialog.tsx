@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -34,13 +34,30 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  
-  const [newStartTime, setNewStartTime] = useState<Date>(
-    lesson ? new Date(lesson.startTime) : new Date()
-  );
-  const [newEndTime, setNewEndTime] = useState<Date>(
-    lesson ? new Date(lesson.endTime) : new Date()
-  );
+
+  const [newStartTime, setNewStartTime] = useState<Date>(() => {
+    if (lesson) {
+      return new Date(lesson.startTime);
+    }
+    const now = new Date();
+    return now;
+  });
+
+  const [newEndTime, setNewEndTime] = useState<Date>(() => {
+    if (lesson) {
+      return new Date(lesson.endTime);
+    }
+    const now = new Date();
+    return new Date(now.getTime() + 60 * 60 * 1000); // +1 час по умолчанию
+  });
+
+  // Обновляем время при изменении урока
+  useEffect(() => {
+    if (lesson) {
+      setNewStartTime(new Date(lesson.startTime));
+      setNewEndTime(new Date(lesson.endTime));
+    }
+  }, [lesson]);
 
   const handleStartTimeChange = (date: Date | null) => {
     if (date && lesson) {
@@ -79,14 +96,14 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
   );
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: { 
+        sx: {
           borderRadius: isMobile ? 0 : 2,
           maxHeight: isMobile ? "100vh" : "90vh",
         },
@@ -109,7 +126,12 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
 
       <DialogContent sx={{ px: isMobile ? 2 : 3 }}>
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-          <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3} mt={2}>
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={isMobile ? 2 : 3}
+            mt={2}
+          >
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 <strong>Текущее время:</strong>{" "}
@@ -158,17 +180,15 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
         </LocalizationProvider>
       </DialogContent>
 
-      <DialogActions sx={{ 
-        px: isMobile ? 2 : 3, 
-        py: isMobile ? 2 : 1.5,
-        flexDirection: isMobile ? "column" : "row",
-        gap: isMobile ? 1 : 0,
-      }}>
-        <Button 
-          onClick={handleClose} 
-          disabled={isLoading}
-          fullWidth={isMobile}
-        >
+      <DialogActions
+        sx={{
+          px: isMobile ? 2 : 3,
+          py: isMobile ? 2 : 1.5,
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 1 : 0,
+        }}
+      >
+        <Button onClick={handleClose} disabled={isLoading} fullWidth={isMobile}>
           Отмена
         </Button>
         <Button

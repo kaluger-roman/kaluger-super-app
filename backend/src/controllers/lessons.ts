@@ -13,7 +13,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       studentId,
       status,
       page = "1",
-      limit = "10",
+      limit = "50",
     } = req.query;
 
     const pageNum = parseInt(page as string);

@@ -98,23 +98,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             >
               🎓
             </Box>
-            {isMobile ? (
-              "Kaluger"
-            ) : (
-              <>
-                Kaluger{" "}
-                <Box
-                  component="span"
-                  sx={{
-                    color: "#42a5f5",
-                    ml: 0.5,
-                    fontSize: { xs: 20, sm: 28 },
-                  }}
-                >
-                  Tutor
-                </Box>
-              </>
-            )}
+            {isMobile ? "Kaluger" : <>Kaluger Tutor</>}
           </Typography>
 
           {user && (
