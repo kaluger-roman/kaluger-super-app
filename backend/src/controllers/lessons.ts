@@ -156,7 +156,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Студент не найден" });
+      return res.status(404).json({ error: "Ученик не найден" });
     }
 
     if (isRecurring) {

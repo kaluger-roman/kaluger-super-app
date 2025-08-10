@@ -51,7 +51,7 @@ export const statisticsApi = {
       params,
     }),
 
-  // Статистика по студентам
+  // Статистика по ученикам
   getStudentStatistics: (params?: { startDate?: string; endDate?: string }) =>
     api.get<{ studentStatistics: StudentStatistics }>(
       "/statistics/by-student",

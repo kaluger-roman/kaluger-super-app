@@ -177,7 +177,7 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Получаем информацию о студентах
+    // Получаем информацию о учениках
     const studentIds = studentStats.map((stat) => stat.studentId);
     const students = await prisma.student.findMany({
       where: {

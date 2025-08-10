@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { CreateStudentDto, UpdateStudentDto } from "../types";
 import { AuthRequest } from "../middleware/auth";
 import prisma from "../lib/prisma";
+import { handlePrismaError } from "../utils/prismaErrorHandler";
 
 export const getStudents = async (req: AuthRequest, res: Response) => {
   try {
@@ -43,7 +44,7 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Студент не найден" });
+      return res.status(404).json({ error: "Ученик не найден" });
     }
 
     res.json({ student });
@@ -86,11 +87,16 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({
-      message: "Студент успешно создан",
+      message: "Ученик успешно создан",
       student,
     });
   } catch (error) {
     console.error("Create student error:", error);
+
+    if (handlePrismaError(error, res)) {
+      return;
+    }
+
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
@@ -124,7 +130,7 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingStudent) {
-      return res.status(404).json({ error: "Студент не найден" });
+      return res.status(404).json({ error: "Ученик не найден" });
     }
 
     // Prepare update data - convert empty strings to null for optional fields
@@ -158,11 +164,16 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      message: "Студент успешно обновлен",
+      message: "Ученик успешно обновлен",
       student,
     });
   } catch (error) {
     console.error("Update student error:", error);
+
+    if (handlePrismaError(error, res)) {
+      return;
+    }
+
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
@@ -181,14 +192,14 @@ export const deleteStudent = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingStudent) {
-      return res.status(404).json({ error: "Студент не найден" });
+      return res.status(404).json({ error: "Ученик не найден" });
     }
 
     await prisma.student.delete({
       where: { id },
     });
 
-    res.json({ message: "Студент успешно удален" });
+    res.json({ message: "Ученик успешно удален" });
   } catch (error) {
     console.error("Delete student error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

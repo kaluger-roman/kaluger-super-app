@@ -119,7 +119,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
             {LESSON_TYPE_LABELS[lesson.lessonType]}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Студент: {lesson.student?.name}
+            Ученик: {lesson.student?.name}
           </Typography>
         </Box>
       </DialogTitle>

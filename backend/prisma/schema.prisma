@@ -43,6 +43,8 @@ model Student {
 
   lessons Lesson[]
 
+  @@unique([email, tutorId])
+  @@unique([phone, tutorId])
   @@map("students")
 }
 

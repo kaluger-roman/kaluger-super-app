@@ -126,7 +126,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({ lesson, onClick }) => {
               </Typography>
 
               <Typography variant="body2" color="textSecondary" gutterBottom>
-                {lesson.student?.name || "Студент не указан"}
+                {lesson.student?.name || "Ученик не указан"}
               </Typography>
 
               <Typography variant="body2" color="textSecondary" gutterBottom>

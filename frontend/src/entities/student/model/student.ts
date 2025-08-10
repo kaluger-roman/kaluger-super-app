@@ -104,32 +104,32 @@ removeStudent.watch(removeStudentFx);
 // Auto-reload students after CRUD operations
 addStudentFx.doneData.watch(() => {
   loadStudents();
-  showSuccess("Студент добавлен");
+  showSuccess("Ученик добавлен");
 });
 
 updateStudentFx.doneData.watch(() => {
   loadStudents();
-  showSuccess("Студент обновлен");
+  showSuccess("Ученик обновлен");
 });
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
   loadUpcomingLessons();
-  showSuccess("Студент удален");
+  showSuccess("Ученик удален");
 });
 
 // Handle errors
-addStudentFx.failData.watch((error) => {
+addStudentFx.failData.watch((error: any) => {
   console.error("Add student error:", error);
-  showError("Ошибка при добавлении студента");
+  showError(error?.response?.data?.error || "Ошибка при добавлении студента");
 });
 
-updateStudentFx.failData.watch((error) => {
+updateStudentFx.failData.watch((error: any) => {
   console.error("Update student error:", error);
-  showError("Ошибка при обновлении студента");
+  showError(error?.response?.data?.error || "Ошибка при обновлении студента");
 });
 
-removeStudentFx.failData.watch((error) => {
+removeStudentFx.failData.watch((error: any) => {
   console.error("Remove student error:", error);
-  showError("Ошибка при удалении студента");
+  showError(error?.response?.data?.error || "Ошибка при удалении студента");
 });

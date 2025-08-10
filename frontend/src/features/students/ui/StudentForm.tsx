@@ -119,7 +119,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         await updateStudent({ id: student.id, data: studentData });
         showNotification({
           type: "success",
-          message: "Студент успешно обновлен",
+          message: "Ученик успешно обновлен",
         });
       } else {
         // For creation, don't send empty strings - use undefined
@@ -134,7 +134,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         await addStudent(createData);
         showNotification({
           type: "success",
-          message: "Студент успешно добавлен",
+          message: "Ученик успешно добавлен",
         });
       }
 
@@ -161,7 +161,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
       await removeStudent(student.id);
       showNotification({
         type: "success",
-        message: "Студент успешно удален",
+        message: "Ученик успешно удален",
       });
       setDeleteDialogOpen(false);
       onClose();

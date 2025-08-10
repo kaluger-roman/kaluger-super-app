@@ -7,7 +7,7 @@ export const initializeApp = createEvent();
 
 // Effects
 export const initializeAppFx = createEffect(async () => {
-  // Загружаем только студентов и предстоящие уроки
+  // Загружаем только учеников и предстоящие уроки
   await Promise.all([loadStudents(), loadUpcomingLessons()]);
 });
 
