@@ -235,7 +235,7 @@ export const LessonsPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !upcomingLessons.length && !completedLessons.length) {
     return <Loading />;
   }
 
