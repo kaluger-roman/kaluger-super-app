@@ -22,23 +22,21 @@ const getStatistics = async (req, res) => {
             }),
             prisma_1.default.lesson.count({ where }),
             prisma_1.default.lesson.aggregate({
-                where: { ...where, status: "COMPLETED", isPaid: true },
+                where: { ...where, isPaid: true },
                 _sum: { price: true },
             }),
             prisma_1.default.lesson.aggregate({
                 where: {
                     tutorId: userId,
                     startTime: lastMonthRange,
-                    status: "COMPLETED",
                     isPaid: true,
                 },
                 _sum: { price: true },
             }),
             prisma_1.default.lesson.count({
                 where: {
-                    tutorId: userId,
-                    startTime: { gte: now },
-                    status: { in: ["SCHEDULED", "RESCHEDULED"] },
+                    ...where,
+                    status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
                 },
             }),
         ]);

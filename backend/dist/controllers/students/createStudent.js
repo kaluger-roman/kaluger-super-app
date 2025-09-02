@@ -21,6 +21,7 @@ const createStudent = async (req, res) => {
                 name: data.name,
                 email: data.email,
                 phone: data.phone,
+                grade: data.grade,
                 notes: data.notes,
                 hourlyRate: data.hourlyRate,
                 tutorId: userId,

@@ -96,15 +96,17 @@ const getUpcomingLessons = async (req, res) => {
         const userId = req.user?.userId;
         const { limit = "10" } = req.query;
         const limitNum = parseInt(limit);
+        const now = new Date();
         const lessons = await prisma_1.default.lesson.findMany({
             where: {
                 tutorId: userId,
-                startTime: {
-                    gte: new Date(),
-                },
-                status: {
-                    in: ["SCHEDULED", "IN_PROGRESS"],
-                },
+                OR: [
+                    { status: "IN_PROGRESS" },
+                    {
+                        status: { in: ["SCHEDULED", "RESCHEDULED"] },
+                        startTime: { gte: now },
+                    },
+                ],
             },
             include: {
                 student: {
