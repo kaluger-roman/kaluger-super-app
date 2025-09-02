@@ -45,8 +45,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
       prisma.lesson.count({
         where: {
-          tutorId: userId,
-          startTime: { gte: now },
+          ...where,
           status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
         },
       }),
