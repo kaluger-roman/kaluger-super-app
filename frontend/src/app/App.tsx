@@ -28,15 +28,25 @@ const App: React.FC = () => {
   const appInitialized = useStore($appInitialized);
 
   useEffect(() => {
-    // Set auth token from localStorage on app start
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      setAuthToken(token);
-      getProfileFx();
-    }
+    // Set auth token from localStorage on app start and restore profile
+    (async () => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        setAuthToken(token);
+        try {
+          // Wait for profile to be fetched before initializing the rest of the app
+          await getProfileFx();
+        } catch (e) {
+          // Ignore profile fetch errors here; initialize app anyway
+          // (getProfileFx will set stores on success/fail)
+          // eslint-disable-next-line no-console
+          console.error("Failed to restore profile:", e);
+        }
+      }
 
-    // Initialize app
-    initializeApp();
+      // Initialize app (load students, upcoming lessons etc.)
+      initializeApp();
+    })();
   }, []);
 
   useEffect(() => {

@@ -19,6 +19,14 @@ export const validateCreateStudentDto = (data: CreateStudentDto) => {
     errors.push("Почасовая ставка должна быть положительной");
   }
 
+  if (
+    typeof data.grade !== "undefined" &&
+    data.grade !== null &&
+    (typeof data.grade !== "number" || data.grade < 1 || data.grade > 11)
+  ) {
+    errors.push("Класс должен быть числом от 1 до 11");
+  }
+
   return errors;
 };
 
