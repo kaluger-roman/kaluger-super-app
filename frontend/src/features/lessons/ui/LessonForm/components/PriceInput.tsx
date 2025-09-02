@@ -29,12 +29,7 @@ export const PriceInput: React.FC<PriceInputProps> = ({
       value={formData.price}
       onChange={onChange("price")}
       error={!!errors.price}
-      helperText={
-        errors.price ||
-        (selectedStudent?.hourlyRate
-          ? `Рекомендуемая: ${selectedStudent.hourlyRate} ₽`
-          : "")
-      }
+      helperText={errors.price}
       placeholder={selectedStudent?.hourlyRate?.toString()}
       fullWidth
       disabled={isLoading}
