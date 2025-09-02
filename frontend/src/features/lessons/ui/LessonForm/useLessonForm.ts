@@ -4,7 +4,11 @@ import type { LessonFormData, ConfirmDialogData } from "./types";
 import { updateLesson } from "../../../../entities/lesson";
 import type { UpdateLessonDto } from "../../../../shared";
 
-export const useLessonForm = (lesson?: Lesson, onClose?: () => void) => {
+export const useLessonForm = (
+  lesson?: Lesson,
+  onClose?: () => void,
+  open?: boolean
+) => {
   const [formData, setFormData] = useState<LessonFormData>({
     subject: "MATHEMATICS",
     lessonType: "SCHOOL",
@@ -28,42 +32,43 @@ export const useLessonForm = (lesson?: Lesson, onClose?: () => void) => {
     action: () => {},
   });
 
-  // Заполняем форму данными урока при редактировании
   useEffect(() => {
-    if (lesson) {
-      setFormData({
-        subject: lesson.subject,
-        lessonType: lesson.lessonType,
-        description: lesson.description || "",
-        startTime: new Date(lesson.startTime),
-        endTime: new Date(lesson.endTime),
-        price: lesson.price?.toString() || "",
-        studentId: lesson.studentId,
-        homework: lesson.homework || "",
-        notes: lesson.notes || "",
-        isRecurring: lesson.isRecurring || false,
-        isPaid: lesson.isPaid || false,
-      });
-    } else {
-      const now = new Date();
-      const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+    if (open) {
+      if (lesson) {
+        setFormData({
+          subject: lesson.subject,
+          lessonType: lesson.lessonType,
+          description: lesson.description || "",
+          startTime: new Date(lesson.startTime),
+          endTime: new Date(lesson.endTime),
+          price: lesson.price?.toString() || "",
+          studentId: lesson.studentId,
+          homework: lesson.homework || "",
+          notes: lesson.notes || "",
+          isRecurring: lesson.isRecurring || false,
+          isPaid: lesson.isPaid || false,
+        });
+      } else {
+        const now = new Date();
+        const endTime = new Date(now.getTime() + 60 * 60 * 1000);
 
-      setFormData({
-        subject: "MATHEMATICS",
-        lessonType: "SCHOOL",
-        description: "",
-        startTime: now,
-        endTime,
-        price: "",
-        studentId: "",
-        homework: "",
-        notes: "",
-        isRecurring: false,
-        isPaid: false,
-      });
+        setFormData({
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          description: "",
+          startTime: now,
+          endTime,
+          price: "",
+          studentId: "",
+          homework: "",
+          notes: "",
+          isRecurring: false,
+          isPaid: false,
+        });
+      }
+      setErrors({});
     }
-    setErrors({});
-  }, [lesson]);
+  }, [open, lesson]);
 
   const handleChange = (field: string) => (e: any) => {
     const value = e.target ? e.target.value : e;

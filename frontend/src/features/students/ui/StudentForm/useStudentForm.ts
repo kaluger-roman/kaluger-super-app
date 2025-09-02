@@ -11,7 +11,11 @@ import { showNotification } from "../../../../shared";
 import type { Student } from "../../../../shared";
 import type { StudentFormData } from "./types";
 
-export const useStudentForm = (student?: Student, onClose?: () => void) => {
+export const useStudentForm = (
+  student?: Student,
+  onClose?: () => void,
+  open?: boolean
+) => {
   const isLoading = useStore($studentsIsLoading);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -34,28 +38,29 @@ export const useStudentForm = (student?: Student, onClose?: () => void) => {
     return unsubscribe;
   }, [onClose]);
 
-  // Заполняем данные формы
   useEffect(() => {
-    if (student) {
-      setFormData({
-        name: student.name || "",
-        email: student.email || "",
-        phone: student.phone || "",
-        hourlyRate: student.hourlyRate?.toString() || "",
-        grade: student.grade?.toString() || "",
-        notes: student.notes || "",
-      });
-    } else {
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        hourlyRate: "",
-        grade: "",
-        notes: "",
-      });
+    if (open) {
+      if (student) {
+        setFormData({
+          name: student.name || "",
+          email: student.email || "",
+          phone: student.phone || "",
+          hourlyRate: student.hourlyRate?.toString() || "",
+          grade: student.grade?.toString() || "",
+          notes: student.notes || "",
+        });
+      } else {
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          hourlyRate: "",
+          grade: "",
+          notes: "",
+        });
+      }
     }
-  }, [student]);
+  }, [open, student]);
 
   const handleChange =
     (field: string) =>

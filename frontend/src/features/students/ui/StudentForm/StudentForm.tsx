@@ -31,7 +31,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
     handleSubmit,
     handleDeleteStudent,
     handleDeleteConfirm,
-  } = useStudentForm(student, onClose);
+  } = useStudentForm(student, onClose, open);
 
   return (
     <Dialog
