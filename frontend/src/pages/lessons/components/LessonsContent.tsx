@@ -61,6 +61,9 @@ export const LessonsContent: React.FC<LessonsContentProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onPaymentChange={onPaymentChange}
+        onCancel={onCancel}
+        onRestore={onRestore}
+        onReschedule={onReschedule}
         onCardClick={onCardClick}
         type="completed"
       />

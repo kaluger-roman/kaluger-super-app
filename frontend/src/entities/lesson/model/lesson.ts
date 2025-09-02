@@ -149,6 +149,8 @@ updateLessonFx.doneData.watch(() => {
   loadUpcomingLessons();
   showSuccess("Урок обновлен");
   closeLessonDialog();
+  const { page, limit } = $completedPagination.getState();
+  loadCompletedLessons({ page, limit });
 });
 
 removeLessonFx.doneData.watch(() => {
