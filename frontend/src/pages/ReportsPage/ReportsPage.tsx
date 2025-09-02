@@ -26,14 +26,7 @@ export const ReportsPage: React.FC = () => {
   }, [loadStatistics]);
 
   if (!statistics) {
-    return (
-      <Box p={3}>
-        <Typography variant="h4" gutterBottom>
-          📊 Отчеты
-        </Typography>
-        <Typography>Загрузка данных...</Typography>
-      </Box>
-    );
+    return null;
   }
 
   return (

@@ -3,7 +3,6 @@ import { Container, Typography, Box, Fab, Paper } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
 import { $students, $studentsIsLoading } from "../../entities";
-import { Loading } from "../../shared";
 import { StudentDeleteDialog } from "../../shared/ui";
 import { StudentForm, StudentViewDialog } from "../../features/students";
 import { useStudentsPage } from "./useStudentsPage";
@@ -30,7 +29,7 @@ export const StudentsPage: React.FC = () => {
   } = useStudentsPage();
 
   if (isLoading && students.length === 0) {
-    return <Loading message="Загрузка студентов..." />;
+    return null;
   }
 
   return (

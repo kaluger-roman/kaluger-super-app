@@ -1,7 +1,6 @@
 export { Button } from "./Button";
 export { TextField } from "./TextField";
 export { Card } from "./Card";
-export { Loading } from "./Loading";
 export { theme } from "./theme";
 export { NotificationProvider } from "./NotificationProvider";
 export { ConfirmDialog } from "./ConfirmDialog";

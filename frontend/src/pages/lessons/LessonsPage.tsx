@@ -7,7 +7,6 @@ import {
   $completedPagination,
   $lessonsIsLoading,
 } from "../../entities";
-import { Loading } from "../../shared";
 import { useLessonsPage } from "./useLessonsPage";
 import {
   LessonsTabs,
@@ -121,10 +120,6 @@ export const LessonsPage: React.FC = () => {
       isDialogOpen: true,
     }));
   };
-
-  if (isLoading && !upcomingLessons.length && !completedLessons.length) {
-    return <Loading />;
-  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

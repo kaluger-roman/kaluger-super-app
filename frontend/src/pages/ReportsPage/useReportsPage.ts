@@ -1,5 +1,13 @@
 import { useState, useCallback } from "react";
+import { createEffect } from "effector";
 import { Statistics, statisticsApi } from "../../shared/api/statistics";
+
+export const loadStatisticsFx = createEffect(
+  async (params: { startDate?: string; endDate?: string }) => {
+    const response = await statisticsApi.getStatistics(params);
+    return response.data as Statistics;
+  }
+);
 
 export const useReportsPage = () => {
   const [statistics, setStatistics] = useState<Statistics | null>(null);
@@ -25,8 +33,8 @@ export const useReportsPage = () => {
         params.endDate = dateRange.endDate.toISOString().split("T")[0];
       }
 
-      const response = await statisticsApi.getStatistics(params);
-      setStatistics(response.data);
+      const data = await loadStatisticsFx(params);
+      setStatistics(data);
     } catch (err) {
       console.error("Ошибка загрузки статистики:", err);
       setError("Не удалось загрузить статистику");

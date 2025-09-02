@@ -5,7 +5,7 @@ import { CssBaseline, Backdrop, CircularProgress } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ru } from "date-fns/locale";
-import { useStore } from "effector-react";
+import { useStore, useUnit } from "effector-react";
 
 import {
   $isAuthenticated,
@@ -21,11 +21,13 @@ import {
 import { theme } from "../shared";
 import { NotificationProvider } from "../shared/ui/NotificationProvider";
 import { AppContent } from "./components";
+import { $isBlocking } from "../shared/model/blocking";
 
 const App: React.FC = () => {
   const isAuthenticated = useStore($isAuthenticated);
   const user = useStore($user);
   const appInitialized = useStore($appInitialized);
+  const isBlocking = useUnit($isBlocking);
 
   useEffect(() => {
     // Set auth token from localStorage on app start and restore profile
@@ -82,6 +84,12 @@ const App: React.FC = () => {
         <Router>
           <AppContent isLoggedIn={isAuthenticated} user={user} />
           <NotificationProvider />
+          <Backdrop
+            sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 1 }}
+            open={isBlocking}
+          >
+            <CircularProgress color="inherit" />
+          </Backdrop>
         </Router>
       </LocalizationProvider>
     </ThemeProvider>
