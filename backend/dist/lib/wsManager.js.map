@@ -1,0 +1,1 @@
+{"version":3,"file":"wsManager.js","sourceRoot":"","sources":["../../src/lib/wsManager.ts"],"names":[],"mappings":";;;AAEA,IAAI,iBAAiB,GAA4B,IAAI,CAAC;AAE/C,MAAM,mBAAmB,GAAG,CAAC,OAAyB,EAAE,EAAE;IAC/D,iBAAiB,GAAG,OAAO,CAAC;AAC9B,CAAC,CAAC;AAFW,QAAA,mBAAmB,uBAE9B;AAEK,MAAM,mBAAmB,GAAG,GAA4B,EAAE;IAC/D,OAAO,iBAAiB,CAAC;AAC3B,CAAC,CAAC;AAFW,QAAA,mBAAmB,uBAE9B"}

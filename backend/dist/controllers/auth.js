@@ -13,14 +13,14 @@ const register = async (req, res) => {
         if (!email || !password || !name) {
             return res
                 .status(400)
-                .json({ error: "Email, password, and name are required" });
+                .json({ error: "Email, пароль и имя обязательны для заполнения" });
         }
         if (!(0, auth_1.validateEmail)(email)) {
-            return res.status(400).json({ error: "Invalid email format" });
+            return res.status(400).json({ error: "Неверный формат email" });
         }
         if (!(0, auth_1.validatePassword)(password)) {
             return res.status(400).json({
-                error: "Password must be at least 8 characters long and contain uppercase, lowercase, and number",
+                error: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, а также цифры",
             });
         }
         // Check if user already exists
@@ -28,7 +28,7 @@ const register = async (req, res) => {
             where: { email },
         });
         if (existingUser) {
-            return res.status(409).json({ error: "User already exists" });
+            return res.status(409).json({ error: "Пользователь уже существует" });
         }
         // Create user
         const hashedPassword = await (0, auth_1.hashPassword)(password);
@@ -42,7 +42,7 @@ const register = async (req, res) => {
         // Generate token
         const token = (0, auth_1.generateToken)({ userId: user.id, email: user.email });
         res.status(201).json({
-            message: "User created successfully",
+            message: "Пользователь успешно создан",
             token,
             user: {
                 id: user.id,
@@ -53,7 +53,7 @@ const register = async (req, res) => {
     }
     catch (error) {
         console.error("Registration error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
 };
 exports.register = register;
@@ -62,24 +62,26 @@ const login = async (req, res) => {
         const { email, password } = req.body;
         // Validation
         if (!email || !password) {
-            return res.status(400).json({ error: "Email and password are required" });
+            return res
+                .status(400)
+                .json({ error: "Email и пароль обязательны для заполнения" });
         }
         // Find user
         const user = await prisma_1.default.user.findUnique({
             where: { email },
         });
         if (!user) {
-            return res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "Неверные учетные данные" });
         }
         // Check password
         const isPasswordValid = await (0, auth_1.comparePassword)(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "Неверные учетные данные" });
         }
         // Generate token
         const token = (0, auth_1.generateToken)({ userId: user.id, email: user.email });
         res.json({
-            message: "Login successful",
+            message: "Вход выполнен успешно",
             token,
             user: {
                 id: user.id,
@@ -90,7 +92,7 @@ const login = async (req, res) => {
     }
     catch (error) {
         console.error("Login error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
 };
 exports.login = login;
@@ -107,13 +109,13 @@ const getProfile = async (req, res) => {
             },
         });
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "Пользователь не найден" });
         }
         res.json({ user });
     }
     catch (error) {
         console.error("Get profile error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
 };
 exports.getProfile = getProfile;

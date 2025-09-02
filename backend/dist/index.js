@@ -9,8 +9,11 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const node_cron_1 = __importDefault(require("node-cron"));
+const http_1 = require("http");
 const prisma_1 = __importDefault(require("./lib/prisma"));
 exports.prisma = prisma_1.default;
+const websocket_1 = require("./lib/websocket");
+const wsManager_1 = require("./lib/wsManager");
 const recurringLessons_1 = require("./services/recurringLessons");
 const lessonStatusUpdater_1 = require("./services/lessonStatusUpdater");
 const auth_1 = __importDefault(require("./routes/auth"));
@@ -47,8 +50,14 @@ app.use("*", (req, res) => {
     res.status(404).json({ error: "Route not found" });
 });
 const PORT = process.env.PORT || 3001;
-const server = app.listen(PORT, () => {
+// Create HTTP server and WebSocket manager
+const server = (0, http_1.createServer)(app);
+const wsManager = new websocket_1.WebSocketManager(server);
+// Устанавливаем WebSocket менеджер для использования в других модулях
+(0, wsManager_1.setWebSocketManager)(wsManager);
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
     // Setup cron job to process recurring lessons daily at 2 AM
     node_cron_1.default.schedule("0 2 * * *", async () => {
         console.log("Running recurring lessons processing job...");

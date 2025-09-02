@@ -9,11 +9,11 @@ export type LoginDto = {
 };
 export type CreateStudentDto = {
     name: string;
-    email?: string;
-    phone?: string;
-    notes?: string;
-    hourlyRate?: number;
-    grade?: number;
+    email?: string | null;
+    phone?: string | null;
+    notes?: string | null;
+    hourlyRate?: number | null;
+    grade?: number | null;
 };
 export type UpdateStudentDto = Partial<CreateStudentDto>;
 export type CreateLessonDto = {

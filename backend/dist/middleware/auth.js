@@ -6,11 +6,13 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
     if (!token) {
-        return res.status(401).json({ error: "Access token required" });
+        return res.status(401).json({ error: "Токен доступа обязателен" });
     }
     const payload = (0, auth_1.verifyToken)(token);
     if (!payload) {
-        return res.status(403).json({ error: "Invalid or expired token" });
+        return res
+            .status(403)
+            .json({ error: "Недействительный или истекший токен" });
     }
     req.user = payload;
     next();
