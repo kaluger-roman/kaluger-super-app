@@ -32,14 +32,13 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
       prisma.lesson.count({ where }),
       prisma.lesson.aggregate({
-        where: { ...where, status: "COMPLETED", isPaid: true },
+        where: { ...where, isPaid: true },
         _sum: { price: true },
       }),
       prisma.lesson.aggregate({
         where: {
           tutorId: userId,
           startTime: lastMonthRange,
-          status: "COMPLETED",
           isPaid: true,
         },
         _sum: { price: true },
@@ -48,7 +47,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         where: {
           tutorId: userId,
           startTime: { gte: now },
-          status: { in: ["SCHEDULED", "RESCHEDULED"] },
+          status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
         },
       }),
     ]);
