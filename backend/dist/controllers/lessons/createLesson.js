@@ -11,6 +11,17 @@ const createSingleLesson = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
     const start = new Date(startTime);
     const end = new Date(endTime);
+    // Determine initial status based on times: if the lesson is already finished -> COMPLETED,
+    // if it's currently ongoing -> IN_PROGRESS, otherwise keep default SCHEDULED.
+    let computedStatus = undefined;
+    const now = new Date();
+    if (end.getTime() <= now.getTime()) {
+        computedStatus = "COMPLETED";
+    }
+    else if (start.getTime() <= now.getTime() &&
+        end.getTime() > now.getTime()) {
+        computedStatus = "IN_PROGRESS";
+    }
     // Check for scheduling conflicts for single lesson
     const conflicts = await (0, validators_1.checkSchedulingConflicts)(userId, start, end, prisma_1.default);
     if (conflicts.length > 0) {
@@ -28,6 +39,7 @@ const createSingleLesson = async (userId, data, student, res) => {
             price: price || student.hourlyRate,
             homework,
             notes,
+            ...(computedStatus ? { status: computedStatus } : {}),
             isRecurring: false,
             tutorId: userId,
             studentId,

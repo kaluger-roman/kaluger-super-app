@@ -17,14 +17,6 @@ const validateLessonData = (data) => {
             error: "Время окончания должно быть позже времени начала",
         };
     }
-    const now = new Date();
-    now.setSeconds(0, 0); // Убираем секунды и миллисекунды для точности
-    if (start < now) {
-        return {
-            isValid: false,
-            error: "Время начала должно быть в будущем",
-        };
-    }
     if (price && price < 0) {
         return {
             isValid: false,

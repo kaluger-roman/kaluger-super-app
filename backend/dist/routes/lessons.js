@@ -7,7 +7,6 @@ const router = (0, express_1.Router)();
 // All routes require authentication
 router.use(auth_1.authenticateToken);
 router.get("/", lessons_1.getLessons);
-router.get("/upcoming", lessons_1.getUpcomingLessons);
 router.get("/:id", lessons_1.getLesson);
 router.post("/", lessons_1.createLesson);
 router.put("/:id", lessons_1.updateLesson);

@@ -82,9 +82,36 @@ const updateLesson = async (req, res) => {
             const statusCode = validation.statusCode || 400;
             return res.status(statusCode).json({ error: validation.error });
         }
+        // If times are changed (or status is not explicitly provided), compute status based on new times
+        const now = new Date();
+        const start = updateData.startTime
+            ? new Date(updateData.startTime)
+            : existingLesson.startTime;
+        const end = updateData.endTime
+            ? new Date(updateData.endTime)
+            : existingLesson.endTime;
+        let computedStatus = undefined;
+        if (end.getTime() <= now.getTime()) {
+            computedStatus = "COMPLETED";
+        }
+        else if (start.getTime() <= now.getTime() &&
+            end.getTime() > now.getTime()) {
+            computedStatus = "IN_PROGRESS";
+        }
+        else {
+            // If status explicitly provided in updateData, respect it; otherwise keep existing status or SCHEDULED
+            if (!updateData.status) {
+                computedStatus =
+                    existingLesson.status === "CANCELLED" ? "CANCELLED" : undefined;
+            }
+        }
+        const dataToUpdate = {
+            ...updateData,
+            ...(computedStatus ? { status: computedStatus } : {}),
+        };
         const lesson = await prisma_1.default.lesson.update({
             where: { id },
-            data: updateData,
+            data: dataToUpdate,
             include: {
                 student: {
                     select: {
