@@ -13,7 +13,10 @@ export const loadCompletedLessons = createEvent<{
   limit?: number;
 }>();
 export const loadLesson = createEvent<string>();
-export const loadUpcomingLessons = createEvent();
+export const loadUpcomingLessons = createEvent<{
+  page?: number;
+  limit?: number;
+}>();
 export const addLesson = createEvent<CreateLessonDto>();
 export const updateLesson = createEvent<{
   id: string;
@@ -41,9 +44,11 @@ export const loadLessonFx = createEffect(async (id: string) => {
   return await lessonsApi.getById(id);
 });
 
-export const loadUpcomingLessonsFx = createEffect(async () => {
-  return await lessonsApi.getUpcoming();
-});
+export const loadUpcomingLessonsFx = createEffect(
+  async (filters?: { page?: number; limit?: number }) => {
+    return await lessonsApi.getUpcoming(filters);
+  }
+);
 
 export const addLessonFx = createEffect(async (lessonData: CreateLessonDto) => {
   return await lessonsApi.create(lessonData);
@@ -75,7 +80,7 @@ export const $completedLessons = createStore<Lesson[]>([]).on(
 );
 
 export const $upcomingLessons = createStore<Lesson[]>([])
-  .on(loadUpcomingLessonsFx.doneData, (_, lessons) => lessons)
+  .on(loadUpcomingLessonsFx.doneData, (_, { lessons }) => lessons)
   .on(addLessonFx.doneData, (lessons, newLesson) => [...lessons, newLesson])
   .on(updateLessonFx.doneData, (lessons, updatedLesson) =>
     lessons.map((lesson) =>
@@ -96,9 +101,16 @@ export const $currentLesson = createStore<Lesson | null>(null)
 export const $completedPagination = createStore({
   total: 0,
   page: 1,
-  limit: 50,
+  limit: 10,
   totalPages: 0,
 }).on(loadCompletedLessonsFx.doneData, (_, { pagination }) => pagination);
+
+export const $upcomingPagination = createStore({
+  total: 0,
+  page: 1,
+  limit: 10,
+  totalPages: 0,
+}).on(loadUpcomingLessonsFx.doneData, (_, { pagination }) => pagination);
 
 export const $isLoading = createStore(false)
   .on(
@@ -140,21 +152,30 @@ removeLesson.watch(removeLessonFx);
 
 // Auto-reload lessons after CRUD operations
 addLessonFx.doneData.watch(() => {
-  loadUpcomingLessons();
+  const { page, limit } = $upcomingPagination.getState();
+  loadUpcomingLessons({ page, limit });
   showSuccess("Урок создан");
   closeLessonDialog();
 });
 
 updateLessonFx.doneData.watch(() => {
-  loadUpcomingLessons();
+  const upcomingPagination = $upcomingPagination.getState();
+  const completedPagination = $completedPagination.getState();
+  loadUpcomingLessons({
+    page: upcomingPagination.page,
+    limit: upcomingPagination.limit,
+  });
   showSuccess("Урок обновлен");
   closeLessonDialog();
-  const { page, limit } = $completedPagination.getState();
-  loadCompletedLessons({ page, limit });
+  loadCompletedLessons({
+    page: completedPagination.page,
+    limit: completedPagination.limit,
+  });
 });
 
 removeLessonFx.doneData.watch(() => {
-  loadUpcomingLessons();
+  const { page, limit } = $upcomingPagination.getState();
+  loadUpcomingLessons({ page, limit });
   showSuccess("Урок удален");
   closeLessonDialog();
 });

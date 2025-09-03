@@ -5,7 +5,6 @@ import {
   createLesson,
   updateLesson,
   deleteLesson,
-  getUpcomingLessons,
 } from "../controllers/lessons";
 import { authenticateToken } from "../middleware/auth";
 
@@ -15,7 +14,6 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get("/", getLessons);
-router.get("/upcoming", getUpcomingLessons);
 router.get("/:id", getLesson);
 router.post("/", createLesson);
 router.put("/:id", updateLesson);

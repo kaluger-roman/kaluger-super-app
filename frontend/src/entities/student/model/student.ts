@@ -119,7 +119,7 @@ updateStudentFx.doneData.watch(() => {
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
-  loadUpcomingLessons();
+  loadUpcomingLessons({});
   showSuccess("Ученик удален");
   closeStudentDialog();
 });

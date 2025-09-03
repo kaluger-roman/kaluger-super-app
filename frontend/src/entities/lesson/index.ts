@@ -4,6 +4,7 @@ export {
   $upcomingLessons,
   $currentLesson,
   $completedPagination,
+  $upcomingPagination,
   $isLoading as $lessonsIsLoading,
   loadCompletedLessons,
   loadLesson,

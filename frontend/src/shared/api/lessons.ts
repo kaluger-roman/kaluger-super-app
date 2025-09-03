@@ -40,9 +40,30 @@ export const lessonsApi = {
     return response.data.lesson;
   },
 
-  getUpcoming: async (): Promise<Lesson[]> => {
-    const response = await api.get("/lessons/upcoming");
-    return response.data.lessons;
+  getUpcoming: async (filters?: {
+    page?: number;
+    limit?: number;
+  }): Promise<LessonsResponse> => {
+    const params = new URLSearchParams();
+
+    // Для предстоящих уроков используем специальную логику:
+    // 1. IN_PROGRESS уроки (независимо от времени)
+    // 2. SCHEDULED/RESCHEDULED уроки с startTime >= сейчас
+    const now = new Date().toISOString();
+
+    // Отправляем только статусы, остальная логика будет в backend
+    params.append("upcoming", "true");
+    params.append("currentTime", now);
+
+    if (filters?.page) {
+      params.append("page", filters.page.toString());
+    }
+    if (filters?.limit) {
+      params.append("limit", filters.limit.toString());
+    }
+
+    const response = await api.get(`/lessons?${params.toString()}`);
+    return response.data;
   },
 
   getStatistics: async (filters?: {

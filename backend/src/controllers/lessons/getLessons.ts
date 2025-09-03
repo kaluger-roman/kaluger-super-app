@@ -10,8 +10,10 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       endDate,
       studentId,
       status,
+      upcoming,
+      currentTime,
       page = "1",
-      limit = "50",
+      limit = "10",
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -20,23 +22,36 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
 
     const where: any = { tutorId: userId };
 
-    if (startDate || endDate) {
-      where.startTime = {};
-      if (startDate) where.startTime.gte = new Date(startDate as string);
-      if (endDate) where.startTime.lte = new Date(endDate as string);
-    }
+    // Специальная логика для предстоящих уроков
+    if (upcoming === "true" && currentTime) {
+      const now = new Date(currentTime as string);
+      where.OR = [
+        { status: "IN_PROGRESS" },
+        {
+          status: { in: ["SCHEDULED", "RESCHEDULED"] },
+          startTime: { gte: now },
+        },
+      ];
+    } else {
+      // Обычная логика фильтрации
+      if (startDate || endDate) {
+        where.startTime = {};
+        if (startDate) where.startTime.gte = new Date(startDate as string);
+        if (endDate) where.startTime.lte = new Date(endDate as string);
+      }
 
-    if (studentId) {
-      where.studentId = studentId;
-    }
+      if (studentId) {
+        where.studentId = studentId;
+      }
 
-    if (status && typeof status === "string") {
-      // Support multiple statuses separated by comma
-      const statuses = status.split(",").map((s: string) => s.trim());
-      if (statuses.length > 1) {
-        where.status = { in: statuses };
-      } else {
-        where.status = status;
+      if (status && typeof status === "string") {
+        // Support multiple statuses separated by comma
+        const statuses = status.split(",").map((s: string) => s.trim());
+        if (statuses.length > 1) {
+          where.status = { in: statuses };
+        } else {
+          where.status = status;
+        }
       }
     }
 
@@ -52,7 +67,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
             },
           },
         },
-        orderBy: { startTime: "desc" },
+        orderBy: { startTime: upcoming === "true" ? "asc" : "desc" },
         skip,
         take: limitNum,
       }),
@@ -96,45 +111,6 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
     res.json({ lesson });
   } catch (error) {
     console.error("Get lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
-  }
-};
-
-export const getUpcomingLessons = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { limit = "10" } = req.query;
-    const limitNum = parseInt(limit as string);
-
-    const now = new Date();
-
-    const lessons = await prisma.lesson.findMany({
-      where: {
-        tutorId: userId,
-        OR: [
-          { status: "IN_PROGRESS" },
-          {
-            status: { in: ["SCHEDULED", "RESCHEDULED"] },
-            startTime: { gte: now },
-          },
-        ],
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { startTime: "asc" },
-      take: limitNum,
-    });
-
-    res.json({ lessons });
-  } catch (error) {
-    console.error("Get upcoming lessons error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

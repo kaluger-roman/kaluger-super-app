@@ -5,6 +5,7 @@ import {
   $upcomingLessons,
   $completedLessons,
   $completedPagination,
+  $upcomingPagination,
   $lessonsIsLoading,
 } from "../../entities";
 import { useLessonsPage } from "./useLessonsPage";
@@ -18,6 +19,7 @@ import {
 export const LessonsPage: React.FC = () => {
   const upcomingLessons = useStore($upcomingLessons);
   const completedLessons = useStore($completedLessons);
+  const upcomingPagination = useStore($upcomingPagination);
   const completedPagination = useStore($completedPagination);
   const isLoading = useStore($lessonsIsLoading);
 
@@ -28,6 +30,7 @@ export const LessonsPage: React.FC = () => {
     setConfirmDialog,
     handleTabChange,
     handleCompletedPageChange,
+    handleUpcomingPageChange,
     handleEditLesson,
     handleDeleteLesson,
     handleDeleteConfirm,
@@ -146,6 +149,7 @@ export const LessonsPage: React.FC = () => {
         currentTab={state.currentTab}
         upcomingLessons={upcomingLessons}
         completedLessons={completedLessons}
+        upcomingPagination={upcomingPagination}
         completedPagination={completedPagination}
         onEdit={handleEditLesson}
         onDelete={handleDeleteLesson}
@@ -154,6 +158,7 @@ export const LessonsPage: React.FC = () => {
         onReschedule={handleRescheduleLesson}
         onPaymentChange={handlePaymentChange}
         onCardClick={handleCardClick}
+        onUpcomingPageChange={handleUpcomingPageChange}
         onCompletedPageChange={handleCompletedPageChange}
       />
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   loadCompletedLessons,
+  loadUpcomingLessons,
   removeLesson,
   updateLesson,
   closeLessonDialog,
@@ -32,7 +33,7 @@ export const useLessonsPage = () => {
   // Load completed lessons when switching to completed tab
   useEffect(() => {
     if (state.currentTab === 1) {
-      loadCompletedLessons({ page: 1, limit: 50 });
+      loadCompletedLessons({ page: 1, limit: 10 });
     }
   }, [state.currentTab]);
 
@@ -59,7 +60,14 @@ export const useLessonsPage = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    loadCompletedLessons({ page, limit: 50 });
+    loadCompletedLessons({ page, limit: 10 });
+  };
+
+  const handleUpcomingPageChange = (
+    _event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    loadUpcomingLessons({ page, limit: 10 });
   };
 
   const handleEditLesson = (lesson: Lesson) => {
@@ -88,7 +96,7 @@ export const useLessonsPage = () => {
 
     // Reload completed lessons if we're on the completed tab
     if (state.currentTab === 1) {
-      loadCompletedLessons({ page: completedPagination.page, limit: 50 });
+      loadCompletedLessons({ page: completedPagination.page, limit: 10 });
     }
   };
 
@@ -179,6 +187,7 @@ export const useLessonsPage = () => {
     setConfirmDialog,
     handleTabChange,
     handleCompletedPageChange,
+    handleUpcomingPageChange,
     handleEditLesson,
     handleDeleteLesson,
     handleDeleteConfirm,
