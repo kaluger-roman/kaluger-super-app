@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import {
   loadCompletedLessons,
+  loadCancelledLessons,
   loadUpcomingLessons,
   removeLesson,
   updateLesson,
   closeLessonDialog,
   $completedPagination,
+  $cancelledPagination,
 } from "../../entities";
 import { useStore } from "effector-react";
 import type { Lesson } from "../../shared";
@@ -13,6 +15,7 @@ import type { LessonsPageState, ConfirmDialogState } from "./types";
 
 export const useLessonsPage = () => {
   const completedPagination = useStore($completedPagination);
+  const cancelledPagination = useStore($cancelledPagination);
 
   const [state, setState] = useState<LessonsPageState>({
     currentTab: 0,
@@ -30,10 +33,18 @@ export const useLessonsPage = () => {
     action: () => {},
   });
 
-  // Load completed lessons when switching to completed tab
+  // Load lessons based on current tab
   useEffect(() => {
-    if (state.currentTab === 1) {
-      loadCompletedLessons({ page: 1, limit: 10 });
+    switch (state.currentTab) {
+      case 1: // Прошедшие
+        loadCompletedLessons({ page: 1, limit: 10 });
+        break;
+      case 2: // Отмененные
+        loadCancelledLessons({ page: 1, limit: 10 });
+        break;
+      default:
+        // Запланированные загружаются в основном компоненте
+        break;
     }
   }, [state.currentTab]);
 
@@ -62,6 +73,15 @@ export const useLessonsPage = () => {
   ) => {
     loadCompletedLessons({ page, limit: 10 });
   };
+
+  const handleCancelledPageChange = (
+    _event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    loadCancelledLessons({ page, limit: 10 });
+  };
+
+  // rescheduled page handling removed
 
   const handleUpcomingPageChange = (
     _event: React.ChangeEvent<unknown>,
@@ -94,9 +114,16 @@ export const useLessonsPage = () => {
       deleteAllFuture,
     });
 
-    // Reload completed lessons if we're on the completed tab
-    if (state.currentTab === 1) {
-      loadCompletedLessons({ page: completedPagination.page, limit: 10 });
+    // Reload lessons based on current tab
+    switch (state.currentTab) {
+      case 1:
+        loadCompletedLessons({ page: completedPagination.page, limit: 10 });
+        break;
+      case 2:
+        loadCancelledLessons({ page: cancelledPagination.page, limit: 10 });
+        break;
+      default:
+        break;
     }
   };
 
@@ -187,6 +214,7 @@ export const useLessonsPage = () => {
     setConfirmDialog,
     handleTabChange,
     handleCompletedPageChange,
+    handleCancelledPageChange,
     handleUpcomingPageChange,
     handleEditLesson,
     handleDeleteLesson,

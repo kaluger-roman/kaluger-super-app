@@ -15,7 +15,7 @@ type LessonsYearProps = {
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
-  type: "scheduled" | "completed";
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
 export const LessonsYear: React.FC<LessonsYearProps> = ({

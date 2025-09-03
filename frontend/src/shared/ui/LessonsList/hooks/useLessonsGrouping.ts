@@ -4,7 +4,7 @@ import { filterLessonsByType, groupLessonsByDate } from "../utils/lessonUtils";
 
 type UseLessonsGroupingProps = {
   lessons: Lesson[];
-  type: "scheduled" | "completed";
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
 export const useLessonsGrouping = ({

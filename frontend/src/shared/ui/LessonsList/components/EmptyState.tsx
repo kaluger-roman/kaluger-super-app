@@ -2,10 +2,42 @@ import React from "react";
 import { Box, Typography } from "@mui/material";
 
 type EmptyStateProps = {
-  type: "scheduled" | "completed";
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ type }) => {
+  const getEmptyStateContent = () => {
+    switch (type) {
+      case "scheduled":
+        return {
+          title: "📅 Нет запланированных уроков",
+          description: 'Добавьте новый урок, нажав на кнопку "+"',
+        };
+      case "completed":
+        return {
+          title: "📚 Нет прошедших уроков",
+          description: "Прошедшие уроки будут отображаться здесь",
+        };
+      case "cancelled":
+        return {
+          title: "❌ Нет отмененных уроков",
+          description: "Отмененные уроки будут отображаться здесь",
+        };
+      case "rescheduled":
+        return {
+          title: "📆 Нет перенесенных уроков",
+          description: "Перенесенные уроки будут отображаться здесь",
+        };
+      default:
+        return {
+          title: "📋 Нет уроков",
+          description: "Уроки будут отображаться здесь",
+        };
+    }
+  };
+
+  const { title, description } = getEmptyStateContent();
+
   return (
     <Box
       display="flex"
@@ -16,15 +48,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ type }) => {
       textAlign="center"
     >
       <Typography variant="h5" color="text.secondary" gutterBottom>
-        {type === "scheduled"
-          ? "📅 Нет запланированных уроков"
-          : "📚 Нет прошедших уроков"}
+        {title}
       </Typography>
-      <Typography color="text.secondary">
-        {type === "scheduled"
-          ? 'Добавьте новый урок, нажав на кнопку "+"'
-          : "Прошедшие уроки будут отображаться здесь"}
-      </Typography>
+      <Typography color="text.secondary">{description}</Typography>
     </Box>
   );
 };

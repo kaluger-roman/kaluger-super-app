@@ -12,6 +12,10 @@ export const loadCompletedLessons = createEvent<{
   page?: number;
   limit?: number;
 }>();
+export const loadCancelledLessons = createEvent<{
+  page?: number;
+  limit?: number;
+}>();
 export const loadLesson = createEvent<string>();
 export const loadUpcomingLessons = createEvent<{
   page?: number;
@@ -35,7 +39,16 @@ export const loadCompletedLessonsFx = createEffect(
   async (filters?: { page?: number; limit?: number }) => {
     return await lessonsApi.getAll({
       ...filters,
-      status: "COMPLETED,CANCELLED",
+      status: "COMPLETED",
+    });
+  }
+);
+
+export const loadCancelledLessonsFx = createEffect(
+  async (filters?: { page?: number; limit?: number }) => {
+    return await lessonsApi.getAll({
+      ...filters,
+      status: "CANCELLED",
     });
   }
 );
@@ -79,6 +92,11 @@ export const $completedLessons = createStore<Lesson[]>([]).on(
   (_, { lessons }) => lessons
 );
 
+export const $cancelledLessons = createStore<Lesson[]>([]).on(
+  loadCancelledLessonsFx.doneData,
+  (_, { lessons }) => lessons
+);
+
 export const $upcomingLessons = createStore<Lesson[]>([])
   .on(loadUpcomingLessonsFx.doneData, (_, { lessons }) => lessons)
   .on(addLessonFx.doneData, (lessons, newLesson) => [...lessons, newLesson])
@@ -105,6 +123,13 @@ export const $completedPagination = createStore({
   totalPages: 0,
 }).on(loadCompletedLessonsFx.doneData, (_, { pagination }) => pagination);
 
+export const $cancelledPagination = createStore({
+  total: 0,
+  page: 1,
+  limit: 10,
+  totalPages: 0,
+}).on(loadCancelledLessonsFx.doneData, (_, { pagination }) => pagination);
+
 export const $upcomingPagination = createStore({
   total: 0,
   page: 1,
@@ -116,6 +141,7 @@ export const $isLoading = createStore(false)
   .on(
     [
       loadCompletedLessonsFx,
+      loadCancelledLessonsFx,
       loadLessonFx,
       loadUpcomingLessonsFx,
       addLessonFx,
@@ -127,12 +153,14 @@ export const $isLoading = createStore(false)
   .on(
     [
       loadCompletedLessonsFx.done,
+      loadCancelledLessonsFx.done,
       loadLessonFx.done,
       loadUpcomingLessonsFx.done,
       addLessonFx.done,
       updateLessonFx.done,
       removeLessonFx.done,
       loadCompletedLessonsFx.fail,
+      loadCancelledLessonsFx.fail,
       loadLessonFx.fail,
       loadUpcomingLessonsFx.fail,
       addLessonFx.fail,
@@ -144,6 +172,7 @@ export const $isLoading = createStore(false)
 
 // Connect events to effects
 loadCompletedLessons.watch(loadCompletedLessonsFx);
+loadCancelledLessons.watch(loadCancelledLessonsFx);
 loadLesson.watch(loadLessonFx);
 loadUpcomingLessons.watch(loadUpcomingLessonsFx);
 addLesson.watch(addLessonFx);
@@ -161,16 +190,23 @@ addLessonFx.doneData.watch(() => {
 updateLessonFx.doneData.watch(() => {
   const upcomingPagination = $upcomingPagination.getState();
   const completedPagination = $completedPagination.getState();
+  const cancelledPagination = $cancelledPagination.getState();
+
   loadUpcomingLessons({
     page: upcomingPagination.page,
     limit: upcomingPagination.limit,
   });
-  showSuccess("Урок обновлен");
-  closeLessonDialog();
   loadCompletedLessons({
     page: completedPagination.page,
     limit: completedPagination.limit,
   });
+  loadCancelledLessons({
+    page: cancelledPagination.page,
+    limit: cancelledPagination.limit,
+  });
+
+  showSuccess("Урок обновлен");
+  closeLessonDialog();
 });
 
 removeLessonFx.doneData.watch(() => {

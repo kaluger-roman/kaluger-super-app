@@ -47,22 +47,30 @@ export const getStatusLabel = (status: string): string => {
 
 export const filterLessonsByType = (
   lessons: Lesson[],
-  type: "scheduled" | "completed"
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
 ): Lesson[] => {
-  if (type === "scheduled") {
-    return lessons.filter(
-      (lesson) => lesson.status !== "COMPLETED" && lesson.status !== "CANCELLED"
-    );
-  } else {
-    return lessons.filter(
-      (lesson) => lesson.status === "COMPLETED" || lesson.status === "CANCELLED"
-    );
+  switch (type) {
+    case "scheduled":
+      return lessons.filter(
+        (lesson) =>
+          lesson.status === "SCHEDULED" ||
+          lesson.status === "IN_PROGRESS" ||
+          lesson.status === "RESCHEDULED"
+      );
+    case "completed":
+      return lessons.filter((lesson) => lesson.status === "COMPLETED");
+    case "cancelled":
+      return lessons.filter((lesson) => lesson.status === "CANCELLED");
+    case "rescheduled":
+      return lessons.filter((lesson) => lesson.status === "RESCHEDULED");
+    default:
+      return lessons;
   }
 };
 
 export const groupLessonsByDate = (
   lessons: Lesson[],
-  type: "scheduled" | "completed"
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
 ): GroupedLessons => {
   const grouped: GroupedLessons = {};
 
@@ -110,7 +118,7 @@ export const groupLessonsByDate = (
 
 export const sortYears = (
   years: string[],
-  type: "scheduled" | "completed"
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
 ): string[] => {
   return years.sort((a, b) => {
     if (type === "scheduled") {
@@ -123,7 +131,7 @@ export const sortYears = (
 
 export const sortMonths = (
   monthEntries: [string, any][],
-  type: "scheduled" | "completed"
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
 ): [string, any][] => {
   return monthEntries.sort(([a], [b]) => {
     const monthOrder = [

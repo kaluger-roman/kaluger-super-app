@@ -4,7 +4,9 @@ import { useStore } from "effector-react";
 import {
   $upcomingLessons,
   $completedLessons,
+  $cancelledLessons,
   $completedPagination,
+  $cancelledPagination,
   $upcomingPagination,
   $lessonsIsLoading,
 } from "../../entities";
@@ -19,8 +21,10 @@ import {
 export const LessonsPage: React.FC = () => {
   const upcomingLessons = useStore($upcomingLessons);
   const completedLessons = useStore($completedLessons);
+  const cancelledLessons = useStore($cancelledLessons);
   const upcomingPagination = useStore($upcomingPagination);
   const completedPagination = useStore($completedPagination);
+  const cancelledPagination = useStore($cancelledPagination);
   const isLoading = useStore($lessonsIsLoading);
 
   const {
@@ -30,6 +34,7 @@ export const LessonsPage: React.FC = () => {
     setConfirmDialog,
     handleTabChange,
     handleCompletedPageChange,
+    handleCancelledPageChange,
     handleUpcomingPageChange,
     handleEditLesson,
     handleDeleteLesson,
@@ -149,8 +154,10 @@ export const LessonsPage: React.FC = () => {
         currentTab={state.currentTab}
         upcomingLessons={upcomingLessons}
         completedLessons={completedLessons}
+        cancelledLessons={cancelledLessons}
         upcomingPagination={upcomingPagination}
         completedPagination={completedPagination}
+        cancelledPagination={cancelledPagination}
         onEdit={handleEditLesson}
         onDelete={handleDeleteLesson}
         onCancel={handleCancelLesson}
@@ -160,6 +167,7 @@ export const LessonsPage: React.FC = () => {
         onCardClick={handleCardClick}
         onUpcomingPageChange={handleUpcomingPageChange}
         onCompletedPageChange={handleCompletedPageChange}
+        onCancelledPageChange={handleCancelledPageChange}
       />
 
       <AddLessonFab onClick={handleAddLesson} />

@@ -19,7 +19,7 @@ type LessonsListProps = {
   onReschedule?: (lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
   onCardClick: (lesson: Lesson) => void;
-  type: "scheduled" | "completed";
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
 export const LessonsList: React.FC<LessonsListProps> = ({

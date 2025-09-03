@@ -94,7 +94,15 @@ export const useLessonForm = (
 
           // Автоматически корректируем время окончания при изменении времени начала
           if (field === "startTime") {
-            newData.endTime = new Date(date.getTime() + 60 * 60 * 1000);
+            // Сохраняем предыдущую продолжительность, если есть
+            let duration = prev.endTime.getTime() - prev.startTime.getTime();
+
+            // Если предыдущая продолжительность некорректна или равна нулю, используем 1 час
+            if (!duration || duration <= 0) {
+              duration = 60 * 60 * 1000;
+            }
+
+            newData.endTime = new Date(date.getTime() + duration);
           }
 
           return newData;
@@ -111,19 +119,6 @@ export const useLessonForm = (
 
     if (formData.startTime >= formData.endTime) {
       newErrors.endTime = "Время окончания должно быть позже времени начала";
-    }
-
-    if (formData.startTime < new Date() && !lesson) {
-      const now = new Date();
-      if (
-        formData.startTime.getFullYear() < now.getFullYear() ||
-        formData.startTime.getMonth() < now.getMonth() ||
-        formData.startTime.getDate() < now.getDate() ||
-        formData.startTime.getHours() < now.getHours() ||
-        formData.startTime.getMinutes() < now.getMinutes()
-      ) {
-        newErrors.startTime = "Время начала не может быть в прошлом";
-      }
     }
 
     if (
