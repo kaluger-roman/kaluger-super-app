@@ -3,6 +3,7 @@ import { UpdateLessonDto } from "../../types";
 import { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
+import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
 
 const validateUpdateData = async (
   id: string,
@@ -155,6 +156,28 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
         },
       },
     });
+
+    // If this lesson is recurring and start/end times changed, delegate shifting to helper
+    if (
+      existingLesson.isRecurring &&
+      (updateData.startTime || updateData.endTime) &&
+      existingLesson.status === "SCHEDULED" &&
+      updateData.status !== "RESCHEDULED"
+    ) {
+      const newStart = new Date(start);
+      const newEnd = new Date(end);
+
+      const result = await shiftFutureRecurringLessons(
+        existingLesson,
+        newStart,
+        newEnd
+      );
+      if (result.conflicts && result.conflicts.length > 0) {
+        throw new Error("Перенесенная серия конфликтует с другими уроками");
+      } else if (result.shifted && result.shifted > 0) {
+        console.log(`Shifted ${result.shifted} future recurring lessons`);
+      }
+    }
 
     res.json({
       message: "Урок успешно обновлен",

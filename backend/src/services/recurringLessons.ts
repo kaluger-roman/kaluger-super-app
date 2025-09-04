@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import { groupRecurringLessonsByPattern } from "./recurringHelpers";
 
 export const processRecurringLessons = async () => {
   try {
@@ -21,26 +22,7 @@ export const processRecurringLessons = async () => {
     }
 
     // Группируем уроки по уникальным комбинациям (tutor + student + time pattern)
-    const lessonGroups = new Map<string, (typeof recurringLessons)[0]>();
-
-    for (const lesson of recurringLessons) {
-      const weekday = new Date(lesson.startTime).getDay();
-      const hour = new Date(lesson.startTime).getHours();
-      const minute = new Date(lesson.startTime).getMinutes();
-      const duration =
-        new Date(lesson.endTime).getTime() -
-        new Date(lesson.startTime).getTime();
-
-      const key = `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}-${duration}`;
-
-      // Берем самый поздний урок из группы как основу для создания новых
-      if (
-        !lessonGroups.has(key) ||
-        new Date(lesson.startTime) > new Date(lessonGroups.get(key)!.startTime)
-      ) {
-        lessonGroups.set(key, lesson);
-      }
-    }
+    const lessonGroups = groupRecurringLessonsByPattern(recurringLessons);
 
     const threeMonthsFromNow = new Date();
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);

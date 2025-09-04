@@ -64,11 +64,37 @@ export const LessonForm: React.FC<LessonFormProps> = ({
         isPaid: formData.isPaid,
       };
 
-      if (lesson) {
-        updateLesson({ id: lesson.id, data: lessonData as UpdateLessonDto });
-      } else {
-        addLesson(lessonData as CreateLessonDto);
+      const performUpdate = () => {
+        if (lesson) {
+          updateLesson({ id: lesson.id, data: lessonData as UpdateLessonDto });
+        } else {
+          addLesson(lessonData as CreateLessonDto);
+        }
+      };
+
+      // If editing an existing recurring lesson and time changed, show confirmation
+      if (lesson && lesson.isRecurring && lesson.status === "SCHEDULED") {
+        const oldStart = new Date(lesson.startTime).toISOString();
+        const oldEnd = new Date(lesson.endTime).toISOString();
+        if (
+          oldStart !== lessonData.startTime ||
+          oldEnd !== lessonData.endTime
+        ) {
+          setConfirmDialog({
+            open: true,
+            title: "Изменение времени регулярного урока",
+            message:
+              "Вы уверены? Время будет изменено у всех ещё несостоявшихся запланированных и не перенесённых регулярных уроков в этой серии.",
+            action: async () => {
+              performUpdate();
+              setConfirmDialog((prev) => ({ ...prev, open: false }));
+            },
+          });
+          return;
+        }
       }
+
+      performUpdate();
     } catch (error) {
       console.error("Lesson form error:", error);
     }

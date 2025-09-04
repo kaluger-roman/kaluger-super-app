@@ -32,7 +32,6 @@ export type Lesson = {
   grade?: number;
   status: LessonStatus;
   isRecurring?: boolean; // Регулярное занятие
-  recurringParentId?: string; // ID родительского регулярного урока
   createdAt: string;
   updatedAt: string;
   studentId: string;
