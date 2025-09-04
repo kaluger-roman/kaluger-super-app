@@ -112,11 +112,12 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       : existingLesson.endTime;
 
     let computedStatus: any = undefined;
-    if (end.getTime() <= now.getTime()) {
+    if (end.getTime() <= now.getTime() && updateData.status !== "CANCELLED") {
       computedStatus = "COMPLETED";
     } else if (
       start.getTime() <= now.getTime() &&
-      end.getTime() > now.getTime()
+      end.getTime() > now.getTime() &&
+      updateData.status !== "CANCELLED"
     ) {
       computedStatus = "IN_PROGRESS";
     } else {
