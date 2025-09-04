@@ -16,6 +16,7 @@ import {
   DateTimeSelector,
   PriceInput,
 } from "../components";
+import { PastDateNotice } from "./PastDateNotice";
 
 type LessonFormContentProps = {
   formData: any;
@@ -76,6 +77,11 @@ export const LessonFormContent = ({
             isLoading={isLoading}
             isMobile={isMobile}
             onDateChange={handleDateChange}
+          />
+          <PastDateNotice
+            startTime={formData.startTime}
+            endTime={formData.endTime}
+            lesson={lesson}
           />
 
           <PriceInput

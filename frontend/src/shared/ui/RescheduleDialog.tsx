@@ -16,6 +16,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ru } from "date-fns/locale";
 import { Lesson, SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../types";
+import { PastDateNotice } from "../../features/lessons/ui/LessonForm/components/PastDateNotice";
 
 type RescheduleDialogProps = {
   open: boolean;
@@ -152,6 +153,12 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                   size: isMobile ? "small" : "medium",
                 },
               }}
+            />
+
+            <PastDateNotice
+              startTime={newStartTime}
+              endTime={newEndTime}
+              lesson={lesson}
             />
 
             <DateTimePicker
