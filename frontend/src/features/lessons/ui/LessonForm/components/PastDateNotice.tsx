@@ -1,11 +1,11 @@
 import React from "react";
-import { Alert, IconButton } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Alert } from "@mui/material";
+import { Lesson } from "../../../../../shared";
 
 type Props = {
   startTime: Date;
   endTime: Date;
-  lesson?: any;
+  lesson?: Lesson;
 };
 
 export const PastDateNotice: React.FC<Props> = ({
@@ -40,7 +40,7 @@ export const PastDateNotice: React.FC<Props> = ({
         statusCode = "SCHEDULED";
       }
 
-      if (start && start.getTime() < now) {
+      if (start && start.getTime() < now && lesson?.status !== "COMPLETED") {
         const ruLabel =
           statusCode === "COMPLETED"
             ? "Завершён"

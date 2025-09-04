@@ -77,6 +77,7 @@ export const LessonFormContent = ({
             isLoading={isLoading}
             isMobile={isMobile}
             onDateChange={handleDateChange}
+            lesson={lesson}
           />
           <PastDateNotice
             startTime={formData.startTime}
