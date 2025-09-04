@@ -6,19 +6,6 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export const calculateEarningsChange = (
-  earnings: number,
-  lastMonthEarnings: number
-) => {
-  const change = earnings - lastMonthEarnings;
-  const changePercent =
-    lastMonthEarnings > 0
-      ? ((change / lastMonthEarnings) * 100).toFixed(1)
-      : "0";
-
-  return { change, changePercent };
-};
-
 export const calculateCompletionRate = (
   completed: number,
   total: number

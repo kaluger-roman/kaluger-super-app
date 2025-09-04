@@ -25,7 +25,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              📈 Показатели эффективности
+              📈 Показатели эффективности (период)
             </Typography>
             <Box display="flex" flexDirection="column" gap={2}>
               <Box>

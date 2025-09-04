@@ -48,7 +48,7 @@ export const PastDateNotice: React.FC<Props> = ({
             ? "Идёт сейчас"
             : "Запланирован";
 
-        const text = `Вы указали дату в прошлом. После сохранения статус будет '${ruLabel}'.`;
+        const text = `Согласно указанной дате после сохранения статус будет '${ruLabel}'.`;
 
         setMessage(text);
         setVisible(true);

@@ -114,6 +114,8 @@ export type Statistics = {
   earnings: number;
   lastMonthEarnings: number;
   lostEarnings: number;
+  upcomingIncome?: number;
+  trialLessonsCount?: number;
 };
 
 // Re-export date formatting functions for convenience

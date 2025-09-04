@@ -9,13 +9,7 @@ import {
   Button,
   Typography,
   Box,
-  IconButton,
-  Tooltip,
 } from "@mui/material";
-import {
-  Payment as PaymentIcon,
-  PaymentOutlined as PaymentOutlinedIcon,
-} from "@mui/icons-material";
 import { Lesson } from "../types";
 
 type PaymentStatusProps = {
@@ -37,6 +31,9 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
   const [pendingPaymentStatus, setPendingPaymentStatus] = useState<
     boolean | null
   >(null);
+
+  // Don't show payment toggle for free lessons — toggle should appear only when there's a price
+  if (!lesson.price) return null;
 
   const handlePaymentToggle = (newStatus: boolean) => {
     setPendingPaymentStatus(newStatus);

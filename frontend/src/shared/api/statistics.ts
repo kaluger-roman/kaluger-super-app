@@ -8,6 +8,13 @@ export type Statistics = {
   earnings: number;
   lastMonthEarnings: number;
   lostEarnings: number;
+  upcomingIncome?: number;
+  prepaidIncome?: number;
+  unpaidDebtSum?: number;
+  unpaidDebtCount?: number;
+  unpaidDebtOver24hSum?: number;
+  unpaidDebtOver24hCount?: number;
+  trialLessonsCount?: number;
 };
 
 export type LessonsBySubject = {
