@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processRecurringLessons = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const recurringHelpers_1 = require("./recurringHelpers");
 const processRecurringLessons = async () => {
     try {
         console.log("Processing recurring lessons...");
@@ -23,20 +24,7 @@ const processRecurringLessons = async () => {
             return;
         }
         // Группируем уроки по уникальным комбинациям (tutor + student + time pattern)
-        const lessonGroups = new Map();
-        for (const lesson of recurringLessons) {
-            const weekday = new Date(lesson.startTime).getDay();
-            const hour = new Date(lesson.startTime).getHours();
-            const minute = new Date(lesson.startTime).getMinutes();
-            const duration = new Date(lesson.endTime).getTime() -
-                new Date(lesson.startTime).getTime();
-            const key = `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}-${duration}`;
-            // Берем самый поздний урок из группы как основу для создания новых
-            if (!lessonGroups.has(key) ||
-                new Date(lesson.startTime) > new Date(lessonGroups.get(key).startTime)) {
-                lessonGroups.set(key, lesson);
-            }
-        }
+        const lessonGroups = (0, recurringHelpers_1.groupRecurringLessonsByPattern)(recurringLessons);
         const threeMonthsFromNow = new Date();
         threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
         let createdCount = 0;

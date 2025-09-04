@@ -6,9 +6,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateLesson = void 0;
 const wsManager_1 = require("../../lib/wsManager");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
+const recurringHelpers_1 = require("../../services/recurringHelpers");
 const validateUpdateData = async (id, userId, updateData, existingLesson) => {
     // Validation for time updates
     if (updateData.startTime || updateData.endTime) {
+        // Do not allow changing times for cancelled lessons (can't reschedule a cancelled lesson)
+        if (existingLesson.status === "CANCELLED") {
+            return {
+                isValid: false,
+                error: "Невозможно перенести отменённый урок. Сначала восстановите урок",
+                statusCode: 400,
+            };
+        }
         const start = updateData.startTime
             ? new Date(updateData.startTime)
             : existingLesson.startTime;
@@ -91,11 +100,12 @@ const updateLesson = async (req, res) => {
             ? new Date(updateData.endTime)
             : existingLesson.endTime;
         let computedStatus = undefined;
-        if (end.getTime() <= now.getTime()) {
+        if (end.getTime() <= now.getTime() && updateData.status !== "CANCELLED") {
             computedStatus = "COMPLETED";
         }
         else if (start.getTime() <= now.getTime() &&
-            end.getTime() > now.getTime()) {
+            end.getTime() > now.getTime() &&
+            updateData.status !== "CANCELLED") {
             computedStatus = "IN_PROGRESS";
         }
         else {
@@ -122,6 +132,21 @@ const updateLesson = async (req, res) => {
                 },
             },
         });
+        // If this lesson is recurring and start/end times changed, delegate shifting to helper
+        if (existingLesson.isRecurring &&
+            (updateData.startTime || updateData.endTime) &&
+            existingLesson.status === "SCHEDULED" &&
+            updateData.status !== "RESCHEDULED") {
+            const newStart = new Date(start);
+            const newEnd = new Date(end);
+            const result = await (0, recurringHelpers_1.shiftFutureRecurringLessons)(existingLesson, newStart, newEnd);
+            if (result.conflicts && result.conflicts.length > 0) {
+                throw new Error("Перенесенная серия конфликтует с другими уроками");
+            }
+            else if (result.shifted && result.shifted > 0) {
+                console.log(`Shifted ${result.shifted} future recurring lessons`);
+            }
+        }
         res.json({
             message: "Урок успешно обновлен",
             lesson,
