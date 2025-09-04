@@ -12,6 +12,15 @@ const validateUpdateData = async (
 ) => {
   // Validation for time updates
   if (updateData.startTime || updateData.endTime) {
+    // Do not allow changing times for cancelled lessons (can't reschedule a cancelled lesson)
+    if (existingLesson.status === "CANCELLED") {
+      return {
+        isValid: false,
+        error:
+          "Невозможно перенести отменённый урок. Сначала восстановите урок",
+        statusCode: 400,
+      };
+    }
     const start = updateData.startTime
       ? new Date(updateData.startTime)
       : existingLesson.startTime;

@@ -49,7 +49,7 @@ export const LessonDialogActions: React.FC<LessonDialogActionsProps> = ({
           flex: 1,
         }}
       >
-        {onReschedule && (
+        {onReschedule && lesson.status !== "CANCELLED" && (
           <Button
             onClick={onReschedule}
             variant="outlined"

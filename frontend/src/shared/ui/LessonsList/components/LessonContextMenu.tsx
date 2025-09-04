@@ -38,7 +38,7 @@ export const LessonContextMenu: React.FC<LessonContextMenuProps> = ({
           Редактировать
         </MenuItem>
       )}
-      {onReschedule && (
+      {onReschedule && selectedLesson?.status !== "CANCELLED" && (
         <MenuItem onClick={onReschedule}>
           <RescheduleIcon sx={{ mr: 1 }} />
           Перенести урок
