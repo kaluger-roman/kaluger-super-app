@@ -4,6 +4,7 @@ import { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
+import { truncateToMinute } from "../../utils/time";
 
 const createSingleLesson = async (
   userId: string,
@@ -23,13 +24,13 @@ const createSingleLesson = async (
     studentId,
   } = data;
 
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  const start = truncateToMinute(new Date(startTime));
+  const end = truncateToMinute(new Date(endTime));
 
   // Determine initial status based on times: if the lesson is already finished -> COMPLETED,
   // if it's currently ongoing -> IN_PROGRESS, otherwise keep default SCHEDULED.
   let computedStatus: any = undefined;
-  const now = new Date();
+  const now = truncateToMinute(new Date());
   if (end.getTime() <= now.getTime()) {
     computedStatus = "COMPLETED";
   } else if (
@@ -101,16 +102,16 @@ const createRecurringLessons = async (
     studentId,
   } = data;
 
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  const start = truncateToMinute(new Date(startTime));
+  const end = truncateToMinute(new Date(endTime));
 
   // Создаем регулярные уроки на 3 месяца вперед
   const lessons = [];
-  const threeMonthsLater = new Date(start);
+  const threeMonthsLater = truncateToMinute(new Date(start));
   threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
-  let currentStart = new Date(start);
-  let currentEnd = new Date(end);
+  let currentStart = truncateToMinute(new Date(start));
+  let currentEnd = truncateToMinute(new Date(end));
 
   while (currentStart <= threeMonthsLater) {
     // Check for scheduling conflicts
@@ -127,8 +128,8 @@ const createRecurringLessons = async (
         lessonType,
         description:
           currentStart.getTime() === start.getTime() ? description : undefined,
-        startTime: currentStart,
-        endTime: currentEnd,
+        startTime: truncateToMinute(currentStart),
+        endTime: truncateToMinute(currentEnd),
         price: price || student.hourlyRate,
         homework:
           currentStart.getTime() === start.getTime() ? homework : undefined,
@@ -142,8 +143,12 @@ const createRecurringLessons = async (
     }
 
     // Move to next week
-    currentStart = new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-    currentEnd = new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+    currentStart = truncateToMinute(
+      new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+    );
+    currentEnd = truncateToMinute(
+      new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
+    );
   }
 
   if (lessons.length === 0) {

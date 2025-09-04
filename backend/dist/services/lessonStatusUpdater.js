@@ -6,8 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateLessonStatuses = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const wsManager_1 = require("../lib/wsManager");
+const time_1 = require("../utils/time");
 const updateLessonStatuses = async () => {
-    const now = new Date();
+    const now = (0, time_1.truncateToMinute)(new Date());
     const wsManager = (0, wsManager_1.getWebSocketManager)();
     try {
         // Получаем уроки, которые должны стать IN_PROGRESS

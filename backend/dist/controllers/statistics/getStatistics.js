@@ -6,11 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStatistics = void 0;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const utils_1 = require("./utils");
+const time_1 = require("../../utils/time");
 const getStatistics = async (req, res) => {
     try {
         const userId = req.user?.userId;
         const { startDate, endDate } = req.query;
-        const now = new Date();
+        const now = (0, time_1.truncateToMinute)(new Date());
         const where = (0, utils_1.buildStatisticsWhere)(userId, startDate, endDate);
         const lastMonthRange = (0, utils_1.getLastMonthRange)();
         const [completedLessons, cancelledLessons, totalLessons, earnings, lastMonthEarnings, upcomingLessons, prepaidIncome, upcomingIncome, trialLessonsCount,] = await Promise.all([
@@ -68,7 +69,7 @@ const getStatistics = async (req, res) => {
             _count: { id: true },
             _sum: { price: true },
         });
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const twentyFourHoursAgo = (0, time_1.truncateToMinute)(new Date(now.getTime() - 24 * 60 * 60 * 1000));
         const unpaidOver24h = await prisma_1.default.lesson.aggregate({
             where: {
                 ...where,

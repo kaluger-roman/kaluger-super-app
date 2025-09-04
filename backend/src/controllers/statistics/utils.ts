@@ -1,3 +1,5 @@
+import { truncateToMinute } from "../../utils/time";
+
 export const getDateRange = (startDate?: string, endDate?: string) => {
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -26,9 +28,13 @@ export const getDateRange = (startDate?: string, endDate?: string) => {
 };
 
 export const getLastMonthRange = () => {
-  const now = new Date();
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  const now = truncateToMinute(new Date());
+  const lastMonthStart = truncateToMinute(
+    new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  );
+  const lastMonthEnd = truncateToMinute(
+    new Date(now.getFullYear(), now.getMonth(), 0)
+  );
 
   return {
     gte: lastMonthStart,

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.processRecurringLessons = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const recurringHelpers_1 = require("./recurringHelpers");
+const time_1 = require("../utils/time");
 const processRecurringLessons = async () => {
     try {
         console.log("Processing recurring lessons...");
@@ -45,8 +46,8 @@ const processRecurringLessons = async () => {
             if (!lastLesson)
                 continue;
             // Создаем уроки от последнего существующего до 3 месяцев вперед
-            let currentStart = new Date(lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-            let currentEnd = new Date(lastLesson.endTime.getTime() + 7 * 24 * 60 * 60 * 1000);
+            let currentStart = (0, time_1.truncateToMinute)(new Date(lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000));
+            let currentEnd = (0, time_1.truncateToMinute)(new Date(lastLesson.endTime.getTime() + 7 * 24 * 60 * 60 * 1000));
             const lessonsToCreate = [];
             while (currentStart <= threeMonthsFromNow) {
                 // Проверяем конфликты
@@ -81,8 +82,8 @@ const processRecurringLessons = async () => {
                     });
                 }
                 // Переходим к следующей неделе
-                currentStart = new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-                currentEnd = new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+                currentStart = (0, time_1.truncateToMinute)(new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+                currentEnd = (0, time_1.truncateToMinute)(new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
             }
             if (lessonsToCreate.length > 0) {
                 await prisma_1.default.lesson.createMany({

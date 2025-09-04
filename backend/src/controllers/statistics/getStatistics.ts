@@ -2,13 +2,14 @@ import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
 import { buildStatisticsWhere, getLastMonthRange } from "./utils";
+import { truncateToMinute } from "../../utils/time";
 
 export const getStatistics = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { startDate, endDate } = req.query;
 
-    const now = new Date();
+    const now = truncateToMinute(new Date());
     const where = buildStatisticsWhere(
       userId!,
       startDate as string,
@@ -84,7 +85,9 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       _sum: { price: true },
     });
 
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twentyFourHoursAgo = truncateToMinute(
+      new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    );
     const unpaidOver24h = await prisma.lesson.aggregate({
       where: {
         ...where,

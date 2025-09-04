@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLesson = exports.getLessons = void 0;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
+const time_1 = require("../../utils/time");
 const getLessons = async (req, res) => {
     try {
         const userId = req.user?.userId;
@@ -15,7 +16,7 @@ const getLessons = async (req, res) => {
         const where = { tutorId: userId };
         // Специальная логика для предстоящих уроков
         if (upcoming === "true" && currentTime) {
-            const now = new Date(currentTime);
+            const now = (0, time_1.truncateToMinute)(new Date(currentTime));
             where.OR = [
                 { status: "IN_PROGRESS" },
                 {
@@ -29,9 +30,9 @@ const getLessons = async (req, res) => {
             if (startDate || endDate) {
                 where.startTime = {};
                 if (startDate)
-                    where.startTime.gte = new Date(startDate);
+                    where.startTime.gte = (0, time_1.truncateToMinute)(new Date(startDate));
                 if (endDate)
-                    where.startTime.lte = new Date(endDate);
+                    where.startTime.lte = (0, time_1.truncateToMinute)(new Date(endDate));
             }
             if (studentId) {
                 where.studentId = studentId;

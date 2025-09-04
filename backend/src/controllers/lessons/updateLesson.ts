@@ -4,6 +4,7 @@ import { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
+import { truncateToMinute } from "../../utils/time";
 
 const validateUpdateData = async (
   id: string,
@@ -23,10 +24,10 @@ const validateUpdateData = async (
       };
     }
     const start = updateData.startTime
-      ? new Date(updateData.startTime)
+      ? truncateToMinute(new Date(updateData.startTime))
       : existingLesson.startTime;
     const end = updateData.endTime
-      ? new Date(updateData.endTime)
+      ? truncateToMinute(new Date(updateData.endTime))
       : existingLesson.endTime;
 
     if (start >= end) {
@@ -112,14 +113,14 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     }
 
     // If times are changed (or status is not explicitly provided), compute status based on new times
-    const now = new Date();
+    const now = truncateToMinute(new Date());
 
     const start = updateData.startTime
-      ? new Date(updateData.startTime)
-      : existingLesson.startTime;
+      ? truncateToMinute(new Date(updateData.startTime))
+      : truncateToMinute(new Date(existingLesson.startTime));
     const end = updateData.endTime
-      ? new Date(updateData.endTime)
-      : existingLesson.endTime;
+      ? truncateToMinute(new Date(updateData.endTime))
+      : truncateToMinute(new Date(existingLesson.endTime));
 
     let computedStatus: any = undefined;
     if (end.getTime() <= now.getTime() && updateData.status !== "CANCELLED") {
@@ -140,6 +141,8 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
 
     const dataToUpdate = {
       ...updateData,
+      ...(updateData.startTime ? { startTime: start } : {}),
+      ...(updateData.endTime ? { endTime: end } : {}),
       ...(computedStatus ? { status: computedStatus } : {}),
     };
 
@@ -164,8 +167,8 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       existingLesson.status === "SCHEDULED" &&
       updateData.status !== "RESCHEDULED"
     ) {
-      const newStart = new Date(start);
-      const newEnd = new Date(end);
+      const newStart = truncateToMinute(new Date(start));
+      const newEnd = truncateToMinute(new Date(end));
 
       const result = await shiftFutureRecurringLessons(
         existingLesson,

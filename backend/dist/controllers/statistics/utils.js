@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildStatisticsWhere = exports.getLastMonthRange = exports.getDateRange = void 0;
+const time_1 = require("../../utils/time");
 const getDateRange = (startDate, endDate) => {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -19,9 +20,9 @@ const getDateRange = (startDate, endDate) => {
 };
 exports.getDateRange = getDateRange;
 const getLastMonthRange = () => {
-    const now = new Date();
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const now = (0, time_1.truncateToMinute)(new Date());
+    const lastMonthStart = (0, time_1.truncateToMinute)(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    const lastMonthEnd = (0, time_1.truncateToMinute)(new Date(now.getFullYear(), now.getMonth(), 0));
     return {
         gte: lastMonthStart,
         lte: lastMonthEnd,

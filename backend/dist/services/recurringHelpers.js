@@ -5,11 +5,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shiftFutureRecurringLessons = exports.groupRecurringLessonsByPattern = exports.getRecurringLessonKey = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const time_1 = require("../utils/time");
 // Build a stable grouping key for recurring lessons
 const getRecurringLessonKey = (lesson) => {
-    const weekday = new Date(lesson.startTime).getDay();
-    const hour = new Date(lesson.startTime).getHours();
-    const minute = new Date(lesson.startTime).getMinutes();
+    const t = (0, time_1.truncateToMinute)(new Date(lesson.startTime));
+    const weekday = t.getDay();
+    const hour = t.getHours();
+    const minute = t.getMinutes();
     return `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}`;
 };
 exports.getRecurringLessonKey = getRecurringLessonKey;
@@ -31,8 +33,8 @@ exports.groupRecurringLessonsByPattern = groupRecurringLessonsByPattern;
 // Shift future recurring lessons in the same group when a base lesson time changes.
 // If any planned shift conflicts with existing lessons, abort all shifts and return conflicts.
 const shiftFutureRecurringLessons = async (existingLesson, newStart, newEnd) => {
-    const oldStart = new Date(existingLesson.startTime);
-    const oldEnd = new Date(existingLesson.endTime);
+    const oldStart = (0, time_1.truncateToMinute)(new Date(existingLesson.startTime));
+    const oldEnd = (0, time_1.truncateToMinute)(new Date(existingLesson.endTime));
     const deltaStart = newStart.getTime() - oldStart.getTime();
     const deltaEnd = newEnd.getTime() - oldEnd.getTime();
     const key = (0, exports.getRecurringLessonKey)(existingLesson);
@@ -51,8 +53,8 @@ const shiftFutureRecurringLessons = async (existingLesson, newStart, newEnd) => 
     }
     const toShift = futureLessons.filter((l) => (0, exports.getRecurringLessonKey)(l) === key);
     const planned = toShift.map((l) => {
-        const shiftedStart = new Date(new Date(l.startTime).getTime() + deltaStart);
-        const shiftedEnd = new Date(new Date(l.endTime).getTime() + deltaEnd);
+        const shiftedStart = (0, time_1.truncateToMinute)(new Date(new Date(l.startTime).getTime() + deltaStart));
+        const shiftedEnd = (0, time_1.truncateToMinute)(new Date(new Date(l.endTime).getTime() + deltaEnd));
         return { original: l, shiftedStart, shiftedEnd };
     });
     // Pre-check conflicts for all planned shifts

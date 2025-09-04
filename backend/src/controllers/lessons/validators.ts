@@ -1,4 +1,5 @@
 import { CreateLessonDto } from "../../types";
+import { truncateToMinute } from "../../utils/time";
 
 export const validateLessonData = (data: CreateLessonDto) => {
   const { subject, lessonType, startTime, endTime, studentId, price } = data;
@@ -11,8 +12,8 @@ export const validateLessonData = (data: CreateLessonDto) => {
     };
   }
 
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  const start = truncateToMinute(new Date(startTime));
+  const end = truncateToMinute(new Date(endTime));
 
   if (start >= end) {
     return {

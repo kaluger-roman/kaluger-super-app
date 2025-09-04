@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
+import { truncateToMinute } from "../../utils/time";
 
 export const getLessons = async (req: AuthRequest, res: Response) => {
   try {
@@ -24,7 +25,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
 
     // Специальная логика для предстоящих уроков
     if (upcoming === "true" && currentTime) {
-      const now = new Date(currentTime as string);
+      const now = truncateToMinute(new Date(currentTime as string));
       where.OR = [
         { status: "IN_PROGRESS" },
         {
@@ -36,8 +37,10 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       // Обычная логика фильтрации
       if (startDate || endDate) {
         where.startTime = {};
-        if (startDate) where.startTime.gte = new Date(startDate as string);
-        if (endDate) where.startTime.lte = new Date(endDate as string);
+        if (startDate)
+          where.startTime.gte = truncateToMinute(new Date(startDate as string));
+        if (endDate)
+          where.startTime.lte = truncateToMinute(new Date(endDate as string));
       }
 
       if (studentId) {

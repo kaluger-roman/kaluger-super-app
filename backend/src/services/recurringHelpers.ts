@@ -1,10 +1,12 @@
 import prisma from "../lib/prisma";
+import { truncateToMinute } from "../utils/time";
 
 // Build a stable grouping key for recurring lessons
 export const getRecurringLessonKey = (lesson: any) => {
-  const weekday = new Date(lesson.startTime).getDay();
-  const hour = new Date(lesson.startTime).getHours();
-  const minute = new Date(lesson.startTime).getMinutes();
+  const t = truncateToMinute(new Date(lesson.startTime));
+  const weekday = t.getDay();
+  const hour = t.getHours();
+  const minute = t.getMinutes();
 
   return `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}`;
 };
@@ -39,8 +41,8 @@ export const shiftFutureRecurringLessons = async (
   shifted: number;
   conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
 }> => {
-  const oldStart = new Date(existingLesson.startTime);
-  const oldEnd = new Date(existingLesson.endTime);
+  const oldStart = truncateToMinute(new Date(existingLesson.startTime));
+  const oldEnd = truncateToMinute(new Date(existingLesson.endTime));
 
   const deltaStart = newStart.getTime() - oldStart.getTime();
   const deltaEnd = newEnd.getTime() - oldEnd.getTime();
@@ -68,8 +70,12 @@ export const shiftFutureRecurringLessons = async (
   const toShift = futureLessons.filter((l) => getRecurringLessonKey(l) === key);
 
   const planned = toShift.map((l) => {
-    const shiftedStart = new Date(new Date(l.startTime).getTime() + deltaStart);
-    const shiftedEnd = new Date(new Date(l.endTime).getTime() + deltaEnd);
+    const shiftedStart = truncateToMinute(
+      new Date(new Date(l.startTime).getTime() + deltaStart)
+    );
+    const shiftedEnd = truncateToMinute(
+      new Date(new Date(l.endTime).getTime() + deltaEnd)
+    );
     return { original: l, shiftedStart, shiftedEnd };
   });
 

@@ -1,8 +1,9 @@
 import prisma from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
+import { truncateToMinute } from "../utils/time";
 
 export const updateLessonStatuses = async () => {
-  const now = new Date();
+  const now = truncateToMinute(new Date());
   const wsManager = getWebSocketManager();
 
   try {

@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma";
 import { groupRecurringLessonsByPattern } from "./recurringHelpers";
+import { truncateToMinute } from "../utils/time";
 
 export const processRecurringLessons = async () => {
   try {
@@ -47,11 +48,11 @@ export const processRecurringLessons = async () => {
       if (!lastLesson) continue;
 
       // Создаем уроки от последнего существующего до 3 месяцев вперед
-      let currentStart = new Date(
-        lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000
+      let currentStart = truncateToMinute(
+        new Date(lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000)
       );
-      let currentEnd = new Date(
-        lastLesson.endTime.getTime() + 7 * 24 * 60 * 60 * 1000
+      let currentEnd = truncateToMinute(
+        new Date(lastLesson.endTime.getTime() + 7 * 24 * 60 * 60 * 1000)
       );
 
       const lessonsToCreate = [];
@@ -91,10 +92,12 @@ export const processRecurringLessons = async () => {
         }
 
         // Переходим к следующей неделе
-        currentStart = new Date(
-          currentStart.getTime() + 7 * 24 * 60 * 60 * 1000
+        currentStart = truncateToMinute(
+          new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
         );
-        currentEnd = new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+        currentEnd = truncateToMinute(
+          new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
+        );
       }
 
       if (lessonsToCreate.length > 0) {

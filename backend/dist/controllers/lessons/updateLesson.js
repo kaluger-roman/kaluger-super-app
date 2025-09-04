@@ -7,6 +7,7 @@ exports.updateLesson = void 0;
 const wsManager_1 = require("../../lib/wsManager");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const recurringHelpers_1 = require("../../services/recurringHelpers");
+const time_1 = require("../../utils/time");
 const validateUpdateData = async (id, userId, updateData, existingLesson) => {
     // Validation for time updates
     if (updateData.startTime || updateData.endTime) {
@@ -19,10 +20,10 @@ const validateUpdateData = async (id, userId, updateData, existingLesson) => {
             };
         }
         const start = updateData.startTime
-            ? new Date(updateData.startTime)
+            ? (0, time_1.truncateToMinute)(new Date(updateData.startTime))
             : existingLesson.startTime;
         const end = updateData.endTime
-            ? new Date(updateData.endTime)
+            ? (0, time_1.truncateToMinute)(new Date(updateData.endTime))
             : existingLesson.endTime;
         if (start >= end) {
             return {
@@ -92,13 +93,13 @@ const updateLesson = async (req, res) => {
             return res.status(statusCode).json({ error: validation.error });
         }
         // If times are changed (or status is not explicitly provided), compute status based on new times
-        const now = new Date();
+        const now = (0, time_1.truncateToMinute)(new Date());
         const start = updateData.startTime
-            ? new Date(updateData.startTime)
-            : existingLesson.startTime;
+            ? (0, time_1.truncateToMinute)(new Date(updateData.startTime))
+            : (0, time_1.truncateToMinute)(new Date(existingLesson.startTime));
         const end = updateData.endTime
-            ? new Date(updateData.endTime)
-            : existingLesson.endTime;
+            ? (0, time_1.truncateToMinute)(new Date(updateData.endTime))
+            : (0, time_1.truncateToMinute)(new Date(existingLesson.endTime));
         let computedStatus = undefined;
         if (end.getTime() <= now.getTime() && updateData.status !== "CANCELLED") {
             computedStatus = "COMPLETED";
@@ -117,6 +118,8 @@ const updateLesson = async (req, res) => {
         }
         const dataToUpdate = {
             ...updateData,
+            ...(updateData.startTime ? { startTime: start } : {}),
+            ...(updateData.endTime ? { endTime: end } : {}),
             ...(computedStatus ? { status: computedStatus } : {}),
         };
         const lesson = await prisma_1.default.lesson.update({
@@ -137,8 +140,8 @@ const updateLesson = async (req, res) => {
             (updateData.startTime || updateData.endTime) &&
             existingLesson.status === "SCHEDULED" &&
             updateData.status !== "RESCHEDULED") {
-            const newStart = new Date(start);
-            const newEnd = new Date(end);
+            const newStart = (0, time_1.truncateToMinute)(new Date(start));
+            const newEnd = (0, time_1.truncateToMinute)(new Date(end));
             const result = await (0, recurringHelpers_1.shiftFutureRecurringLessons)(existingLesson, newStart, newEnd);
             if (result.conflicts && result.conflicts.length > 0) {
                 throw new Error("Перенесенная серия конфликтует с другими уроками");

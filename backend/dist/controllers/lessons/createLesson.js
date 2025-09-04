@@ -7,14 +7,15 @@ exports.createLesson = void 0;
 const wsManager_1 = require("../../lib/wsManager");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const validators_1 = require("./validators");
+const time_1 = require("../../utils/time");
 const createSingleLesson = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const start = (0, time_1.truncateToMinute)(new Date(startTime));
+    const end = (0, time_1.truncateToMinute)(new Date(endTime));
     // Determine initial status based on times: if the lesson is already finished -> COMPLETED,
     // if it's currently ongoing -> IN_PROGRESS, otherwise keep default SCHEDULED.
     let computedStatus = undefined;
-    const now = new Date();
+    const now = (0, time_1.truncateToMinute)(new Date());
     if (end.getTime() <= now.getTime()) {
         computedStatus = "COMPLETED";
     }
@@ -63,14 +64,14 @@ const createSingleLesson = async (userId, data, student, res) => {
 };
 const createRecurringLessons = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const start = (0, time_1.truncateToMinute)(new Date(startTime));
+    const end = (0, time_1.truncateToMinute)(new Date(endTime));
     // Создаем регулярные уроки на 3 месяца вперед
     const lessons = [];
-    const threeMonthsLater = new Date(start);
+    const threeMonthsLater = (0, time_1.truncateToMinute)(new Date(start));
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-    let currentStart = new Date(start);
-    let currentEnd = new Date(end);
+    let currentStart = (0, time_1.truncateToMinute)(new Date(start));
+    let currentEnd = (0, time_1.truncateToMinute)(new Date(end));
     while (currentStart <= threeMonthsLater) {
         // Check for scheduling conflicts
         const conflicts = await (0, validators_1.checkSchedulingConflicts)(userId, currentStart, currentEnd, prisma_1.default);
@@ -79,8 +80,8 @@ const createRecurringLessons = async (userId, data, student, res) => {
                 subject,
                 lessonType,
                 description: currentStart.getTime() === start.getTime() ? description : undefined,
-                startTime: currentStart,
-                endTime: currentEnd,
+                startTime: (0, time_1.truncateToMinute)(currentStart),
+                endTime: (0, time_1.truncateToMinute)(currentEnd),
                 price: price || student.hourlyRate,
                 homework: currentStart.getTime() === start.getTime() ? homework : undefined,
                 notes: currentStart.getTime() === start.getTime() ? notes : undefined,
@@ -91,8 +92,8 @@ const createRecurringLessons = async (userId, data, student, res) => {
             lessons.push(lessonData);
         }
         // Move to next week
-        currentStart = new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-        currentEnd = new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+        currentStart = (0, time_1.truncateToMinute)(new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+        currentEnd = (0, time_1.truncateToMinute)(new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
     }
     if (lessons.length === 0) {
         return res.status(400).json({

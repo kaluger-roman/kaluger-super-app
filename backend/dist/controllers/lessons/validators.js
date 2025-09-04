@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkSchedulingConflicts = exports.validateLessonData = void 0;
+const time_1 = require("../../utils/time");
 const validateLessonData = (data) => {
     const { subject, lessonType, startTime, endTime, studentId, price } = data;
     if (!subject || !lessonType || !startTime || !endTime || !studentId) {
@@ -9,8 +10,8 @@ const validateLessonData = (data) => {
             error: "Предмет, тип урока, время начала, время окончания и ID студента обязательны",
         };
     }
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const start = (0, time_1.truncateToMinute)(new Date(startTime));
+    const end = (0, time_1.truncateToMinute)(new Date(endTime));
     if (start >= end) {
         return {
             isValid: false,
