@@ -154,7 +154,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },

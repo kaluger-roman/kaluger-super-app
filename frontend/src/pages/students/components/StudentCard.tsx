@@ -40,19 +40,25 @@ export const StudentCard: React.FC<StudentCardProps> = ({
           alignItems="flex-start"
         >
           <Box flex={1}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
               {student.name}
             </Typography>
-            {student.email && (
-              <Typography variant="body2" color="text.secondary">
-                {student.email}
-              </Typography>
-            )}
+
             {student.phone && (
               <Typography variant="body2" color="text.secondary">
                 {student.phone}
               </Typography>
             )}
+
+            {student.contactMethod && (
+              <Typography variant="body2" color="text.secondary">
+                {student.contactMethod === "WHATSAPP" ? "WhatsApp" : "Telegram"}
+                {student.contactMethod === "TELEGRAM" && student.telegramNick
+                  ? ` (${student.telegramNick})`
+                  : ""}
+              </Typography>
+            )}
+
             {student.hourlyRate && (
               <Typography variant="body2" color="text.secondary">
                 💰 {student.hourlyRate} ₽/час
@@ -72,6 +78,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
+                p: 0,
                 minHeight: "auto",
                 "& .MuiAccordionSummary-content": {
                   margin: "8px 0",
@@ -82,7 +89,20 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                 Подробности
               </Typography>
             </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
+            <AccordionDetails sx={{ p: 0 }}>
+              {student.parentName && (
+                <Typography variant="body2" color="text.secondary">
+                  <b>Родители:</b>{" "}
+                  {student.parentName ? `${student.parentName} ` : ""}
+                  {student.parentPhone} (
+                  {student.parentContactMethod === "WHATSAPP"
+                    ? "WhatsApp"
+                    : "Telegram"}
+                  {student.parentTelegramNick &&
+                    `: ${student.parentTelegramNick}`}
+                  )
+                </Typography>
+              )}
               {student.notes && (
                 <Box mb={1}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>

@@ -62,13 +62,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       prisma.lesson.findMany({
         where,
         include: {
-          student: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          student: true,
         },
         orderBy: { startTime: upcoming === "true" ? "asc" : "desc" },
         skip,

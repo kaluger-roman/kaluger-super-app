@@ -64,15 +64,7 @@ const createSingleLesson = async (
       tutorId: userId,
       studentId,
     },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
+    include: { student: true },
   });
 
   res.status(201).json({ lesson });
@@ -170,15 +162,7 @@ const createRecurringLessons = async (
       startTime: start,
       studentId,
     },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
+    include: { student: true },
   });
 
   res.status(201).json({

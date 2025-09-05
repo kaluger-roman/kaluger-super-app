@@ -28,22 +28,26 @@ model User {
 }
 
 model Student {
-  id         String   @id @default(cuid())
-  name       String
-  email      String?
-  phone      String?
-  notes      String?
-  hourlyRate Float?
-  grade      Int? // Класс от 1 до 11
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String         @id @default(cuid())
+  name                String
+  contactMethod       ContactMethod  @default(WHATSAPP)
+  parentPhone         String?
+  parentName          String?
+  parentContactMethod ContactMethod?
+  telegramNick        String?
+  parentTelegramNick  String?
+  phone               String?
+  notes               String?
+  hourlyRate          Float?
+  grade               Int? // Класс от 1 до 11
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   tutorId String
   tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
 
   lessons Lesson[]
 
-  @@unique([email, tutorId])
   @@unique([phone, tutorId])
   @@map("students")
 }
@@ -72,6 +76,11 @@ model Lesson {
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("lessons")
+}
+
+enum ContactMethod {
+  WHATSAPP
+  TELEGRAM
 }
 
 enum LessonStatus {

@@ -30,16 +30,6 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
       />
 
       <TextField
-        label="Email"
-        type="email"
-        value={formData.email}
-        onChange={onChange("email")}
-        fullWidth
-        placeholder="student@example.com"
-        size={isMobile ? "small" : "medium"}
-      />
-
-      <TextField
         label="Телефон"
         value={formData.phone}
         onChange={onChange("phone")}
@@ -47,6 +37,80 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
         placeholder="+7 (999) 999-99-99"
         size={isMobile ? "small" : "medium"}
       />
+
+      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+        <InputLabel>Способ связи</InputLabel>
+        <Select
+          value={formData.contactMethod || "WHATSAPP"}
+          onChange={(e) =>
+            onChange("contactMethod")({
+              target: { value: e.target.value },
+            } as any)
+          }
+          label="Способ связи"
+        >
+          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
+          <MenuItem value="TELEGRAM">Telegram</MenuItem>
+        </Select>
+      </FormControl>
+
+      {formData.contactMethod === "TELEGRAM" && (
+        <TextField
+          label="Telegram ник"
+          value={(formData as any).telegramNick || ""}
+          onChange={onChange("telegramNick")}
+          fullWidth
+          placeholder="@nickname"
+          size={isMobile ? "small" : "medium"}
+        />
+      )}
+
+      <TextField
+        label="Имя родителя"
+        value={(formData as any).parentName || ""}
+        onChange={onChange("parentName")}
+        fullWidth
+        placeholder="Имя родителя"
+        size={isMobile ? "small" : "medium"}
+      />
+
+      <TextField
+        label="Телефон родителя"
+        value={formData.parentPhone}
+        onChange={onChange("parentPhone")}
+        fullWidth
+        placeholder="+7 (999) 999-99-99"
+        size={isMobile ? "small" : "medium"}
+      />
+
+      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+        <InputLabel>Способ связи (родители)</InputLabel>
+        <Select
+          value={formData.parentContactMethod || "WHATSAPP"}
+          onChange={(e) =>
+            onChange("parentContactMethod")({
+              target: { value: e.target.value },
+            } as any)
+          }
+          label="Способ связи (родители)"
+        >
+          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
+          <MenuItem value="TELEGRAM">Telegram</MenuItem>
+        </Select>
+      </FormControl>
+
+      {formData.parentContactMethod === "TELEGRAM" && (
+        <TextField
+          label="Telegram ник (родители)"
+          value={(formData as any).parentTelegramNick || ""}
+          onChange={onChange("parentTelegramNick")}
+          fullWidth
+          placeholder="@parent_nick"
+          size={isMobile ? "small" : "medium"}
+        />
+      )}
+
+      {/* main student phone input (already present above) */}
 
       <TextField
         label="Почасовая ставка"

@@ -8,7 +8,12 @@ export type User = {
 export type Student = {
   id: string;
   name: string;
-  email?: string | null;
+  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  parentPhone?: string | null;
+  parentName?: string | null;
+  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  telegramNick?: string | null;
+  parentTelegramNick?: string | null;
   phone?: string | null;
   notes?: string | null;
   hourlyRate?: number | null;
@@ -35,7 +40,15 @@ export type Lesson = {
   createdAt: string;
   updatedAt: string;
   studentId: string;
-  student?: Pick<Student, "id" | "name" | "email">;
+  student?: Pick<
+    Student,
+    | "id"
+    | "name"
+    | "phone"
+    | "contactMethod"
+    | "parentPhone"
+    | "parentContactMethod"
+  >;
 };
 
 export type LessonStatus =
@@ -63,7 +76,12 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
 
 export type CreateStudentDto = {
   name: string;
-  email?: string | null;
+  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  parentPhone?: string | null;
+  parentName?: string | null;
+  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  telegramNick?: string | null;
+  parentTelegramNick?: string | null;
   phone?: string | null;
   notes?: string | null;
   hourlyRate?: number | null;

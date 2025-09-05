@@ -21,7 +21,12 @@ export const useStudentForm = (
 
   const [formData, setFormData] = useState<StudentFormData>({
     name: "",
-    email: "",
+    contactMethod: "WHATSAPP",
+    parentPhone: "",
+    parentName: "",
+    parentContactMethod: "WHATSAPP",
+    telegramNick: "",
+    parentTelegramNick: "",
     phone: "",
     hourlyRate: "",
     grade: "",
@@ -43,7 +48,12 @@ export const useStudentForm = (
       if (student) {
         setFormData({
           name: student.name || "",
-          email: student.email || "",
+          contactMethod: student.contactMethod || "WHATSAPP",
+          parentPhone: student.parentPhone || "",
+          parentName: student.parentName || "",
+          parentContactMethod: student.parentContactMethod || "WHATSAPP",
+          telegramNick: student.telegramNick || "",
+          parentTelegramNick: student.parentTelegramNick || "",
           phone: student.phone || "",
           hourlyRate: student.hourlyRate?.toString() || "",
           grade: student.grade?.toString() || "",
@@ -52,7 +62,12 @@ export const useStudentForm = (
       } else {
         setFormData({
           name: "",
-          email: "",
+          contactMethod: "WHATSAPP",
+          parentPhone: "",
+          parentName: "",
+          parentContactMethod: "WHATSAPP",
+          telegramNick: "",
+          parentTelegramNick: "",
           phone: "",
           hourlyRate: "",
           grade: "",
@@ -91,7 +106,12 @@ export const useStudentForm = (
 
   const prepareStudentData = () => ({
     name: formData.name.trim(),
-    email: formData.email.trim() || "",
+    contactMethod: formData.contactMethod,
+    telegramNick: formData.telegramNick?.trim() || "",
+    parentPhone: formData.parentPhone?.trim() || "",
+    parentName: formData.parentName?.trim() || "",
+    parentContactMethod: formData.parentContactMethod || undefined,
+    parentTelegramNick: formData.parentTelegramNick?.trim() || "",
     phone: formData.phone.trim() || "",
     hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
     grade:
@@ -115,7 +135,12 @@ export const useStudentForm = (
         // For creation, don't send empty strings - use undefined
         const createData = {
           name: studentData.name,
-          email: studentData.email || undefined,
+          contactMethod: studentData.contactMethod || undefined,
+          telegramNick: studentData.telegramNick || undefined,
+          parentPhone: studentData.parentPhone || undefined,
+          parentName: studentData.parentName || undefined,
+          parentTelegramNick: studentData.parentTelegramNick || undefined,
+          parentContactMethod: studentData.parentContactMethod || undefined,
           phone: studentData.phone || undefined,
           hourlyRate: studentData.hourlyRate || undefined,
           grade: studentData.grade || undefined,

@@ -1,4 +1,3 @@
-export { StudentCard } from "./ui/StudentCard";
 export {
   $students,
   $currentStudent,

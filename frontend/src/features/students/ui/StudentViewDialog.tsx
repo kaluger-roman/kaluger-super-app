@@ -93,28 +93,52 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
               )}
             </Box>
 
-            {(student.email || student.phone) && <Divider />}
+            {(student.contactMethod ||
+              student.phone ||
+              student.parentPhone) && <Divider />}
 
             {/* Контактная информация */}
-            {(student.email || student.phone) && (
+            {(student.contactMethod ||
+              student.phone ||
+              student.parentPhone) && (
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   📞 Контакты
                 </Typography>
-                {student.email && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    Email: {student.email}
-                  </Typography>
-                )}
                 {student.phone && (
                   <Typography variant="body2" color="text.secondary">
                     Телефон: {student.phone}
                   </Typography>
                 )}
+                {student.contactMethod && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    {student.contactMethod === "WHATSAPP"
+                      ? "WhatsApp"
+                      : `Telegram (${student.telegramNick})`}
+                  </Typography>
+                )}
+
+                {student.parentPhone && (
+                  <Typography variant="body2" color="text.secondary">
+                    Родители:{" "}
+                    {student.parentName ? `${student.parentName} — ` : ""}
+                    {student.parentPhone} (
+                    {student.parentContactMethod === "WHATSAPP"
+                      ? "WhatsApp"
+                      : "Telegram"}
+                    )
+                  </Typography>
+                )}
+                {student.parentContactMethod === "TELEGRAM" &&
+                  student.parentTelegramNick && (
+                    <Typography variant="body2" color="text.secondary">
+                      Telegram (родители): @{student.parentTelegramNick}
+                    </Typography>
+                  )}
               </Box>
             )}
 

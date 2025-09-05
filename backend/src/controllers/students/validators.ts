@@ -1,9 +1,5 @@
 import { CreateStudentDto, UpdateStudentDto } from "../../types";
 
-export const validateEmail = (email: string): boolean => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
-
 export const validateCreateStudentDto = (data: CreateStudentDto) => {
   const errors: string[] = [];
 
@@ -11,8 +7,8 @@ export const validateCreateStudentDto = (data: CreateStudentDto) => {
     errors.push("Имя обязательно для заполнения");
   }
 
-  if (data.email && !validateEmail(data.email)) {
-    errors.push("Неверный формат email");
+  if (!data.contactMethod) {
+    errors.push("Не выбран способ связи (WhatsApp или Telegram)");
   }
 
   if (data.hourlyRate && data.hourlyRate < 0) {
@@ -33,8 +29,8 @@ export const validateCreateStudentDto = (data: CreateStudentDto) => {
 export const validateUpdateStudentDto = (data: UpdateStudentDto) => {
   const errors: string[] = [];
 
-  if (data.email && !validateEmail(data.email)) {
-    errors.push("Неверный формат email");
+  if ("contactMethod" in data && !data.contactMethod) {
+    errors.push("Не выбран способ связи (WhatsApp или Telegram)");
   }
 
   if (data.hourlyRate && data.hourlyRate < 0) {
@@ -46,9 +42,29 @@ export const validateUpdateStudentDto = (data: UpdateStudentDto) => {
 
 export const prepareUpdateData = (updateData: UpdateStudentDto) => {
   const preparedData: any = { ...updateData };
-
-  if ("email" in updateData) {
-    preparedData.email = updateData.email === "" ? null : updateData.email;
+  if ("contactMethod" in updateData) {
+    preparedData.contactMethod = updateData.contactMethod || undefined;
+  }
+  if ("parentPhone" in updateData) {
+    preparedData.parentPhone =
+      updateData.parentPhone === "" ? null : updateData.parentPhone;
+  }
+  if ("parentContactMethod" in updateData) {
+    preparedData.parentContactMethod = updateData.parentContactMethod || null;
+  }
+  if ("telegramNick" in updateData) {
+    preparedData.telegramNick =
+      updateData.telegramNick === "" ? null : updateData.telegramNick;
+  }
+  if ("parentTelegramNick" in updateData) {
+    preparedData.parentTelegramNick =
+      updateData.parentTelegramNick === ""
+        ? null
+        : updateData.parentTelegramNick;
+  }
+  if ("parentName" in updateData) {
+    preparedData.parentName =
+      updateData.parentName === "" ? null : updateData.parentName;
   }
   if ("phone" in updateData) {
     preparedData.phone = updateData.phone === "" ? null : updateData.phone;

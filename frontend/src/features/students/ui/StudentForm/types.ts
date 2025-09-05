@@ -2,7 +2,12 @@ import type { Student } from "../../../../shared";
 
 export type StudentFormData = {
   name: string;
-  email: string;
+  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  parentPhone?: string;
+  parentName?: string;
+  parentContactMethod?: "WHATSAPP" | "TELEGRAM";
+  telegramNick?: string;
+  parentTelegramNick?: string;
   phone: string;
   hourlyRate: string;
   grade: string;
