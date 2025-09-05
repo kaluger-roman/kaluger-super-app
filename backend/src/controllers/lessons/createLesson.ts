@@ -56,7 +56,7 @@ const createSingleLesson = async (
       description,
       startTime: start,
       endTime: end,
-      price: price,
+      price: price || student.hourlyRate,
       homework,
       notes,
       ...(computedStatus ? { status: computedStatus } : {}),
@@ -122,7 +122,7 @@ const createRecurringLessons = async (
           currentStart.getTime() === start.getTime() ? description : undefined,
         startTime: truncateToMinute(currentStart),
         endTime: truncateToMinute(currentEnd),
-        price: price,
+        price: price || student.hourlyRate,
         homework:
           currentStart.getTime() === start.getTime() ? homework : undefined,
         notes: currentStart.getTime() === start.getTime() ? notes : undefined,

@@ -28,6 +28,7 @@ export const useStudentForm = (
     telegramNick: "",
     parentTelegramNick: "",
     phone: "",
+    hourlyRate: "",
     grade: "",
     notes: "",
   });
@@ -54,6 +55,7 @@ export const useStudentForm = (
           telegramNick: student.telegramNick || "",
           parentTelegramNick: student.parentTelegramNick || "",
           phone: student.phone || "",
+          hourlyRate: student.hourlyRate?.toString() || "",
           grade: student.grade?.toString() || "",
           notes: student.notes || "",
         });
@@ -67,6 +69,7 @@ export const useStudentForm = (
           telegramNick: "",
           parentTelegramNick: "",
           phone: "",
+          hourlyRate: "",
           grade: "",
           notes: "",
         });
@@ -110,6 +113,7 @@ export const useStudentForm = (
     parentContactMethod: formData.parentContactMethod || undefined,
     parentTelegramNick: formData.parentTelegramNick?.trim() || "",
     phone: formData.phone.trim() || "",
+    hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
     grade:
       formData.grade && formData.grade !== ""
         ? parseInt(formData.grade, 10)
@@ -138,6 +142,7 @@ export const useStudentForm = (
           parentTelegramNick: studentData.parentTelegramNick || undefined,
           parentContactMethod: studentData.parentContactMethod || undefined,
           phone: studentData.phone || undefined,
+          hourlyRate: studentData.hourlyRate || undefined,
           grade: studentData.grade || undefined,
           notes: studentData.notes || undefined,
         };

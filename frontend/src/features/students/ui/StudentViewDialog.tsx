@@ -86,6 +86,11 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
                   🎓 {student.grade} класс
                 </Typography>
               )}
+              {student.hourlyRate && (
+                <Typography variant="body1" gutterBottom>
+                  💰 {student.hourlyRate} ₽/час
+                </Typography>
+              )}
             </Box>
 
             {(student.contactMethod ||

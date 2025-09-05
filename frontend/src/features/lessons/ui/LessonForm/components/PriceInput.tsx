@@ -1,5 +1,7 @@
 import React from "react";
 import { TextField } from "@mui/material";
+import { useStore } from "effector-react";
+import { $students } from "../../../../../entities/student";
 import type { LessonFormData } from "../types";
 
 type PriceInputProps = {
@@ -17,6 +19,9 @@ export const PriceInput: React.FC<PriceInputProps> = ({
   isMobile,
   onChange,
 }) => {
+  const students = useStore($students);
+  const selectedStudent = students.find((s) => s.id === formData.studentId);
+
   return (
     <TextField
       label="Стоимость урока (₽)"
@@ -25,6 +30,7 @@ export const PriceInput: React.FC<PriceInputProps> = ({
       onChange={onChange("price")}
       error={!!errors.price}
       helperText={errors.price}
+      placeholder={selectedStudent?.hourlyRate?.toString()}
       fullWidth
       disabled={isLoading}
       size={isMobile ? "small" : "medium"}
