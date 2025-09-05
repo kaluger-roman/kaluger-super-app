@@ -61,7 +61,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
             {student.hourlyRate && (
               <Typography variant="body2" color="text.secondary">
-                💰 {student.hourlyRate} ₽/час
+                💰 {student.hourlyRate} ₽/урок
               </Typography>
             )}
           </Box>

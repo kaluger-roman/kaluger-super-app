@@ -88,7 +88,7 @@ export const StudentViewDialog: React.FC<StudentViewDialogProps> = ({
               )}
               {student.hourlyRate && (
                 <Typography variant="body1" gutterBottom>
-                  💰 {student.hourlyRate} ₽/час
+                  💰 {student.hourlyRate} ₽/урок
                 </Typography>
               )}
             </Box>

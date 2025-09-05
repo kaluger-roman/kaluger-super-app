@@ -113,7 +113,7 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
       {/* main student phone input (already present above) */}
 
       <TextField
-        label="Почасовая ставка"
+        label="Ставка"
         type="number"
         value={formData.hourlyRate}
         onChange={onChange("hourlyRate")}

@@ -40,12 +40,40 @@ export const StudentSelector: React.FC<StudentSelectorProps> = ({
         label="Ученик *"
         disabled={isLoading}
       >
-        {students.map((student) => (
-          <MenuItem key={student.id} value={student.id}>
-            {student.name}
-            {student.hourlyRate && ` (${student.hourlyRate} ₽/час)`}
-          </MenuItem>
-        ))}
+        {students.map((student) => {
+          const contact = student.phone || student.telegramNick || null;
+          const contactLabel = `${contact};` || "Нет контакта;";
+
+          return (
+            <MenuItem
+              key={student.id}
+              value={student.id}
+              sx={{ alignItems: "flex-start" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  whiteSpace: "normal",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>{student.name}</span>
+                <span
+                  style={{
+                    marginTop: 4,
+                    fontSize: 13,
+                    color: "rgba(0,0,0,0.6)",
+                  }}
+                >
+                  {contactLabel}
+                  {student.hourlyRate && ` ${student.hourlyRate} ₽/занятие`}
+                </span>
+              </div>
+            </MenuItem>
+          );
+        })}
       </Select>
       {errors.studentId && (
         <Alert severity="error" sx={{ mt: 1 }}>
