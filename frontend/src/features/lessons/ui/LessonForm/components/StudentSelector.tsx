@@ -43,7 +43,6 @@ export const StudentSelector: React.FC<StudentSelectorProps> = ({
         {students.map((student) => (
           <MenuItem key={student.id} value={student.id}>
             {student.name}
-            {student.hourlyRate && ` (${student.hourlyRate} ₽/час)`}
           </MenuItem>
         ))}
       </Select>

@@ -58,12 +58,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                   : ""}
               </Typography>
             )}
-
-            {student.hourlyRate && (
-              <Typography variant="body2" color="text.secondary">
-                💰 {student.hourlyRate} ₽/час
-              </Typography>
-            )}
           </Box>
           <IconButton size="small" onClick={(e) => onMenuClick(e, student)}>
             <MoreVertIcon />

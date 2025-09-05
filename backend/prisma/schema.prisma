@@ -38,7 +38,6 @@ model Student {
   parentTelegramNick  String?
   phone               String?
   notes               String?
-  hourlyRate          Float?
   grade               Int? // Класс от 1 до 11
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt

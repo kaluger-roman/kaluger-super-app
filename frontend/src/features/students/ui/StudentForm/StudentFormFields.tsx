@@ -2,7 +2,6 @@ import React from "react";
 import {
   Box,
   TextField,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
@@ -111,19 +110,6 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
       )}
 
       {/* main student phone input (already present above) */}
-
-      <TextField
-        label="Почасовая ставка"
-        type="number"
-        value={formData.hourlyRate}
-        onChange={onChange("hourlyRate")}
-        fullWidth
-        InputProps={{
-          startAdornment: <InputAdornment position="start">₽</InputAdornment>,
-        }}
-        placeholder="1000"
-        size={isMobile ? "small" : "medium"}
-      />
 
       <FormControl fullWidth size={isMobile ? "small" : "medium"}>
         <InputLabel>Класс</InputLabel>

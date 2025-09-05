@@ -37,9 +37,7 @@ export const StudentsOverview = ({ students }: StudentsOverviewProps) => {
               </Box>
               <Box textAlign="right">
                 <Typography variant="body2">
-                  {student.hourlyRate
-                    ? `${student.hourlyRate} ₽/час`
-                    : "Ставка не указана"}
+                  {student.grade ? `${student.grade} класс` : "Класс не указан"}
                 </Typography>
               </Box>
             </Box>

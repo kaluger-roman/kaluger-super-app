@@ -11,10 +11,6 @@ export const validateCreateStudentDto = (data: CreateStudentDto) => {
     errors.push("Не выбран способ связи (WhatsApp или Telegram)");
   }
 
-  if (data.hourlyRate && data.hourlyRate < 0) {
-    errors.push("Почасовая ставка должна быть положительной");
-  }
-
   if (
     typeof data.grade !== "undefined" &&
     data.grade !== null &&
@@ -31,10 +27,6 @@ export const validateUpdateStudentDto = (data: UpdateStudentDto) => {
 
   if ("contactMethod" in data && !data.contactMethod) {
     errors.push("Не выбран способ связи (WhatsApp или Telegram)");
-  }
-
-  if (data.hourlyRate && data.hourlyRate < 0) {
-    errors.push("Почасовая ставка должна быть положительной");
   }
 
   return errors;
@@ -72,12 +64,7 @@ export const prepareUpdateData = (updateData: UpdateStudentDto) => {
   if ("notes" in updateData) {
     preparedData.notes = updateData.notes === "" ? null : updateData.notes;
   }
-  if ("hourlyRate" in updateData) {
-    preparedData.hourlyRate =
-      updateData.hourlyRate === null || updateData.hourlyRate === undefined
-        ? null
-        : updateData.hourlyRate;
-  }
+
   if ("grade" in updateData) {
     preparedData.grade =
       updateData.grade === null || updateData.grade === undefined

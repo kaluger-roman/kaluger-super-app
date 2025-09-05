@@ -9,7 +9,6 @@ export type StudentFormData = {
   telegramNick?: string;
   parentTelegramNick?: string;
   phone: string;
-  hourlyRate: string;
   grade: string;
   notes: string;
 };
