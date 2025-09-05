@@ -45,15 +45,7 @@ const createSingleLesson = async (userId, data, student, res) => {
             tutorId: userId,
             studentId,
         },
-        include: {
-            student: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                },
-            },
-        },
+        include: { student: true },
     });
     res.status(201).json({ lesson });
     // Отправляем WebSocket уведомление о статусе урока
@@ -111,15 +103,7 @@ const createRecurringLessons = async (userId, data, student, res) => {
             startTime: start,
             studentId,
         },
-        include: {
-            student: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                },
-            },
-        },
+        include: { student: true },
     });
     res.status(201).json({
         lesson: firstLesson,

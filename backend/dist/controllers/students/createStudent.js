@@ -19,7 +19,12 @@ const createStudent = async (req, res) => {
         const student = await prisma_1.default.student.create({
             data: {
                 name: data.name,
-                email: data.email,
+                telegramNick: data.telegramNick || null,
+                contactMethod: data.contactMethod,
+                parentPhone: data.parentPhone || null,
+                parentName: data.parentName || null,
+                parentTelegramNick: data.parentTelegramNick || null,
+                parentContactMethod: data.parentContactMethod || null,
                 phone: data.phone,
                 grade: data.grade,
                 notes: data.notes,

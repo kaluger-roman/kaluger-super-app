@@ -1,17 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prepareUpdateData = exports.validateUpdateStudentDto = exports.validateCreateStudentDto = exports.validateEmail = void 0;
-const validateEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
-exports.validateEmail = validateEmail;
+exports.prepareUpdateData = exports.validateUpdateStudentDto = exports.validateCreateStudentDto = void 0;
 const validateCreateStudentDto = (data) => {
     const errors = [];
     if (!data.name) {
         errors.push("Имя обязательно для заполнения");
     }
-    if (data.email && !(0, exports.validateEmail)(data.email)) {
-        errors.push("Неверный формат email");
+    if (!data.contactMethod) {
+        errors.push("Не выбран способ связи (WhatsApp или Telegram)");
     }
     if (data.hourlyRate && data.hourlyRate < 0) {
         errors.push("Почасовая ставка должна быть положительной");
@@ -26,8 +22,8 @@ const validateCreateStudentDto = (data) => {
 exports.validateCreateStudentDto = validateCreateStudentDto;
 const validateUpdateStudentDto = (data) => {
     const errors = [];
-    if (data.email && !(0, exports.validateEmail)(data.email)) {
-        errors.push("Неверный формат email");
+    if ("contactMethod" in data && !data.contactMethod) {
+        errors.push("Не выбран способ связи (WhatsApp или Telegram)");
     }
     if (data.hourlyRate && data.hourlyRate < 0) {
         errors.push("Почасовая ставка должна быть положительной");
@@ -37,8 +33,29 @@ const validateUpdateStudentDto = (data) => {
 exports.validateUpdateStudentDto = validateUpdateStudentDto;
 const prepareUpdateData = (updateData) => {
     const preparedData = { ...updateData };
-    if ("email" in updateData) {
-        preparedData.email = updateData.email === "" ? null : updateData.email;
+    if ("contactMethod" in updateData) {
+        preparedData.contactMethod = updateData.contactMethod || undefined;
+    }
+    if ("parentPhone" in updateData) {
+        preparedData.parentPhone =
+            updateData.parentPhone === "" ? null : updateData.parentPhone;
+    }
+    if ("parentContactMethod" in updateData) {
+        preparedData.parentContactMethod = updateData.parentContactMethod || null;
+    }
+    if ("telegramNick" in updateData) {
+        preparedData.telegramNick =
+            updateData.telegramNick === "" ? null : updateData.telegramNick;
+    }
+    if ("parentTelegramNick" in updateData) {
+        preparedData.parentTelegramNick =
+            updateData.parentTelegramNick === ""
+                ? null
+                : updateData.parentTelegramNick;
+    }
+    if ("parentName" in updateData) {
+        preparedData.parentName =
+            updateData.parentName === "" ? null : updateData.parentName;
     }
     if ("phone" in updateData) {
         preparedData.phone = updateData.phone === "" ? null : updateData.phone;
