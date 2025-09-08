@@ -15,6 +15,7 @@ type LessonsYearProps = {
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
@@ -28,6 +29,7 @@ export const LessonsYear: React.FC<LessonsYearProps> = ({
   onCardClick,
   onMenuClick,
   onPaymentChange,
+  onHomeworkSentChange,
   type,
 }) => {
   const sortedMonths = sortMonths(Object.entries(yearData), type);
@@ -86,6 +88,7 @@ export const LessonsYear: React.FC<LessonsYearProps> = ({
               onCardClick={onCardClick}
               onMenuClick={onMenuClick}
               onPaymentChange={onPaymentChange}
+              onHomeworkSentChange={onHomeworkSentChange}
               type={type}
             />
           );

@@ -53,21 +53,22 @@ model Student {
 }
 
 model Lesson {
-  id          String       @id @default(cuid())
-  subject     Subject      @default(MATHEMATICS) // Предмет (Математика, Физика)
-  lessonType  LessonType   @default(SCHOOL) // Тип урока (ЕГЭ, ОГЭ, Олимпиады, Школа)
-  description String?
-  startTime   DateTime
-  endTime     DateTime
-  price       Float?
-  isPaid      Boolean      @default(false)
-  homework    String?
-  notes       String?
-  grade       Int? // Оценка от 1 до 5
-  status      LessonStatus @default(SCHEDULED)
-  isRecurring Boolean      @default(false) // Регулярное занятие
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                      String       @id @default(cuid())
+  subject                 Subject      @default(MATHEMATICS) // Предмет (Математика, Физика)
+  lessonType              LessonType   @default(SCHOOL) // Тип урока (ЕГЭ, ОГЭ, Олимпиады, Школа)
+  description             String?
+  startTime               DateTime
+  endTime                 DateTime
+  price                   Float?
+  isPaid                  Boolean      @default(false)
+  isHomeworkSentByTeacher Boolean      @default(false)
+  homework                String?
+  notes                   String?
+  grade                   Int? // Оценка от 1 до 5
+  status                  LessonStatus @default(SCHEDULED)
+  isRecurring             Boolean      @default(false) // Регулярное занятие
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   tutorId String
   tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)

@@ -22,6 +22,7 @@ type LessonsDialogsProps = {
   onRescheduleFromView: () => void;
   onDeleteFromView: () => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   onDeleteConfirm: (deleteAllFuture?: boolean) => void;
   onRescheduleConfirm: (newStartTime: Date, newEndTime: Date) => void;
   onConfirmAction: () => void;
@@ -42,6 +43,7 @@ export const LessonsDialogs: React.FC<LessonsDialogsProps> = ({
   onRescheduleFromView,
   onDeleteFromView,
   onPaymentChange,
+  onHomeworkSentChange,
   onDeleteConfirm,
   onRescheduleConfirm,
   onConfirmAction,
@@ -64,6 +66,7 @@ export const LessonsDialogs: React.FC<LessonsDialogsProps> = ({
         onReschedule={onRescheduleFromView}
         onDelete={onDeleteFromView}
         onPaymentChange={onPaymentChange}
+        onHomeworkSentChange={onHomeworkSentChange}
       />
 
       <ConfirmDialog

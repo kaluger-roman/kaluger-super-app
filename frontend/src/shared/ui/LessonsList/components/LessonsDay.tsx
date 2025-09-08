@@ -9,6 +9,7 @@ type LessonsDayProps = {
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
 };
 
 export const LessonsDay: React.FC<LessonsDayProps> = ({
@@ -17,6 +18,7 @@ export const LessonsDay: React.FC<LessonsDayProps> = ({
   onCardClick,
   onMenuClick,
   onPaymentChange,
+  onHomeworkSentChange,
 }) => {
   return (
     <Box sx={{ mb: 3 }}>
@@ -40,6 +42,7 @@ export const LessonsDay: React.FC<LessonsDayProps> = ({
             onCardClick={onCardClick}
             onMenuClick={onMenuClick}
             onPaymentChange={onPaymentChange}
+            onHomeworkSentChange={onHomeworkSentChange}
           />
         ))}
       </Box>

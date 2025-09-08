@@ -18,6 +18,7 @@ type LessonsListProps = {
   onRestore?: (lesson: Lesson) => void;
   onReschedule?: (lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   onCardClick: (lesson: Lesson) => void;
   type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
@@ -30,6 +31,7 @@ export const LessonsList: React.FC<LessonsListProps> = ({
   onRestore,
   onReschedule,
   onPaymentChange,
+  onHomeworkSentChange,
   onCardClick,
   type,
 }) => {
@@ -83,6 +85,7 @@ export const LessonsList: React.FC<LessonsListProps> = ({
             onCardClick={onCardClick}
             onMenuClick={handleMenuClick}
             onPaymentChange={onPaymentChange}
+            onHomeworkSentChange={onHomeworkSentChange}
             type={type}
           />
         );

@@ -32,6 +32,7 @@ export type Lesson = {
   endTime: string;
   price?: number;
   isPaid: boolean;
+  isHomeworkSentByTeacher?: boolean;
   homework?: string;
   notes?: string;
   grade?: number;
@@ -105,6 +106,7 @@ export type CreateLessonDto = {
 
 export type UpdateLessonDto = Partial<CreateLessonDto> & {
   isPaid?: boolean;
+  isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: LessonStatus;
 };

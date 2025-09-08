@@ -1,4 +1,3 @@
-export { LessonCard } from "./ui/LessonCard";
 export {
   $completedLessons,
   $cancelledLessons,

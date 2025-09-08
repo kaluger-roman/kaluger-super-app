@@ -41,9 +41,6 @@ export const StudentSelector: React.FC<StudentSelectorProps> = ({
         disabled={isLoading}
       >
         {students.map((student) => {
-          const contact = student.phone || student.telegramNick || null;
-          const contactLabel = `${contact};` || "Нет контакта;";
-
           return (
             <MenuItem
               key={student.id}
@@ -67,7 +64,6 @@ export const StudentSelector: React.FC<StudentSelectorProps> = ({
                     color: "rgba(0,0,0,0.6)",
                   }}
                 >
-                  {contactLabel}
                   {student.hourlyRate && ` ${student.hourlyRate} ₽/занятие`}
                 </span>
               </div>

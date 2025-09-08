@@ -27,6 +27,7 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
   onReschedule,
   onDelete,
   onPaymentChange,
+  onHomeworkSentChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -71,7 +72,11 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
       </DialogTitle>
 
       <DialogContent>
-        <LessonDetails lesson={lesson} onPaymentChange={onPaymentChange} />
+        <LessonDetails
+          lesson={lesson}
+          onPaymentChange={onPaymentChange}
+          onHomeworkSentChange={onHomeworkSentChange}
+        />
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>

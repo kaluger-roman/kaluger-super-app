@@ -18,4 +18,5 @@ export type LessonViewDialogProps = {
   onReschedule?: () => void;
   onDelete: () => void;
   onPaymentChange?: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
 };

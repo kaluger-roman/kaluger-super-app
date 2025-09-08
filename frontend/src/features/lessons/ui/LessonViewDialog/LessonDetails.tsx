@@ -1,18 +1,20 @@
 import React from "react";
 import { Box, Typography, Divider } from "@mui/material";
 import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../../../shared";
-import { PaymentStatus } from "../../../../shared/ui";
+import { PaymentStatus, HomeworkSentStatus } from "../../../../shared/ui";
 import { formatDateTime } from "./utils";
 import type { Lesson } from "../../../../shared";
 
 type LessonDetailsProps = {
   lesson: Lesson;
   onPaymentChange?: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
 };
 
 export const LessonDetails: React.FC<LessonDetailsProps> = ({
   lesson,
   onPaymentChange,
+  onHomeworkSentChange,
 }) => {
   return (
     <Box display="flex" flexDirection="column" gap={3}>
@@ -32,6 +34,12 @@ export const LessonDetails: React.FC<LessonDetailsProps> = ({
           <Box sx={{ mt: 1 }}>
             <PaymentStatus lesson={lesson} onPaymentChange={onPaymentChange} />
           </Box>
+        )}
+        {onHomeworkSentChange && (
+          <HomeworkSentStatus
+            lesson={lesson}
+            onHomeworkSentChange={onHomeworkSentChange}
+          />
         )}
       </Box>
 

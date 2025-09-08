@@ -9,7 +9,7 @@ import {
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ru } from "date-fns/locale";
-import { PaymentStatus } from "../../../../../shared/ui";
+import { PaymentStatus, HomeworkSentStatus } from "../../../../../shared/ui";
 import {
   StudentSelector,
   SubjectTypeSelector,
@@ -93,19 +93,33 @@ export const LessonFormContent = ({
             onChange={handleChange}
           />
 
-          {/* Статус оплаты */}
-          {lesson && (
-            <PaymentStatus
-              lesson={{
-                ...lesson,
-                isPaid: formData.isPaid,
-              }}
-              onPaymentChange={(_, isPaid) =>
-                setFormData((prev: any) => ({ ...prev, isPaid }))
-              }
-            />
-          )}
-
+          <Box>
+            {lesson && (
+              <PaymentStatus
+                lesson={{
+                  ...lesson,
+                  isPaid: formData.isPaid,
+                }}
+                onPaymentChange={(_, isPaid) =>
+                  setFormData((prev: any) => ({ ...prev, isPaid }))
+                }
+              />
+            )}
+            {lesson && (
+              <HomeworkSentStatus
+                lesson={{
+                  ...lesson,
+                  isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
+                }}
+                onHomeworkSentChange={(_, isSent) =>
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    isHomeworkSentByTeacher: isSent,
+                  }))
+                }
+              />
+            )}
+          </Box>
           {/* Регулярное занятие */}
           {!lesson && (
             <FormControlLabel

@@ -12,6 +12,7 @@ type LessonsMonthProps = {
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
@@ -23,6 +24,7 @@ export const LessonsMonth: React.FC<LessonsMonthProps> = ({
   onCardClick,
   onMenuClick,
   onPaymentChange,
+  onHomeworkSentChange,
   type,
 }) => {
   return (
@@ -72,6 +74,7 @@ export const LessonsMonth: React.FC<LessonsMonthProps> = ({
             onCardClick={onCardClick}
             onMenuClick={onMenuClick}
             onPaymentChange={onPaymentChange}
+            onHomeworkSentChange={onHomeworkSentChange}
           />
         ))}
       </Collapse>

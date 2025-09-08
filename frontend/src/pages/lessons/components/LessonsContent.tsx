@@ -19,6 +19,7 @@ type LessonsContentProps = {
   onRestore: (lesson: Lesson) => void;
   onReschedule: (lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   onCardClick: (lesson: Lesson) => void;
   onUpcomingPageChange: (
     event: React.ChangeEvent<unknown>,
@@ -99,6 +100,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
     onRestore,
     onReschedule,
     onPaymentChange,
+    onHomeworkSentChange,
     onCardClick,
     onUpcomingPageChange,
     onCompletedPageChange,
@@ -133,6 +135,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
         onRestore={onRestore}
         onReschedule={onReschedule}
         onPaymentChange={onPaymentChange}
+        onHomeworkSentChange={onHomeworkSentChange}
         onCardClick={onCardClick}
         type={cfg.type}
       />

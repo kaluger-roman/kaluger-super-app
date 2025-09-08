@@ -11,4 +11,5 @@ export { RescheduleDialog } from "./RescheduleDialog";
 export { CompletedLessonsAccordion } from "./CompletedLessonsAccordion";
 export { RecurringLessonBadge } from "./RecurringLessonBadge";
 export { PaymentStatus } from "./PaymentStatus";
+export { HomeworkSentStatus } from "./HomeworkSentStatus";
 export { LessonsList } from "./LessonsList";

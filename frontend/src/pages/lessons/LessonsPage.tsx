@@ -44,6 +44,7 @@ export const LessonsPage: React.FC = () => {
     handleRescheduleLesson,
     handleRescheduleConfirm,
     handlePaymentChange,
+    handleHomeworkSentChange,
     handleCardClick,
   } = useLessonsPage();
 
@@ -164,6 +165,7 @@ export const LessonsPage: React.FC = () => {
         onRestore={handleRestoreLesson}
         onReschedule={handleRescheduleLesson}
         onPaymentChange={handlePaymentChange}
+        onHomeworkSentChange={handleHomeworkSentChange}
         onCardClick={handleCardClick}
         onUpcomingPageChange={handleUpcomingPageChange}
         onCompletedPageChange={handleCompletedPageChange}
@@ -187,6 +189,7 @@ export const LessonsPage: React.FC = () => {
         onRescheduleFromView={handleRescheduleFromView}
         onDeleteFromView={handleDeleteFromView}
         onPaymentChange={handlePaymentChange}
+        onHomeworkSentChange={handleHomeworkSentChange}
         onDeleteConfirm={handleDeleteConfirm}
         onRescheduleConfirm={handleRescheduleConfirm}
         onConfirmAction={confirmDialog.action}

@@ -199,6 +199,13 @@ export const useLessonsPage = () => {
     });
   };
 
+  const handleHomeworkSentChange = (lessonId: string, isSent: boolean) => {
+    updateLesson({
+      id: lessonId,
+      data: { isHomeworkSentByTeacher: isSent },
+    });
+  };
+
   const handleCardClick = (lesson: Lesson) => {
     setState((prev) => ({
       ...prev,
@@ -224,6 +231,7 @@ export const useLessonsPage = () => {
     handleRescheduleLesson,
     handleRescheduleConfirm,
     handlePaymentChange,
+    handleHomeworkSentChange,
     handleCardClick,
   };
 };

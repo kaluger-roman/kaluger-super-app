@@ -12,7 +12,8 @@ import {
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { Lesson, SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../../types";
 import { RecurringLessonBadge } from "../../RecurringLessonBadge";
-import { PaymentStatus } from "../../PaymentStatus";
+// UI dialogs and tooltips moved to LessonStatusIcons
+import LessonStatusIcons from "./LessonStatusIcons";
 import {
   formatTime,
   getStatusColor,
@@ -24,13 +25,14 @@ type LessonCardProps = {
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   onPaymentChange: (lessonId: string, isPaid: boolean) => void;
+  onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
 };
-
 export const LessonCard: React.FC<LessonCardProps> = ({
   lesson,
   onCardClick,
   onMenuClick,
   onPaymentChange,
+  onHomeworkSentChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -93,8 +95,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
             <Box
               display="flex"
               justifyContent="space-between"
-              flexDirection={isMobile ? "column" : "row"}
-              alignItems={isMobile ? "flex-start" : "center"}
+              alignItems={"center"}
               gap={1}
             >
               <Typography variant="body2" color="text.secondary">
@@ -102,17 +103,11 @@ export const LessonCard: React.FC<LessonCardProps> = ({
                 {LESSON_TYPE_LABELS[lesson.lessonType]}
               </Typography>
 
-              <Box
-                sx={{
-                  minWidth: "fit-content",
-                  width: isMobile ? "100%" : "auto",
-                }}
-              >
-                <PaymentStatus
-                  lesson={lesson}
-                  onPaymentChange={onPaymentChange}
-                />
-              </Box>
+              <LessonStatusIcons
+                lesson={lesson}
+                onPaymentChange={onPaymentChange}
+                onHomeworkSentChange={onHomeworkSentChange}
+              />
             </Box>
           </Box>
 
