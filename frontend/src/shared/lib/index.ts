@@ -7,3 +7,4 @@ export {
   capitalizeFirst,
 } from "./utils";
 export { useNotifications } from "./useNotifications";
+export { useDisableNumberScroll } from "./use-disable-number-scroll";

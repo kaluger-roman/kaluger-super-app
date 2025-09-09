@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Box,
   TextField,
@@ -9,6 +9,7 @@ import {
   InputLabel,
 } from "@mui/material";
 import type { StudentFormFieldsProps } from "./types";
+import { useDisableNumberScroll } from "../../../../shared";
 
 export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
   formData,
@@ -16,6 +17,9 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
   onChange,
   onGradeChange,
 }) => {
+  const priceInputRef = useRef<HTMLInputElement | null>(null);
+  useDisableNumberScroll(priceInputRef);
+
   return (
     <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3} pt={1}>
       <TextField
@@ -115,6 +119,7 @@ export const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
       <TextField
         label="Ставка"
         type="number"
+        inputRef={priceInputRef}
         value={formData.hourlyRate}
         onChange={onChange("hourlyRate")}
         fullWidth

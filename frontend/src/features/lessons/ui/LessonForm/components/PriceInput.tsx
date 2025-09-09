@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useRef } from "react";
 import { TextField } from "@mui/material";
 import { useStore } from "effector-react";
 import { $students } from "../../../../../entities/student";
 import type { LessonFormData } from "../types";
+import { useDisableNumberScroll } from "../../../../../shared";
 
 type PriceInputProps = {
   formData: LessonFormData;
@@ -21,6 +22,8 @@ export const PriceInput: React.FC<PriceInputProps> = ({
 }) => {
   const students = useStore($students);
   const selectedStudent = students.find((s) => s.id === formData.studentId);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useDisableNumberScroll(inputRef);
 
   return (
     <TextField
@@ -34,6 +37,7 @@ export const PriceInput: React.FC<PriceInputProps> = ({
       fullWidth
       disabled={isLoading}
       size={isMobile ? "small" : "medium"}
+      inputRef={inputRef}
     />
   );
 };
