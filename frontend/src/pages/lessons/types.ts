@@ -5,6 +5,8 @@ export type LessonsPageState = {
   isDialogOpen: boolean;
   isViewDialogOpen: boolean;
   isRescheduleDialogOpen: boolean;
+  /** Вид отображения уроков: постранично / понедельно / расписание */
+  viewMode?: "paged" | "weekly" | "schedule";
   editingLesson?: Lesson;
   viewingLesson?: Lesson;
   reschedulingLesson?: Lesson;

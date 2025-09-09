@@ -7,6 +7,7 @@ type PageInfo = { totalPages: number; page: number };
 
 type LessonsContentProps = {
   currentTab: number;
+  viewMode?: "paged" | "weekly" | "schedule";
   upcomingLessons: Lesson[];
   completedLessons: Lesson[];
   cancelledLessons: Lesson[];
@@ -94,6 +95,7 @@ const TAB_CONFIG: {
 export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   const {
     currentTab,
+    viewMode = "paged",
     onEdit,
     onDelete,
     onCancel,
@@ -140,7 +142,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
         type={cfg.type}
       />
 
-      {pagination?.totalPages > 1 && (
+      {viewMode === "paged" && pagination?.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination
             count={pagination.totalPages}

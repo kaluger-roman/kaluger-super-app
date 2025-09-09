@@ -1,5 +1,6 @@
 import React from "react";
 import { Container, Typography, Box } from "@mui/material";
+import { ViewModeToggle } from "./components/ViewModeToggle";
 import { useStore } from "effector-react";
 import {
   $upcomingLessons,
@@ -17,6 +18,7 @@ import {
   LessonsContent,
   LessonsDialogs,
 } from "./components";
+import { $lessonsViewMode } from "./model/viewMode";
 
 export const LessonsPage: React.FC = () => {
   const upcomingLessons = useStore($upcomingLessons);
@@ -47,6 +49,8 @@ export const LessonsPage: React.FC = () => {
     handleHomeworkSentChange,
     handleCardClick,
   } = useLessonsPage();
+
+  const viewMode = useStore($lessonsViewMode);
 
   const handleCloseDialog = () => {
     setState((prev) => ({
@@ -132,7 +136,7 @@ export const LessonsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box mb={4}>
+      <Box mb={1}>
         <Typography
           variant="h3"
           component="h1"
@@ -144,6 +148,9 @@ export const LessonsPage: React.FC = () => {
         <Typography variant="h6" color="text.secondary">
           Управление расписанием и занятиями
         </Typography>
+        <Box mt={2}>
+          <ViewModeToggle />
+        </Box>
       </Box>
 
       <LessonsTabs
@@ -153,6 +160,7 @@ export const LessonsPage: React.FC = () => {
 
       <LessonsContent
         currentTab={state.currentTab}
+        viewMode={viewMode}
         upcomingLessons={upcomingLessons}
         completedLessons={completedLessons}
         cancelledLessons={cancelledLessons}
