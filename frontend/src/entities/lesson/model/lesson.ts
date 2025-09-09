@@ -6,6 +6,10 @@ import {
   UpdateLessonDto,
 } from "../../../shared";
 import { showSuccess, showError } from "../../../shared/model/notifications";
+import {
+  $currentWeek,
+  $lessonsViewMode,
+} from "../../../pages/lessons/model/viewMode";
 
 // Events
 export const loadCompletedLessons = createEvent<{
@@ -20,6 +24,9 @@ export const loadLesson = createEvent<string>();
 export const loadUpcomingLessons = createEvent<{
   page?: number;
   limit?: number;
+}>();
+export const loadWeeklyLessons = createEvent<{
+  weekStart: string;
 }>();
 export const addLesson = createEvent<CreateLessonDto>();
 export const updateLesson = createEvent<{
@@ -60,6 +67,12 @@ export const loadLessonFx = createEffect(async (id: string) => {
 export const loadUpcomingLessonsFx = createEffect(
   async (filters?: { page?: number; limit?: number }) => {
     return await lessonsApi.getUpcoming(filters);
+  }
+);
+
+export const loadWeeklyLessonsFx = createEffect(
+  async (filters: { weekStart: string }) => {
+    return await lessonsApi.getByWeek(filters);
   }
 );
 
@@ -109,6 +122,11 @@ export const $upcomingLessons = createStore<Lesson[]>([])
     lessons.filter((lesson) => lesson.id !== removedId)
   );
 
+export const $weeklyLessons = createStore<Lesson[]>([]).on(
+  loadWeeklyLessonsFx.doneData,
+  (_, { lessons }) => lessons
+);
+
 export const $currentLesson = createStore<Lesson | null>(null)
   .on(loadLessonFx.doneData, (_, lesson) => lesson)
   .on(updateLessonFx.doneData, (current, updated) =>
@@ -144,6 +162,7 @@ export const $isLoading = createStore(false)
       loadCancelledLessonsFx,
       loadLessonFx,
       loadUpcomingLessonsFx,
+      loadWeeklyLessonsFx,
       addLessonFx,
       updateLessonFx,
       removeLessonFx,
@@ -156,6 +175,7 @@ export const $isLoading = createStore(false)
       loadCancelledLessonsFx.done,
       loadLessonFx.done,
       loadUpcomingLessonsFx.done,
+      loadWeeklyLessonsFx.done,
       addLessonFx.done,
       updateLessonFx.done,
       removeLessonFx.done,
@@ -163,6 +183,7 @@ export const $isLoading = createStore(false)
       loadCancelledLessonsFx.fail,
       loadLessonFx.fail,
       loadUpcomingLessonsFx.fail,
+      loadWeeklyLessonsFx.fail,
       addLessonFx.fail,
       updateLessonFx.fail,
       removeLessonFx.fail,
@@ -175,6 +196,7 @@ loadCompletedLessons.watch(loadCompletedLessonsFx);
 loadCancelledLessons.watch(loadCancelledLessonsFx);
 loadLesson.watch(loadLessonFx);
 loadUpcomingLessons.watch(loadUpcomingLessonsFx);
+loadWeeklyLessons.watch(loadWeeklyLessonsFx);
 addLesson.watch(addLessonFx);
 updateLesson.watch(updateLessonFx);
 removeLesson.watch(removeLessonFx);
@@ -191,19 +213,28 @@ updateLessonFx.doneData.watch(() => {
   const upcomingPagination = $upcomingPagination.getState();
   const completedPagination = $completedPagination.getState();
   const cancelledPagination = $cancelledPagination.getState();
+  const lessonsViewMode = $lessonsViewMode.getState();
 
-  loadUpcomingLessons({
-    page: upcomingPagination.page,
-    limit: upcomingPagination.limit,
-  });
-  loadCompletedLessons({
-    page: completedPagination.page,
-    limit: completedPagination.limit,
-  });
-  loadCancelledLessons({
-    page: cancelledPagination.page,
-    limit: cancelledPagination.limit,
-  });
+  if (lessonsViewMode === "weekly") {
+    loadWeeklyLessons({
+      weekStart: $currentWeek.getState().toISOString() || "",
+    });
+  }
+
+  if (lessonsViewMode === "paged") {
+    loadUpcomingLessons({
+      page: upcomingPagination.page,
+      limit: upcomingPagination.limit,
+    });
+    loadCompletedLessons({
+      page: completedPagination.page,
+      limit: completedPagination.limit,
+    });
+    loadCancelledLessons({
+      page: cancelledPagination.page,
+      limit: cancelledPagination.limit,
+    });
+  }
 
   showSuccess("Урок обновлен");
   closeLessonDialog();

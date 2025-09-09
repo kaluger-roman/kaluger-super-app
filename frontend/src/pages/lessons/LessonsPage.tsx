@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Typography, Box } from "@mui/material";
 import { ViewModeToggle } from "./components/ViewModeToggle";
-import { useStore } from "effector-react";
+import { useUnit } from "effector-react";
 import {
   $upcomingLessons,
   $completedLessons,
@@ -18,16 +18,15 @@ import {
   LessonsContent,
   LessonsDialogs,
 } from "./components";
-import { $lessonsViewMode } from "./model/viewMode";
 
 export const LessonsPage: React.FC = () => {
-  const upcomingLessons = useStore($upcomingLessons);
-  const completedLessons = useStore($completedLessons);
-  const cancelledLessons = useStore($cancelledLessons);
-  const upcomingPagination = useStore($upcomingPagination);
-  const completedPagination = useStore($completedPagination);
-  const cancelledPagination = useStore($cancelledPagination);
-  const isLoading = useStore($lessonsIsLoading);
+  const upcomingLessons = useUnit($upcomingLessons);
+  const completedLessons = useUnit($completedLessons);
+  const cancelledLessons = useUnit($cancelledLessons);
+  const upcomingPagination = useUnit($upcomingPagination);
+  const completedPagination = useUnit($completedPagination);
+  const cancelledPagination = useUnit($cancelledPagination);
+  const isLoading = useUnit($lessonsIsLoading);
 
   const {
     state,
@@ -49,8 +48,6 @@ export const LessonsPage: React.FC = () => {
     handleHomeworkSentChange,
     handleCardClick,
   } = useLessonsPage();
-
-  const viewMode = useStore($lessonsViewMode);
 
   const handleCloseDialog = () => {
     setState((prev) => ({
@@ -160,7 +157,6 @@ export const LessonsPage: React.FC = () => {
 
       <LessonsContent
         currentTab={state.currentTab}
-        viewMode={viewMode}
         upcomingLessons={upcomingLessons}
         completedLessons={completedLessons}
         cancelledLessons={cancelledLessons}

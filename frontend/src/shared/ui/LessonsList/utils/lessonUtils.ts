@@ -157,3 +157,22 @@ export const sortMonths = (
     }
   });
 };
+
+export const getWeekEnd = (weekStart: Date): Date => {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 6);
+  return d;
+};
+
+export const formatWeekRange = (weekStart: Date): string => {
+  const weekEnd = getWeekEnd(weekStart);
+  const startFormatted = weekStart.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+  });
+  const endFormatted = weekEnd.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+  });
+  return `${startFormatted} - ${endFormatted}`;
+};

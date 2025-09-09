@@ -32,11 +32,16 @@ export const LessonDetails: React.FC<LessonDetailsProps> = ({
         </Typography>
         {onPaymentChange && (
           <Box sx={{ mt: 1 }}>
-            <PaymentStatus lesson={lesson} onPaymentChange={onPaymentChange} />
+            <PaymentStatus
+              needConfirm
+              lesson={lesson}
+              onPaymentChange={onPaymentChange}
+            />
           </Box>
         )}
         {onHomeworkSentChange && (
           <HomeworkSentStatus
+            needConfirm
             lesson={lesson}
             onHomeworkSentChange={onHomeworkSentChange}
           />

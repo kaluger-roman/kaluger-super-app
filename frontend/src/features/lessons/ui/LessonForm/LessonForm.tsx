@@ -32,7 +32,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
     handleDateChange,
     validateForm,
     handleCancelLesson,
-  } = useLessonForm(lesson, onClose, open);
+  } = useLessonForm(lesson, open);
 
   // Подписываемся на событие закрытия диалога
   useEffect(() => {
@@ -62,6 +62,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({
         notes: formData.notes || null,
         isRecurring: formData.isRecurring,
         isPaid: formData.isPaid,
+        isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
       };
 
       const performUpdate = () => {

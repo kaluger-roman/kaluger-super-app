@@ -1,13 +1,16 @@
 import React from "react";
 import { Box, Pagination } from "@mui/material";
 import { LessonsList } from "../../../shared";
+import { WeekPagination } from "./WeekPagination";
 import type { Lesson } from "../../../shared";
+import { useUnit } from "effector-react";
+import { $currentWeek, $lessonsViewMode } from "../model/viewMode";
+import { $weeklyLessons } from "../../../entities";
 
 type PageInfo = { totalPages: number; page: number };
 
 type LessonsContentProps = {
   currentTab: number;
-  viewMode?: "paged" | "weekly" | "schedule";
   upcomingLessons: Lesson[];
   completedLessons: Lesson[];
   cancelledLessons: Lesson[];
@@ -95,7 +98,6 @@ const TAB_CONFIG: {
 export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   const {
     currentTab,
-    viewMode = "paged",
     onEdit,
     onDelete,
     onCancel,
@@ -111,7 +113,12 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
 
   const cfg = TAB_CONFIG.find((t) => t.key === currentTab) ?? TAB_CONFIG[0];
 
-  const lessons = props[cfg.listProp] as Lesson[];
+  const viewMode = useUnit($lessonsViewMode);
+  const currentWeek = useUnit($currentWeek);
+  const weeklyLessons = useUnit($weeklyLessons);
+
+  const lessonsSource =
+    viewMode === "weekly" ? weeklyLessons : (props[cfg.listProp] as Lesson[]);
   const pagination = props[cfg.paginationProp] as PageInfo;
 
   const handlePageChange = (e: React.ChangeEvent<unknown>, page: number) => {
@@ -130,7 +137,8 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   return (
     <>
       <LessonsList
-        lessons={lessons}
+        lessons={lessonsSource}
+        viewMode={viewMode}
         onEdit={onEdit}
         onDelete={onDelete}
         onCancel={onCancel}
@@ -152,6 +160,10 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
             size="large"
           />
         </Box>
+      )}
+
+      {viewMode === "weekly" && currentWeek && (
+        <WeekPagination currentWeek={currentWeek} />
       )}
     </>
   );

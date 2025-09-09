@@ -15,26 +15,28 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       currentTime,
       page = "1",
       limit = "10",
+      weekly,
+      weekStart,
     } = req.query;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
-
     const where: any = { tutorId: userId };
 
-    // Специальная логика для предстоящих уроков
-    if (upcoming === "true" && currentTime) {
-      const now = truncateToMinute(new Date(currentTime as string));
-      where.OR = [
-        { status: "IN_PROGRESS" },
-        {
-          status: { in: ["SCHEDULED", "RESCHEDULED"] },
-          startTime: { gte: now },
-        },
-      ];
+    // Date filtering: for weekly requests we only bound by weekStart..weekEnd
+    if (weekly === "true" && weekStart) {
+      const startOfWeek = truncateToMinute(new Date(weekStart as string));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      where.startTime = {
+        gte: startOfWeek,
+        lte: endOfWeek,
+      };
     } else {
-      // Обычная логика фильтрации
+      // Non-weekly: allow arbitrary start/end filters
       if (startDate || endDate) {
         where.startTime = {};
         if (startDate)
@@ -42,13 +44,25 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
         if (endDate)
           where.startTime.lte = truncateToMinute(new Date(endDate as string));
       }
+    }
 
-      if (studentId) {
-        where.studentId = studentId;
-      }
+    if (studentId) {
+      where.studentId = studentId;
+    }
 
-      if (status && typeof status === "string") {
-        // Support multiple statuses separated by comma
+    // Apply status/upcoming filtering only for non-weekly requests.
+    if (weekly !== "true") {
+      const upcomingFlag = upcoming === "true" && !!currentTime;
+      if (upcomingFlag) {
+        const now = truncateToMinute(new Date(currentTime as string));
+        where.OR = [
+          { status: "IN_PROGRESS" },
+          {
+            status: { in: ["SCHEDULED", "RESCHEDULED"] },
+            startTime: { gte: now },
+          },
+        ];
+      } else if (status && typeof status === "string") {
         const statuses = status.split(",").map((s: string) => s.trim());
         if (statuses.length > 1) {
           where.status = { in: statuses };
@@ -64,21 +78,26 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
         include: {
           student: true,
         },
-        orderBy: { startTime: upcoming === "true" ? "asc" : "desc" },
-        skip,
-        take: limitNum,
+        orderBy: {
+          startTime: upcoming === "true" || weekly === "true" ? "asc" : "desc",
+        },
+        // Для недельных запросов не используем пагинацию
+        ...(weekly !== "true" && { skip, take: limitNum }),
       }),
       prisma.lesson.count({ where }),
     ]);
 
     res.json({
       lessons,
-      pagination: {
-        total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      },
+      pagination:
+        weekly === "true"
+          ? undefined
+          : {
+              total,
+              page: pageNum,
+              limit: limitNum,
+              totalPages: Math.ceil(total / limitNum),
+            },
     });
   } catch (error) {
     console.error("Get lessons error:", error);

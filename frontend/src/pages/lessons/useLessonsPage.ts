@@ -8,14 +8,18 @@ import {
   closeLessonDialog,
   $completedPagination,
   $cancelledPagination,
+  loadWeeklyLessons,
 } from "../../entities";
 import { useStore } from "effector-react";
 import type { Lesson } from "../../shared";
 import type { LessonsPageState, ConfirmDialogState } from "./types";
+import { $currentWeek, $lessonsViewMode } from "./model/viewMode";
 
 export const useLessonsPage = () => {
   const completedPagination = useStore($completedPagination);
   const cancelledPagination = useStore($cancelledPagination);
+  const lessonsViewMode = useStore($lessonsViewMode);
+  const currentWeek = useStore($currentWeek);
 
   const [state, setState] = useState<LessonsPageState>({
     currentTab: 0,
@@ -33,20 +37,31 @@ export const useLessonsPage = () => {
     action: () => {},
   });
 
-  // Load lessons based on current tab
   useEffect(() => {
-    switch (state.currentTab) {
-      case 1: // Прошедшие
-        loadCompletedLessons({ page: 1, limit: 10 });
-        break;
-      case 2: // Отмененные
-        loadCancelledLessons({ page: 1, limit: 10 });
-        break;
-      default:
-        // Запланированные загружаются в основном компоненте
-        break;
+    if (lessonsViewMode === "weekly") {
+      const weekStart = currentWeek.toISOString();
+      loadWeeklyLessons({ weekStart });
     }
-  }, [state.currentTab]);
+  }, [lessonsViewMode, currentWeek]);
+
+  useEffect(() => {
+    if (lessonsViewMode === "paged") {
+      switch (state.currentTab) {
+        case 0: // Запланированные
+          loadUpcomingLessons({ page: 1, limit: 10 });
+          break;
+        case 1: // Прошедшие
+          loadCompletedLessons({ page: 1, limit: 10 });
+          break;
+        case 2: // Отмененные
+          loadCancelledLessons({ page: 1, limit: 10 });
+          break;
+        default:
+          // Запланированные загружаются в основном компоненте
+          break;
+      }
+    }
+  }, [state.currentTab, lessonsViewMode]);
 
   // Подписываемся на событие закрытия диалога
   useEffect(() => {

@@ -66,6 +66,18 @@ export const lessonsApi = {
     return response.data;
   },
 
+  getByWeek: async (filters: {
+    weekStart: string;
+  }): Promise<LessonsResponse> => {
+    const params = new URLSearchParams();
+
+    params.append("weekStart", filters.weekStart);
+    params.append("weekly", "true");
+
+    const response = await api.get(`/lessons?${params.toString()}`);
+    return response.data;
+  },
+
   getStatistics: async (filters?: {
     startDate?: string;
     endDate?: string;

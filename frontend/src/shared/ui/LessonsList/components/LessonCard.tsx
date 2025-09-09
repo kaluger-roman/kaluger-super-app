@@ -34,9 +34,6 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   onPaymentChange,
   onHomeworkSentChange,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
   return (
     <Card
       variant="outlined"

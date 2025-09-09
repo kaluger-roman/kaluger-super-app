@@ -6,6 +6,7 @@ import {
   InfoMessage,
   LessonContextMenu,
   LessonsYear,
+  WeeklyView,
 } from "./components";
 import { useLessonsGrouping, useLessonMenu } from "./hooks";
 import { sortYears } from "./utils";
@@ -21,6 +22,7 @@ type LessonsListProps = {
   onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   onCardClick: (lesson: Lesson) => void;
   type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  viewMode?: "paged" | "weekly" | "schedule";
 };
 
 export const LessonsList: React.FC<LessonsListProps> = ({
@@ -34,6 +36,7 @@ export const LessonsList: React.FC<LessonsListProps> = ({
   onHomeworkSentChange,
   onCardClick,
   type,
+  viewMode = "paged",
 }) => {
   const {
     filteredLessons,
@@ -65,14 +68,28 @@ export const LessonsList: React.FC<LessonsListProps> = ({
   if (filteredLessons.length === 0) {
     return <EmptyState type={type} />;
   }
+  const commonProps = {
+    onEdit,
+    onDelete,
+    onCancel,
+    onRestore,
+    onReschedule,
+    onPaymentChange,
+    onHomeworkSentChange,
+    onCardClick,
+    type,
+  } as const;
 
-  const sortedYears = sortYears(Object.keys(groupedLessons), type);
-
-  return (
-    <Box display="flex" flexDirection="column" gap={2}>
-      {sortedYears.map((year) => {
+  const body =
+    viewMode === "weekly" ? (
+      <WeeklyView
+        lessons={filteredLessons}
+        onMenuClick={handleMenuClick}
+        {...commonProps}
+      />
+    ) : (
+      sortYears(Object.keys(groupedLessons), type).map((year) => {
         const isYearCollapsed = collapsedYears[year] ?? false;
-
         return (
           <LessonsYear
             key={year}
@@ -82,14 +99,16 @@ export const LessonsList: React.FC<LessonsListProps> = ({
             collapsedMonths={collapsedMonths}
             onToggleYear={() => toggleYear(year)}
             onToggleMonth={(month) => toggleMonth(year, month)}
-            onCardClick={onCardClick}
             onMenuClick={handleMenuClick}
-            onPaymentChange={onPaymentChange}
-            onHomeworkSentChange={onHomeworkSentChange}
-            type={type}
+            {...commonProps}
           />
         );
-      })}
+      })
+    );
+
+  return (
+    <Box display="flex" flexDirection="column" gap={2}>
+      {body}
 
       {type === "scheduled" && <InfoMessage />}
 

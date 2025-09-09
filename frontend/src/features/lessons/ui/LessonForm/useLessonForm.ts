@@ -4,14 +4,10 @@ import type { LessonFormData, ConfirmDialogData } from "./types";
 import { updateLesson } from "../../../../entities/lesson";
 import type { UpdateLessonDto } from "../../../../shared";
 
-export const useLessonForm = (
-  lesson?: Lesson,
-  onClose?: () => void,
-  open?: boolean
-) => {
+export const useLessonForm = (lesson?: Lesson, open?: boolean) => {
   const [formData, setFormData] = useState<LessonFormData>({
-    subject: "MATHEMATICS",
-    lessonType: "SCHOOL",
+    subject: "PHYSICS",
+    lessonType: "EGE",
     description: "",
     startTime: new Date(),
     endTime: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
@@ -21,6 +17,7 @@ export const useLessonForm = (
     notes: "",
     isRecurring: false,
     isPaid: false,
+    isHomeworkSentByTeacher: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,14 +44,15 @@ export const useLessonForm = (
           notes: lesson.notes || "",
           isRecurring: lesson.isRecurring || false,
           isPaid: lesson.isPaid || false,
+          isHomeworkSentByTeacher: lesson.isHomeworkSentByTeacher || false,
         });
       } else {
         const now = new Date();
         const endTime = new Date(now.getTime() + 60 * 60 * 1000);
 
         setFormData({
-          subject: "MATHEMATICS",
-          lessonType: "SCHOOL",
+          subject: "PHYSICS",
+          lessonType: "EGE",
           description: "",
           startTime: now,
           endTime,
@@ -64,6 +62,7 @@ export const useLessonForm = (
           notes: "",
           isRecurring: false,
           isPaid: false,
+          isHomeworkSentByTeacher: false,
         });
       }
       setErrors({});

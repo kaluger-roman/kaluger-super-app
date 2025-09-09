@@ -18,14 +18,15 @@ type PaymentStatusProps = {
   variant?: "checkbox" | "icon" | "inline" | "toggle";
   size?: "small" | "medium";
   showLabel?: boolean;
+  needConfirm?: boolean;
 };
 
 export const PaymentStatus: React.FC<PaymentStatusProps> = ({
   lesson,
   onPaymentChange,
-  variant = "checkbox",
   size = "medium",
   showLabel = true,
+  needConfirm = false,
 }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [pendingPaymentStatus, setPendingPaymentStatus] = useState<
@@ -60,7 +61,11 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
         control={
           <Checkbox
             checked={lesson.isPaid}
-            onChange={() => handlePaymentToggle(!lesson.isPaid)}
+            onChange={() =>
+              needConfirm
+                ? handlePaymentToggle(!lesson.isPaid)
+                : onPaymentChange(lesson.id, !lesson.isPaid)
+            }
             sx={{
               "& .MuiSvgIcon-root": {
                 borderRadius: "16px",

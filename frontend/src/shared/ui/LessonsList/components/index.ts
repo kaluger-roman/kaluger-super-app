@@ -5,3 +5,4 @@ export { LessonsMonth } from "./LessonsMonth";
 export { LessonsYear } from "./LessonsYear";
 export { EmptyState } from "./EmptyState";
 export { InfoMessage } from "./InfoMessage";
+export { WeeklyView } from "./WeeklyView";

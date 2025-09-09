@@ -17,6 +17,7 @@ type HomeworkSentStatusProps = {
   onHomeworkSentChange?: (lessonId: string, isSent: boolean) => void;
   size?: "small" | "medium";
   showLabel?: boolean;
+  needConfirm?: boolean;
 };
 
 export const HomeworkSentStatus: React.FC<HomeworkSentStatusProps> = ({
@@ -24,13 +25,18 @@ export const HomeworkSentStatus: React.FC<HomeworkSentStatusProps> = ({
   onHomeworkSentChange,
   size = "medium",
   showLabel = true,
+  needConfirm = false,
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
 
   const handleToggle = (newStatus: boolean) => {
-    setPendingStatus(newStatus);
-    setConfirmOpen(true);
+    if (needConfirm) {
+      setPendingStatus(newStatus);
+      setConfirmOpen(true);
+    } else {
+      onHomeworkSentChange?.(lesson.id, newStatus);
+    }
   };
 
   const handleConfirm = () => {
