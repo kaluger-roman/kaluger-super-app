@@ -9,24 +9,24 @@ const time_1 = require("../../utils/time");
 const getLessons = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", } = req.query;
+        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", weekly, weekStart, } = req.query;
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
         const where = { tutorId: userId };
-        // Специальная логика для предстоящих уроков
-        if (upcoming === "true" && currentTime) {
-            const now = (0, time_1.truncateToMinute)(new Date(currentTime));
-            where.OR = [
-                { status: "IN_PROGRESS" },
-                {
-                    status: { in: ["SCHEDULED", "RESCHEDULED"] },
-                    startTime: { gte: now },
-                },
-            ];
+        // Date filtering: for weekly requests we only bound by weekStart..weekEnd
+        if (weekly === "true" && weekStart) {
+            const startOfWeek = (0, time_1.truncateToMinute)(new Date(weekStart));
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(endOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+            where.startTime = {
+                gte: startOfWeek,
+                lte: endOfWeek,
+            };
         }
         else {
-            // Обычная логика фильтрации
+            // Non-weekly: allow arbitrary start/end filters
             if (startDate || endDate) {
                 where.startTime = {};
                 if (startDate)
@@ -34,11 +34,24 @@ const getLessons = async (req, res) => {
                 if (endDate)
                     where.startTime.lte = (0, time_1.truncateToMinute)(new Date(endDate));
             }
-            if (studentId) {
-                where.studentId = studentId;
+        }
+        if (studentId) {
+            where.studentId = studentId;
+        }
+        // Apply status/upcoming filtering only for non-weekly requests.
+        if (weekly !== "true") {
+            const upcomingFlag = upcoming === "true" && !!currentTime;
+            if (upcomingFlag) {
+                const now = (0, time_1.truncateToMinute)(new Date(currentTime));
+                where.OR = [
+                    { status: "IN_PROGRESS" },
+                    {
+                        status: { in: ["SCHEDULED", "RESCHEDULED"] },
+                        startTime: { gte: now },
+                    },
+                ];
             }
-            if (status && typeof status === "string") {
-                // Support multiple statuses separated by comma
+            else if (status && typeof status === "string") {
                 const statuses = status.split(",").map((s) => s.trim());
                 if (statuses.length > 1) {
                     where.status = { in: statuses };
@@ -54,20 +67,24 @@ const getLessons = async (req, res) => {
                 include: {
                     student: true,
                 },
-                orderBy: { startTime: upcoming === "true" ? "asc" : "desc" },
-                skip,
-                take: limitNum,
+                orderBy: {
+                    startTime: upcoming === "true" || weekly === "true" ? "asc" : "desc",
+                },
+                // Для недельных запросов не используем пагинацию
+                ...(weekly !== "true" && { skip, take: limitNum }),
             }),
             prisma_1.default.lesson.count({ where }),
         ]);
         res.json({
             lessons,
-            pagination: {
-                total,
-                page: pageNum,
-                limit: limitNum,
-                totalPages: Math.ceil(total / limitNum),
-            },
+            pagination: weekly === "true"
+                ? undefined
+                : {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum),
+                },
         });
     }
     catch (error) {
