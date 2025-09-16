@@ -34,10 +34,24 @@ export const RecurringLessonDeleteDialog: React.FC<
     setDeleteAllFuture(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleConfirm();
+    }
+  };
+
   if (!lesson) return null;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      onKeyDown={handleKeyDown}
+    >
       <DialogTitle>Удалить урок</DialogTitle>
       <DialogContent>
         <Box display="flex" flexDirection="column" gap={2}>

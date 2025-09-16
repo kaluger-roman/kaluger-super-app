@@ -10,7 +10,7 @@ import {
   Box,
 } from "@mui/material";
 import { Lesson } from "../types";
-import ToggleSwitch from "./ToggleSwitch";
+import { Switch } from "@mui/material";
 
 type HomeworkSentStatusProps = {
   lesson: Lesson;
@@ -52,15 +52,27 @@ export const HomeworkSentStatus: React.FC<HomeworkSentStatusProps> = ({
     setPendingStatus(null);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleConfirm();
+    }
+  };
+
   return (
     <>
       <FormControlLabel
         onClick={(e) => e.stopPropagation()}
         control={
-          <ToggleSwitch
+          <Switch
             checked={!!lesson.isHomeworkSentByTeacher}
-            onToggle={(next) => handleToggle(next)}
+            onChange={(
+              _e: React.ChangeEvent<HTMLInputElement>,
+              next: boolean
+            ) => handleToggle(next)}
             size={size}
+            color={lesson.isHomeworkSentByTeacher ? "success" : "error"}
           />
         }
         label={
@@ -85,6 +97,7 @@ export const HomeworkSentStatus: React.FC<HomeworkSentStatusProps> = ({
         open={confirmOpen}
         onClose={handleCancel}
         maxWidth="sm"
+        onKeyDown={handleKeyDown}
       >
         <DialogTitle>
           {pendingStatus

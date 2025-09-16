@@ -4,3 +4,4 @@ export { LessonsContent } from "./LessonsContent";
 export { LessonsDialogs } from "./LessonsDialogs";
 export { ViewModeToggle } from "./ViewModeToggle";
 export { WeekPagination } from "./WeekPagination";
+export { LessonsFilters } from "./LessonsFilters";

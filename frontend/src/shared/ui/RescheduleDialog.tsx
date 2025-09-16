@@ -89,6 +89,16 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isLoading && isValidTimeRange) {
+        handleConfirm();
+      }
+    }
+  };
+
   if (!lesson) return null;
 
   const isValidTimeRange = newStartTime < newEndTime;
@@ -100,6 +110,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      onKeyDown={handleKeyDown}
       maxWidth="sm"
       fullWidth
       fullScreen={isMobile}

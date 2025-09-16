@@ -1,6 +1,7 @@
 import React from "react";
 import { Container, Typography, Box } from "@mui/material";
 import { ViewModeToggle } from "./components/ViewModeToggle";
+import { LessonsFilters } from "./components/LessonsFilters";
 import { useUnit } from "effector-react";
 import {
   $upcomingLessons,
@@ -147,6 +148,7 @@ export const LessonsPage: React.FC = () => {
         </Typography>
         <Box mt={2}>
           <ViewModeToggle />
+          <LessonsFilters />
         </Box>
       </Box>
 

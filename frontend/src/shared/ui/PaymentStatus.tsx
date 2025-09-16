@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   FormControlLabel,
-  Checkbox,
+  Switch,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -59,81 +59,18 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
       <FormControlLabel
         onClick={(e) => e.stopPropagation()}
         control={
-          <Checkbox
+          <Switch
             checked={lesson.isPaid}
-            onChange={() =>
+            onChange={(
+              _e: React.ChangeEvent<HTMLInputElement>,
+              next: boolean
+            ) =>
               needConfirm
-                ? handlePaymentToggle(!lesson.isPaid)
-                : onPaymentChange(lesson.id, !lesson.isPaid)
-            }
-            sx={{
-              "& .MuiSvgIcon-root": {
-                borderRadius: "16px",
-                width: 40,
-                height: 24,
-                backgroundColor: lesson.isPaid ? "success.main" : "error.main",
-                transition: "background-color 0.2s",
-              },
-              "& .Mui-checked .MuiSvgIcon-root": {
-                backgroundColor: "success.main",
-              },
-              "& .MuiCheckbox-root": {
-                padding: 0,
-              },
-            }}
-            icon={
-              <Box
-                sx={{
-                  width: 40,
-                  height: 24,
-                  borderRadius: "16px",
-                  backgroundColor: "error.main",
-                  position: "relative",
-                  transition: "background-color 0.2s",
-                }}
-              >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: 2,
-                    top: 2,
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    backgroundColor: "common.white",
-                    boxShadow: 1,
-                    transition: "left 0.2s",
-                  }}
-                />
-              </Box>
-            }
-            checkedIcon={
-              <Box
-                sx={{
-                  width: 40,
-                  height: 24,
-                  borderRadius: "16px",
-                  backgroundColor: "success.main",
-                  position: "relative",
-                  transition: "background-color 0.2s",
-                }}
-              >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: 18,
-                    top: 2,
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    backgroundColor: "common.white",
-                    boxShadow: 1,
-                    transition: "left 0.2s",
-                  }}
-                />
-              </Box>
+                ? handlePaymentToggle(next)
+                : onPaymentChange(lesson.id, next)
             }
             size={size}
+            color={lesson.isPaid ? "success" : "error"}
           />
         }
         label={
@@ -151,6 +88,13 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
         open={confirmDialogOpen}
         onClose={handleCancelPayment}
         maxWidth="sm"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            handleConfirmPayment();
+          }
+        }}
       >
         <DialogTitle>
           {pendingPaymentStatus

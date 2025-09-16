@@ -43,11 +43,20 @@ export const ConfirmStatusDialog: React.FC<Props> = ({
     onConfirm();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleConfirm();
+    }
+  };
+
   return (
     <Dialog
       open={open}
       onClose={handleClose}
       onClick={(e) => stopPropagation && e.stopPropagation()}
+      onKeyDown={handleKeyDown}
     >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>

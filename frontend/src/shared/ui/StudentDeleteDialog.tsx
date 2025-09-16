@@ -35,8 +35,22 @@ export const StudentDeleteDialog: React.FC<StudentDeleteDialogProps> = ({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleConfirm();
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      onKeyDown={handleKeyDown}
+    >
       <DialogTitle>Удалить ученика</DialogTitle>
       <DialogContent>
         <Box display="flex" flexDirection="column" gap={2}>

@@ -5,6 +5,7 @@ import { WeekPagination } from "./WeekPagination";
 import type { Lesson } from "../../../shared";
 import { useUnit } from "effector-react";
 import { $currentWeek, $lessonsViewMode } from "../model/viewMode";
+import { $onlyUnpaid, $onlyWithoutHomework } from "../model/filters";
 import { $weeklyLessons } from "../../../entities";
 
 type PageInfo = { totalPages: number; page: number };
@@ -111,6 +112,9 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
     onCancelledPageChange,
   } = props;
 
+  const onlyUnpaid = useUnit($onlyUnpaid);
+  const onlyWithoutHomework = useUnit($onlyWithoutHomework);
+
   const cfg = TAB_CONFIG.find((t) => t.key === currentTab) ?? TAB_CONFIG[0];
 
   const viewMode = useUnit($lessonsViewMode);
@@ -120,6 +124,18 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   const lessonsSource =
     viewMode === "weekly" ? weeklyLessons : (props[cfg.listProp] as Lesson[]);
   const pagination = props[cfg.paginationProp] as PageInfo;
+
+  // Apply client-side filters if requested
+  const filteredLessons = React.useMemo(() => {
+    let list = lessonsSource ?? [];
+    if (onlyUnpaid) {
+      list = list.filter((l) => l.isPaid === false);
+    }
+    if (onlyWithoutHomework) {
+      list = list.filter((l) => l.isHomeworkSentByTeacher === false);
+    }
+    return list;
+  }, [lessonsSource, onlyUnpaid, onlyWithoutHomework]);
 
   const handlePageChange = (e: React.ChangeEvent<unknown>, page: number) => {
     switch (cfg.key) {
@@ -137,7 +153,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   return (
     <>
       <LessonsList
-        lessons={lessonsSource}
+        lessons={filteredLessons}
         viewMode={viewMode}
         onEdit={onEdit}
         onDelete={onDelete}

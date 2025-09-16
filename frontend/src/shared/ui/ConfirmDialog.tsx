@@ -34,8 +34,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   severity = "warning",
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const getSeverityColor = () => {
     switch (severity) {
       case "error":
@@ -47,14 +47,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      onConfirm();
+    }
+  };
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      onKeyDown={handleKeyDown}
       maxWidth="xs"
       fullWidth
       PaperProps={{
-        sx: { 
+        sx: {
           borderRadius: 2,
           m: isMobile ? 2 : 3,
         },
@@ -68,20 +77,20 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       </DialogTitle>
 
       <DialogContent>
-        <Typography variant={isMobile ? "body2" : "body1"}>{message}</Typography>
+        <Typography variant={isMobile ? "body2" : "body1"}>
+          {message}
+        </Typography>
       </DialogContent>
 
-      <DialogActions sx={{ 
-        p: 3, 
-        pt: 1,
-        flexDirection: isMobile ? "column" : "row",
-        gap: isMobile ? 1 : 0,
-      }}>
-        <Button 
-          onClick={onClose} 
-          variant="outlined"
-          fullWidth={isMobile}
-        >
+      <DialogActions
+        sx={{
+          p: 3,
+          pt: 1,
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 1 : 0,
+        }}
+      >
+        <Button onClick={onClose} variant="outlined" fullWidth={isMobile}>
           {cancelText}
         </Button>
         <Button
