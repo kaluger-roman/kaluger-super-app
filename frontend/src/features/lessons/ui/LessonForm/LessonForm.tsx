@@ -95,6 +95,25 @@ export const LessonForm: React.FC<LessonFormProps> = ({
         }
       }
 
+      // If editing an existing recurring lesson and price changed, show confirmation
+      if (lesson && lesson.isRecurring && lesson.status === "SCHEDULED") {
+        const oldPrice = lesson.price ?? null;
+        const newPrice = lessonData.price ?? null;
+        if (oldPrice !== newPrice) {
+          setConfirmDialog({
+            open: true,
+            title: "Изменение цены регулярного урока",
+            message:
+              "Вы уверены? Цена будет изменена у всех ещё несостоявшихся запланированных и не перенесённых регулярных уроков в этой серии.",
+            action: async () => {
+              performUpdate();
+              setConfirmDialog((prev) => ({ ...prev, open: false }));
+            },
+          });
+          return;
+        }
+      }
+
       performUpdate();
     } catch (error) {
       console.error("Lesson form error:", error);

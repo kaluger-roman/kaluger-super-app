@@ -4,6 +4,7 @@ import { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
+import { updatePriceForFutureRecurringLessons } from "../../services/recurringHelpers";
 import { truncateToMinute } from "../../utils/time";
 
 const validateUpdateData = async (
@@ -179,6 +180,17 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       } else if (result.shifted && result.shifted > 0) {
         console.log(`Shifted ${result.shifted} future recurring lessons`);
       }
+    }
+
+    // If this lesson is recurring and price changed, update future lessons' prices
+    if (
+      existingLesson.isRecurring &&
+      Object.prototype.hasOwnProperty.call(updateData, "price") &&
+      existingLesson.status === "SCHEDULED" &&
+      updateData.status !== "RESCHEDULED"
+    ) {
+      const newPrice = updateData.price ?? null;
+      await updatePriceForFutureRecurringLessons(existingLesson, newPrice);
     }
 
     res.json({

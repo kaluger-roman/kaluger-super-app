@@ -124,3 +124,35 @@ export const shiftFutureRecurringLessons = async (
 
   return { shifted: planned.length };
 };
+
+// Update price for future recurring lessons in the same group
+export const updatePriceForFutureRecurringLessons = async (
+  existingLesson: any,
+  newPrice: number | null
+): Promise<{ updated: number }> => {
+  const key = getRecurringLessonKey(existingLesson);
+
+  const futureLessons = await prisma.lesson.findMany({
+    where: {
+      tutorId: existingLesson.tutorId,
+      studentId: existingLesson.studentId,
+      isRecurring: true,
+      status: "SCHEDULED",
+    },
+  });
+
+  const toUpdate = futureLessons.filter(
+    (l) => getRecurringLessonKey(l) === key
+  );
+
+  if (toUpdate.length === 0) return { updated: 0 };
+
+  // Perform updates in a transaction
+  await prisma.$transaction(
+    toUpdate.map((t) =>
+      prisma.lesson.update({ where: { id: t.id }, data: { price: newPrice } })
+    )
+  );
+
+  return { updated: toUpdate.length };
+};
