@@ -14,6 +14,7 @@ import { useStore } from "effector-react";
 import type { Lesson } from "../../shared";
 import type { LessonsPageState, ConfirmDialogState } from "./types";
 import { $currentWeek, $lessonsViewMode } from "./model/viewMode";
+import { $onlyUnpaid, $onlyWithoutHomework } from "./model/filters";
 
 export const useLessonsPage = () => {
   const completedPagination = useStore($completedPagination);
@@ -40,21 +41,41 @@ export const useLessonsPage = () => {
   useEffect(() => {
     if (lessonsViewMode === "weekly") {
       const weekStart = currentWeek.toISOString();
-      loadWeeklyLessons({ weekStart });
+      const onlyUnpaid = $onlyUnpaid.getState();
+      const onlyWithoutHomework = $onlyWithoutHomework.getState();
+      loadWeeklyLessons({ weekStart, onlyUnpaid, onlyWithoutHomework });
     }
   }, [lessonsViewMode, currentWeek]);
 
   useEffect(() => {
+    const onlyUnpaid = $onlyUnpaid.getState();
+    const onlyWithoutHomework = $onlyWithoutHomework.getState();
+
     if (lessonsViewMode === "paged") {
       switch (state.currentTab) {
         case 0: // Запланированные
-          loadUpcomingLessons({ page: 1, limit: 10 });
+          loadUpcomingLessons({
+            page: 1,
+            limit: 10,
+            onlyUnpaid,
+            onlyWithoutHomework,
+          });
           break;
         case 1: // Прошедшие
-          loadCompletedLessons({ page: 1, limit: 10 });
+          loadCompletedLessons({
+            page: 1,
+            limit: 10,
+            onlyUnpaid,
+            onlyWithoutHomework,
+          });
           break;
         case 2: // Отмененные
-          loadCancelledLessons({ page: 1, limit: 10 });
+          loadCancelledLessons({
+            page: 1,
+            limit: 10,
+            onlyUnpaid,
+            onlyWithoutHomework,
+          });
           break;
         default:
           // Запланированные загружаются в основном компоненте
@@ -86,14 +107,24 @@ export const useLessonsPage = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    loadCompletedLessons({ page, limit: 10 });
+    loadCompletedLessons({
+      page,
+      limit: 10,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
+    });
   };
 
   const handleCancelledPageChange = (
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    loadCancelledLessons({ page, limit: 10 });
+    loadCancelledLessons({
+      page,
+      limit: 10,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
+    });
   };
 
   // rescheduled page handling removed
@@ -102,7 +133,12 @@ export const useLessonsPage = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    loadUpcomingLessons({ page, limit: 10 });
+    loadUpcomingLessons({
+      page,
+      limit: 10,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
+    });
   };
 
   const handleEditLesson = (lesson: Lesson) => {

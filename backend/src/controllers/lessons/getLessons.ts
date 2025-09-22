@@ -17,6 +17,8 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       limit = "10",
       weekly,
       weekStart,
+      onlyUnpaid,
+      onlyWithoutHomework,
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -48,6 +50,15 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
 
     if (studentId) {
       where.studentId = studentId;
+    }
+
+    if (onlyUnpaid === "true") {
+      where.isPaid = false;
+      where.price = { gt: 0 } as any;
+    }
+
+    if (onlyWithoutHomework === "true") {
+      where.isHomeworkSentByTeacher = false;
     }
 
     // Apply status/upcoming filtering only for non-weekly requests.

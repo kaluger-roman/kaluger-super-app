@@ -7,6 +7,10 @@ import {
 } from "../../../shared";
 import { showSuccess, showError } from "../../../shared/model/notifications";
 import { loadUpcomingLessons } from "../../lesson/model/lesson";
+import {
+  $onlyUnpaid,
+  $onlyWithoutHomework,
+} from "../../../pages/lessons/model/filters";
 
 // Events
 export const loadStudents = createEvent();
@@ -119,7 +123,10 @@ updateStudentFx.doneData.watch(() => {
 
 removeStudentFx.doneData.watch(() => {
   loadStudents();
-  loadUpcomingLessons({});
+  loadUpcomingLessons({
+    onlyUnpaid: $onlyUnpaid.getState(),
+    onlyWithoutHomework: $onlyWithoutHomework.getState(),
+  });
   showSuccess("Ученик удален");
   closeStudentDialog();
 });

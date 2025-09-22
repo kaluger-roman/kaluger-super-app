@@ -18,6 +18,8 @@ type LessonsFilters = {
   status?: string;
   page?: number;
   limit?: number;
+  onlyUnpaid?: boolean;
+  onlyWithoutHomework?: boolean;
 };
 
 export const lessonsApi = {
@@ -43,6 +45,8 @@ export const lessonsApi = {
   getUpcoming: async (filters?: {
     page?: number;
     limit?: number;
+    onlyUnpaid?: boolean;
+    onlyWithoutHomework?: boolean;
   }): Promise<LessonsResponse> => {
     const params = new URLSearchParams();
 
@@ -54,6 +58,11 @@ export const lessonsApi = {
     // Отправляем только статусы, остальная логика будет в backend
     params.append("upcoming", "true");
     params.append("currentTime", now);
+
+    if (filters?.onlyUnpaid)
+      params.append("onlyUnpaid", String(filters.onlyUnpaid));
+    if (filters?.onlyWithoutHomework)
+      params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
 
     if (filters?.page) {
       params.append("page", filters.page.toString());
@@ -68,11 +77,17 @@ export const lessonsApi = {
 
   getByWeek: async (filters: {
     weekStart: string;
+    onlyUnpaid?: boolean;
+    onlyWithoutHomework?: boolean;
   }): Promise<LessonsResponse> => {
     const params = new URLSearchParams();
 
     params.append("weekStart", filters.weekStart);
     params.append("weekly", "true");
+    if (filters.onlyUnpaid)
+      params.append("onlyUnpaid", String(filters.onlyUnpaid));
+    if (filters.onlyWithoutHomework)
+      params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
 
     const response = await api.get(`/lessons?${params.toString()}`);
     return response.data;

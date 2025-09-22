@@ -10,23 +10,27 @@ import {
   $currentWeek,
   $lessonsViewMode,
 } from "../../../pages/lessons/model/viewMode";
+import {
+  $onlyUnpaid,
+  $onlyWithoutHomework,
+} from "../../../pages/lessons/model/filters";
 
 // Events
-export const loadCompletedLessons = createEvent<{
+export type LoadPagedFilters = {
   page?: number;
   limit?: number;
-}>();
-export const loadCancelledLessons = createEvent<{
-  page?: number;
-  limit?: number;
-}>();
+  onlyUnpaid?: boolean;
+  onlyWithoutHomework?: boolean;
+};
+
+export const loadCompletedLessons = createEvent<LoadPagedFilters>();
+export const loadCancelledLessons = createEvent<LoadPagedFilters>();
 export const loadLesson = createEvent<string>();
-export const loadUpcomingLessons = createEvent<{
-  page?: number;
-  limit?: number;
-}>();
+export const loadUpcomingLessons = createEvent<LoadPagedFilters>();
 export const loadWeeklyLessons = createEvent<{
   weekStart: string;
+  onlyUnpaid?: boolean;
+  onlyWithoutHomework?: boolean;
 }>();
 export const addLesson = createEvent<CreateLessonDto>();
 export const updateLesson = createEvent<{
@@ -43,7 +47,7 @@ export const closeLessonDialog = createEvent();
 
 // Effects
 export const loadCompletedLessonsFx = createEffect(
-  async (filters?: { page?: number; limit?: number }) => {
+  async (filters?: LoadPagedFilters) => {
     return await lessonsApi.getAll({
       ...filters,
       status: "COMPLETED",
@@ -52,7 +56,7 @@ export const loadCompletedLessonsFx = createEffect(
 );
 
 export const loadCancelledLessonsFx = createEffect(
-  async (filters?: { page?: number; limit?: number }) => {
+  async (filters?: LoadPagedFilters) => {
     return await lessonsApi.getAll({
       ...filters,
       status: "CANCELLED",
@@ -65,13 +69,17 @@ export const loadLessonFx = createEffect(async (id: string) => {
 });
 
 export const loadUpcomingLessonsFx = createEffect(
-  async (filters?: { page?: number; limit?: number }) => {
+  async (filters?: LoadPagedFilters) => {
     return await lessonsApi.getUpcoming(filters);
   }
 );
 
 export const loadWeeklyLessonsFx = createEffect(
-  async (filters: { weekStart: string }) => {
+  async (filters: {
+    weekStart: string;
+    onlyUnpaid?: boolean;
+    onlyWithoutHomework?: boolean;
+  }) => {
     return await lessonsApi.getByWeek(filters);
   }
 );
@@ -204,7 +212,12 @@ removeLesson.watch(removeLessonFx);
 // Auto-reload lessons after CRUD operations
 addLessonFx.doneData.watch(() => {
   const { page, limit } = $upcomingPagination.getState();
-  loadUpcomingLessons({ page, limit });
+  loadUpcomingLessons({
+    page,
+    limit,
+    onlyUnpaid: $onlyUnpaid.getState(),
+    onlyWithoutHomework: $onlyWithoutHomework.getState(),
+  });
   showSuccess("Урок создан");
   closeLessonDialog();
 });
@@ -218,6 +231,8 @@ updateLessonFx.doneData.watch(() => {
   if (lessonsViewMode === "weekly") {
     loadWeeklyLessons({
       weekStart: $currentWeek.getState().toISOString() || "",
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
     });
   }
 
@@ -225,14 +240,20 @@ updateLessonFx.doneData.watch(() => {
     loadUpcomingLessons({
       page: upcomingPagination.page,
       limit: upcomingPagination.limit,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
     });
     loadCompletedLessons({
       page: completedPagination.page,
       limit: completedPagination.limit,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
     });
     loadCancelledLessons({
       page: cancelledPagination.page,
       limit: cancelledPagination.limit,
+      onlyUnpaid: $onlyUnpaid.getState(),
+      onlyWithoutHomework: $onlyWithoutHomework.getState(),
     });
   }
 
@@ -242,7 +263,12 @@ updateLessonFx.doneData.watch(() => {
 
 removeLessonFx.doneData.watch(() => {
   const { page, limit } = $upcomingPagination.getState();
-  loadUpcomingLessons({ page, limit });
+  loadUpcomingLessons({
+    page,
+    limit,
+    onlyUnpaid: $onlyUnpaid.getState(),
+    onlyWithoutHomework: $onlyWithoutHomework.getState(),
+  });
   showSuccess("Урок удален");
   closeLessonDialog();
 });
