@@ -7,6 +7,7 @@ exports.updateLesson = void 0;
 const wsManager_1 = require("../../lib/wsManager");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const recurringHelpers_1 = require("../../services/recurringHelpers");
+const recurringHelpers_2 = require("../../services/recurringHelpers");
 const time_1 = require("../../utils/time");
 const validateUpdateData = async (id, userId, updateData, existingLesson) => {
     // Validation for time updates
@@ -148,6 +149,14 @@ const updateLesson = async (req, res) => {
             else if (result.shifted && result.shifted > 0) {
                 console.log(`Shifted ${result.shifted} future recurring lessons`);
             }
+        }
+        // If this lesson is recurring and price changed, update future lessons' prices
+        if (existingLesson.isRecurring &&
+            Object.prototype.hasOwnProperty.call(updateData, "price") &&
+            existingLesson.status === "SCHEDULED" &&
+            updateData.status !== "RESCHEDULED") {
+            const newPrice = updateData.price ?? null;
+            await (0, recurringHelpers_2.updatePriceForFutureRecurringLessons)(existingLesson, newPrice);
         }
         res.json({
             message: "Урок успешно обновлен",

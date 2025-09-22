@@ -9,7 +9,7 @@ const time_1 = require("../../utils/time");
 const getLessons = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", weekly, weekStart, } = req.query;
+        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", weekly, weekStart, onlyUnpaid, onlyWithoutHomework, } = req.query;
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
@@ -37,6 +37,13 @@ const getLessons = async (req, res) => {
         }
         if (studentId) {
             where.studentId = studentId;
+        }
+        if (onlyUnpaid === "true") {
+            where.isPaid = false;
+            where.price = { gt: 0 };
+        }
+        if (onlyWithoutHomework === "true") {
+            where.isHomeworkSentByTeacher = false;
         }
         // Apply status/upcoming filtering only for non-weekly requests.
         if (weekly !== "true") {

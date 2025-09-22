@@ -7,4 +7,7 @@ export declare const shiftFutureRecurringLessons: (existingLesson: any, newStart
         conflictingLessonId: string;
     }>;
 }>;
+export declare const updatePriceForFutureRecurringLessons: (existingLesson: any, newPrice: number | null) => Promise<{
+    updated: number;
+}>;
 //# sourceMappingURL=recurringHelpers.d.ts.map

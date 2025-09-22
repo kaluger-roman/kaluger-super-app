@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shiftFutureRecurringLessons = exports.groupRecurringLessonsByPattern = exports.getRecurringLessonKey = void 0;
+exports.updatePriceForFutureRecurringLessons = exports.shiftFutureRecurringLessons = exports.groupRecurringLessonsByPattern = exports.getRecurringLessonKey = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const time_1 = require("../utils/time");
 // Build a stable grouping key for recurring lessons
@@ -91,4 +91,23 @@ const shiftFutureRecurringLessons = async (existingLesson, newStart, newEnd) => 
     return { shifted: planned.length };
 };
 exports.shiftFutureRecurringLessons = shiftFutureRecurringLessons;
+// Update price for future recurring lessons in the same group
+const updatePriceForFutureRecurringLessons = async (existingLesson, newPrice) => {
+    const key = (0, exports.getRecurringLessonKey)(existingLesson);
+    const futureLessons = await prisma_1.default.lesson.findMany({
+        where: {
+            tutorId: existingLesson.tutorId,
+            studentId: existingLesson.studentId,
+            isRecurring: true,
+            status: "SCHEDULED",
+        },
+    });
+    const toUpdate = futureLessons.filter((l) => (0, exports.getRecurringLessonKey)(l) === key);
+    if (toUpdate.length === 0)
+        return { updated: 0 };
+    // Perform updates in a transaction
+    await prisma_1.default.$transaction(toUpdate.map((t) => prisma_1.default.lesson.update({ where: { id: t.id }, data: { price: newPrice } })));
+    return { updated: toUpdate.length };
+};
+exports.updatePriceForFutureRecurringLessons = updatePriceForFutureRecurringLessons;
 //# sourceMappingURL=recurringHelpers.js.map

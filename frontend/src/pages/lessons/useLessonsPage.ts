@@ -10,7 +10,7 @@ import {
   $cancelledPagination,
   loadWeeklyLessons,
 } from "../../entities";
-import { useStore } from "effector-react";
+import { useStore, useUnit } from "effector-react";
 import type { Lesson } from "../../shared";
 import type { LessonsPageState, ConfirmDialogState } from "./types";
 import { $currentWeek, $lessonsViewMode } from "./model/viewMode";
@@ -38,19 +38,18 @@ export const useLessonsPage = () => {
     action: () => {},
   });
 
+  const onlyUnpaid = useUnit($onlyUnpaid);
+  const onlyWithoutHomework = useUnit($onlyWithoutHomework);
+
   useEffect(() => {
     if (lessonsViewMode === "weekly") {
       const weekStart = currentWeek.toISOString();
-      const onlyUnpaid = $onlyUnpaid.getState();
-      const onlyWithoutHomework = $onlyWithoutHomework.getState();
+
       loadWeeklyLessons({ weekStart, onlyUnpaid, onlyWithoutHomework });
     }
-  }, [lessonsViewMode, currentWeek]);
+  }, [lessonsViewMode, currentWeek, onlyUnpaid, onlyWithoutHomework]);
 
   useEffect(() => {
-    const onlyUnpaid = $onlyUnpaid.getState();
-    const onlyWithoutHomework = $onlyWithoutHomework.getState();
-
     if (lessonsViewMode === "paged") {
       switch (state.currentTab) {
         case 0: // Запланированные
@@ -82,7 +81,7 @@ export const useLessonsPage = () => {
           break;
       }
     }
-  }, [state.currentTab, lessonsViewMode]);
+  }, [state.currentTab, lessonsViewMode, onlyUnpaid, onlyWithoutHomework]);
 
   // Подписываемся на событие закрытия диалога
   useEffect(() => {
