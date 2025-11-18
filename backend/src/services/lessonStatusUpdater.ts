@@ -10,7 +10,7 @@ export const updateLessonStatuses = async () => {
     // Получаем уроки, которые должны стать IN_PROGRESS
     const lessonsToStart = await prisma.lesson.findMany({
       where: {
-        status: "SCHEDULED",
+        status: { in: ["SCHEDULED", "RESCHEDULED"] },
         startTime: {
           lte: now,
         },
