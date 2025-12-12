@@ -9,7 +9,7 @@ const time_1 = require("../../utils/time");
 const getLessons = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", weekly, weekStart, onlyUnpaid, onlyWithoutHomework, } = req.query;
+        const { startDate, endDate, studentId, status, upcoming, currentTime, page = "1", limit = "10", weekly, noPagination, weekStart, onlyUnpaid, onlyWithoutHomework, } = req.query;
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
@@ -77,14 +77,15 @@ const getLessons = async (req, res) => {
                 orderBy: {
                     startTime: upcoming === "true" || weekly === "true" ? "asc" : "desc",
                 },
-                // Для недельных запросов не используем пагинацию
-                ...(weekly !== "true" && { skip, take: limitNum }),
+                // Если явно запрошено отключение пагинации или это weekly-запрос — не используем пагинацию
+                ...(weekly !== "true" &&
+                    noPagination !== "true" && { skip, take: limitNum }),
             }),
             prisma_1.default.lesson.count({ where }),
         ]);
         res.json({
             lessons,
-            pagination: weekly === "true"
+            pagination: weekly === "true" || noPagination === "true"
                 ? undefined
                 : {
                     total,
