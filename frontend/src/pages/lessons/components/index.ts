@@ -5,3 +5,5 @@ export { LessonsDialogs } from "./LessonsDialogs";
 export { ViewModeToggle } from "./ViewModeToggle";
 export { WeekPagination } from "./WeekPagination";
 export { LessonsFilters } from "./LessonsFilters";
+export { ScheduleView } from "./ScheduleView";
+export { LessonCell } from "./LessonCell";

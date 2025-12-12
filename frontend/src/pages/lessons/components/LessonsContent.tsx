@@ -2,10 +2,11 @@ import React from "react";
 import { Box, Pagination } from "@mui/material";
 import { LessonsList } from "../../../shared";
 import { WeekPagination } from "./WeekPagination";
+import { ScheduleView } from "./ScheduleView";
 import type { Lesson } from "../../../shared";
 import { useUnit } from "effector-react";
 import { $currentWeek, $lessonsViewMode } from "../model/viewMode";
-import { $weeklyLessons } from "../../../entities";
+import { $weeklyLessons, $scheduleLessons } from "../../../entities";
 
 type PageInfo = { totalPages: number; page: number };
 
@@ -37,6 +38,7 @@ type LessonsContentProps = {
     event: React.ChangeEvent<unknown>,
     page: number
   ) => void;
+  onLoadMoreDays?: (startDate: Date, endDate: Date) => void;
 };
 
 const TAB_CONFIG: {
@@ -109,6 +111,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
     onUpcomingPageChange,
     onCompletedPageChange,
     onCancelledPageChange,
+    onLoadMoreDays,
   } = props;
 
   const cfg = TAB_CONFIG.find((t) => t.key === currentTab) ?? TAB_CONFIG[0];
@@ -116,6 +119,7 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
   const viewMode = useUnit($lessonsViewMode);
   const currentWeek = useUnit($currentWeek);
   const weeklyLessons = useUnit($weeklyLessons);
+  const scheduleLessons = useUnit($scheduleLessons);
 
   const lessonsSource =
     viewMode === "weekly" ? weeklyLessons : (props[cfg.listProp] as Lesson[]);
@@ -133,6 +137,16 @@ export const LessonsContent: React.FC<LessonsContentProps> = (props) => {
         return;
     }
   };
+
+  if (viewMode === "schedule") {
+    return (
+      <ScheduleView
+        lessons={scheduleLessons}
+        onLessonClick={onCardClick}
+        onLoadMoreDays={onLoadMoreDays || (() => {})}
+      />
+    );
+  }
 
   return (
     <>

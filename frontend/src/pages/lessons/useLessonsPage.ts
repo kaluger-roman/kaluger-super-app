@@ -9,6 +9,7 @@ import {
   $completedPagination,
   $cancelledPagination,
   loadWeeklyLessons,
+  loadScheduleLessons,
 } from "../../entities";
 import { useStore, useUnit } from "effector-react";
 import type { Lesson } from "../../shared";
@@ -46,6 +47,17 @@ export const useLessonsPage = () => {
       const weekStart = currentWeek.toISOString();
 
       loadWeeklyLessons({ weekStart, onlyUnpaid, onlyWithoutHomework });
+    } else if (lessonsViewMode === "schedule") {
+      const now = new Date();
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 15);
+      const endDate = new Date(now);
+      endDate.setDate(now.getDate() + 15);
+
+      loadScheduleLessons({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
     }
   }, [lessonsViewMode, currentWeek, onlyUnpaid, onlyWithoutHomework]);
 
@@ -264,6 +276,13 @@ export const useLessonsPage = () => {
     }));
   };
 
+  const handleLoadMoreDays = (startDate: Date, endDate: Date) => {
+    loadScheduleLessons({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+  };
+
   return {
     state,
     setState,
@@ -283,5 +302,6 @@ export const useLessonsPage = () => {
     handlePaymentChange,
     handleHomeworkSentChange,
     handleCardClick,
+    handleLoadMoreDays,
   };
 };

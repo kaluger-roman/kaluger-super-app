@@ -93,6 +93,19 @@ export const lessonsApi = {
     return response.data;
   },
 
+  getByDateRange: async (filters: {
+    startDate: string;
+    endDate: string;
+  }): Promise<LessonsResponse> => {
+    const params = new URLSearchParams();
+
+    params.append("startDate", filters.startDate);
+    params.append("endDate", filters.endDate);
+
+    const response = await api.get(`/lessons?${params.toString()}`);
+    return response.data;
+  },
+
   getStatistics: async (filters?: {
     startDate?: string;
     endDate?: string;

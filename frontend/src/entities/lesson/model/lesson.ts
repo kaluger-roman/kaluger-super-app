@@ -32,6 +32,10 @@ export const loadWeeklyLessons = createEvent<{
   onlyUnpaid?: boolean;
   onlyWithoutHomework?: boolean;
 }>();
+export const loadScheduleLessons = createEvent<{
+  startDate: string;
+  endDate: string;
+}>();
 export const addLesson = createEvent<CreateLessonDto>();
 export const updateLesson = createEvent<{
   id: string;
@@ -81,6 +85,12 @@ export const loadWeeklyLessonsFx = createEffect(
     onlyWithoutHomework?: boolean;
   }) => {
     return await lessonsApi.getByWeek(filters);
+  }
+);
+
+export const loadScheduleLessonsFx = createEffect(
+  async (filters: { startDate: string; endDate: string }) => {
+    return await lessonsApi.getByDateRange(filters);
   }
 );
 
@@ -135,6 +145,56 @@ export const $weeklyLessons = createStore<Lesson[]>([]).on(
   (_, { lessons }) => lessons
 );
 
+// Хранилище для данных расписания с группировкой по дням
+export const $scheduleLessons = createStore<Record<string, Lesson[]>>({})
+  .on(loadScheduleLessonsFx.doneData, (state, { lessons }) => {
+    // Группируем уроки по дням
+    const lessonsByDay: Record<string, Lesson[]> = {};
+    lessons.forEach((lesson) => {
+      const dateKey = new Date(lesson.startTime).toISOString().split("T")[0];
+      if (!lessonsByDay[dateKey]) {
+        lessonsByDay[dateKey] = [];
+      }
+      lessonsByDay[dateKey].push(lesson);
+    });
+
+    // Объединяем с существующими данными
+    return { ...state, ...lessonsByDay };
+  })
+  .on(addLessonFx.doneData, (state, newLesson) => {
+    const dateKey = new Date(newLesson.startTime).toISOString().split("T")[0];
+    const dayLessons = state[dateKey] || [];
+    return {
+      ...state,
+      [dateKey]: [...dayLessons, newLesson],
+    };
+  })
+  .on(updateLessonFx.doneData, (state, updatedLesson) => {
+    const dateKey = new Date(updatedLesson.startTime)
+      .toISOString()
+      .split("T")[0];
+    const dayLessons = state[dateKey] || [];
+    const updatedDayLessons = dayLessons.map((lesson) =>
+      lesson.id === updatedLesson.id ? updatedLesson : lesson
+    );
+    return {
+      ...state,
+      [dateKey]: updatedDayLessons,
+    };
+  })
+  .on(removeLessonFx.doneData, (state, removedId) => {
+    const newState = { ...state };
+    Object.keys(newState).forEach((dateKey) => {
+      newState[dateKey] = newState[dateKey].filter(
+        (lesson) => lesson.id !== removedId
+      );
+      if (newState[dateKey].length === 0) {
+        delete newState[dateKey];
+      }
+    });
+    return newState;
+  });
+
 export const $currentLesson = createStore<Lesson | null>(null)
   .on(loadLessonFx.doneData, (_, lesson) => lesson)
   .on(updateLessonFx.doneData, (current, updated) =>
@@ -171,6 +231,7 @@ export const $isLoading = createStore(false)
       loadLessonFx,
       loadUpcomingLessonsFx,
       loadWeeklyLessonsFx,
+      loadScheduleLessonsFx,
       addLessonFx,
       updateLessonFx,
       removeLessonFx,
@@ -184,6 +245,7 @@ export const $isLoading = createStore(false)
       loadLessonFx.done,
       loadUpcomingLessonsFx.done,
       loadWeeklyLessonsFx.done,
+      loadScheduleLessonsFx.done,
       addLessonFx.done,
       updateLessonFx.done,
       removeLessonFx.done,
@@ -192,6 +254,7 @@ export const $isLoading = createStore(false)
       loadLessonFx.fail,
       loadUpcomingLessonsFx.fail,
       loadWeeklyLessonsFx.fail,
+      loadScheduleLessonsFx.fail,
       addLessonFx.fail,
       updateLessonFx.fail,
       removeLessonFx.fail,
@@ -205,6 +268,7 @@ loadCancelledLessons.watch(loadCancelledLessonsFx);
 loadLesson.watch(loadLessonFx);
 loadUpcomingLessons.watch(loadUpcomingLessonsFx);
 loadWeeklyLessons.watch(loadWeeklyLessonsFx);
+loadScheduleLessons.watch(loadScheduleLessonsFx);
 addLesson.watch(addLessonFx);
 updateLesson.watch(updateLessonFx);
 removeLesson.watch(removeLessonFx);
@@ -233,6 +297,20 @@ updateLessonFx.doneData.watch(() => {
       weekStart: $currentWeek.getState().toISOString() || "",
       onlyUnpaid: $onlyUnpaid.getState(),
       onlyWithoutHomework: $onlyWithoutHomework.getState(),
+    });
+  }
+
+  if (lessonsViewMode === "schedule") {
+    // Для режима расписания перезагружаем только текущий видимый диапазон
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 15);
+    const endDate = new Date(now);
+    endDate.setDate(now.getDate() + 15);
+
+    loadScheduleLessons({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
     });
   }
 

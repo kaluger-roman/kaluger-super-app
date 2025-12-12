@@ -12,6 +12,7 @@ import {
   $upcomingPagination,
   $lessonsIsLoading,
 } from "../../entities";
+import { $lessonsViewMode } from "./model/viewMode";
 import { useLessonsPage } from "./useLessonsPage";
 import {
   LessonsTabs,
@@ -28,6 +29,7 @@ export const LessonsPage: React.FC = () => {
   const completedPagination = useUnit($completedPagination);
   const cancelledPagination = useUnit($cancelledPagination);
   const isLoading = useUnit($lessonsIsLoading);
+  const lessonsViewMode = useUnit($lessonsViewMode);
 
   const {
     state,
@@ -48,6 +50,7 @@ export const LessonsPage: React.FC = () => {
     handlePaymentChange,
     handleHomeworkSentChange,
     handleCardClick,
+    handleLoadMoreDays,
   } = useLessonsPage();
 
   const handleCloseDialog = () => {
@@ -148,14 +151,16 @@ export const LessonsPage: React.FC = () => {
         </Typography>
         <Box mt={2}>
           <ViewModeToggle />
-          <LessonsFilters />
+          {lessonsViewMode !== "schedule" && <LessonsFilters />}
         </Box>
       </Box>
 
-      <LessonsTabs
-        currentTab={state.currentTab}
-        onTabChange={handleTabChange}
-      />
+      {lessonsViewMode !== "schedule" && (
+        <LessonsTabs
+          currentTab={state.currentTab}
+          onTabChange={handleTabChange}
+        />
+      )}
 
       <LessonsContent
         currentTab={state.currentTab}
@@ -176,6 +181,7 @@ export const LessonsPage: React.FC = () => {
         onUpcomingPageChange={handleUpcomingPageChange}
         onCompletedPageChange={handleCompletedPageChange}
         onCancelledPageChange={handleCancelledPageChange}
+        onLoadMoreDays={handleLoadMoreDays}
       />
 
       <AddLessonFab onClick={handleAddLesson} />
