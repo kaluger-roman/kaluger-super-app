@@ -1,8 +1,17 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Box, Typography } from "@mui/material";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
 import { LessonCell } from "./LessonCell";
 import type { Lesson } from "../../../shared";
+import { useStore } from "effector-react";
+import { loadScheduleLessonsFx } from "../../../entities/lesson/model/lesson";
 
 type ScheduleViewProps = {
   lessons: Record<string, Lesson[]>; // Уроки по дням (ключ - дата в формате YYYY-MM-DD)
@@ -26,7 +35,7 @@ const Header = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
   position: "sticky",
   top: 64,
-  zIndex: 3,
+  zIndex: 10,
 }));
 
 const TimeColumn = styled(Box)(({ theme }) => ({
@@ -42,6 +51,17 @@ const ScrollContainer = styled(Box)({
   position: "relative",
 });
 
+const LoaderOverlay = styled(Box)(({ theme }) => ({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.6)",
+  zIndex: 20,
+  pointerEvents: "auto",
+}));
+
 const MainScrollArea = styled(Box)({
   display: "flex",
   overflowX: "auto",
@@ -55,7 +75,7 @@ const TimeGrid = styled(Box)(({ theme }) => ({
   flexShrink: 0,
   position: "sticky",
   left: 0,
-  zIndex: 2,
+  zIndex: 8,
   height: "fit-content",
   backgroundColor: theme.palette.background.default,
   borderRight: `1px solid ${theme.palette.divider}`,
@@ -80,6 +100,7 @@ const DayColumn = styled(Box)(({ theme }) => ({
   borderRight: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
+  position: "relative",
 }));
 
 const TimeSlot = styled(Box)(({ theme }) => ({
@@ -160,8 +181,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 }) => {
   const [centerDate] = useState(new Date());
   const [containerWidth, setContainerWidth] = useState(0);
+  const theme = useTheme();
   const headerScrollRef = React.useRef<HTMLDivElement>(null);
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
+
+  const [now, setNow] = useState<Date>(() => new Date());
 
   // Compute start and end hour dynamically from lessons
   const { startHour, endHour } = useMemo(() => {
@@ -191,7 +215,46 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     [startHour, endHour]
   );
 
-  const dateRange = useMemo(() => generateDateRange(centerDate), [centerDate]);
+  // Track already requested ranges to avoid duplicate requests
+  const requestedRangesRef = useRef<Set<string>>(new Set());
+
+  // Compute currently loaded min/max dates from the lessons prop
+  const { minLoadedDate, maxLoadedDate } = useMemo(() => {
+    const keys = Object.keys(lessons || {});
+    if (keys.length === 0) return { minLoadedDate: null, maxLoadedDate: null };
+    const dates = keys.map((k) => new Date(k));
+    const times = dates.map((d) => d.getTime());
+    const min = new Date(Math.min(...times));
+    const max = new Date(Math.max(...times));
+    return { minLoadedDate: min, maxLoadedDate: max };
+  }, [lessons]);
+
+  // Build dateRange from loaded data when available, otherwise fallback to centerDate-based range
+  const dateRange = useMemo(() => {
+    if (minLoadedDate && maxLoadedDate) {
+      const start = new Date(minLoadedDate);
+      const end = new Date(maxLoadedDate);
+      // add small buffer so user can scroll a bit beyond loaded range
+      start.setDate(start.getDate() - 3);
+      end.setDate(end.getDate() + 3);
+      const dates: Date[] = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
+      return dates;
+    }
+
+    return generateDateRange(centerDate);
+  }, [minLoadedDate, maxLoadedDate, centerDate]);
+
+  // Tick every minute to update current time and refresh today's lessons
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const interval = window.setInterval(tick, 60 * 1000);
+    // also update immediately at mount
+    tick();
+    return () => clearInterval(interval);
+  }, []);
 
   // Синхронизация прокрутки заголовка и основной области
   const handleHeaderScroll = useCallback(
@@ -213,25 +276,47 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         headerScrollRef.current.scrollLeft = element.scrollLeft;
       }
 
-      // Проверяем, нужно ли загрузить больше дней
-      const scrollPercentage =
-        element.scrollLeft / (element.scrollWidth - element.clientWidth);
+      // Проверяем, нужно ли загрузить больше дней — по расстоянию до краёв (150px)
+      const distanceToRight =
+        element.scrollWidth - element.clientWidth - element.scrollLeft;
+      const distanceToLeft = element.scrollLeft;
+      const EDGE_THRESHOLD = 150; // px
 
-      if (scrollPercentage > 0.8) {
+      if (distanceToRight < EDGE_THRESHOLD) {
         // Загружаем дни справа
         const lastDate = dateRange[dateRange.length - 1];
         const endDate = new Date(lastDate);
         endDate.setDate(lastDate.getDate() + 7);
+
+        // Skip if we've already loaded up to or beyond requested end
+        if (maxLoadedDate && endDate.getTime() <= maxLoadedDate.getTime()) {
+          return;
+        }
+
+        const key = `${lastDate.toISOString()}_${endDate.toISOString()}`;
+        if (requestedRangesRef.current.has(key)) return;
+        requestedRangesRef.current.add(key);
+
         onLoadMoreDays(lastDate, endDate);
-      } else if (scrollPercentage < 0.2) {
+      } else if (distanceToLeft < EDGE_THRESHOLD) {
         // Загружаем дни слева
         const firstDate = dateRange[0];
         const startDate = new Date(firstDate);
         startDate.setDate(firstDate.getDate() - 7);
+
+        // Skip if we've already loaded starting at or before requested start
+        if (minLoadedDate && startDate.getTime() >= minLoadedDate.getTime()) {
+          return;
+        }
+
+        const key = `${startDate.toISOString()}_${firstDate.toISOString()}`;
+        if (requestedRangesRef.current.has(key)) return;
+        requestedRangesRef.current.add(key);
+
         onLoadMoreDays(startDate, firstDate);
       }
     },
-    [dateRange, onLoadMoreDays]
+    [dateRange, onLoadMoreDays, minLoadedDate, maxLoadedDate]
   );
 
   // Группировка уроков по дням и временным слотам
@@ -256,8 +341,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   }, [lessons, startHour]);
 
   // Инициализация центральной позиции прокрутки
+  const didInitialCenterRef = useRef(false);
+
+  // Initial centering only once — do not recenter on subsequent data loads
   useEffect(() => {
-    if (containerWidth > 0) {
+    if (didInitialCenterRef.current) return;
+    if (containerWidth > 0 && dateRange.length > 0) {
       const todayIndex = dateRange.findIndex(
         (date) => getDateKey(date) === getDateKey(new Date())
       );
@@ -274,9 +363,47 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (mainScrollRef.current) {
           mainScrollRef.current.scrollLeft = initialScroll;
         }
+        didInitialCenterRef.current = true;
       }
     }
   }, [containerWidth, dateRange]);
+  const isScheduleLoading = useStore(loadScheduleLessonsFx.pending);
+
+  // Preserve scroll position when new days are prepended: if dateRange start moves earlier,
+  // shift scrollLeft by number of added days * CELL_WIDTH so user's viewport stays in place.
+  const prevStartRef = useRef<Date | null>(null);
+  useEffect(() => {
+    if (!mainScrollRef.current) {
+      prevStartRef.current = dateRange[0] || null;
+      return;
+    }
+
+    const prevStart = prevStartRef.current;
+    const newStart = dateRange[0] || null;
+    if (!prevStart || !newStart) {
+      prevStartRef.current = newStart;
+      return;
+    }
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.round(
+      (prevStart.getTime() - newStart.getTime()) / msPerDay
+    );
+    if (diffDays > 0) {
+      const deltaPx = diffDays * CELL_WIDTH;
+      // adjust both header and main scrolls
+      if (mainScrollRef.current) {
+        mainScrollRef.current.scrollLeft =
+          (mainScrollRef.current.scrollLeft || 0) + deltaPx;
+      }
+      if (headerScrollRef.current) {
+        headerScrollRef.current.scrollLeft =
+          (headerScrollRef.current.scrollLeft || 0) + deltaPx;
+      }
+    }
+
+    prevStartRef.current = newStart;
+  }, [dateRange]);
 
   return (
     <ScheduleContainer>
@@ -330,6 +457,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       </Header>
 
       <ScrollContainer>
+        {isScheduleLoading && (
+          <LoaderOverlay>
+            <CircularProgress />
+          </LoaderOverlay>
+        )}
         <MainScrollArea
           ref={(el: HTMLDivElement | null) => {
             mainScrollRef.current = el;
@@ -338,6 +470,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
           }}
           onScroll={handleMainScroll}
+          style={{ pointerEvents: isScheduleLoading ? "none" : "auto" }}
         >
           <TimeGrid>
             {timeSlots.map((time) => (
@@ -353,9 +486,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             {dateRange.map((date) => {
               const dateKey = getDateKey(date);
               const dayLessons = lessonsByDayAndTime[dateKey] || {};
+              const isToday = dateKey === getDateKey(now);
 
               return (
-                <DayColumn key={dateKey}>
+                <DayColumn
+                  key={dateKey}
+                  style={
+                    isToday
+                      ? { backgroundColor: theme.palette.action.hover }
+                      : undefined
+                  }
+                >
                   {timeSlots.map((time, timeIndex) => {
                     const lessonsInSlot = dayLessons[timeIndex] || [];
 
@@ -379,6 +520,27 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       </LessonSlot>
                     );
                   })}
+                  {(() => {
+                    const nowHours = now.getHours() + now.getMinutes() / 60;
+                    const topPx = (nowHours - startHour) * CELL_HEIGHT;
+                    if (topPx >= 0 && topPx <= timeSlots.length * CELL_HEIGHT) {
+                      return (
+                        <Box
+                          key={`now-line-${dateKey}`}
+                          position="absolute"
+                          left={0}
+                          right={0}
+                          top={topPx}
+                          height={2}
+                          sx={{
+                            backgroundColor: theme.palette.error.main,
+                            zIndex: 5,
+                          }}
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
                 </DayColumn>
               );
             })}

@@ -11,7 +11,7 @@ This is a tutor management application with:
 
 ## Additional Frontend Guidelines
 
-- Try avoid large React components (more than 150 lines). Split logic and UI into smaller components when possible.
+- Strongly avoid large React components (more than 150 lines). Split logic and UI into smaller components.
 - Extract shared logic and UI into reusable components or hooks.
 - Move as much business and state logic as possible from React components into Effector models (store, events, effects).
 - One file — one React component. Place hooks and helpers in separate files or in shared files.
