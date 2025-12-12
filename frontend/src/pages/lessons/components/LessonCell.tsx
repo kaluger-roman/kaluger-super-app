@@ -7,11 +7,15 @@ import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../../shared";
 type LessonCellProps = {
   lesson: Lesson;
   onClick: (lesson: Lesson) => void;
+  compact?: boolean;
 };
 
 const LessonCard = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "status",
-})<{ status: Lesson["status"] }>(({ theme, status }) => {
+  shouldForwardProp: (prop) => prop !== "status" && prop !== "compact",
+})<{
+  status: Lesson["status"];
+  compact?: boolean;
+}>(({ theme, status, compact }) => {
   const getStatusColor = () => {
     switch (status) {
       case "SCHEDULED":
@@ -53,21 +57,42 @@ const LessonCard = styled(Box, {
     }
   };
 
-  return {
+  const base = {
     ...getStatusColor(),
-    padding: theme.spacing(1),
     borderRadius: theme.shape.borderRadius,
     cursor: "pointer",
+    height: "100%",
     margin: "2px",
-    minHeight: "60px",
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(0.5),
     transition: "all 0.2s ease-in-out",
     "&:hover": {
       transform: "translateY(-1px)",
       boxShadow: theme.shadows[2],
     },
+  } as any;
+
+  if (compact) {
+    return {
+      ...base,
+      margin: "1px",
+      height: "calc(100% - 3px)",
+      padding: "0px 4px",
+      borderRadius: "4px",
+      minHeight: "24px",
+      display: "flex",
+      flexDirection: "row",
+      gap: theme.spacing(0.5),
+      alignItems: "center",
+    };
+  }
+
+  return {
+    ...base,
+    padding: theme.spacing(1),
+    minHeight: "110px",
+    height: "calc(100% - 6px)",
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(0.5),
   };
 });
 
@@ -88,7 +113,11 @@ const getStatusLabel = (status: Lesson["status"]) => {
   }
 };
 
-export const LessonCell: React.FC<LessonCellProps> = ({ lesson, onClick }) => {
+export const LessonCell: React.FC<LessonCellProps> = ({
+  lesson,
+  onClick,
+  compact = false,
+}) => {
   const startTime = new Date(lesson.startTime);
   const endTime = new Date(lesson.endTime);
 
@@ -98,6 +127,21 @@ export const LessonCell: React.FC<LessonCellProps> = ({ lesson, onClick }) => {
       minute: "2-digit",
     });
   };
+
+  if (compact) {
+    return (
+      <LessonCard
+        status={lesson.status}
+        compact
+        onClick={() => onClick(lesson)}
+      >
+        <Typography variant="caption" noWrap sx={{ fontWeight: 600 }}>
+          {lesson.price ? `${lesson.price}₽ ` : ""}
+          {lesson.student?.name}
+        </Typography>
+      </LessonCard>
+    );
+  }
 
   return (
     <LessonCard status={lesson.status} onClick={() => onClick(lesson)}>
@@ -133,7 +177,12 @@ export const LessonCell: React.FC<LessonCellProps> = ({ lesson, onClick }) => {
       </Typography>
 
       {lesson.price && (
-        <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mt="auto"
+        >
           <Typography variant="caption" fontWeight="bold">
             {lesson.price}₽
           </Typography>

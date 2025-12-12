@@ -17,14 +17,14 @@ export const ViewModeToggle: React.FC = () => {
       size="small"
       aria-label="view-mode"
     >
+      <ToggleButton value="schedule" aria-label="schedule">
+        Расписание
+      </ToggleButton>
       <ToggleButton value="paged" aria-label="paged">
         Постранично
       </ToggleButton>
       <ToggleButton value="weekly" aria-label="weekly">
         Понедельно
-      </ToggleButton>
-      <ToggleButton value="schedule" aria-label="schedule">
-        Расписание
       </ToggleButton>
     </ToggleButtonGroup>
   );

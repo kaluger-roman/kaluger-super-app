@@ -5,7 +5,13 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
 import { LessonCell } from "./LessonCell";
@@ -21,6 +27,7 @@ type ScheduleViewProps = {
 
 const CELL_WIDTH = 180; // Ширина колонки дня
 const CELL_HEIGHT = 116; // Высота временного слота
+const CELL_HEIGHT_COMPACT = 27; // Высота временного слота для краткой формы
 
 const ScheduleContainer = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -35,7 +42,10 @@ const Header = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
   position: "sticky",
   top: 64,
-  zIndex: 10,
+  zIndex: 35,
+  borderTopLeftRadius: theme.shape.borderRadius,
+  borderTopRightRadius: theme.shape.borderRadius,
+  overflow: "hidden",
 }));
 
 const TimeColumn = styled(Box)(({ theme }) => ({
@@ -75,7 +85,7 @@ const TimeGrid = styled(Box)(({ theme }) => ({
   flexShrink: 0,
   position: "sticky",
   left: 0,
-  zIndex: 8,
+  zIndex: 30,
   height: "fit-content",
   backgroundColor: theme.palette.background.default,
   borderRight: `1px solid ${theme.palette.divider}`,
@@ -101,6 +111,7 @@ const DayColumn = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   position: "relative",
+  overflow: "hidden",
 }));
 
 const TimeSlot = styled(Box)(({ theme }) => ({
@@ -110,7 +121,7 @@ const TimeSlot = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  backgroundColor: theme.palette.background.default,
+  zIndex: 30,
 }));
 
 const LessonSlot = styled(Box)(({ theme }) => ({
@@ -180,6 +191,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onLoadMoreDays,
 }) => {
   const [centerDate] = useState(new Date());
+  const [compactMode, setCompactMode] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const theme = useTheme();
   const headerScrollRef = React.useRef<HTMLDivElement>(null);
@@ -214,6 +226,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     () => generateTimeSlots(startHour, endHour),
     [startHour, endHour]
   );
+
+  const activeCellHeight = compactMode ? CELL_HEIGHT_COMPACT : CELL_HEIGHT;
 
   // Track already requested ranges to avoid duplicate requests
   const requestedRangesRef = useRef<Set<string>>(new Set());
@@ -319,27 +333,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     [dateRange, onLoadMoreDays, minLoadedDate, maxLoadedDate]
   );
 
-  // Группировка уроков по дням и временным слотам
-  const lessonsByDayAndTime = useMemo(() => {
-    const grouped: Record<string, Record<number, Lesson[]>> = {};
-
-    Object.entries(lessons).forEach(([dateKey, dayLessons]) => {
-      grouped[dateKey] = {};
-
-      dayLessons.forEach((lesson) => {
-        const startTime = new Date(lesson.startTime);
-        const hour = startTime.getHours();
-        const timeSlot = Math.max(0, hour - startHour);
-        if (!grouped[dateKey][timeSlot]) {
-          grouped[dateKey][timeSlot] = [];
-        }
-        grouped[dateKey][timeSlot].push(lesson);
-      });
-    });
-
-    return grouped;
-  }, [lessons, startHour]);
-
   // Инициализация центральной позиции прокрутки
   const didInitialCenterRef = useRef(false);
 
@@ -350,10 +343,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       const todayIndex = dateRange.findIndex(
         (date) => getDateKey(date) === getDateKey(new Date())
       );
-      if (todayIndex >= 0) {
+      if (todayIndex >= 0 && Object.keys(lessons).length > 0) {
         const initialScroll = Math.max(
           0,
-          todayIndex * CELL_WIDTH - containerWidth / 2
+          todayIndex * CELL_WIDTH - containerWidth / 2 + 80
         );
 
         // Синхронизируем прокрутку обоих элементов
@@ -366,7 +359,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         didInitialCenterRef.current = true;
       }
     }
-  }, [containerWidth, dateRange]);
+  }, [containerWidth, dateRange, lessons]);
   const isScheduleLoading = useStore(loadScheduleLessonsFx.pending);
 
   // Preserve scroll position when new days are prepended: if dateRange start moves earlier,
@@ -406,147 +399,199 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   }, [dateRange]);
 
   return (
-    <ScheduleContainer>
-      <Header>
-        <TimeColumn>
-          <Box
-            height="80px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Typography variant="caption" color="text.secondary">
-              Время
-            </Typography>
-          </Box>
-        </TimeColumn>
-        <DaysGrid ref={headerScrollRef} onScroll={handleHeaderScroll}>
-          {dateRange.map((date) => {
-            const { dayName, dayNumber, monthName, isToday } =
-              formatDayHeader(date);
-            return (
-              <DayColumn key={getDateKey(date)}>
-                <DayHeader>
-                  <Typography
-                    variant="caption"
-                    color={isToday ? "primary.main" : "text.secondary"}
-                    fontWeight="bold"
-                    fontSize="10px"
-                  >
-                    {monthName}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color={isToday ? "primary.main" : "text.secondary"}
-                    fontWeight={isToday ? "bold" : "normal"}
-                  >
-                    {dayName}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    color={isToday ? "primary.main" : "text.primary"}
-                    fontWeight={isToday ? "bold" : "normal"}
-                  >
-                    {dayNumber}
-                  </Typography>
-                </DayHeader>
-              </DayColumn>
-            );
-          })}
-        </DaysGrid>
-      </Header>
+    <>
+      <Box display="flex" alignItems="center" px={2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={compactMode}
+              onChange={(_, v) => setCompactMode(v)}
+            />
+          }
+          label={<Typography variant="caption">Краткая форма</Typography>}
+        />
+      </Box>
 
-      <ScrollContainer>
-        {isScheduleLoading && (
-          <LoaderOverlay>
-            <CircularProgress />
-          </LoaderOverlay>
-        )}
-        <MainScrollArea
-          ref={(el: HTMLDivElement | null) => {
-            mainScrollRef.current = el;
-            if (el && containerWidth === 0) {
-              setContainerWidth(el.clientWidth);
-            }
-          }}
-          onScroll={handleMainScroll}
-          style={{ pointerEvents: isScheduleLoading ? "none" : "auto" }}
-        >
-          <TimeGrid>
-            {timeSlots.map((time) => (
-              <TimeSlot key={time}>
-                <Typography variant="caption" color="text.secondary">
-                  {time}
-                </Typography>
-              </TimeSlot>
-            ))}
-          </TimeGrid>
-
-          <ContentGrid>
+      <ScheduleContainer>
+        <Header>
+          <TimeColumn>
+            <Box
+              height="80px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Typography variant="caption" color="text.secondary">
+                Время
+              </Typography>
+            </Box>
+          </TimeColumn>
+          <DaysGrid ref={headerScrollRef} onScroll={handleHeaderScroll}>
             {dateRange.map((date) => {
-              const dateKey = getDateKey(date);
-              const dayLessons = lessonsByDayAndTime[dateKey] || {};
-              const isToday = dateKey === getDateKey(now);
-
+              const { dayName, dayNumber, monthName, isToday } =
+                formatDayHeader(date);
               return (
-                <DayColumn
-                  key={dateKey}
-                  style={
-                    isToday
-                      ? { backgroundColor: theme.palette.action.hover }
-                      : undefined
-                  }
-                >
-                  {timeSlots.map((time, timeIndex) => {
-                    const lessonsInSlot = dayLessons[timeIndex] || [];
+                <DayColumn key={getDateKey(date)}>
+                  <DayHeader>
+                    <Typography
+                      variant="caption"
+                      color={isToday ? "primary.main" : "text.secondary"}
+                      fontWeight="bold"
+                      fontSize="10px"
+                    >
+                      {monthName}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color={isToday ? "primary.main" : "text.secondary"}
+                      fontWeight={isToday ? "bold" : "normal"}
+                    >
+                      {dayName}
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      color={isToday ? "primary.main" : "text.primary"}
+                      fontWeight={isToday ? "bold" : "normal"}
+                    >
+                      {dayNumber}
+                    </Typography>
+                  </DayHeader>
+                </DayColumn>
+              );
+            })}
+          </DaysGrid>
+        </Header>
 
-                    return (
-                      <LessonSlot key={`${dateKey}-${time}`}>
-                        {lessonsInSlot.map((lesson, lessonIndex) => (
+        <ScrollContainer>
+          {isScheduleLoading && (
+            <LoaderOverlay>
+              <CircularProgress />
+            </LoaderOverlay>
+          )}
+          <MainScrollArea
+            ref={(el: HTMLDivElement | null) => {
+              mainScrollRef.current = el;
+              if (el && containerWidth === 0) {
+                setContainerWidth(el.clientWidth);
+              }
+            }}
+            onScroll={handleMainScroll}
+            style={{ pointerEvents: isScheduleLoading ? "none" : "auto" }}
+          >
+            <TimeGrid>
+              {timeSlots.map((time) => (
+                <TimeSlot
+                  key={time}
+                  style={{
+                    height: activeCellHeight,
+                    minHeight: activeCellHeight,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {time}
+                  </Typography>
+                </TimeSlot>
+              ))}
+            </TimeGrid>
+
+            <ContentGrid>
+              {dateRange.map((date) => {
+                const dateKey = getDateKey(date);
+                const isToday = dateKey === getDateKey(now);
+
+                return (
+                  <DayColumn
+                    key={dateKey}
+                    style={
+                      isToday
+                        ? { backgroundColor: theme.palette.action.hover }
+                        : undefined
+                    }
+                  >
+                    {timeSlots.map((time) => (
+                      <LessonSlot
+                        key={`${dateKey}-${time}`}
+                        style={{
+                          height: activeCellHeight,
+                          minHeight: activeCellHeight,
+                        }}
+                      />
+                    ))}
+
+                    {/* Render lessons positioned by exact start/end time (minutes) */}
+                    {(lessons[dateKey] || [])
+                      .sort(
+                        (a, b) =>
+                          new Date(a.startTime).getTime() -
+                          new Date(b.startTime).getTime()
+                      )
+                      .map((lesson, lessonIndex) => {
+                        const start = new Date(lesson.startTime);
+                        const end = new Date(lesson.endTime);
+                        const minutesFromStartHour =
+                          (start.getHours() - startHour) * 60 +
+                          start.getMinutes();
+                        const durationMinutes = Math.max(
+                          15,
+                          Math.round((end.getTime() - start.getTime()) / 60000)
+                        );
+
+                        const topPx =
+                          (minutesFromStartHour / 60) * activeCellHeight;
+                        const heightPx =
+                          (durationMinutes / 60) * activeCellHeight;
+
+                        return (
                           <Box
                             key={lesson.id}
                             position="absolute"
-                            top={lessonIndex * 4}
-                            left={lessonIndex * 4}
+                            top={topPx}
+                            left={0}
                             right={0}
-                            zIndex={lessonsInSlot.length - lessonIndex}
+                            height={Math.max(24, heightPx)}
+                            zIndex={10 + (lessonIndex % 5)}
+                            onClick={() => onLessonClick(lesson)}
                           >
                             <LessonCell
                               lesson={lesson}
                               onClick={onLessonClick}
+                              compact={compactMode}
                             />
                           </Box>
-                        ))}
-                      </LessonSlot>
-                    );
-                  })}
-                  {(() => {
-                    const nowHours = now.getHours() + now.getMinutes() / 60;
-                    const topPx = (nowHours - startHour) * CELL_HEIGHT;
-                    if (topPx >= 0 && topPx <= timeSlots.length * CELL_HEIGHT) {
-                      return (
-                        <Box
-                          key={`now-line-${dateKey}`}
-                          position="absolute"
-                          left={0}
-                          right={0}
-                          top={topPx}
-                          height={2}
-                          sx={{
-                            backgroundColor: theme.palette.error.main,
-                            zIndex: 5,
-                          }}
-                        />
-                      );
-                    }
-                    return null;
-                  })()}
-                </DayColumn>
-              );
-            })}
-          </ContentGrid>
-        </MainScrollArea>
-      </ScrollContainer>
-    </ScheduleContainer>
+                        );
+                      })}
+                    {(() => {
+                      const nowHours = now.getHours() + now.getMinutes() / 60;
+                      const topPx = (nowHours - startHour) * activeCellHeight;
+                      if (
+                        topPx >= 0 &&
+                        topPx <= timeSlots.length * activeCellHeight
+                      ) {
+                        return (
+                          <Box
+                            key={`now-line-${dateKey}`}
+                            position="absolute"
+                            left={0}
+                            right={0}
+                            top={topPx}
+                            height={2}
+                            sx={{
+                              backgroundColor: theme.palette.error.main,
+                              zIndex: 5,
+                            }}
+                          />
+                        );
+                      }
+                      return null;
+                    })()}
+                  </DayColumn>
+                );
+              })}
+            </ContentGrid>
+          </MainScrollArea>
+        </ScrollContainer>
+      </ScheduleContainer>
+    </>
   );
 };
