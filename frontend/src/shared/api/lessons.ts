@@ -96,11 +96,15 @@ export const lessonsApi = {
   getByDateRange: async (filters: {
     startDate: string;
     endDate: string;
+    noPagination?: string;
   }): Promise<LessonsResponse> => {
     const params = new URLSearchParams();
 
     params.append("startDate", filters.startDate);
     params.append("endDate", filters.endDate);
+
+    if (filters.noPagination)
+      params.append("noPagination", filters.noPagination);
 
     const response = await api.get(`/lessons?${params.toString()}`);
     return response.data;

@@ -16,6 +16,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       page = "1",
       limit = "10",
       weekly,
+      noPagination,
       weekStart,
       onlyUnpaid,
       onlyWithoutHomework,
@@ -92,8 +93,9 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
         orderBy: {
           startTime: upcoming === "true" || weekly === "true" ? "asc" : "desc",
         },
-        // Для недельных запросов не используем пагинацию
-        ...(weekly !== "true" && { skip, take: limitNum }),
+        // Если явно запрошено отключение пагинации или это weekly-запрос — не используем пагинацию
+        ...(weekly !== "true" &&
+          noPagination !== "true" && { skip, take: limitNum }),
       }),
       prisma.lesson.count({ where }),
     ]);
@@ -101,7 +103,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     res.json({
       lessons,
       pagination:
-        weekly === "true"
+        weekly === "true" || noPagination === "true"
           ? undefined
           : {
               total,

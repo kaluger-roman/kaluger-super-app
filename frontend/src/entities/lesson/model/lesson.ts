@@ -35,6 +35,7 @@ export const loadWeeklyLessons = createEvent<{
 export const loadScheduleLessons = createEvent<{
   startDate: string;
   endDate: string;
+  noPagination?: string;
 }>();
 export const addLesson = createEvent<CreateLessonDto>();
 export const updateLesson = createEvent<{
@@ -311,6 +312,7 @@ updateLessonFx.doneData.watch(() => {
     loadScheduleLessons({
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      noPagination: "true",
     });
   }
 

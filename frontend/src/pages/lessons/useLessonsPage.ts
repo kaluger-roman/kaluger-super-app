@@ -57,6 +57,7 @@ export const useLessonsPage = () => {
       loadScheduleLessons({
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        noPagination: "true",
       });
     }
   }, [lessonsViewMode, currentWeek, onlyUnpaid, onlyWithoutHomework]);
@@ -280,6 +281,7 @@ export const useLessonsPage = () => {
     loadScheduleLessons({
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      noPagination: "true",
     });
   };
 
