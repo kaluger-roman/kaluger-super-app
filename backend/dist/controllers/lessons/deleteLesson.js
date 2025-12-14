@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteLesson = void 0;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
+const recurringHelpers_1 = require("../../services/recurringHelpers");
 const deleteLesson = async (req, res) => {
     try {
         const { id } = req.params;
@@ -21,8 +22,8 @@ const deleteLesson = async (req, res) => {
             return res.status(404).json({ error: "Урок не найден" });
         }
         if (deleteAllFuture && existingLesson.isRecurring) {
-            // Delete all future recurring lessons with the same pattern
-            await prisma_1.default.lesson.deleteMany({
+            const baseKey = (0, recurringHelpers_1.getRecurringLessonKey)(existingLesson);
+            const futureLessons = await prisma_1.default.lesson.findMany({
                 where: {
                     tutorId: userId,
                     studentId: existingLesson.studentId,
@@ -32,14 +33,21 @@ const deleteLesson = async (req, res) => {
                     status: { notIn: ["CANCELLED", "COMPLETED"] },
                 },
             });
+            console.log("Future lessons ", futureLessons);
+            const toDeleteIds = futureLessons
+                .filter((l) => (0, recurringHelpers_1.getRecurringLessonKey)(l) === baseKey)
+                .map((l) => l.id);
+            console.log("To delete IDs ", toDeleteIds);
+            if (toDeleteIds.length > 0) {
+                await prisma_1.default.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
+            }
             res.json({
-                message: "Все будущие регулярные уроки успешно удалены",
+                message: "Будущие регулярные уроки данной серии успешно удалены",
+                deleted: toDeleteIds.length,
             });
         }
         else {
-            await prisma_1.default.lesson.delete({
-                where: { id },
-            });
+            await prisma_1.default.lesson.delete({ where: { id } });
             res.json({ message: "Урок успешно удален" });
         }
     }

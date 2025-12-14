@@ -14,7 +14,10 @@ const processRecurringLessons = async () => {
         const recurringLessons = await prisma_1.default.lesson.findMany({
             where: {
                 isRecurring: true,
-                status: "SCHEDULED",
+                // status: "SCHEDULED",
+                startTime: {
+                    gte: (0, time_1.truncateToMinute)(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+                },
             },
             include: {
                 student: true,
@@ -29,22 +32,7 @@ const processRecurringLessons = async () => {
         const threeMonthsFromNow = new Date();
         threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
         let createdCount = 0;
-        for (const [_, baseLesson] of lessonGroups) {
-            // Найти последний урок в этой серии
-            const lastLesson = await prisma_1.default.lesson.findFirst({
-                where: {
-                    tutorId: baseLesson.tutorId,
-                    studentId: baseLesson.studentId,
-                    isRecurring: true,
-                    subject: baseLesson.subject,
-                    lessonType: baseLesson.lessonType,
-                },
-                orderBy: {
-                    startTime: "desc",
-                },
-            });
-            if (!lastLesson)
-                continue;
+        for (const [_, lastLesson] of lessonGroups) {
             // Создаем уроки от последнего существующего до 3 месяцев вперед
             let currentStart = (0, time_1.truncateToMinute)(new Date(lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000));
             let currentEnd = (0, time_1.truncateToMinute)(new Date(lastLesson.endTime.getTime() + 7 * 24 * 60 * 60 * 1000));
@@ -53,7 +41,7 @@ const processRecurringLessons = async () => {
                 // Проверяем конфликты
                 const conflicts = await prisma_1.default.lesson.findMany({
                     where: {
-                        tutorId: baseLesson.tutorId,
+                        tutorId: lastLesson.tutorId,
                         status: {
                             not: "CANCELLED",
                         },
@@ -71,14 +59,14 @@ const processRecurringLessons = async () => {
                 });
                 if (conflicts.length === 0) {
                     lessonsToCreate.push({
-                        subject: baseLesson.subject,
-                        lessonType: baseLesson.lessonType,
+                        subject: lastLesson.subject,
+                        lessonType: lastLesson.lessonType,
                         startTime: currentStart,
                         endTime: currentEnd,
-                        price: baseLesson.price,
+                        price: lastLesson.price,
                         isRecurring: true,
-                        tutorId: baseLesson.tutorId,
-                        studentId: baseLesson.studentId,
+                        tutorId: lastLesson.tutorId,
+                        studentId: lastLesson.studentId,
                     });
                 }
                 // Переходим к следующей неделе
