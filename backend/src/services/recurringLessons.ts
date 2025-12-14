@@ -22,8 +22,6 @@ export const processRecurringLessons = async () => {
       return;
     }
 
-    console.log(recurringLessons);
-
     // Группируем уроки по уникальным комбинациям (tutor + student + time pattern)
     const lessonGroups = groupRecurringLessonsByPattern(recurringLessons);
 
@@ -32,25 +30,7 @@ export const processRecurringLessons = async () => {
 
     let createdCount = 0;
 
-    console.log(lessonGroups);
-
-    for (const [_, baseLesson] of lessonGroups) {
-      // Найти последний урок в этой серии
-      const lastLesson = await prisma.lesson.findFirst({
-        where: {
-          tutorId: baseLesson.tutorId,
-          studentId: baseLesson.studentId,
-          isRecurring: true,
-          subject: baseLesson.subject,
-          lessonType: baseLesson.lessonType,
-        },
-        orderBy: {
-          startTime: "desc",
-        },
-      });
-
-      if (!lastLesson) continue;
-
+    for (const [_, lastLesson] of lessonGroups) {
       // Создаем уроки от последнего существующего до 3 месяцев вперед
       let currentStart = truncateToMinute(
         new Date(lastLesson.startTime.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -65,7 +45,7 @@ export const processRecurringLessons = async () => {
         // Проверяем конфликты
         const conflicts = await prisma.lesson.findMany({
           where: {
-            tutorId: baseLesson.tutorId,
+            tutorId: lastLesson.tutorId,
             status: {
               not: "CANCELLED",
             },
@@ -84,14 +64,14 @@ export const processRecurringLessons = async () => {
 
         if (conflicts.length === 0) {
           lessonsToCreate.push({
-            subject: baseLesson.subject,
-            lessonType: baseLesson.lessonType,
+            subject: lastLesson.subject,
+            lessonType: lastLesson.lessonType,
             startTime: currentStart,
             endTime: currentEnd,
-            price: baseLesson.price,
+            price: lastLesson.price,
             isRecurring: true,
-            tutorId: baseLesson.tutorId,
-            studentId: baseLesson.studentId,
+            tutorId: lastLesson.tutorId,
+            studentId: lastLesson.studentId,
           });
         }
 
