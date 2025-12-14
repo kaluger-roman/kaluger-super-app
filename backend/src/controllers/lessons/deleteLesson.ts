@@ -1,6 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
+import { getRecurringLessonKey } from "../../services/recurringHelpers";
+import { truncateToMinute } from "../../utils/time";
 
 export const deleteLesson = async (req: AuthRequest, res: Response) => {
   try {
@@ -21,8 +23,9 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
     }
 
     if (deleteAllFuture && existingLesson.isRecurring) {
-      // Delete all future recurring lessons with the same pattern
-      await prisma.lesson.deleteMany({
+      const baseKey = getRecurringLessonKey(existingLesson);
+
+      const futureLessons = await prisma.lesson.findMany({
         where: {
           tutorId: userId,
           studentId: existingLesson.studentId,
@@ -33,13 +36,20 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
         },
       });
 
+      const toDeleteIds = futureLessons
+        .filter((l) => getRecurringLessonKey(l) === baseKey)
+        .map((l) => l.id);
+
+      if (toDeleteIds.length > 0) {
+        await prisma.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
+      }
+
       res.json({
-        message: "Все будущие регулярные уроки успешно удалены",
+        message: "Будущие регулярные уроки данной серии успешно удалены",
+        deleted: toDeleteIds.length,
       });
     } else {
-      await prisma.lesson.delete({
-        where: { id },
-      });
+      await prisma.lesson.delete({ where: { id } });
 
       res.json({ message: "Урок успешно удален" });
     }
