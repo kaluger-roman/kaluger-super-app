@@ -33,11 +33,9 @@ const deleteLesson = async (req, res) => {
                     status: { notIn: ["CANCELLED", "COMPLETED"] },
                 },
             });
-            console.log("Future lessons ", futureLessons);
             const toDeleteIds = futureLessons
                 .filter((l) => (0, recurringHelpers_1.getRecurringLessonKey)(l) === baseKey)
                 .map((l) => l.id);
-            console.log("To delete IDs ", toDeleteIds);
             if (toDeleteIds.length > 0) {
                 await prisma_1.default.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
             }

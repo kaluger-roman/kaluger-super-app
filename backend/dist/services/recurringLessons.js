@@ -14,10 +14,7 @@ const processRecurringLessons = async () => {
         const recurringLessons = await prisma_1.default.lesson.findMany({
             where: {
                 isRecurring: true,
-                // status: "SCHEDULED",
-                startTime: {
-                    gte: (0, time_1.truncateToMinute)(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
-                },
+                status: "SCHEDULED",
             },
             include: {
                 student: true,
