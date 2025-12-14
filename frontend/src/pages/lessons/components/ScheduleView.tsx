@@ -296,41 +296,29 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       const distanceToLeft = element.scrollLeft;
       const EDGE_THRESHOLD = 150; // px
 
-      if (distanceToRight < EDGE_THRESHOLD) {
+      if (distanceToRight < EDGE_THRESHOLD && maxLoadedDate) {
         // Загружаем дни справа
-        const lastDate = dateRange[dateRange.length - 1];
-        const endDate = new Date(lastDate);
-        endDate.setDate(lastDate.getDate() + 7);
+        const endDate = new Date(maxLoadedDate);
+        endDate.setDate(maxLoadedDate.getDate() + 7);
 
-        // Skip if we've already loaded up to or beyond requested end
-        if (maxLoadedDate && endDate.getTime() <= maxLoadedDate.getTime()) {
-          return;
-        }
-
-        const key = `${lastDate.toISOString()}_${endDate.toISOString()}`;
+        const key = `${maxLoadedDate.toISOString()}_${endDate.toISOString()}`;
         if (requestedRangesRef.current.has(key)) return;
         requestedRangesRef.current.add(key);
 
-        onLoadMoreDays(lastDate, endDate);
-      } else if (distanceToLeft < EDGE_THRESHOLD) {
+        onLoadMoreDays(maxLoadedDate, endDate);
+      } else if (distanceToLeft < EDGE_THRESHOLD && minLoadedDate) {
         // Загружаем дни слева
-        const firstDate = dateRange[0];
-        const startDate = new Date(firstDate);
-        startDate.setDate(firstDate.getDate() - 7);
+        const startDate = new Date(minLoadedDate);
+        startDate.setDate(minLoadedDate.getDate() - 7);
 
-        // Skip if we've already loaded starting at or before requested start
-        if (minLoadedDate && startDate.getTime() >= minLoadedDate.getTime()) {
-          return;
-        }
-
-        const key = `${startDate.toISOString()}_${firstDate.toISOString()}`;
+        const key = `${startDate.toISOString()}_${minLoadedDate.toISOString()}`;
         if (requestedRangesRef.current.has(key)) return;
         requestedRangesRef.current.add(key);
 
-        onLoadMoreDays(startDate, firstDate);
+        onLoadMoreDays(startDate, minLoadedDate);
       }
     },
-    [dateRange, onLoadMoreDays, minLoadedDate, maxLoadedDate]
+    [onLoadMoreDays, minLoadedDate, maxLoadedDate]
   );
 
   // Инициализация центральной позиции прокрутки
