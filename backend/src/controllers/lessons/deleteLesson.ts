@@ -36,9 +36,13 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
         },
       });
 
+      console.log("Future lessons ", futureLessons);
+
       const toDeleteIds = futureLessons
         .filter((l) => getRecurringLessonKey(l) === baseKey)
         .map((l) => l.id);
+
+      console.log("To delete IDs ", toDeleteIds);
 
       if (toDeleteIds.length > 0) {
         await prisma.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
