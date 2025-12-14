@@ -22,6 +22,8 @@ export const processRecurringLessons = async () => {
       return;
     }
 
+    console.log(recurringLessons);
+
     // Группируем уроки по уникальным комбинациям (tutor + student + time pattern)
     const lessonGroups = groupRecurringLessonsByPattern(recurringLessons);
 
@@ -29,6 +31,8 @@ export const processRecurringLessons = async () => {
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
 
     let createdCount = 0;
+
+    console.log(lessonGroups);
 
     for (const [_, baseLesson] of lessonGroups) {
       // Найти последний урок в этой серии
