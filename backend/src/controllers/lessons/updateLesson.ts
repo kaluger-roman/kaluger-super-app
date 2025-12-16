@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { UpdateLessonDto } from "../../types";
+import type { Lesson } from "@prisma/client";
 import { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
@@ -11,11 +12,9 @@ const validateUpdateData = async (
   id: string,
   userId: string,
   updateData: UpdateLessonDto,
-  existingLesson: any
+  existingLesson: Lesson
 ) => {
-  // Validation for time updates
   if (updateData.startTime || updateData.endTime) {
-    // Do not allow changing times for cancelled lessons (can't reschedule a cancelled lesson)
     if (existingLesson.status === "CANCELLED") {
       return {
         isValid: false,
@@ -38,7 +37,6 @@ const validateUpdateData = async (
       };
     }
 
-    // Check for scheduling conflicts (excluding current lesson)
     const conflictingLesson = await prisma.lesson.findFirst({
       where: {
         id: { not: id },
@@ -46,12 +44,8 @@ const validateUpdateData = async (
         status: { not: "CANCELLED" },
         OR: [
           {
-            startTime: {
-              lt: end,
-            },
-            endTime: {
-              gt: start,
-            },
+            startTime: { lt: end },
+            endTime: { gt: start },
           },
         ],
       },
@@ -67,17 +61,11 @@ const validateUpdateData = async (
   }
 
   if (updateData.price && updateData.price < 0) {
-    return {
-      isValid: false,
-      error: "Цена должна быть положительной",
-    };
+    return { isValid: false, error: "Цена должна быть положительной" };
   }
 
   if (updateData.grade && (updateData.grade < 1 || updateData.grade > 5)) {
-    return {
-      isValid: false,
-      error: "Оценка должна быть от 1 до 5",
-    };
+    return { isValid: false, error: "Оценка должна быть от 1 до 5" };
   }
 
   return { isValid: true };
@@ -89,7 +77,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const updateData: UpdateLessonDto = req.body;
 
-    // Check if lesson exists and belongs to user
     const existingLesson = await prisma.lesson.findFirst({
       where: {
         id,
@@ -101,7 +88,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    // Validate update data
     const validation = await validateUpdateData(
       id,
       userId!,
@@ -113,7 +99,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       return res.status(statusCode).json({ error: validation.error });
     }
 
-    // If times are changed (or status is not explicitly provided), compute status based on new times
     const now = truncateToMinute(new Date());
 
     const start = updateData.startTime
@@ -123,7 +108,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       ? truncateToMinute(new Date(updateData.endTime))
       : truncateToMinute(new Date(existingLesson.endTime));
 
-    let computedStatus: any = undefined;
+    let computedStatus: UpdateLessonDto["status"] | undefined = undefined;
     if (end.getTime() <= now.getTime() && updateData.status !== "CANCELLED") {
       computedStatus = "COMPLETED";
     } else if (
@@ -133,7 +118,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     ) {
       computedStatus = "IN_PROGRESS";
     } else {
-      // If status explicitly provided in updateData, respect it; otherwise keep existing status or SCHEDULED
       if (!updateData.status) {
         computedStatus =
           existingLesson.status === "CANCELLED" ? "CANCELLED" : undefined;
@@ -160,7 +144,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // If this lesson is recurring and start/end times changed, delegate shifting to helper
     if (
       existingLesson.isRecurring &&
       (updateData.startTime || updateData.endTime) &&
@@ -182,7 +165,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // If this lesson is recurring and price changed, update future lessons' prices
     if (
       existingLesson.isRecurring &&
       Object.prototype.hasOwnProperty.call(updateData, "price") &&
@@ -198,7 +180,6 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       lesson,
     });
 
-    // Отправляем WebSocket уведомление о статусе урока только если статус изменился
     if (updateData.status && updateData.status !== existingLesson.status) {
       const wsManager = getWebSocketManager();
       if (wsManager) {

@@ -11,12 +11,14 @@ This is a tutor management application with:
 
 ### Frontend Documentation
 
-- [code-style-frontend.md](./code-style-frontend.md) - Coding conventions and best practices for frontend
-- [architecture-frontend.md](./architecture-frontend.md) - Architecture and design patterns for frontend
-- [testing-frontend.md](./testing-frontend.md) - Testing strategies and best practices for frontend
+- [code-style-frontend.md](architecture-backend.md) - Coding conventions and best practices for frontend
+- [architecture-frontend.md](architecture-frontend.md) - Architecture and design patterns for frontend
 
 ### Backend Documentation
 
-- [code-style-backend.md](./code-style-backend.md) - Coding conventions and best practices for backend
-- [architecture-backend.md](./architecture-backend.md) - Architecture and design patterns for backend
-- [testing-backend.md](./testing-backend.md) - Testing strategies and best practices for backend
+- [code-style-backend.md](code-style-backend.md) - Coding conventions and best practices for backend
+- [architecture-backend.md](architecture-backend.md) - Architecture and design patterns for backend
+
+### Core principles
+
+Follow SOLID principles, DRY, KISS, YAGNI, and other best practices in both frontend and backend code.

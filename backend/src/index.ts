@@ -61,47 +61,52 @@ app.use("*", (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 // Create HTTP server and WebSocket manager
-const server = createServer(app);
-const wsManager = new WebSocketManager(server);
+let server: ReturnType<typeof createServer> | null = null;
+if (process.env.NODE_ENV !== "test") {
+  server = createServer(app);
+  const wsManager = new WebSocketManager(server);
 
-// Устанавливаем WebSocket менеджер для использования в других модулях
-setWebSocketManager(wsManager);
+  setWebSocketManager(wsManager);
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
 
-  // Setup cron job to process recurring lessons daily at 2 AM
-  cron.schedule("0 2 * * *", async () => {
-    console.log("Running recurring lessons processing job...");
-    try {
-      await processRecurringLessons();
-    } catch (error) {
-      console.error("Error in recurring lessons cron job:", error);
-    }
+    cron.schedule("0 2 * * *", async () => {
+      console.log("Running recurring lessons processing job...");
+      try {
+        await processRecurringLessons();
+      } catch (error) {
+        console.error("Error in recurring lessons cron job:", error);
+      }
+    });
+
+    cron.schedule("* * * * *", async () => {
+      try {
+        await updateLessonStatuses();
+      } catch (error) {
+        console.error("Error in lesson status update cron job:", error);
+      }
+    });
+
+    console.log("Cron jobs scheduled:");
+    console.log("- Recurring lessons: Daily at 2 AM");
+    console.log("- Lesson status updates: Every minute");
   });
-
-  // Setup cron job to update lesson statuses every minute
-  cron.schedule("* * * * *", async () => {
-    try {
-      await updateLessonStatuses();
-    } catch (error) {
-      console.error("Error in lesson status update cron job:", error);
-    }
-  });
-
-  console.log("Cron jobs scheduled:");
-  console.log("- Recurring lessons: Daily at 2 AM");
-  console.log("- Lesson status updates: Every minute");
-});
+}
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
-  server.close(() => {
+  if (server) {
+    server.close(() => {
+      prisma.$disconnect();
+      console.log("Process terminated");
+    });
+  } else {
     prisma.$disconnect();
     console.log("Process terminated");
-  });
+  }
 });
 
 export { app, prisma };

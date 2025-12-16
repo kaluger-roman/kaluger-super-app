@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
+import type { Prisma, LessonStatus } from "@prisma/client";
 
 export const getLessons = async (req: AuthRequest, res: Response) => {
   try {
@@ -25,9 +26,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
-    const where: any = { tutorId: userId };
-
-    // Date filtering: for weekly requests we only bound by weekStart..weekEnd
+    const where: Prisma.LessonWhereInput = { tutorId: userId };
     if (weekly === "true" && weekStart) {
       const startOfWeek = truncateToMinute(new Date(weekStart as string));
       const endOfWeek = new Date(startOfWeek);
@@ -39,30 +38,29 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
         lte: endOfWeek,
       };
     } else {
-      // Non-weekly: allow arbitrary start/end filters
       if (startDate || endDate) {
-        where.startTime = {};
+        const dtFilter: { gte?: Date; lte?: Date } = {};
         if (startDate)
-          where.startTime.gte = truncateToMinute(new Date(startDate as string));
+          dtFilter.gte = truncateToMinute(new Date(startDate as string));
         if (endDate)
-          where.startTime.lte = truncateToMinute(new Date(endDate as string));
+          dtFilter.lte = truncateToMinute(new Date(endDate as string));
+        where.startTime = dtFilter as Prisma.LessonWhereInput["startTime"];
       }
     }
 
     if (studentId) {
-      where.studentId = studentId;
+      where.studentId = studentId as string;
     }
 
     if (onlyUnpaid === "true") {
       where.isPaid = false;
-      where.price = { gt: 0 } as any;
+      where.price = { gt: 0 } as Prisma.LessonWhereInput["price"];
     }
 
     if (onlyWithoutHomework === "true") {
       where.isHomeworkSentByTeacher = false;
     }
 
-    // Apply status/upcoming filtering only for non-weekly requests.
     if (weekly !== "true") {
       const upcomingFlag = upcoming === "true" && !!currentTime;
       if (upcomingFlag) {
@@ -75,11 +73,13 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
           },
         ];
       } else if (status && typeof status === "string") {
-        const statuses = status.split(",").map((s: string) => s.trim());
+        const statuses = status
+          .split(",")
+          .map((s: string) => s.trim() as LessonStatus);
         if (statuses.length > 1) {
           where.status = { in: statuses };
         } else {
-          where.status = status;
+          where.status = status as LessonStatus;
         }
       }
     }

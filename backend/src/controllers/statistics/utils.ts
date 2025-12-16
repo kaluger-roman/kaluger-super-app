@@ -1,8 +1,28 @@
 import { truncateToMinute } from "../../utils/time";
 
+// Parse date-only strings as local day ranges (00:00 local to 23:59:59.999 local).
+const parseLocalDateStart = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+};
+
+const parseLocalDateEnd = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
+};
+
 export const getDateRange = (startDate?: string, endDate?: string) => {
   const now = new Date();
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const currentMonthStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1,
+    0,
+    0,
+    0,
+    0
+  );
   const currentMonthEnd = new Date(
     now.getFullYear(),
     now.getMonth() + 1,
@@ -13,18 +33,10 @@ export const getDateRange = (startDate?: string, endDate?: string) => {
     999
   );
 
-  const lte = endDate
-    ? (() => {
-        const d = new Date(endDate);
-        d.setHours(23, 59, 59, 999);
-        return d;
-      })()
-    : currentMonthEnd;
+  const gte = startDate ? parseLocalDateStart(startDate) : currentMonthStart;
+  const lte = endDate ? parseLocalDateEnd(endDate) : currentMonthEnd;
 
-  return {
-    gte: startDate ? new Date(startDate) : currentMonthStart,
-    lte,
-  };
+  return { gte, lte };
 };
 
 export const getLastMonthRange = () => {

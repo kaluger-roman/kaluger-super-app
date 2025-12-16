@@ -1,5 +1,6 @@
 import { CreateLessonDto } from "../../types";
 import { truncateToMinute } from "../../utils/time";
+import type { PrismaClient } from "@prisma/client";
 
 export const validateLessonData = (data: CreateLessonDto) => {
   const { subject, lessonType, startTime, endTime, studentId, price } = data;
@@ -36,7 +37,7 @@ export const checkSchedulingConflicts = async (
   userId: string,
   startTime: Date,
   endTime: Date,
-  prisma: any
+  prisma: PrismaClient
 ) => {
   return prisma.lesson.findMany({
     where: {
