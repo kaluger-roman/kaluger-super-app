@@ -60,6 +60,8 @@ backend/
 
 **Only standard `.ts` files.** No custom extensions like `.utils.ts`, `.data.ts`, etc.
 
+**Every folder must have `index.ts`** — re-export public API, import from folder not files.
+
 ## Strict Rules
 
 - **Controllers < 150 lines** — extract to services

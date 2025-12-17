@@ -60,6 +60,7 @@ frontend/src/
 ## Strict Rules
 
 - **One component per file** — each in its own directory
+- **Every folder must have `index.ts`** — re-export public API, import from folder not files (except `shared/`)
 - **Types only in `*.types.ts`** (except component props)
 - **Use `type`, not `interface`**
 - **Use string literals, not enums**
