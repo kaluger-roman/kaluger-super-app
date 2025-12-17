@@ -1,5 +1,5 @@
 ---
-description: "Write tests for frontend code following best practices and testing strategies."
+description: "Write frontend tests following project conventions"
 tools:
   [
     "runCommands",
@@ -22,47 +22,49 @@ tools:
   ]
 ---
 
-Follow DRY, KISS, YAGNI, and other best practices for tests.
+# Frontend Testing
 
-# Testing Guide Frontend
+Stack: Vitest + React Testing Library + MSW + Playwright
 
-## Testing Stack
+## Strict Rules
 
-Recommended testing tools for the frontend:
+- **Test user behavior**, not implementation details
+- **Pure functions** — test in isolation
+- **Components** — test with RTL, wrap in theme provider
+- **Effector stores** — test in isolation with fork
+- **E2E** — screenshot comparisons only, no other assertions
+- **Mock**: APIs, timers, localStorage
+- **Real**: Effector stores, utils, simple components
+- **No `export default`** — only named exports/imports
+- **No props drilling** — use Effector stores
+- **No IIFE in JSX** — extract to separate components
+- **No logic in .map()** — extract to a component if callback has calculations
 
-- **Vitest**: Fast test runner (Vite-native alternative to Jest)
-- **React Testing Library**: Component testing utilities
-- **@testing-library/user-event**: User interaction simulation
-- **@testing-library/jest-dom**: Custom matchers for DOM
-- **MSW (Mock Service Worker)**: API mocking
-- **Playwright**: E2E testing framework
+## Test Naming
 
-## Critical rules
+```typescript
+// ✅ Descriptive
+it("should show error when email is invalid", () => {});
 
-- Test pure functions in isolation.
-- Test UI components using RTL.
-- Test components with user interactions using RTL.
-- Wrap components in theme provider for tests.
-- Test Effector stores and models in isolation
-- **E2E tests should cover full user flows. Need to compare screenshots for visual regressions and not use other types of assertions.**
+// ❌ Vague
+it("test validation", () => {});
+```
 
-## Best Practices
+## Component Test Example
 
-### General Guidelines
+```typescript
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ThemeProvider } from "@mui/material";
+import { theme } from "@/shared/ui/theme";
 
-- **Test user behavior, not implementation**: Focus on what users see and do
-- **Mock external dependencies**: API calls, timers, localStorage
-- **Keep tests independent**: Each test should be runnable in isolation
+const renderWithTheme = (ui: React.ReactElement) =>
+  render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
-### Mocking vs Real Implementation
-
-- **Mock**: External APIs, complex libraries, slow operations
-- **Real**: Effector stores, utility functions, simple components
-
-## Additional Resources
-
-- [Vitest Documentation](https://vitest.dev/)
-- [React Testing Library](https://testing-library.com/react)
-- [Effector Testing](https://effector.dev/docs/api/effector/fork/)
-- [Playwright Documentation](https://playwright.dev/)
-- [Testing Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
+it("should submit form with valid data", async () => {
+  renderWithTheme(<LoginForm />);
+  await userEvent.type(screen.getByLabelText(/email/i), "test@example.com");
+  await userEvent.click(screen.getByRole("button", { name: /submit/i }));
+  expect(screen.getByText(/success/i)).toBeInTheDocument();
+});
+```

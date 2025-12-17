@@ -1,5 +1,5 @@
 ---
-description: "Write tests for backend code following best practices and testing strategies."
+description: "Write backend tests following project conventions"
 tools:
   [
     "runCommands",
@@ -31,41 +31,35 @@ tools:
   ]
 ---
 
-Follow DRY, KISS, YAGNI, and other best practices for tests.
+# Backend Testing
 
-# Testing Guide Backend
+Stack: Jest + Supertest + Faker + test database
 
-This guide covers testing strategies, tools, and best practices for the backend application.
+## Strict Rules
 
-## Testing Stack
+- **Do NOT mock Prisma** — use separate test database
+- **Clean up after tests** — delete created records
+- **Tests must be independent** — no shared state between tests
+- **Always async/await** — never callbacks
+- **Test edge cases** — invalid input, empty arrays, null values
+- **No `export default`** — only named exports/imports
 
-Recommended testing tools for the backend:
-
-- **Jest**: Test runner and assertion library
-- **Supertest**: HTTP assertions for testing Express routes
-- **@faker-js/faker**: Generate fake data for tests
-- **ts-jest**: TypeScript support for Jest
-- **@types/jest**: TypeScript types for Jest
-- **prisma-mock**: Mocking Prisma Client for unit tests
-
-## Critical rules
-
-- **Do not mock Prisma**, use a separate test database.
-- Use Arrange-Act-Assert pattern:
-- Create reusable test data factories
-- Keep tests focused and easy to debug
-- **Descriptive test names**: Use "should [expected behavior] when [condition]"
-- **Test edge cases**: Invalid input, empty arrays, null values
-- **Avoid test interdependence**: Each test should be independent
-- **Clean up after tests**: Always clean up database records
-
-**Example: Testing student controller**
+## Test Naming
 
 ```typescript
-// src/controllers/students/__tests__/createStudent.integration.test.ts
+// ✅ Descriptive: "should [behavior] when [condition]"
+it("should return 400 when student name is empty", async () => {});
+
+// ❌ Vague
+it("test validation", async () => {});
+```
+
+## Integration Test Template
+
+```typescript
 import request from "supertest";
 import { faker } from "@faker-js/faker";
-import app from "../../../app"; // Export Express app from separate file
+import app from "../../../app";
 import prisma from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 
@@ -74,148 +68,47 @@ describe("POST /api/students", () => {
   let userId: string;
 
   beforeAll(async () => {
-    // Create test user
     const user = await prisma.user.create({
-      data: {
-        email: faker.internet.email(),
-        password: "hashed_password",
-        name: faker.person.fullName(),
-      },
+      data: { email: faker.internet.email(), password: "hash", name: "Test" },
     });
     userId = user.id;
     authToken = generateToken({ userId: user.id, email: user.email });
   });
 
   afterAll(async () => {
-    // Clean up
     await prisma.student.deleteMany({ where: { tutorId: userId } });
     await prisma.user.delete({ where: { id: userId } });
-    await prisma.$disconnect();
   });
 
-  it("should create a new student", async () => {
-    const studentData = {
-      name: faker.person.fullName(),
-      contactMethod: "WHATSAPP",
-      phone: faker.phone.number(),
-      grade: 10,
-    };
-
+  it("should create student with valid data", async () => {
     const response = await request(app)
       .post("/api/students")
       .set("Authorization", `Bearer ${authToken}`)
-      .send(studentData)
+      .send({ name: "Student", contactMethod: "WHATSAPP", grade: 10 })
       .expect(201);
 
-    expect(response.body.student).toMatchObject({
-      name: studentData.name,
-      contactMethod: studentData.contactMethod,
-      phone: studentData.phone,
-      grade: studentData.grade,
-      tutorId: userId,
-    });
-
-    // Verify in database
-    const student = await prisma.student.findUnique({
-      where: { id: response.body.student.id },
-    });
-    expect(student).toBeTruthy();
+    expect(response.body.student).toMatchObject({ name: "Student", tutorId: userId });
   });
 });
 ```
 
-### Testing with Database Transactions
-
-Use transactions to roll back changes after each test.
+## Mocking External Services
 
 ```typescript
-describe("Student CRUD operations", () => {
-  let authToken: string;
-  let userId: string;
-
-  beforeEach(async () => {
-    // Setup code
-  });
-
-  afterEach(async () => {
-    // Rollback: delete all test data
-    await prisma.student.deleteMany({ where: { tutorId: userId } });
-  });
-
-  // Tests...
-});
-```
-
-### Mocking External Dependencies
-
-Mock WebSocket manager, cron jobs, and external services:
-
-```typescript
-// Mock WebSocket manager
+// WebSocket
 jest.mock("../../lib/wsManager", () => ({
-  getWebSocketManager: jest.fn(() => ({
-    broadcastLessonStatusUpdate: jest.fn(),
-  })),
+  getWebSocketManager: jest.fn(() => ({ broadcastLessonStatusUpdate: jest.fn() })),
 }));
 
-// Mock cron
-jest.mock("node-cron", () => ({
-  schedule: jest.fn(),
-}));
+// Cron
+jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 ```
 
-### Test Naming
+## Error Testing
 
 ```typescript
-// ✅ DO use descriptive names
-it("should return 400 when student name is empty", async () => {});
-it("should create recurring lessons for 3 months", async () => {});
-
-// ❌ DON'T use vague names
-it("test1", async () => {});
-it("should work", async () => {});
-```
-
-### Async/Await
-
-Always use async/await, never callbacks:
-
-```typescript
-// ✅ DO use async/await
-it("should create student", async () => {
-  const result = await createStudent(data);
-  expect(result).toBeDefined();
-});
-
-// ❌ DON'T use callbacks
-it("should create student", (done) => {
-  createStudent(data).then((result) => {
-    expect(result).toBeDefined();
-    done();
-  });
+it("should throw when end time is before start", async () => {
+  await expect(createLesson({ startTime: new Date(), endTime: new Date(Date.now() - 3600000) }))
+    .rejects.toThrow("Время окончания должно быть позже времени начала");
 });
 ```
-
-### Error Testing
-
-Test error cases explicitly:
-
-```typescript
-it("should throw error for invalid lesson time", async () => {
-  const invalidData = {
-    startTime: new Date(),
-    endTime: new Date(Date.now() - 3600000), // End before start
-  };
-
-  await expect(createLesson(invalidData)).rejects.toThrow(
-    "Время окончания должно быть позже времени начала"
-  );
-});
-```
-
-## Additional Resources
-
-- [Jest Documentation](https://jestjs.io/docs/getting-started)
-- [Supertest Documentation](https://github.com/visionmedia/supertest)
-- [Prisma Testing Guide](https://www.prisma.io/docs/guides/testing)
-- [Testing Best Practices](https://testingjavascript.com/)
