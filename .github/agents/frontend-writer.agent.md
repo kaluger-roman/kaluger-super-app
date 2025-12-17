@@ -71,6 +71,7 @@ frontend/src/
 - **No IIFE in JSX** — extract `{(() => { ... })()}` to separate components
 - **No logic in .map()** — if map callback has calculations, extract to a component
 - **No inline styles** — no `style={{}}`, no `sx={{}}`, use `*.styled.ts` files only
+- **No unnecessary wrappers** — use `onDelete={deleteDialogOpened}` not `onDelete={(x) => deleteDialogOpened(x)}`
 - **Components < 150 lines** — split if larger
 - **Business logic in models**, not components
 
@@ -92,6 +93,12 @@ frontend/src/
 **sample order:** `{ clock, source, filter, fn, target }`
 
 **Form state:** Keep in Effector stores, not React useState.
+
+**Atomic stores:** Avoid large object stores. Instead of `$uiState: { isOpen, selected, anchor }` use separate `$isOpen`, `$selected`, `$anchor`.
+
+**Models < 200 lines** — split into smaller models if larger.
+
+**Export models as namespace:** `export * as featureModel from "./feature.model"`, use as `featureModel.$store`, `featureModel.eventName`
 
 ## New Feature Template
 
