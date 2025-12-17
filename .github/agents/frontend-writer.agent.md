@@ -70,6 +70,7 @@ frontend/src/
 - **No props drilling** — use Effector stores
 - **No IIFE in JSX** — extract `{(() => { ... })()}` to separate components
 - **No logic in .map()** — if map callback has calculations, extract to a component
+- **No inline styles** — no `style={{}}`, no `sx={{}}`, use `*.styled.ts` files only
 - **Components < 150 lines** — split if larger
 - **Business logic in models**, not components
 
