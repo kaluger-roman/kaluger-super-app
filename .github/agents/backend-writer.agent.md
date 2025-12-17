@@ -72,6 +72,8 @@ backend/
 - **No `any`** — use `unknown`
 - **No `export default`** — only named exports/imports
 - **Error messages in Russian**
+- **No ESLint errors** — code must pass linting after changes
+- **Build must pass** — no TypeScript errors
 
 ## Layer Responsibilities
 

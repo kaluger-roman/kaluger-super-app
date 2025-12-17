@@ -57,6 +57,17 @@ frontend/src/
 
 **Only these extensions allowed:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts`, `.helpers.ts`, `.hooks.ts`. No custom extensions like `.utils.ts`, `.data.ts`, etc.
 
+**Group related files in folders:**
+```
+StudentCard/
+├─ index.ts              # re-export
+├─ StudentCard.tsx       # component
+├─ StudentCard.styled.ts # styles
+├─ StudentCard.types.ts  # types (if needed)
+├─ StudentCard.constants.ts
+└─ StudentCard.hooks.ts
+```
+
 ## Strict Rules
 
 - **One component per file** — each in its own directory
@@ -71,9 +82,12 @@ frontend/src/
 - **No IIFE in JSX** — extract `{(() => { ... })()}` to separate components
 - **No logic in .map()** — if map callback has calculations, extract to a component
 - **No inline styles** — no `style={{}}`, no `sx={{}}`, use `*.styled.ts` files only
+- **Import styled as namespace** — `import * as Styled from "./Component.styled"`, use as `<Styled.Container>`
 - **No unnecessary wrappers** — use `onDelete={deleteDialogOpened}` not `onDelete={(x) => deleteDialogOpened(x)}`
 - **Components < 150 lines** — split if larger
 - **Business logic in models**, not components
+- **No ESLint errors** — code must pass linting after changes
+- **Build must pass** — no TypeScript errors
 
 ## Effector Conventions
 
@@ -89,6 +103,20 @@ frontend/src/
 - `.on()`, `.watch()`, `store.getState()`
 - `forward()`, `guard()` — use `sample` instead
 - `useStore` — use `useUnit`
+- `useUnit` with array destructuring — use separate calls for stores
+
+**useUnit pattern:**
+```typescript
+// ✅ Stores: separate lines
+const lessons = useUnit(model.$lessons);
+const students = useUnit(model.$students);
+
+// ✅ Actions: object
+const actions = useUnit({ save: model.saved, delete: model.deleted });
+
+// ❌ Don't
+const [lessons, students] = useUnit([model.$lessons, model.$students]);
+```
 
 **sample order:** `{ clock, source, filter, fn, target }`
 
