@@ -39,7 +39,7 @@ Stack: Vitest + React Testing Library + MSW + Playwright
 - **No props drilling** — use Effector stores
 - **No IIFE in JSX** — extract to separate components
 - **No logic in .map()** — extract to a component if callback has calculations
-- **No inline styles** — no `style={{}}`, no `sx={{}}`, use `*.styled.ts` files only
+- **Don't test styled files** — no separate tests for `*.styled.ts`
 
 ## Test Naming
 
@@ -57,7 +57,7 @@ it("test validation", () => {});
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material";
-import { theme } from "@/shared/ui/theme";
+import { theme } from "@shared";
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);

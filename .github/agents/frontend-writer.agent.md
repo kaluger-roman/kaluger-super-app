@@ -42,7 +42,32 @@ frontend/src/
 
 **Import direction:** `pages` → `features` → `entities` → `shared` (only downward)
 
+**Import aliases:** Use `@app`, `@pages`, `@features`, `@entities`, `@shared` for cross-layer imports:
+
+```typescript
+// ✅ Good — top-level index
+import { Button } from "@shared";
+import { studentModel } from "@entities";
+import { LessonForm } from "@features";
+
+// ❌ Bad — deep imports
+import { Button } from "@shared/ui";
+import { Button } from "../../shared/ui";
+```
+
 ## File Naming
+
+**PascalCase** — components and their related files:
+
+- `StudentCard/StudentCard.tsx`
+- `StudentCard/StudentCard.styled.ts`
+- `StudentCard/StudentCard.hooks.ts`
+- `StudentCard/StudentCard.helpers.ts`
+
+**camelCase** — everything else:
+
+- `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`
+- `lessons.constants.ts`, `lessons.helpers.ts`, `lessons.hooks.ts`
 
 | Type      | Pattern                           | Example                       |
 | --------- | --------------------------------- | ----------------------------- |
@@ -50,7 +75,7 @@ frontend/src/
 | Model     | `feature.model.ts`                | `lessons.model.ts`            |
 | API       | `feature.api.ts`                  | `lessons.api.ts`              |
 | Types     | `feature.types.ts`                | `lessons.types.ts`            |
-| Styles    | `feature.styled.ts`               | `StudentCard.styled.ts`       |
+| Styles    | `Component.styled.ts`             | `StudentCard.styled.ts`       |
 | Constants | `feature.constants.ts`            | `lessons.constants.ts`        |
 | Helpers   | `feature.helpers.ts`              | `lessons.helpers.ts`          |
 | Hooks     | `feature.hooks.ts`                | `lessons.hooks.ts`            |
@@ -58,36 +83,81 @@ frontend/src/
 **Only these extensions allowed:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts`, `.helpers.ts`, `.hooks.ts`. No custom extensions like `.utils.ts`, `.data.ts`, etc.
 
 **Group related files in folders:**
+
 ```
+# Component folder
 StudentCard/
-├─ index.ts              # re-export
-├─ StudentCard.tsx       # component
-├─ StudentCard.styled.ts # styles
-├─ StudentCard.types.ts  # types (if needed)
+├─ index.ts
+├─ StudentCard.tsx
+├─ StudentCard.styled.ts
+├─ StudentCard.types.ts
 ├─ StudentCard.constants.ts
+├─ StudentCard.helpers.ts
 └─ StudentCard.hooks.ts
+
+# Model folder (when model has related files)
+lessons/
+├─ index.ts
+├─ lessons.model.ts
+├─ lessons.types.ts
+├─ lessons.helpers.ts
+└─ lessons.constants.ts
+
+# Multiple models → models/ folder
+feature/
+├─ models/
+│  ├─ index.ts           # export * as listModel, * as formModel
+│  ├─ list/
+│  │  ├─ index.ts
+│  │  ├─ list.model.ts
+│  │  ├─ list.types.ts
+│  │  └─ list.helpers.ts
+│  └─ form.model.ts
+└─ ...
 ```
 
 ## Strict Rules
 
-- **One component per file** — each in its own directory
-- **Every folder must have `index.ts`** — re-export public API, import from folder not files (except `shared/`)
-- **Types only in `*.types.ts`** (except component props)
-- **Use `type`, not `interface`**
-- **Use string literals, not enums**
-- **Use `import type` for type imports**
-- **No `any`** — use `unknown`
-- **No `export default`** — only named exports/imports
-- **No props drilling** — use Effector stores
-- **No IIFE in JSX** — extract `{(() => { ... })()}` to separate components
-- **No logic in .map()** — if map callback has calculations, extract to a component
-- **No inline styles** — no `style={{}}`, no `sx={{}}`, use `*.styled.ts` files only
-- **Import styled as namespace** — `import * as Styled from "./Component.styled"`, use as `<Styled.Container>`
-- **No unnecessary wrappers** — use `onDelete={deleteDialogOpened}` not `onDelete={(x) => deleteDialogOpened(x)}`
+### Structure
+
+- **One component per file** in its own directory
+- **Every folder has `index.ts`** — re-export public API
+- **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
+- **Separate files for:** constants, helpers, hooks, types — never mix in one file
 - **Components < 150 lines** — split if larger
+
+### Types
+
+- **Types in `*.types.ts`** (except component props inline)
+- **Use `type`**, not `interface`
+- **Use `import type`** for type imports
+- **String literals**, not enums
+- **No `any`** — use `unknown`
+
+### Styles
+
+- **No inline styles** — no `style={{}}`, no `sx={{}}`
+- **Styled props with `$` prefix** for dynamic values:
+  ```typescript
+  export const Box = styled(MuiBox)<{ $height: number }>`
+    height: ${({ $height }) => $height}px;
+  `;
+  ```
+- **Import as namespace:** `import * as Styled from "./X.styled"`
+
+### Components
+
+- **No props drilling** — use Effector stores
+- **No IIFE in JSX** — extract to components
+- **No logic in .map()** — extract complex callbacks to components
 - **Business logic in models**, not components
-- **No ESLint errors** — code must pass linting after changes
-- **Build must pass** — no TypeScript errors
+
+### Code Quality
+
+- **Named exports only** — no `export default`
+- **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
+- **No ESLint errors, build must pass**
+- **Self-check** — after all changes, verify that changes do not violate all the agent instructions
 
 ## Effector Conventions
 
@@ -98,6 +168,14 @@ StudentCard/
 - Effects: `effectNameFx`
 - Gates: `FeatureGate`
 
+**Model structure order:**
+
+1. Gates
+2. Stores
+3. Events
+4. Effects
+5. Samples
+
 **Forbidden:**
 
 - `.on()`, `.watch()`, `store.getState()`
@@ -106,6 +184,7 @@ StudentCard/
 - `useUnit` with array destructuring — use separate calls for stores
 
 **useUnit pattern:**
+
 ```typescript
 // ✅ Stores: separate lines
 const lessons = useUnit(model.$lessons);
@@ -126,15 +205,62 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 
 **Models < 200 lines** — split into smaller models if larger.
 
-**Export models as namespace:** `export * as featureModel from "./feature.model"`, use as `featureModel.$store`, `featureModel.eventName`
+**Split models by domain** — separate models by logical responsibility (e.g., `list.model.ts`, `form.model.ts`, `dialogs.model.ts`).
+
+**Extract complex fn/filter to helpers:**
+
+```typescript
+// ❌ Don't inline complex logic
+sample({
+  clock: submitted,
+  source: $formData,
+  fn: (data) => {
+    const validated = validateFields(data);
+    const transformed = transformForApi(validated);
+    return { ...transformed, timestamp: Date.now() };
+  },
+  target: submitFx,
+});
+
+// ✅ Extract to feature.helpers.ts
+import { prepareSubmitData } from "./feature.helpers";
+sample({
+  clock: submitted,
+  source: $formData,
+  fn: prepareSubmitData,
+  target: submitFx,
+});
+```
+
+**Export and import models as namespace:**
+
+```typescript
+// ✅ Export in index.ts
+export * as featureModel from "./feature.model";
+
+// ✅ Import whole model
+import { featureModel } from "./models";
+featureModel.$store;
+featureModel.eventName;
+
+// ✅ Import whole model such way if it's in the same folder
+import * as featureModel from "./feature.model";
+featureModel.$store;
+featureModel.eventName;
+
+// ❌ Don't import parts
+import { $store, eventName } from "./feature.model";
+```
+
+**Re-exports only in index files** — models must not re-export other models, all re-exports go through `index.ts`
 
 ## New Feature Template
 
 ```typescript
-// features/feature-name/feature-name.model.ts
-import { attach, createStore, createEvent, sample } from "effector";
+// features/featureName/featureName.model.ts
+import { createStore, createEvent, sample } from "effector";
 import { createGate } from "effector-react";
-import { featureApi } from "../../api";
+import { featureApi } from "@shared";
 
 export const PageGate = createGate();
 export const $data = createStore<DataType[]>([]);
@@ -146,7 +272,7 @@ sample({ clock: featureApi.loadFx.doneData, target: $data });
 
 ## Code Style
 
-- Extract functions only if reused 3+ times
+- Extract functions only if reused 2+ times
 - Minimal comments — only for non-obvious logic
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian

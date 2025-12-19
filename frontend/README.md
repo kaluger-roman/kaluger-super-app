@@ -44,3 +44,17 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Path Aliases
+
+Project configured TypeScript path aliases for convenient imports from `src`:
+
+- `@app/*`
+- `@pages/*`
+- `@features/*`
+- `@entities/*`
+- `@shared/*`
+- `@components/*`
+- `@widgets/*`
+
+Use them like `import { X } from "@entities/student"` or `import { api } from "@shared/api"` instead of long relative paths.

@@ -60,20 +60,39 @@ backend/
 
 **Only standard `.ts` files.** No custom extensions like `.utils.ts`, `.data.ts`, etc.
 
-**Every folder must have `index.ts`** — re-export public API, import from folder not files.
+**Every folder must have `index.ts`** — re-export all public API needed from that folder.
+
+**No deep imports** — each folder exposes everything via index, max 1 level deep:
+
+```typescript
+// ✅ Good
+import { createStudent } from "./controllers";
+
+// ❌ Bad
+import { createStudent } from "./controllers/students/createStudent";
+```
 
 ## Strict Rules
 
+### Structure
+
 - **Controllers < 150 lines** — extract to services
 - **Complex actions (50+ lines)** — separate file
+
+### Types
+
 - **Types in `src/types/index.ts`** — centralized
-- **Use `type`, not `interface`**
+- **Use `type`**, not `interface`
 - **Use Prisma-generated types** — don't duplicate
 - **No `any`** — use `unknown`
-- **No `export default`** — only named exports/imports
+
+### Code Quality
+
+- **Named exports only** — no `export default`
+- **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
 - **Error messages in Russian**
-- **No ESLint errors** — code must pass linting after changes
-- **Build must pass** — no TypeScript errors
+- **No ESLint errors, build must pass**
+- **Self-check** — after all changes, verify that changes do not violate all the agent instructions
 
 ## Layer Responsibilities
 

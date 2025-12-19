@@ -1,5 +1,50 @@
 {
   "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "@app/*": [
+        "app/*"
+      ],
+      "@app": [
+        "app"
+      ],
+      "@pages/*": [
+        "pages/*"
+      ],
+      "@pages": [
+        "pages"
+      ],
+      "@features/*": [
+        "features/*"
+      ],
+      "@features": [
+        "features"
+      ],
+      "@entities/*": [
+        "entities/*"
+      ],
+      "@entities": [
+        "entities"
+      ],
+      "@shared/*": [
+        "shared/*"
+      ],
+      "@shared": [
+        "shared"
+      ],
+      "@components/*": [
+        "components/*"
+      ],
+      "@components": [
+        "components"
+      ],
+      "@widgets/*": [
+        "widgets/*"
+      ],
+      "@widgets": [
+        "widgets"
+      ]
+    },
     "target": "es5",
     "lib": [
       "dom",
