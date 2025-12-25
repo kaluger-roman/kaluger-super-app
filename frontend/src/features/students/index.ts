@@ -1,2 +1,2 @@
-export { StudentForm } from "./ui/StudentForm";
-export { StudentViewDialog } from "./ui/StudentViewDialog";
+export * from "./ui";
+export { studentsModel, studentFormModel } from "./models";

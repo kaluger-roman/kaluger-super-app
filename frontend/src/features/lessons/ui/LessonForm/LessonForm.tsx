@@ -1,148 +1,79 @@
-import React, { useEffect } from "react";
-import { Dialog, DialogTitle, useMediaQuery, useTheme } from "@mui/material";
-import { useStore } from "effector-react";
-import { CreateLessonDto, UpdateLessonDto } from "../../../../shared";
-import { ConfirmDialog } from "../../../../shared/ui";
-import {
-  addLesson,
-  updateLesson,
-  $lessonsIsLoading,
-  closeLessonDialog,
-} from "../../../../entities/lesson";
-import { useLessonForm } from "./useLessonForm";
-import { LessonFormContent, LessonFormActions } from "./components";
-import type { LessonFormProps } from "./types";
+import type { FC } from "react";
+import { useEffect } from "react";
 
-export const LessonForm: React.FC<LessonFormProps> = ({
-  open,
-  onClose,
-  lesson,
-}) => {
+import { useMediaQuery, useTheme } from "@mui/material";
+import { useUnit } from "effector-react";
+
+import { lessonModel } from "@entities";
+import { ConfirmDialog } from "@shared/ui";
+
+import { LessonFormContent, LessonFormActions } from "./components";
+import * as Styled from "./LessonForm.styled";
+import { lessonsModel, lessonFormModel } from "../../models";
+
+export const LessonForm: FC = () => {
+  const open = useUnit(lessonsModel.$isDialogOpen);
+  const lesson = useUnit(lessonsModel.$editingLesson);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isLoading = useStore($lessonsIsLoading);
+  const isLoading = useUnit(lessonModel.$isLoading);
 
-  const {
-    formData,
-    errors,
-    confirmDialog,
-    setFormData,
-    setConfirmDialog,
-    handleChange,
-    handleDateChange,
-    validateForm,
-    handleCancelLesson,
-  } = useLessonForm(lesson, open);
+  const formData = useUnit(lessonFormModel.$formData);
+  const errors = useUnit(lessonFormModel.$errors);
+  const confirmDialog = useUnit(lessonFormModel.$confirmDialog);
 
-  // Подписываемся на событие закрытия диалога
   useEffect(() => {
-    const unsubscribe = closeLessonDialog.watch(() => {
-      onClose();
+    lessonFormModel.formOpened({ lesson, open });
+  }, [lesson, open]);
+
+  const handleChange = (field: string) => (e: { target?: { value: unknown } } | unknown) => {
+    const value =
+      e && typeof e === "object" && "target" in e
+        ? (e as { target: { value: unknown } }).target.value
+        : e;
+    lessonFormModel.fieldChanged({ field, value });
+  };
+
+  const handleDateChange = (field: "startTime" | "endTime") => (date: Date | null) => {
+    lessonFormModel.dateChanged({ field, value: date });
+  };
+
+  const setFormData = (updater: (prev: typeof formData) => typeof formData) => {
+    const newData = updater(formData);
+    Object.keys(newData).forEach((key) => {
+      if (newData[key as keyof typeof newData] !== formData[key as keyof typeof formData]) {
+        lessonFormModel.fieldChanged({ field: key, value: newData[key as keyof typeof newData] });
+      }
     });
-    return unsubscribe;
-  }, [onClose]);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      const lessonData = {
-        subject: formData.subject,
-        lessonType: formData.lessonType,
-        description: formData.description || null,
-        startTime: formData.startTime.toISOString(),
-        endTime: formData.endTime.toISOString(),
-        price: formData.price ? Number(formData.price) : null,
-        studentId: formData.studentId,
-        homework: formData.homework || null,
-        notes: formData.notes || null,
-        isRecurring: formData.isRecurring,
-        isPaid: formData.isPaid,
-        isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
-      };
-
-      const performUpdate = () => {
-        if (lesson) {
-          updateLesson({ id: lesson.id, data: lessonData as UpdateLessonDto });
-        } else {
-          addLesson(lessonData as CreateLessonDto);
-        }
-      };
-
-      // If editing an existing recurring lesson and time changed, show confirmation
-      if (lesson && lesson.isRecurring && lesson.status === "SCHEDULED") {
-        const oldStart = new Date(lesson.startTime).toISOString();
-        const oldEnd = new Date(lesson.endTime).toISOString();
-        if (
-          oldStart !== lessonData.startTime ||
-          oldEnd !== lessonData.endTime
-        ) {
-          setConfirmDialog({
-            open: true,
-            title: "Изменение времени регулярного урока",
-            message:
-              "Вы уверены? Время будет изменено у всех ещё несостоявшихся запланированных и не перенесённых регулярных уроков в этой серии.",
-            action: async () => {
-              performUpdate();
-              setConfirmDialog((prev) => ({ ...prev, open: false }));
-            },
-          });
-          return;
-        }
-      }
-
-      // If editing an existing recurring lesson and price changed, show confirmation
-      if (lesson && lesson.isRecurring && lesson.status === "SCHEDULED") {
-        const oldPrice = lesson.price ?? null;
-        const newPrice = lessonData.price ?? null;
-        if (oldPrice !== newPrice) {
-          setConfirmDialog({
-            open: true,
-            title: "Изменение цены регулярного урока",
-            message:
-              "Вы уверены? Цена будет изменена у всех ещё несостоявшихся запланированных и не перенесённых регулярных уроков в этой серии.",
-            action: async () => {
-              performUpdate();
-              setConfirmDialog((prev) => ({ ...prev, open: false }));
-            },
-          });
-          return;
-        }
-      }
-
-      performUpdate();
-    } catch (error) {
-      console.error("Lesson form error:", error);
-    }
+    lessonFormModel.formSubmitted(e);
   };
 
   const handleClose = () => {
     if (!isLoading) {
-      onClose();
+      lessonsModel.dialogClosed();
     }
   };
 
+  const handleCancelLesson = () => {
+    lessonFormModel.cancelLessonRequested();
+  };
+
   return (
-    <Dialog
+    <Styled.StyledDialog
       open={open}
       onClose={handleClose}
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 2,
-          maxHeight: isMobile ? "100vh" : "90vh",
-        },
-      }}
+      $isMobile={isMobile}
     >
-      <DialogTitle sx={{ pb: isMobile ? 1 : 2 }}>
+      <Styled.StyledDialogTitle $isMobile={isMobile}>
         {lesson ? "Редактировать урок" : "Создать новый урок"}
-      </DialogTitle>
+      </Styled.StyledDialogTitle>
 
       <form onSubmit={handleSubmit}>
         <LessonFormContent
@@ -168,12 +99,12 @@ export const LessonForm: React.FC<LessonFormProps> = ({
 
       <ConfirmDialog
         open={confirmDialog.open}
-        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
+        onClose={lessonFormModel.confirmDialogClosed}
         onConfirm={confirmDialog.action}
         title={confirmDialog.title}
         message={confirmDialog.message}
         severity="warning"
       />
-    </Dialog>
+    </Styled.StyledDialog>
   );
 };

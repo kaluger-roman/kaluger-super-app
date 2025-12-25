@@ -1,7 +1,2 @@
-export { useReportsPage } from "./useReportsPage";
-export {
-  formatCurrency,
-  calculateCompletionRate,
-  calculateAveragePrice,
-} from "./utils";
+export { statisticsModel } from "./model";
 export * from "./components";

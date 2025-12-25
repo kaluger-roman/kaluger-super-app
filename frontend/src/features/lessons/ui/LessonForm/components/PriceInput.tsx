@@ -1,26 +1,30 @@
-import React, { useRef } from "react";
+import type { FC } from "react";
+import { useRef } from "react";
+
 import { TextField } from "@mui/material";
-import { useStore } from "effector-react";
-import { $students } from "../../../../../entities/student";
+import { useUnit } from "effector-react";
+
+import { studentModel } from "@entities";
+import { useDisableNumberScroll } from "@shared";
+
 import type { LessonFormData } from "../types";
-import { useDisableNumberScroll } from "../../../../../shared";
 
 type PriceInputProps = {
   formData: LessonFormData;
   errors: Record<string, string>;
   isLoading: boolean;
   isMobile: boolean;
-  onChange: (field: string) => (e: any) => void;
+  onChange: (field: string) => (e: { target?: { value: unknown } } | unknown) => void;
 };
 
-export const PriceInput: React.FC<PriceInputProps> = ({
+export const PriceInput: FC<PriceInputProps> = ({
   formData,
   errors,
   isLoading,
   isMobile,
   onChange,
 }) => {
-  const students = useStore($students);
+  const students = useUnit(studentModel.$students);
   const selectedStudent = students.find((s) => s.id === formData.studentId);
   const inputRef = useRef<HTMLInputElement | null>(null);
   useDisableNumberScroll(inputRef);

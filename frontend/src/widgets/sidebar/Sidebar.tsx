@@ -1,17 +1,5 @@
-import React from "react";
-import {
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-  Divider,
-  Box,
-  Avatar,
-} from "@mui/material";
+import type { FC, ReactElement } from "react";
+
 import {
   Dashboard as DashboardIcon,
   School as StudentsIcon,
@@ -19,14 +7,18 @@ import {
   Assessment as ReportsIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
+import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from "@mui/material";
+import { useUnit } from "effector-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useStore } from "effector-react";
-import { $user, logoutUser } from "../../entities";
+
+import { userModel } from "@entities";
+
+import * as Styled from "./Sidebar.styled";
 
 type NavigationItem = {
   label: string;
   path: string;
-  icon: React.ReactElement;
+  icon: ReactElement;
 };
 
 const navigationItems: NavigationItem[] = [
@@ -58,14 +50,10 @@ type SidebarProps = {
   onClose: () => void;
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  drawerWidth,
-  open,
-  onClose,
-}) => {
+export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = useStore($user);
+  const user = useUnit(userModel.$user);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -73,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogout = () => {
-    logoutUser();
+    userModel.logoutUser();
     navigate("/login");
   };
 
@@ -87,37 +75,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <Drawer
+    <Styled.StyledDrawer
       variant="temporary"
       open={open}
       onClose={onClose}
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: drawerWidth,
-          boxSizing: "border-box",
-        },
-      }}
+      drawerWidth={drawerWidth}
     >
-      <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
-          sx={{
-            fontWeight: 700,
-            color: "primary.main",
-            fontSize: { xs: "1.1rem", sm: "1.25rem" },
-          }}
-        >
+      <Styled.StyledToolbar>
+        <Styled.StyledTitle variant="h6" noWrap component="div">
           🎓 Kaluger Tutor
-        </Typography>
-      </Toolbar>
+        </Styled.StyledTitle>
+      </Styled.StyledToolbar>
 
       <Divider />
 
-      <Box sx={{ overflow: "auto", flex: 1 }}>
+      <Styled.ContentBox>
         <List>
           {navigationItems.map((item) => (
             <ListItem key={item.path} disablePadding>
@@ -131,62 +103,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </ListItem>
           ))}
         </List>
-      </Box>
+      </Styled.ContentBox>
 
       <Divider />
 
-      <Box sx={{ p: 2 }}>
+      <Styled.UserSection>
         {user && (
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: { xs: 36, sm: 40 },
-                height: { xs: 36, sm: 40 },
-                fontSize: { xs: "0.875rem", sm: "1rem" },
-              }}
-            >
-              {getInitials(user.name)}
-            </Avatar>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: { xs: "0.875rem", sm: "1rem" },
-                }}
-              >
-                {user.name}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                }}
-              >
+          <Styled.UserInfoBox>
+            <Styled.StyledAvatar>{getInitials(user.name)}</Styled.StyledAvatar>
+            <Styled.UserDetailsBox>
+              <Styled.UserName variant="subtitle1">{user.name}</Styled.UserName>
+              <Styled.UserEmail variant="body2" color="text.secondary">
                 {user.email}
-              </Typography>
-            </Box>
-          </Box>
+              </Styled.UserEmail>
+            </Styled.UserDetailsBox>
+          </Styled.UserInfoBox>
         )}
 
-        <ListItemButton
-          onClick={handleLogout}
-          sx={{
-            m: 0,
-            px: 1,
-            "&:hover": {
-              color: "error.contrastText",
-            },
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 36 }}>
+        <Styled.LogoutButton onClick={handleLogout}>
+          <Styled.LogoutIcon>
             <LogoutIcon />
-          </ListItemIcon>
+          </Styled.LogoutIcon>
           <ListItemText primary="Выйти" />
-        </ListItemButton>
-      </Box>
-    </Drawer>
+        </Styled.LogoutButton>
+      </Styled.UserSection>
+    </Styled.StyledDrawer>
   );
 };

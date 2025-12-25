@@ -44,12 +44,6 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",

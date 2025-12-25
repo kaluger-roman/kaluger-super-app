@@ -1,211 +1,48 @@
-import React from "react";
-import { Container, Typography, Box } from "@mui/material";
-import { ViewModeToggle } from "./components/ViewModeToggle";
-import { LessonsFilters } from "./components/LessonsFilters";
-import { useUnit } from "effector-react";
-import {
-  $upcomingLessons,
-  $completedLessons,
-  $cancelledLessons,
-  $completedPagination,
-  $cancelledPagination,
-  $upcomingPagination,
-  $lessonsIsLoading,
-} from "../../entities";
-import { $lessonsViewMode } from "./model/viewMode";
-import { useLessonsPage } from "./useLessonsPage";
+import type { FC } from "react";
+
+import { Typography } from "@mui/material";
+import { useGate, useUnit } from "effector-react";
+
+import { lessonsModel } from "@features/lessons";
+
 import {
   LessonsTabs,
   AddLessonFab,
   LessonsContent,
   LessonsDialogs,
+  LessonsFilters,
+  ViewModeToggle,
 } from "./components";
+import * as Styled from "./LessonsPage.styled";
 
-export const LessonsPage: React.FC = () => {
-  const upcomingLessons = useUnit($upcomingLessons);
-  const completedLessons = useUnit($completedLessons);
-  const cancelledLessons = useUnit($cancelledLessons);
-  const upcomingPagination = useUnit($upcomingPagination);
-  const completedPagination = useUnit($completedPagination);
-  const cancelledPagination = useUnit($cancelledPagination);
-  const isLoading = useUnit($lessonsIsLoading);
-  const lessonsViewMode = useUnit($lessonsViewMode);
+export const LessonsPage: FC = () => {
+  useGate(lessonsModel.LessonsPageGate);
 
-  const {
-    state,
-    setState,
-    confirmDialog,
-    setConfirmDialog,
-    handleTabChange,
-    handleCompletedPageChange,
-    handleCancelledPageChange,
-    handleUpcomingPageChange,
-    handleEditLesson,
-    handleDeleteLesson,
-    handleDeleteConfirm,
-    handleCancelLesson,
-    handleRestoreLesson,
-    handleRescheduleLesson,
-    handleRescheduleConfirm,
-    handlePaymentChange,
-    handleHomeworkSentChange,
-    handleCardClick,
-    handleLoadMoreDays,
-  } = useLessonsPage();
-
-  const handleCloseDialog = () => {
-    setState((prev) => ({
-      ...prev,
-      isDialogOpen: false,
-      editingLesson: undefined,
-    }));
-  };
-
-  const handleCloseViewDialog = () => {
-    setState((prev) => ({
-      ...prev,
-      isViewDialogOpen: false,
-      viewingLesson: undefined,
-    }));
-  };
-
-  const handleCloseRescheduleDialog = () => {
-    setState((prev) => ({
-      ...prev,
-      isRescheduleDialogOpen: false,
-      reschedulingLesson: undefined,
-    }));
-  };
-
-  const handleCloseDeleteDialog = () => {
-    setState((prev) => ({
-      ...prev,
-      deleteDialogOpen: false,
-      selectedLesson: null,
-    }));
-  };
-
-  const handleCloseConfirmDialog = () => {
-    setConfirmDialog((prev) => ({ ...prev, open: false }));
-  };
-
-  const handleEditFromView = () => {
-    if (state.viewingLesson) {
-      setState((prev) => ({
-        ...prev,
-        isViewDialogOpen: false,
-        editingLesson: state.viewingLesson,
-        isDialogOpen: true,
-      }));
-    }
-  };
-
-  const handleCancelFromView = () => {
-    if (state.viewingLesson) {
-      setState((prev) => ({ ...prev, isViewDialogOpen: false }));
-      handleCancelLesson(state.viewingLesson);
-    }
-  };
-
-  const handleRestoreFromView = () => {
-    if (state.viewingLesson) {
-      setState((prev) => ({ ...prev, isViewDialogOpen: false }));
-      handleRestoreLesson(state.viewingLesson);
-    }
-  };
-
-  const handleRescheduleFromView = () => {
-    if (state.viewingLesson) {
-      setState((prev) => ({ ...prev, isViewDialogOpen: false }));
-      handleRescheduleLesson(state.viewingLesson);
-    }
-  };
-
-  const handleDeleteFromView = () => {
-    if (state.viewingLesson) {
-      handleDeleteLesson(state.viewingLesson);
-    }
-  };
-
-  const handleAddLesson = () => {
-    setState((prev) => ({
-      ...prev,
-      editingLesson: undefined,
-      isDialogOpen: true,
-    }));
-  };
+  const lessonsViewMode = useUnit(lessonsModel.$lessonsViewMode);
+  const currentTab = useUnit(lessonsModel.$currentTab);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box mb={1}>
-        <Typography
-          variant="h3"
-          component="h1"
-          gutterBottom
-          sx={{ fontWeight: 700 }}
-        >
+    <Styled.StyledContainer maxWidth="lg">
+      <Styled.HeaderBox>
+        <Styled.StyledTitle variant="h3" component="h1" gutterBottom>
           📅 Уроки
-        </Typography>
+        </Styled.StyledTitle>
         <Typography variant="h6" color="text.secondary">
           Управление расписанием и занятиями
         </Typography>
-        <Box mt={2}>
+        <Styled.ControlsBox>
           <ViewModeToggle />
           {lessonsViewMode !== "schedule" && <LessonsFilters />}
-        </Box>
-      </Box>
+        </Styled.ControlsBox>
+      </Styled.HeaderBox>
 
-      {lessonsViewMode !== "schedule" && (
-        <LessonsTabs
-          currentTab={state.currentTab}
-          onTabChange={handleTabChange}
-        />
-      )}
+      {lessonsViewMode !== "schedule" && <LessonsTabs />}
 
-      <LessonsContent
-        currentTab={state.currentTab}
-        upcomingLessons={upcomingLessons}
-        completedLessons={completedLessons}
-        cancelledLessons={cancelledLessons}
-        upcomingPagination={upcomingPagination}
-        completedPagination={completedPagination}
-        cancelledPagination={cancelledPagination}
-        onEdit={handleEditLesson}
-        onDelete={handleDeleteLesson}
-        onCancel={handleCancelLesson}
-        onRestore={handleRestoreLesson}
-        onReschedule={handleRescheduleLesson}
-        onPaymentChange={handlePaymentChange}
-        onHomeworkSentChange={handleHomeworkSentChange}
-        onCardClick={handleCardClick}
-        onUpcomingPageChange={handleUpcomingPageChange}
-        onCompletedPageChange={handleCompletedPageChange}
-        onCancelledPageChange={handleCancelledPageChange}
-        onLoadMoreDays={handleLoadMoreDays}
-      />
+      <LessonsContent currentTab={currentTab} />
 
-      <AddLessonFab onClick={handleAddLesson} />
+      <AddLessonFab onClick={lessonsModel.dialogOpened} />
 
-      <LessonsDialogs
-        state={state}
-        confirmDialog={confirmDialog}
-        isLoading={isLoading}
-        onCloseDialog={handleCloseDialog}
-        onCloseViewDialog={handleCloseViewDialog}
-        onCloseRescheduleDialog={handleCloseRescheduleDialog}
-        onCloseDeleteDialog={handleCloseDeleteDialog}
-        onCloseConfirmDialog={handleCloseConfirmDialog}
-        onEditFromView={handleEditFromView}
-        onCancelFromView={handleCancelFromView}
-        onRestoreFromView={handleRestoreFromView}
-        onRescheduleFromView={handleRescheduleFromView}
-        onDeleteFromView={handleDeleteFromView}
-        onPaymentChange={handlePaymentChange}
-        onHomeworkSentChange={handleHomeworkSentChange}
-        onDeleteConfirm={handleDeleteConfirm}
-        onRescheduleConfirm={handleRescheduleConfirm}
-        onConfirmAction={confirmDialog.action}
-      />
-    </Container>
+      <LessonsDialogs />
+    </Styled.StyledContainer>
   );
 };

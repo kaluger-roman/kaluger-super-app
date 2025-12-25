@@ -1,55 +1,42 @@
-import React from "react";
+import type { FC } from "react";
+
 import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  Box,
   Typography,
   Chip,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { ConfirmDialog } from "../../../../shared/ui";
+import { useUnit } from "effector-react";
+
+import { getStatusColor, getStatusLabel } from "@shared";
+import { ConfirmDialog } from "@shared/ui";
+
 import { LessonDetails } from "./LessonDetails";
 import { LessonDialogActions } from "./LessonDialogActions";
-import { useLessonViewDialog } from "./useLessonViewDialog";
-import { getStatusColor, getStatusLabel } from "./utils";
-import type { LessonViewDialogProps } from "./types";
+import * as Styled from "./LessonViewDialog.styled";
+import { lessonsModel } from "../../models";
 
-export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
-  open,
-  onClose,
-  lesson,
-  onEdit,
-  onCancel,
-  onRestore,
-  onReschedule,
-  onDelete,
-  onPaymentChange,
-  onHomeworkSentChange,
-}) => {
+export const LessonViewDialog: FC = () => {
+  const open = useUnit(lessonsModel.$isViewDialogOpen);
+  const lesson = useUnit(lessonsModel.$viewingLesson);
+  const confirmDialog = useUnit(lessonsModel.$confirmDialog);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const {
-    confirmDialog,
-    closeConfirmDialog,
-    createCancelHandler,
-    createRestoreHandler,
-    createDeleteHandler,
-  } = useLessonViewDialog();
+  const actions = useUnit({
+    viewDialogClosed: lessonsModel.viewDialogClosed,
+    confirmDialogClosed: lessonsModel.confirmDialogClosed,
+  });
 
   if (!lesson) return null;
-
-  const handleCancel = createCancelHandler(onCancel);
-  const handleRestore = createRestoreHandler(onRestore);
-  const handleDelete = createDeleteHandler(onDelete);
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => actions.viewDialogClosed()}
       maxWidth="sm"
       fullWidth
       fullScreen={isMobile}
@@ -61,40 +48,27 @@ export const LessonViewDialog: React.FC<LessonViewDialogProps> = ({
       }}
     >
       <DialogTitle>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
+        <Styled.StatusChipBox>
           <Typography variant="h6">Урок</Typography>
           <Chip
             label={getStatusLabel(lesson.status)}
             color={getStatusColor(lesson.status)}
             size="small"
           />
-        </Box>
+        </Styled.StatusChipBox>
       </DialogTitle>
 
       <DialogContent>
-        <LessonDetails
-          lesson={lesson}
-          onPaymentChange={onPaymentChange}
-          onHomeworkSentChange={onHomeworkSentChange}
-        />
+        <LessonDetails lesson={lesson} />
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <LessonDialogActions
-          lesson={lesson}
-          isMobile={isMobile}
-          onEdit={onEdit}
-          onClose={onClose}
-          onReschedule={onReschedule}
-          onCancel={handleCancel}
-          onRestore={handleRestore}
-          onDelete={handleDelete}
-        />
-      </DialogActions>
+      <Styled.ActionsBox>
+        <LessonDialogActions lesson={lesson} isMobile={isMobile} />
+      </Styled.ActionsBox>
 
       <ConfirmDialog
         open={confirmDialog.open}
-        onClose={closeConfirmDialog}
+        onClose={actions.confirmDialogClosed}
         onConfirm={confirmDialog.action}
         title={confirmDialog.title}
         message={confirmDialog.message}

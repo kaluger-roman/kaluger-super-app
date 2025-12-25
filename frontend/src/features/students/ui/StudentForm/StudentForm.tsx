@@ -1,56 +1,75 @@
-import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import { StudentDeleteDialog } from "../../../../shared/ui";
-import { StudentFormFields } from "./StudentFormFields";
-import { StudentFormActions } from "./StudentFormActions";
-import { useStudentForm } from "./useStudentForm";
-import type { StudentFormProps } from "./types";
+import type { FC } from "react";
+import { useEffect } from "react";
 
-export const StudentForm: React.FC<StudentFormProps> = ({
-  open,
-  onClose,
-  student,
-}) => {
+import { DialogContent, useMediaQuery, useTheme } from "@mui/material";
+import { useUnit } from "effector-react";
+
+import { studentModel } from "@entities";
+import { StudentDeleteDialog } from "@shared/ui";
+
+import * as Styled from "./StudentForm.styled";
+import { StudentFormActions } from "./StudentFormActions";
+import { StudentFormFields } from "./StudentFormFields";
+import type { StudentFormProps } from "./types";
+import { studentFormModel } from "../../models";
+
+
+export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const {
-    formData,
-    isLoading,
-    deleteDialogOpen,
-    setDeleteDialogOpen,
-    handleChange,
-    handleGradeChange,
-    handleSubmit,
-    handleDeleteStudent,
-    handleDeleteConfirm,
-  } = useStudentForm(student, onClose, open);
+  const formData = useUnit(studentFormModel.$formData);
+  const isLoading = useUnit(studentModel.$isStudentsLoading);
+  const deleteDialogOpen = useUnit(studentFormModel.$deleteDialogOpen);
+
+  useEffect(() => {
+    if (open) {
+      studentFormModel.formOpened(student);
+    }
+  }, [open, student]);
+
+  const handleChange =
+    (field: string) =>
+    (
+      event:
+        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        | { target: { value: unknown } }
+    ) => {
+      const target = (event as { target?: { value?: unknown } }).target;
+      const value = target?.value ?? "";
+      studentFormModel.fieldChanged({ field, value: String(value) });
+    };
+
+  const handleGradeChange = (value: string) => {
+    studentFormModel.gradeChanged(value);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    studentFormModel.formSubmitted(event);
+  };
+
+  const handleDeleteStudent = () => {
+    studentFormModel.deleteRequested();
+  };
+
+  const handleDeleteConfirm = () => {
+    studentFormModel.deleteConfirmed();
+  };
 
   return (
-    <Dialog
+    <Styled.StyledDialog
       open={open}
       onClose={onClose}
       maxWidth="sm"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 2,
-          maxHeight: isMobile ? "100vh" : "90vh",
-        },
-      }}
+      $isMobile={isMobile}
     >
       <form onSubmit={handleSubmit}>
-        <DialogTitle sx={{ pb: 2 }}>
+        <Styled.StyledDialogTitle>
           {student ? "Редактировать студента" : "Добавить студента"}
-        </DialogTitle>
+        </Styled.StyledDialogTitle>
 
         <DialogContent>
           <StudentFormFields
@@ -61,7 +80,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
           />
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Styled.StyledDialogActions>
           <StudentFormActions
             student={student}
             isLoading={isLoading}
@@ -69,15 +88,15 @@ export const StudentForm: React.FC<StudentFormProps> = ({
             onClose={onClose}
             onDelete={handleDeleteStudent}
           />
-        </DialogActions>
+        </Styled.StyledDialogActions>
       </form>
 
       <StudentDeleteDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={studentFormModel.deleteDialogClosed}
         onConfirm={handleDeleteConfirm}
         student={student}
       />
-    </Dialog>
+    </Styled.StyledDialog>
   );
 };

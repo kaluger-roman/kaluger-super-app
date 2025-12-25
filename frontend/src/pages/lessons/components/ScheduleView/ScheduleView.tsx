@@ -1,23 +1,16 @@
-import { useState, useMemo, useRef } from "react";
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Checkbox,
-  FormControlLabel,
-} from "@mui/material";
-import type { Lesson } from "../../../../shared";
-import { useUnit } from "effector-react";
-import { loadScheduleLessonsFx } from "../../../../entities/lesson/model/lesson";
-import { generateTimeSlots } from "./ScheduleView.helpers";
-import { CELL_HEIGHT, CELL_HEIGHT_COMPACT } from "./ScheduleView.constants";
-import {
-  ScheduleContainer,
-  ScrollContainer,
-  LoaderOverlay,
-} from "./ScheduleView.styled";
+import type { FC } from "react";
+import { useMemo, useRef } from "react";
+
+import { Box, Typography, CircularProgress, Checkbox, FormControlLabel } from "@mui/material";
+import { useGate, useUnit } from "effector-react";
+
+import { lessonModel } from "@entities";
+import type { Lesson } from "@shared";
+
 import { ScheduleHeader } from "./ScheduleHeader";
 import { ScheduleMain } from "./ScheduleMain";
+import { CELL_HEIGHT, CELL_HEIGHT_COMPACT } from "./ScheduleView.constants";
+import { generateTimeSlots } from "./ScheduleView.helpers";
 import {
   useNowTicker,
   useLoadedDateRange,
@@ -27,6 +20,8 @@ import {
   usePreserveScrollOnPrepend,
   useStartEndHour,
 } from "./ScheduleView.hooks";
+import * as scheduleViewModel from "./ScheduleView.model";
+import * as Styled from "./ScheduleView.styled";
 
 type ScheduleViewProps = {
   lessons: Record<string, Lesson[]>;
@@ -34,14 +29,12 @@ type ScheduleViewProps = {
   onLoadMoreDays: (startDate: Date, endDate: Date) => void;
 };
 
-export const ScheduleView: React.FC<ScheduleViewProps> = ({
-  lessons,
-  onLessonClick,
-  onLoadMoreDays,
-}) => {
-  const [centerDate] = useState(new Date());
-  const [compactMode, setCompactMode] = useState(false);
-  const [containerWidth, setContainerWidth] = useState(0);
+export const ScheduleView: FC<ScheduleViewProps> = ({ lessons, onLessonClick, onLoadMoreDays }) => {
+  useGate(scheduleViewModel.ScheduleViewGate);
+
+  const centerDate = useUnit(scheduleViewModel.$centerDate);
+  const compactMode = useUnit(scheduleViewModel.$compactMode);
+  const containerWidth = useUnit(scheduleViewModel.$containerWidth);
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,10 +42,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const { startHour, endHour } = useStartEndHour(lessons);
 
-  const timeSlots = useMemo(
-    () => generateTimeSlots(startHour, endHour),
-    [startHour, endHour]
-  );
+  const timeSlots = useMemo(() => generateTimeSlots(startHour, endHour), [startHour, endHour]);
 
   const activeCellHeight = compactMode ? CELL_HEIGHT_COMPACT : CELL_HEIGHT;
 
@@ -71,14 +61,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     requestedRangesRef
   );
 
-  useInitialCentering(
-    containerWidth,
-    dateRange,
-    lessons,
-    headerScrollRef,
-    mainScrollRef
-  );
-  const isScheduleLoading = useUnit(loadScheduleLessonsFx.pending);
+  useInitialCentering(containerWidth, dateRange, lessons, headerScrollRef, mainScrollRef);
+  const isScheduleLoading = useUnit(lessonModel.loadScheduleLessonsFx.pending);
 
   usePreserveScrollOnPrepend(dateRange, mainScrollRef, headerScrollRef);
 
@@ -90,34 +74,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             <Checkbox
               size="small"
               checked={compactMode}
-              onChange={(_, v) => setCompactMode(v)}
+              onChange={(_, v) => scheduleViewModel.compactModeToggled(v)}
             />
           }
           label={<Typography variant="caption">Краткая форма</Typography>}
         />
       </Box>
 
-      <ScheduleContainer>
+      <Styled.ScheduleContainer>
         <ScheduleHeader
           dateRange={dateRange}
           headerScrollRef={headerScrollRef}
           handleHeaderScroll={handleHeaderScroll}
         />
 
-        <ScrollContainer>
+        <Styled.ScrollContainer>
           {isScheduleLoading && (
-            <LoaderOverlay>
+            <Styled.LoaderOverlay>
               <CircularProgress />
-            </LoaderOverlay>
+            </Styled.LoaderOverlay>
           )}
 
           <ScheduleMain
             dateRange={dateRange}
             timeSlots={timeSlots}
             lessons={lessons}
-            mainScrollRef={(el: any) => {
+            mainScrollRef={(el: HTMLDivElement | null) => {
               mainScrollRef.current = el;
-              if (el && containerWidth === 0) setContainerWidth(el.clientWidth);
+              if (el && containerWidth === 0) scheduleViewModel.containerWidthSet(el.clientWidth);
             }}
             onLessonClick={onLessonClick}
             handleMainScroll={handleMainScroll}
@@ -127,8 +111,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             now={now}
             isLoading={isScheduleLoading}
           />
-        </ScrollContainer>
-      </ScheduleContainer>
+        </Styled.ScrollContainer>
+      </Styled.ScheduleContainer>
     </>
   );
 };

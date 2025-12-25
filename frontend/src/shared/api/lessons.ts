@@ -1,5 +1,5 @@
 import { api } from "./base";
-import { Lesson, CreateLessonDto, UpdateLessonDto, Statistics } from "../types";
+import type { Lesson, CreateLessonDto, UpdateLessonDto, Statistics } from "../types";
 
 type LessonsResponse = {
   lessons: Lesson[];
@@ -59,8 +59,7 @@ export const lessonsApi = {
     params.append("upcoming", "true");
     params.append("currentTime", now);
 
-    if (filters?.onlyUnpaid)
-      params.append("onlyUnpaid", String(filters.onlyUnpaid));
+    if (filters?.onlyUnpaid) params.append("onlyUnpaid", String(filters.onlyUnpaid));
     if (filters?.onlyWithoutHomework)
       params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
 
@@ -84,8 +83,7 @@ export const lessonsApi = {
 
     params.append("weekStart", filters.weekStart);
     params.append("weekly", "true");
-    if (filters.onlyUnpaid)
-      params.append("onlyUnpaid", String(filters.onlyUnpaid));
+    if (filters.onlyUnpaid) params.append("onlyUnpaid", String(filters.onlyUnpaid));
     if (filters.onlyWithoutHomework)
       params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
 
@@ -103,8 +101,7 @@ export const lessonsApi = {
     params.append("startDate", filters.startDate);
     params.append("endDate", filters.endDate);
 
-    if (filters.noPagination)
-      params.append("noPagination", filters.noPagination);
+    if (filters.noPagination) params.append("noPagination", filters.noPagination);
 
     const response = await api.get(`/lessons?${params.toString()}`);
     return response.data;

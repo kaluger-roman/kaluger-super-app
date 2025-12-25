@@ -1,16 +1,19 @@
-import React from "react";
+import type { FC } from "react";
+
 import { Box, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
-import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../../../../shared";
+
+import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "@shared";
+
 import type { LessonFormData } from "../types";
 
 type SubjectTypeSelectorProps = {
   formData: LessonFormData;
   isLoading: boolean;
   isMobile: boolean;
-  onChange: (field: string) => (e: any) => void;
+  onChange: (field: string) => (e: { target?: { value: unknown } } | unknown) => void;
 };
 
-export const SubjectTypeSelector: React.FC<SubjectTypeSelectorProps> = ({
+export const SubjectTypeSelector: FC<SubjectTypeSelectorProps> = ({
   formData,
   isLoading,
   isMobile,

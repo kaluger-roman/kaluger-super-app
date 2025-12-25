@@ -7,11 +7,24 @@ module.exports = {
         project: ['./tsconfig.json'],
     },
     plugins: ['@typescript-eslint', 'import', 'unused-imports'],
-    extends: ['plugin:@typescript-eslint/recommended', 'plugin:import/errors', 'plugin:import/warnings'],
+    extends: [
+        'react-app',
+        'react-app/jest',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:import/errors',
+        'plugin:import/warnings',
+    ],
     settings: {
+        'import/parsers': {
+            '@typescript-eslint/parser': ['.ts', '.tsx'],
+        },
         'import/resolver': {
             typescript: {
                 project: './tsconfig.json',
+                alwaysTryTypes: true,
+            },
+            node: {
+                extensions: ['.js', '.jsx', '.ts', '.tsx'],
             },
             alias: {
                 map: [
@@ -23,16 +36,119 @@ module.exports = {
                     ['@components', './src/components'],
                     ['@widgets', './src/widgets'],
                 ],
-                extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
-            }
+                extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
+            },
         },
     },
     rules: {
+
+        'no-restricted-imports': [
+            'error',
+            {
+                patterns: [
+
+                    '../**/pages/**',
+                    '../**/features/**',
+                    '../**/app/**',
+                    '@shared/*/*',
+                    '@features/*/*/*',
+                    '@entities/*/*/*',
+                ],
+            },
+        ],
+
+        'import/no-restricted-paths': [
+            'error',
+            {
+                zones: [
+                    {
+                        target: './src/shared',
+                        from: './src/shared/index.ts',
+                        message: 'Do not import from @shared within shared layer. Use relative imports instead.',
+                    },
+                    {
+                        target: './src/entities',
+                        from: './src/entities/index.ts',
+                        message: 'Do not import from @entities within entities layer. Use relative imports instead.',
+                    },
+                    {
+                        target: './src/shared',
+                        from: './src/entities',
+                    },
+                    {
+                        target: './src/shared',
+                        from: './src/features',
+                    },
+                    {
+                        target: './src/shared',
+                        from: './src/pages',
+                    },
+                    {
+                        target: './src/shared',
+                        from: './src/app',
+                    },
+                    {
+                        target: './src/entities',
+                        from: './src/features',
+                    },
+                    {
+                        target: './src/entities',
+                        from: './src/pages',
+                    },
+                    {
+                        target: './src/entities',
+                        from: './src/app',
+                    },
+                    {
+                        target: './src/features',
+                        from: './src/pages',
+                    },
+                    {
+                        target: './src/features',
+                        from: './src/app',
+                    },
+                ],
+            },
+        ],
+        'no-unused-vars': 'off',
+        '@typescript-eslint/no-unused-vars': [
+            'error',
+            {
+                args: 'none',
+                ignoreRestSiblings: true,
+            },
+        ],
+        'unused-imports/no-unused-imports': 'error',
+        'unused-imports/no-unused-vars': [
+            'warn',
+            {
+                vars: 'all',
+                varsIgnorePattern: '^_',
+                args: 'after-used',
+                argsIgnorePattern: '^_',
+            },
+        ],
         'import/no-unused-modules': [
-            'warning',
+            1,
             {
                 unusedExports: true,
                 src: ['src/**'],
+            },
+        ],
+        'import/order': [
+            'error',
+            {
+                groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index']],
+                pathGroups: [
+                    {
+                        pattern: 'react',
+                        group: 'external',
+                        position: 'before',
+                    },
+                ],
+                pathGroupsExcludedImportTypes: ['react'],
+                alphabetize: { order: 'asc', caseInsensitive: true },
+                'newlines-between': 'always',
             },
         ],
     },

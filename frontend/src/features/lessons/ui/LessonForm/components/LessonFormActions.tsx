@@ -1,11 +1,15 @@
-import React from "react";
-import { DialogActions, Box, Button } from "@mui/material";
+import { Button } from "@mui/material";
+
+import type { Lesson } from "@shared";
+
+import * as Styled from "./LessonFormActions.styled";
+import type { LessonFormData } from "../types";
 
 type LessonFormActionsProps = {
-  lesson?: any;
+  lesson?: Lesson;
   isLoading: boolean;
   isMobile: boolean;
-  formData: any;
+  formData: LessonFormData;
   onClose: () => void;
   onCancelLesson: () => void;
 };
@@ -25,37 +29,23 @@ export const LessonFormActions = ({
   };
 
   return (
-    <DialogActions sx={{ p: 3, pt: 1 }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          justifyContent: "space-between",
-          width: "100%",
-          gap: isMobile ? 2 : 0,
-        }}
-      >
-        <Box>
+    <Styled.StyledDialogActions>
+      <Styled.Container $isMobile={isMobile}>
+        <Styled.LeftColumn>
           {lesson && lesson.status !== "CANCELLED" && (
-            <Button
+            <Styled.CancelButton
               onClick={onCancelLesson}
               variant="outlined"
               color="error"
               disabled={isLoading}
               fullWidth={isMobile}
-              sx={{ mr: isMobile ? 0 : 1 }}
+              $isMobile={isMobile}
             >
               Отменить урок
-            </Button>
+            </Styled.CancelButton>
           )}
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            gap: 1,
-          }}
-        >
+        </Styled.LeftColumn>
+        <Styled.RightColumn $isMobile={isMobile}>
           <Button
             onClick={handleClose}
             variant="outlined"
@@ -78,8 +68,8 @@ export const LessonFormActions = ({
               ? "Обновить урок"
               : "Создать урок"}
           </Button>
-        </Box>
-      </Box>
-    </DialogActions>
+        </Styled.RightColumn>
+      </Styled.Container>
+    </Styled.StyledDialogActions>
   );
 };

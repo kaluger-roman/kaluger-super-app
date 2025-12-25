@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import type { LessonsMap } from "./ScheduleView.types";
+
+import type { Lesson } from "@shared";
+
 import { generateDateRange, getDateKey } from "./ScheduleView.helpers";
-import { Lesson } from "../../../../shared";
+import type { LessonsMap } from "./ScheduleView.types";
 
 export const useNowTicker = () => {
   const [now, setNow] = useState<Date>(() => new Date());
@@ -61,18 +63,11 @@ export const useInitialCentering = (
   useEffect(() => {
     if (didInitialCenterRef.current) return;
     if (containerWidth > 0 && dateRange.length > 0) {
-      const todayIndex = dateRange.findIndex(
-        (date) => getDateKey(date) === getDateKey(new Date())
-      );
+      const todayIndex = dateRange.findIndex((date) => getDateKey(date) === getDateKey(new Date()));
       if (todayIndex >= 0 && Object.keys(lessons).length > 0) {
-        const initialScroll = Math.max(
-          0,
-          todayIndex * 180 - containerWidth / 2 + 80
-        );
-        if (headerScrollRef.current)
-          headerScrollRef.current.scrollLeft = initialScroll;
-        if (mainScrollRef.current)
-          mainScrollRef.current.scrollLeft = initialScroll;
+        const initialScroll = Math.max(0, todayIndex * 180 - containerWidth / 2 + 80);
+        if (headerScrollRef.current) headerScrollRef.current.scrollLeft = initialScroll;
+        if (mainScrollRef.current) mainScrollRef.current.scrollLeft = initialScroll;
         didInitialCenterRef.current = true;
       }
     }
@@ -99,17 +94,13 @@ export const usePreserveScrollOnPrepend = (
     }
 
     const msPerDay = 24 * 60 * 60 * 1000;
-    const diffDays = Math.round(
-      (prevStart.getTime() - newStart.getTime()) / msPerDay
-    );
+    const diffDays = Math.round((prevStart.getTime() - newStart.getTime()) / msPerDay);
     if (diffDays > 0) {
       const deltaPx = diffDays * 180;
       if (mainScrollRef.current)
-        mainScrollRef.current.scrollLeft =
-          (mainScrollRef.current.scrollLeft || 0) + deltaPx;
+        mainScrollRef.current.scrollLeft = (mainScrollRef.current.scrollLeft || 0) + deltaPx;
       if (headerScrollRef.current)
-        headerScrollRef.current.scrollLeft =
-          (headerScrollRef.current.scrollLeft || 0) + deltaPx;
+        headerScrollRef.current.scrollLeft = (headerScrollRef.current.scrollLeft || 0) + deltaPx;
     }
 
     prevStartRef.current = newStart;
@@ -127,8 +118,7 @@ export const useHeaderMainScrollSync = (
   const handleHeaderScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      if (mainScrollRef.current)
-        mainScrollRef.current.scrollLeft = element.scrollLeft;
+      if (mainScrollRef.current) mainScrollRef.current.scrollLeft = element.scrollLeft;
     },
     [mainScrollRef]
   );
@@ -136,11 +126,9 @@ export const useHeaderMainScrollSync = (
   const handleMainScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      if (headerScrollRef.current)
-        headerScrollRef.current.scrollLeft = element.scrollLeft;
+      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = element.scrollLeft;
 
-      const distanceToRight =
-        element.scrollWidth - element.clientWidth - element.scrollLeft;
+      const distanceToRight = element.scrollWidth - element.clientWidth - element.scrollLeft;
       const distanceToLeft = element.scrollLeft;
 
       if (distanceToRight < 150 && maxLoadedDate) {
@@ -159,13 +147,7 @@ export const useHeaderMainScrollSync = (
         onLoadMoreDays(startDate, minLoadedDate);
       }
     },
-    [
-      headerScrollRef,
-      maxLoadedDate,
-      minLoadedDate,
-      onLoadMoreDays,
-      requestedRangesRef,
-    ]
+    [headerScrollRef, maxLoadedDate, minLoadedDate, onLoadMoreDays, requestedRangesRef]
   );
 
   return { handleHeaderScroll, handleMainScroll };

@@ -1,32 +1,31 @@
-import React, { useEffect } from "react";
-import { Paper, useMediaQuery, useTheme } from "@mui/material";
-import { useStore } from "effector-react";
-import { useNavigate } from "react-router-dom";
-import {
-  registerUser,
-  $userIsLoading,
-  $authError,
-  $isAuthenticated,
-  clearAuthError,
-} from "../../../../entities";
-import { useRegisterForm } from "./useRegisterForm";
-import { RegisterFormHeader } from "./RegisterFormHeader";
-import { RegisterFormFields } from "./RegisterFormFields";
-import { RegisterFormActions } from "./RegisterFormActions";
+import type { FC, FormEvent } from "react";
+import { useEffect } from "react";
 
-export const RegisterForm: React.FC = () => {
+import { useMediaQuery, useTheme } from "@mui/material";
+import { useUnit } from "effector-react";
+import { useNavigate } from "react-router-dom";
+
+import { userModel } from "@entities";
+
+import { useRegisterForm } from "./RegisterForm.hooks";
+import * as Styled from "./RegisterForm.styled";
+import { RegisterFormActions } from "./RegisterFormActions";
+import { RegisterFormFields } from "./RegisterFormFields";
+import { RegisterFormHeader } from "./RegisterFormHeader";
+
+export const RegisterForm: FC = () => {
   const { formData, setters, validation } = useRegisterForm();
   const { validationError, validateForm, clearValidationError } = validation;
 
-  const isLoading = useStore($userIsLoading);
-  const authError = useStore($authError);
-  const isAuthenticated = useStore($isAuthenticated);
+  const isLoading = useUnit(userModel.$isLoading);
+  const authError = useUnit(userModel.$authError);
+  const isAuthenticated = useUnit(userModel.$isAuthenticated);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    clearAuthError();
+    userModel.clearAuthError();
   }, []);
 
   useEffect(() => {
@@ -35,14 +34,14 @@ export const RegisterForm: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    registerUser({
+    userModel.registerUser({
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -50,17 +49,7 @@ export const RegisterForm: React.FC = () => {
   };
 
   return (
-    <Paper
-      elevation={3}
-      sx={{
-        p: isMobile ? 3 : 4,
-        width: "100%",
-        maxWidth: 440,
-        borderRadius: 3,
-        maxHeight: isMobile ? "90vh" : "auto",
-        overflow: "auto",
-      }}
-    >
+    <Styled.StyledPaper elevation={3} $isMobile={isMobile}>
       <RegisterFormHeader isMobile={isMobile} />
 
       <form onSubmit={handleSubmit}>
@@ -79,6 +68,6 @@ export const RegisterForm: React.FC = () => {
           isMobile={isMobile}
         />
       </form>
-    </Paper>
+    </Styled.StyledPaper>
   );
 };

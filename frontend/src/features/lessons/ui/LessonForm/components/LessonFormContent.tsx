@@ -1,32 +1,28 @@
-import React from "react";
-import {
-  DialogContent,
-  Box,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { TextField, FormControlLabel, Checkbox } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
-import { PaymentStatus, HomeworkSentStatus } from "../../../../../shared/ui";
-import {
-  StudentSelector,
-  SubjectTypeSelector,
-  DateTimeSelector,
-  PriceInput,
-} from "../components";
+
+import type { Lesson } from "@shared";
+import { PaymentStatus, HomeworkSentStatus } from "@shared/ui";
+
+import * as Styled from "./LessonFormContent.styled";
 import { PastDateNotice } from "./PastDateNotice";
+import type { LessonFormData } from "../types";
+import { DateTimeSelector } from "./DateTimeSelector";
+import { PriceInput } from "./PriceInput";
+import { StudentSelector } from "./StudentSelector";
+import { SubjectTypeSelector } from "./SubjectTypeSelector";
 
 type LessonFormContentProps = {
-  formData: any;
-  errors: any;
+  formData: LessonFormData;
+  errors: Record<string, string>;
   isLoading: boolean;
   isMobile: boolean;
-  lesson?: any;
-  handleChange: (field: string) => (event: any) => void;
-  handleDateChange: any;
-  setFormData: any;
+  lesson?: Lesson;
+  handleChange: (field: string) => (event: { target?: { value: unknown } } | unknown) => void;
+  handleDateChange: (field: "startTime" | "endTime") => (date: Date | null) => void;
+  setFormData: (updater: (prev: LessonFormData) => LessonFormData) => void;
 };
 
 export const LessonFormContent = ({
@@ -40,9 +36,9 @@ export const LessonFormContent = ({
   setFormData,
 }: LessonFormContentProps) => {
   return (
-    <DialogContent sx={{ px: isMobile ? 2 : 3 }}>
+    <Styled.StyledDialogContent $isMobile={isMobile}>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-        <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3}>
+        <Styled.FormContainer $isMobile={isMobile}>
           <StudentSelector
             formData={formData}
             errors={errors}
@@ -93,16 +89,14 @@ export const LessonFormContent = ({
             onChange={handleChange}
           />
 
-          <Box>
+          <Styled.CheckboxContainer>
             {lesson && (
               <PaymentStatus
                 lesson={{
                   ...lesson,
                   isPaid: formData.isPaid,
                 }}
-                onPaymentChange={(_, isPaid) =>
-                  setFormData((prev: any) => ({ ...prev, isPaid }))
-                }
+                onPaymentChange={(_, isPaid) => setFormData((prev) => ({ ...prev, isPaid }))}
               />
             )}
             {lesson && (
@@ -112,14 +106,14 @@ export const LessonFormContent = ({
                   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
                 }}
                 onHomeworkSentChange={(_, isSent) =>
-                  setFormData((prev: any) => ({
+                  setFormData((prev) => ({
                     ...prev,
                     isHomeworkSentByTeacher: isSent,
                   }))
                 }
               />
             )}
-          </Box>
+          </Styled.CheckboxContainer>
           {/* Регулярное занятие */}
           {!lesson && (
             <FormControlLabel
@@ -127,7 +121,7 @@ export const LessonFormContent = ({
                 <Checkbox
                   checked={formData.isRecurring}
                   onChange={(e) =>
-                    setFormData((prev: any) => ({
+                    setFormData((prev) => ({
                       ...prev,
                       isRecurring: e.target.checked,
                     }))
@@ -160,8 +154,8 @@ export const LessonFormContent = ({
             disabled={isLoading}
             size={isMobile ? "small" : "medium"}
           />
-        </Box>
+        </Styled.FormContainer>
       </LocalizationProvider>
-    </DialogContent>
+    </Styled.StyledDialogContent>
   );
 };

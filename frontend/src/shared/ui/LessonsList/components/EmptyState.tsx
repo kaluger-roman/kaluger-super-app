@@ -1,11 +1,12 @@
-import React from "react";
-import { Box, Typography } from "@mui/material";
+import type { FC } from "react";
+
+import * as Styled from "./EmptyState.styled";
 
 type EmptyStateProps = {
   type: "scheduled" | "completed" | "cancelled" | "rescheduled";
 };
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ type }) => {
+export const EmptyState: FC<EmptyStateProps> = ({ type }) => {
   const getEmptyStateContent = () => {
     switch (type) {
       case "scheduled":
@@ -39,18 +40,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ type }) => {
   const { title, description } = getEmptyStateContent();
 
   return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      py={8}
-      textAlign="center"
-    >
-      <Typography variant="h5" color="text.secondary" gutterBottom>
+    <Styled.Container>
+      <Styled.Title variant="h5" color="text.secondary" gutterBottom>
         {title}
-      </Typography>
-      <Typography color="text.secondary">{description}</Typography>
-    </Box>
+      </Styled.Title>
+      <Styled.Description color="text.secondary">{description}</Styled.Description>
+    </Styled.Container>
   );
 };

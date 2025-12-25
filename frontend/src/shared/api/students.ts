@@ -1,5 +1,5 @@
 import { api } from "./base";
-import { Student, CreateStudentDto, UpdateStudentDto } from "../types";
+import type { Student, CreateStudentDto, UpdateStudentDto } from "../types";
 
 export const studentsApi = {
   getAll: async (): Promise<Student[]> => {
@@ -17,10 +17,7 @@ export const studentsApi = {
     return response.data.student;
   },
 
-  update: async (
-    id: string,
-    studentData: UpdateStudentDto
-  ): Promise<Student> => {
+  update: async (id: string, studentData: UpdateStudentDto): Promise<Student> => {
     const response = await api.put(`/students/${id}`, studentData);
     return response.data.student;
   },

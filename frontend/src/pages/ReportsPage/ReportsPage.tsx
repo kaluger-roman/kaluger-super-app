@@ -1,29 +1,28 @@
-import React, { useEffect } from "react";
-import { Box, Typography, Paper } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import type { FC } from "react";
+
+import { Typography } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
+import { useGate, useUnit } from "effector-react";
+
 import {
-  useReportsPage,
   DateRangeFilter,
   MainStatistics,
   FinancialStatistics,
   PerformanceMetrics,
-} from "./index";
+} from "./components";
+import { statisticsModel } from "./model";
+import * as Styled from "./ReportsPage.styled";
 
-export const ReportsPage: React.FC = () => {
-  const {
-    statistics,
-    loading,
-    error,
-    dateRange,
-    loadStatistics,
-    updateDateRange,
-  } = useReportsPage();
+export const ReportsPage: FC = () => {
+  useGate(statisticsModel.ReportsPageGate);
 
-  useEffect(() => {
-    loadStatistics();
-  }, [loadStatistics]);
+  const statistics = useUnit(statisticsModel.$statistics);
+  const startDate = useUnit(statisticsModel.$startDate);
+  const endDate = useUnit(statisticsModel.$endDate);
+  const loading = useUnit(statisticsModel.$isLoading);
+  const error = useUnit(statisticsModel.$error);
 
   if (!statistics) {
     return null;
@@ -31,24 +30,24 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-      <Box p={3}>
+      <Styled.Container>
         <Typography variant="h4" gutterBottom>
           📊 Отчеты и статистика
         </Typography>
 
         {error && (
-          <Paper sx={{ p: 2, mb: 3, backgroundColor: "#ffebee" }}>
+          <Styled.ErrorPaper>
             <Typography color="error">{error}</Typography>
-          </Paper>
+          </Styled.ErrorPaper>
         )}
 
         <DateRangeFilter
-          startDate={dateRange.startDate}
-          endDate={dateRange.endDate}
+          startDate={startDate}
+          endDate={endDate}
           loading={loading}
-          onStartDateChange={(value) => updateDateRange("startDate", value)}
-          onEndDateChange={(value) => updateDateRange("endDate", value)}
-          onUpdate={loadStatistics}
+          onStartDateChange={statisticsModel.startDateChanged}
+          onEndDateChange={statisticsModel.endDateChanged}
+          onUpdate={statisticsModel.statisticsLoadRequested}
         />
 
         <MainStatistics statistics={statistics} />
@@ -56,7 +55,7 @@ export const ReportsPage: React.FC = () => {
         <FinancialStatistics statistics={statistics} />
 
         <PerformanceMetrics statistics={statistics} />
-      </Box>
+      </Styled.Container>
     </LocalizationProvider>
   );
 };

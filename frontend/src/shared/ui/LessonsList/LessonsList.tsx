@@ -1,15 +1,11 @@
-import React from "react";
+import type { FC } from "react";
+
 import { Box } from "@mui/material";
-import { Lesson } from "../../types";
-import {
-  EmptyState,
-  InfoMessage,
-  LessonContextMenu,
-  LessonsYear,
-  WeeklyView,
-} from "./components";
+
+import { EmptyState, InfoMessage, LessonContextMenu, LessonsYear, WeeklyView } from "./components";
 import { useLessonsGrouping, useLessonMenu } from "./hooks";
-import { sortYears } from "./utils";
+import { sortYears } from "./LessonsList.helpers";
+import type { Lesson } from "../../types";
 
 type LessonsListProps = {
   lessons: Lesson[];
@@ -25,7 +21,7 @@ type LessonsListProps = {
   viewMode?: "paged" | "weekly" | "schedule";
 };
 
-export const LessonsList: React.FC<LessonsListProps> = ({
+export const LessonsList: FC<LessonsListProps> = ({
   lessons,
   onEdit,
   onDelete,
@@ -82,11 +78,7 @@ export const LessonsList: React.FC<LessonsListProps> = ({
 
   const body =
     viewMode === "weekly" ? (
-      <WeeklyView
-        lessons={filteredLessons}
-        onMenuClick={handleMenuClick}
-        {...commonProps}
-      />
+      <WeeklyView lessons={filteredLessons} onMenuClick={handleMenuClick} {...commonProps} />
     ) : (
       sortYears(Object.keys(groupedLessons), type).map((year) => {
         const isYearCollapsed = collapsedYears[year] ?? false;

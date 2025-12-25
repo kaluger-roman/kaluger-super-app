@@ -1,6 +1,9 @@
-import React from "react";
+import type { FC } from "react";
+
 import { Box } from "@mui/material";
-import type { Lesson } from "../../../../../shared";
+
+import type { Lesson } from "@shared";
+
 import { LessonCell } from "../../LessonCell";
 
 type LessonBlockProps = {
@@ -12,7 +15,7 @@ type LessonBlockProps = {
   compact?: boolean;
 };
 
-export const LessonBlock: React.FC<LessonBlockProps> = ({
+export const LessonBlock: FC<LessonBlockProps> = ({
   lesson,
   lessonIndex,
   startHour,
@@ -22,12 +25,8 @@ export const LessonBlock: React.FC<LessonBlockProps> = ({
 }) => {
   const start = new Date(lesson.startTime);
   const end = new Date(lesson.endTime);
-  const minutesFromStartHour =
-    (start.getHours() - startHour) * 60 + start.getMinutes();
-  const durationMinutes = Math.max(
-    15,
-    Math.round((end.getTime() - start.getTime()) / 60000)
-  );
+  const minutesFromStartHour = (start.getHours() - startHour) * 60 + start.getMinutes();
+  const durationMinutes = Math.max(15, Math.round((end.getTime() - start.getTime()) / 60000));
 
   const topPx = (minutesFromStartHour / 60) * activeCellHeight;
   const heightPx = (durationMinutes / 60) * activeCellHeight;

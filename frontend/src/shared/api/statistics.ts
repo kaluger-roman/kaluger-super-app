@@ -1,45 +1,8 @@
+import { Statistics } from "../types";
 import { api } from "./base";
+import type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics.types";
 
-export type Statistics = {
-  completedLessons: number;
-  cancelledLessons: number;
-  upcomingLessons: number;
-  totalLessons: number;
-  earnings: number;
-  lastMonthEarnings: number;
-  lostEarnings: number;
-  upcomingIncome?: number;
-  prepaidIncome?: number;
-  unpaidDebtSum?: number;
-  unpaidDebtCount?: number;
-  unpaidDebtOver24hSum?: number;
-  unpaidDebtOver24hCount?: number;
-  trialLessonsCount?: number;
-};
-
-export type LessonsBySubject = {
-  subject: string;
-  _count: { id: number };
-  _sum: { price: number | null };
-}[];
-
-export type LessonsByType = {
-  lessonType: string;
-  _count: { id: number };
-  _sum: { price: number | null };
-}[];
-
-export type StudentStatistics = {
-  studentId: string;
-  _count: { id: number };
-  _sum: { price: number | null };
-  student:
-    | {
-        id: string;
-        name: string;
-      }
-    | undefined;
-}[];
+export type { LessonsBySubject, LessonsByType, StudentStatistics };
 
 export const statisticsApi = {
   // Основная статистика
@@ -60,8 +23,5 @@ export const statisticsApi = {
 
   // Статистика по ученикам
   getStudentStatistics: (params?: { startDate?: string; endDate?: string }) =>
-    api.get<{ studentStatistics: StudentStatistics }>(
-      "/statistics/by-student",
-      { params }
-    ),
+    api.get<{ studentStatistics: StudentStatistics }>("/statistics/by-student", { params }),
 };

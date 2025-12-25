@@ -3,3 +3,5 @@ export { studentsApi } from "./students";
 export { lessonsApi } from "./lessons";
 export { statisticsApi } from "./statistics";
 export { api } from "./base";
+
+export type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics";

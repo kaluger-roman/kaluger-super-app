@@ -1,43 +1,36 @@
-import React, { useEffect } from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import type { FC } from "react";
+import { useEffect } from "react";
+
+import { CssBaseline, CircularProgress } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
-import { CssBaseline, Backdrop, CircularProgress } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
-import { useStore, useUnit } from "effector-react";
+import { useUnit } from "effector-react";
+import { BrowserRouter as Router } from "react-router-dom";
 
-import {
-  $isAuthenticated,
-  $user,
-  getProfileFx,
-  setAuthToken,
-} from "../entities";
-import { initializeApp, $appInitialized } from "../shared/model/appInit";
-import {
-  connectWebSocket,
-  disconnectWebSocket,
-} from "../shared/model/webSocket";
-import { theme } from "../shared";
-import { NotificationProvider } from "../shared/ui/NotificationProvider";
+import { userModel } from "@entities";
+import { theme, NotificationProvider } from "@shared";
+
+import * as Styled from "./App.styled";
 import { AppContent } from "./components";
-import { $isBlocking } from "../shared/model/blocking";
+import { appInitModel, blockingModel, webSocketModel } from "./model";
 
-const App: React.FC = () => {
-  const isAuthenticated = useStore($isAuthenticated);
-  const user = useStore($user);
-  const appInitialized = useStore($appInitialized);
-  const isBlocking = useUnit($isBlocking);
+const App: FC = () => {
+  const isAuthenticated = useUnit(userModel.$isAuthenticated);
+  const user = useUnit(userModel.$user);
+  const appInitialized = useUnit(appInitModel.$appInitialized);
+  const isBlocking = useUnit(blockingModel.$isBlocking);
 
   useEffect(() => {
     // Set auth token from localStorage on app start and restore profile
     (async () => {
       const token = localStorage.getItem("authToken");
       if (token) {
-        setAuthToken(token);
+        userModel.setAuthToken(token);
         try {
           // Wait for profile to be fetched before initializing the rest of the app
-          await getProfileFx();
+          await userModel.getProfileFx();
         } catch (e) {
           // Ignore profile fetch errors here; initialize app anyway
           // (getProfileFx will set stores on success/fail)
@@ -47,19 +40,19 @@ const App: React.FC = () => {
       }
 
       // Initialize app (load students, upcoming lessons etc.)
-      initializeApp();
+      appInitModel.initializeApp({});
     })();
   }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
-      connectWebSocket();
+      webSocketModel.connectWebSocket();
     } else {
-      disconnectWebSocket();
+      webSocketModel.disconnectWebSocket();
     }
 
     return () => {
-      disconnectWebSocket();
+      webSocketModel.disconnectWebSocket();
     };
   }, [isAuthenticated]);
 
@@ -67,12 +60,9 @@ const App: React.FC = () => {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Backdrop
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={true}
-        >
+        <Styled.StyledBackdrop open={true}>
           <CircularProgress color="inherit" />
-        </Backdrop>
+        </Styled.StyledBackdrop>
       </ThemeProvider>
     );
   }
@@ -84,16 +74,13 @@ const App: React.FC = () => {
         <Router>
           <AppContent isLoggedIn={isAuthenticated} user={user} />
           <NotificationProvider />
-          <Backdrop
-            sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 1 }}
-            open={isBlocking}
-          >
+          <Styled.ModalBackdrop open={isBlocking}>
             <CircularProgress color="inherit" />
-          </Backdrop>
+          </Styled.ModalBackdrop>
         </Router>
       </LocalizationProvider>
     </ThemeProvider>
   );
 };
 
-export default App;
+export { App };

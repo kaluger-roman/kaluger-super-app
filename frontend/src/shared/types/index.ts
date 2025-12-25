@@ -43,37 +43,15 @@ export type Lesson = {
   studentId: string;
   student?: Pick<
     Student,
-    | "id"
-    | "name"
-    | "phone"
-    | "contactMethod"
-    | "parentPhone"
-    | "parentContactMethod"
+    "id" | "name" | "phone" | "contactMethod" | "parentPhone" | "parentContactMethod"
   >;
 };
 
-export type LessonStatus =
-  | "SCHEDULED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "RESCHEDULED"
-  | "IN_PROGRESS";
+export type LessonStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
 
 export type Subject = "MATHEMATICS" | "PHYSICS";
 
 export type LessonType = "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
-
-export const SUBJECT_LABELS: Record<Subject, string> = {
-  MATHEMATICS: "Математика",
-  PHYSICS: "Физика",
-};
-
-export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
-  EGE: "ЕГЭ",
-  OGE: "ОГЭ",
-  OLYMPICS: "Олимпиады",
-  SCHOOL: "Школа",
-};
 
 export type CreateStudentDto = {
   name: string;
@@ -128,19 +106,16 @@ export type AuthResponse = {
 export type Statistics = {
   completedLessons: number;
   cancelledLessons: number;
-  totalLessons: number;
   upcomingLessons: number;
+  totalLessons: number;
   earnings: number;
   lastMonthEarnings: number;
   lostEarnings: number;
   upcomingIncome?: number;
+  prepaidIncome?: number;
+  unpaidDebtSum?: number;
+  unpaidDebtCount?: number;
+  unpaidDebtOver24hSum?: number;
+  unpaidDebtOver24hCount?: number;
   trialLessonsCount?: number;
 };
-
-// Re-export date formatting functions for convenience
-export {
-  formatDate,
-  formatDateTime,
-  formatTime,
-  formatDuration,
-} from "../lib/date";

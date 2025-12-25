@@ -1,4 +1,4 @@
-import type { Student } from "../../../../shared";
+import type { Student } from "@shared";
 
 export type StudentFormData = {
   name: string;
@@ -26,7 +26,9 @@ export type StudentFormFieldsProps = {
   onChange: (
     field: string
   ) => (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | { target: { value: unknown } }
   ) => void;
   onGradeChange: (value: string) => void;
 };

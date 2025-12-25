@@ -1,106 +1,72 @@
-import React from "react";
-import { Container, Typography, Box, Fab, Paper } from "@mui/material";
+import type { FC } from "react";
+
 import { Add as AddIcon } from "@mui/icons-material";
-import { useUnit } from "effector-react";
-import { $students, $studentsIsLoading } from "../../entities";
-import { StudentDeleteDialog } from "../../shared/ui";
-import { StudentForm, StudentViewDialog } from "../../features/students";
-import { useStudentsPage } from "./useStudentsPage";
+import { Typography } from "@mui/material";
+import { useGate, useUnit } from "effector-react";
+
+import { studentModel } from "@entities";
+import { StudentForm, StudentViewDialog, studentsModel } from "@features/students";
+import { StudentDeleteDialog } from "@shared/ui";
+
 import { StudentsList, StudentsMenu, EmptyStudentsState } from "./components";
+import * as Styled from "./StudentsPage.styled";
 
-export const StudentsPage: React.FC = () => {
-  const students = useUnit($students);
-  const isLoading = useUnit($studentsIsLoading);
+export const StudentsPage: FC = () => {
+  useGate(studentsModel.StudentsPageGate);
 
-  const {
-    state,
-    handleMenuClick,
-    handleMenuClose,
-    handleEditFromMenu,
-    handleDeleteFromMenu,
-    handleDeleteConfirm,
-    handleStudentClick,
-    handleCloseViewDialog,
-    handleEditFromView,
-    handleDeleteFromView,
-    handleCloseEditDialog,
-    handleAddStudent,
-    handleCloseDeleteDialog,
-  } = useStudentsPage();
+  const students = useUnit(studentModel.$students);
+  const isLoading = useUnit(studentModel.$isStudentsLoading);
+  const isDialogOpen = useUnit(studentsModel.$isDialogOpen);
+  const isViewDialogOpen = useUnit(studentsModel.$isViewDialogOpen);
+  const anchorEl = useUnit(studentsModel.$anchorEl);
+  const deleteDialogStudent = useUnit(studentsModel.$deleteDialogStudent);
+  const editingStudent = useUnit(studentsModel.$editingStudent);
+  const viewingStudent = useUnit(studentsModel.$viewingStudent);
 
   if (isLoading && students.length === 0) {
     return null;
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box mb={4}>
-        <Typography
-          variant="h3"
-          component="h1"
-          gutterBottom
-          sx={{ fontWeight: 700 }}
-        >
+    <Styled.StyledContainer maxWidth="xl">
+      <Styled.HeaderBox>
+        <Styled.StyledTitle variant="h3" component="h1" gutterBottom>
           👥 Ученики
-        </Typography>
+        </Styled.StyledTitle>
         <Typography variant="h6" color="text.secondary">
           Управление вашими учениками
         </Typography>
-      </Box>
+      </Styled.HeaderBox>
 
-      <Paper sx={{ p: 3 }}>
-        {students.length === 0 ? (
-          <EmptyStudentsState />
-        ) : (
-          <StudentsList
-            students={students}
-            onStudentClick={handleStudentClick}
-            onMenuClick={handleMenuClick}
-          />
-        )}
-      </Paper>
+      <Styled.StyledPaper>
+        {students.length === 0 ? <EmptyStudentsState /> : <StudentsList students={students} />}
+      </Styled.StyledPaper>
 
-      <Fab
-        color="primary"
-        sx={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          width: 64,
-          height: 64,
-        }}
-        onClick={handleAddStudent}
-      >
-        <AddIcon sx={{ fontSize: 28 }} />
-      </Fab>
+      <Styled.StyledFab color="primary" onClick={() => studentsModel.dialogOpened(undefined)}>
+        <AddIcon />
+      </Styled.StyledFab>
 
       <StudentForm
-        open={state.isDialogOpen}
-        onClose={handleCloseEditDialog}
-        student={state.editingStudent}
+        open={isDialogOpen}
+        onClose={studentsModel.dialogClosed}
+        student={editingStudent}
       />
 
-      <StudentViewDialog
-        open={state.isViewDialogOpen}
-        onClose={handleCloseViewDialog}
-        student={state.viewingStudent}
-        onEdit={handleEditFromView}
-        onDelete={handleDeleteFromView}
-      />
+      <StudentViewDialog open={isViewDialogOpen} student={viewingStudent} />
 
       <StudentDeleteDialog
-        open={Boolean(state.deleteDialogOpen)}
-        onClose={handleCloseDeleteDialog}
-        onConfirm={handleDeleteConfirm}
-        student={state.deleteDialogOpen || undefined}
+        open={Boolean(deleteDialogStudent)}
+        onClose={studentsModel.deleteDialogClosed}
+        onConfirm={studentsModel.deleteConfirmed}
+        student={deleteDialogStudent || undefined}
       />
 
       <StudentsMenu
-        anchorEl={state.anchorEl}
-        onClose={handleMenuClose}
-        onEdit={handleEditFromMenu}
-        onDelete={handleDeleteFromMenu}
+        anchorEl={anchorEl}
+        onClose={studentsModel.menuClosed}
+        onEdit={studentsModel.editFromMenuRequested}
+        onDelete={studentsModel.deleteFromMenuRequested}
       />
-    </Container>
+    </Styled.StyledContainer>
   );
 };

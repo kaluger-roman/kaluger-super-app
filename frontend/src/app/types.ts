@@ -1,4 +1,4 @@
-import type { User } from "../shared/types";
+import type { User } from "@shared/types";
 
 export type AppHeaderProps = {
   user: User;

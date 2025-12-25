@@ -1,10 +1,19 @@
-export { formatDate, formatDateTime, formatTime, formatDuration } from "./date";
+export { formatDate, formatDateTime, formatTime, formatDuration } from "./date.helpers";
 export {
   formatCurrency,
   validateEmail,
   validatePhone,
   truncateText,
   capitalizeFirst,
-} from "./utils";
-export { useNotifications } from "./useNotifications";
-export { useDisableNumberScroll } from "./use-disable-number-scroll";
+} from "./lib.helpers";
+export {
+  getStatusLabel,
+  getStatusColor,
+  formatLessonTime,
+  formatTimeForCell,
+  formatDateTimeLong,
+  formatTimeFromString,
+} from "./lesson.helpers";
+export { useNotifications } from "./notifications.hooks";
+export { useDisableNumberScroll } from "./disable-number-scroll.hooks";
+export { styled } from "./styled.helpers";

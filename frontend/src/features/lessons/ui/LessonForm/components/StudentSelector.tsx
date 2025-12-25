@@ -1,13 +1,11 @@
-import React from "react";
-import {
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-} from "@mui/material";
-import { useStore } from "effector-react";
-import { $students } from "../../../../../entities/student";
+import type { FC } from "react";
+
+import { FormControl, InputLabel, Select } from "@mui/material";
+import { useUnit } from "effector-react";
+
+import { studentModel } from "@entities";
+
+import * as Styled from "./StudentSelector.styled";
 import type { LessonFormData } from "../types";
 
 type StudentSelectorProps = {
@@ -15,24 +13,20 @@ type StudentSelectorProps = {
   errors: Record<string, string>;
   isLoading: boolean;
   isMobile: boolean;
-  onChange: (field: string) => (e: any) => void;
+  onChange: (field: string) => (e: { target?: { value: unknown } } | unknown) => void;
 };
 
-export const StudentSelector: React.FC<StudentSelectorProps> = ({
+export const StudentSelector: FC<StudentSelectorProps> = ({
   formData,
   errors,
   isLoading,
   isMobile,
   onChange,
 }) => {
-  const students = useStore($students);
+  const students = useUnit(studentModel.$students);
 
   return (
-    <FormControl
-      fullWidth
-      error={!!errors.studentId}
-      size={isMobile ? "small" : "medium"}
-    >
+    <FormControl fullWidth error={!!errors.studentId} size={isMobile ? "small" : "medium"}>
       <InputLabel>Ученик *</InputLabel>
       <Select
         value={formData.studentId}
@@ -42,39 +36,19 @@ export const StudentSelector: React.FC<StudentSelectorProps> = ({
       >
         {students.map((student) => {
           return (
-            <MenuItem
-              key={student.id}
-              value={student.id}
-              sx={{ alignItems: "flex-start" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  whiteSpace: "normal",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>{student.name}</span>
-                <span
-                  style={{
-                    marginTop: 4,
-                    fontSize: 13,
-                    color: "rgba(0,0,0,0.6)",
-                  }}
-                >
+            <Styled.StyledMenuItem key={student.id} value={student.id}>
+              <Styled.StudentInfoContainer>
+                <Styled.StudentName>{student.name}</Styled.StudentName>
+                <Styled.StudentRate>
                   {student.hourlyRate && ` ${student.hourlyRate} ₽/занятие`}
-                </span>
-              </div>
-            </MenuItem>
+                </Styled.StudentRate>
+              </Styled.StudentInfoContainer>
+            </Styled.StyledMenuItem>
           );
         })}
       </Select>
       {errors.studentId && (
-        <Alert severity="error" sx={{ mt: 1 }}>
-          {errors.studentId}
-        </Alert>
+        <Styled.ErrorAlert severity="error">{errors.studentId}</Styled.ErrorAlert>
       )}
     </FormControl>
   );

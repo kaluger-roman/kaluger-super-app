@@ -6,10 +6,7 @@ export const generateTimeSlots = (startHour: number, endHour: number) => {
   return slots;
 };
 
-export const generateDateRange = (
-  centerDate: Date,
-  daysAround: number = 30
-) => {
+export const generateDateRange = (centerDate: Date, daysAround = 30) => {
   const dates: Date[] = [];
   for (let i = -daysAround; i <= daysAround; i++) {
     const date = new Date(centerDate);

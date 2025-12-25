@@ -1,13 +1,10 @@
-import React from "react";
-import { Menu, MenuItem } from "@mui/material";
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Cancel as CancelIcon,
-  Restore as RestoreIcon,
-  Schedule as RescheduleIcon,
-} from "@mui/icons-material";
-import { Lesson } from "../../../types";
+import type { FC } from "react";
+
+import { Menu } from "@mui/material";
+
+import * as Styled from "./LessonContextMenu.styled";
+import type { Lesson } from "../../../types";
+
 
 type LessonContextMenuProps = {
   anchorEl: HTMLElement | null;
@@ -20,7 +17,7 @@ type LessonContextMenuProps = {
   onReschedule?: () => void;
 };
 
-export const LessonContextMenu: React.FC<LessonContextMenuProps> = ({
+export const LessonContextMenu: FC<LessonContextMenuProps> = ({
   anchorEl,
   selectedLesson,
   onClose,
@@ -33,33 +30,33 @@ export const LessonContextMenu: React.FC<LessonContextMenuProps> = ({
   return (
     <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={onClose}>
       {onEdit && (
-        <MenuItem onClick={onEdit}>
-          <EditIcon sx={{ mr: 1 }} />
+        <Styled.StyledMenuItem onClick={onEdit}>
+          <Styled.StyledEditIcon />
           Редактировать
-        </MenuItem>
+        </Styled.StyledMenuItem>
       )}
       {onReschedule && selectedLesson?.status !== "CANCELLED" && (
-        <MenuItem onClick={onReschedule}>
-          <RescheduleIcon sx={{ mr: 1 }} />
+        <Styled.StyledMenuItem onClick={onReschedule}>
+          <Styled.StyledRescheduleIcon />
           Перенести урок
-        </MenuItem>
+        </Styled.StyledMenuItem>
       )}
       {selectedLesson?.status !== "CANCELLED" && onCancel && (
-        <MenuItem onClick={onCancel}>
-          <CancelIcon sx={{ mr: 1 }} />
+        <Styled.StyledMenuItem onClick={onCancel}>
+          <Styled.StyledCancelIcon />
           Отменить урок
-        </MenuItem>
+        </Styled.StyledMenuItem>
       )}
       {selectedLesson?.status === "CANCELLED" && onRestore && (
-        <MenuItem onClick={onRestore}>
-          <RestoreIcon sx={{ mr: 1 }} />
+        <Styled.StyledMenuItem onClick={onRestore}>
+          <Styled.StyledRestoreIcon />
           Восстановить урок
-        </MenuItem>
+        </Styled.StyledMenuItem>
       )}
-      <MenuItem onClick={onDelete} sx={{ color: "error.main" }}>
-        <DeleteIcon sx={{ mr: 1 }} />
+      <Styled.DeleteMenuItem onClick={onDelete}>
+        <Styled.StyledDeleteIcon />
         Удалить
-      </MenuItem>
+      </Styled.DeleteMenuItem>
     </Menu>
   );
 };

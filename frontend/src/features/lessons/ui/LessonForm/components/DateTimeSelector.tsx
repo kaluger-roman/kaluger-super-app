@@ -1,9 +1,12 @@
-import React from "react";
-import { Box } from "@mui/material";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import type { LessonFormData } from "../types";
+import type { FC } from "react";
+
 import { Alert } from "@mui/material";
-import { Lesson } from "../../../../../shared";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+
+import type { Lesson } from "@shared";
+
+import * as Styled from "./DateTimeSelector.styled";
+import type { LessonFormData } from "../types";
 
 type DateTimeSelectorProps = {
   formData: LessonFormData;
@@ -14,7 +17,7 @@ type DateTimeSelectorProps = {
   lesson?: Lesson | null;
 };
 
-export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
+export const DateTimeSelector: FC<DateTimeSelectorProps> = ({
   formData,
   errors,
   isLoading,
@@ -25,8 +28,8 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   const isCompleted = !!(lesson && lesson.status === "COMPLETED");
 
   return (
-    <Box display="flex" flexDirection="column" gap={0}>
-      <Box display="flex" flexDirection={isMobile ? "column" : "row"} gap={2}>
+    <Styled.FieldsColumn>
+      <Styled.DateTimeRow $isMobile={isMobile}>
         <DateTimePicker
           label="Время начала"
           value={formData.startTime}
@@ -56,16 +59,15 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             },
           }}
         />
-      </Box>
+      </Styled.DateTimeRow>
 
       {isCompleted && (
-        <Box sx={{ width: "100%", mt: 1 }}>
+        <Styled.AlertContainer>
           <Alert severity="info">
-            Чтобы изменить время завершённых уроков, используйте функцию
-            переноса занятия.
+            Чтобы изменить время завершённых уроков, используйте функцию переноса занятия.
           </Alert>
-        </Box>
+        </Styled.AlertContainer>
       )}
-    </Box>
+    </Styled.FieldsColumn>
   );
 };

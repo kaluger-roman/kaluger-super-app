@@ -1,2 +1,3 @@
-export { LessonForm } from "./ui/LessonForm";
-export { LessonViewDialog } from "./ui/LessonViewDialog";
+export * from "./ui";
+
+export { lessonsModel } from "./models";

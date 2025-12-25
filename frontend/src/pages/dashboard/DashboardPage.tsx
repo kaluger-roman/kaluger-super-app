@@ -1,29 +1,27 @@
-import React from "react";
-import { Container, Typography, Box } from "@mui/material";
-import { useStore } from "effector-react";
-import { $upcomingLessons, $students } from "../../entities";
-import { QuickActions, UpcomingLessons, StudentsOverview } from "./components";
+import type { FC } from "react";
 
-export const DashboardPage: React.FC = () => {
-  const upcomingLessons = useStore($upcomingLessons);
-  const students = useStore($students);
+import { useUnit } from "effector-react";
+
+import { lessonModel, studentModel } from "@entities";
+
+import { QuickActions, UpcomingLessons, StudentsOverview } from "./components";
+import * as Styled from "./DashboardPage.styled";
+
+export const DashboardPage: FC = () => {
+  const upcomingLessons = useUnit(lessonModel.$upcomingLessons);
+  const students = useUnit(studentModel.$students);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box mb={3}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ fontWeight: 600 }}
-        >
+    <Styled.StyledContainer maxWidth="lg">
+      <Styled.HeaderBox>
+        <Styled.StyledTitle variant="h3" component="h1" gutterBottom>
           📊 Главная
-        </Typography>
-      </Box>
+        </Styled.StyledTitle>
+      </Styled.HeaderBox>
 
       <QuickActions studentsCount={students.length} />
       <UpcomingLessons lessons={upcomingLessons} />
       <StudentsOverview students={students} />
-    </Container>
+    </Styled.StyledContainer>
   );
 };

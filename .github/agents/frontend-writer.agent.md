@@ -137,12 +137,17 @@ feature/
 ### Styles
 
 - **No inline styles** — no `style={{}}`, no `sx={{}}`
-- **Styled props with `$` prefix** for dynamic values:
+
+- **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering:
+
   ```typescript
+  import { styled } from "@shared";
+
   export const Box = styled(MuiBox)<{ $height: number }>`
     height: ${({ $height }) => $height}px;
   `;
   ```
+
 - **Import as namespace:** `import * as Styled from "./X.styled"`
 
 ### Components

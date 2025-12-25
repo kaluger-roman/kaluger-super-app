@@ -1,0 +1,40 @@
+import type { FC } from "react";
+
+import { Box, Typography } from "@mui/material";
+
+import type { Student } from "@shared";
+
+import * as Styled from "./StudentViewDialog.styled";
+
+type StudentContactsProps = {
+  student: Student;
+};
+
+export const StudentContacts: FC<StudentContactsProps> = ({ student }) => (
+  <Box>
+    <Styled.SectionTitle variant="subtitle2">📞 Контакты</Styled.SectionTitle>
+    {student.phone && (
+      <Typography variant="body2" color="text.secondary">
+        Телефон: {student.phone}
+      </Typography>
+    )}
+    {student.contactMethod && (
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        {student.contactMethod === "WHATSAPP" ? "WhatsApp" : `Telegram (${student.telegramNick})`}
+      </Typography>
+    )}
+
+    {student.parentPhone && (
+      <Typography variant="body2" color="text.secondary">
+        Родители: {student.parentName ? `${student.parentName} — ` : ""}
+        {student.parentPhone} (
+        {student.parentContactMethod === "WHATSAPP" ? "WhatsApp" : "Telegram"})
+      </Typography>
+    )}
+    {student.parentContactMethod === "TELEGRAM" && student.parentTelegramNick && (
+      <Typography variant="body2" color="text.secondary">
+        Telegram (родители): @{student.parentTelegramNick}
+      </Typography>
+    )}
+  </Box>
+);
