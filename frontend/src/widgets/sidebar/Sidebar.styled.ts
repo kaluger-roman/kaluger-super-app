@@ -9,11 +9,11 @@ import {
   styled,
 } from "@mui/material";
 
-export const StyledDrawer = styled(Drawer)<{ drawerWidth: number }>(({ drawerWidth }) => ({
-  width: drawerWidth,
+export const StyledDrawer = styled(Drawer)<{ $drawerWidth: number }>(({ $drawerWidth }) => ({
+  width: $drawerWidth,
   flexShrink: 0,
   "& .MuiDrawer-paper": {
-    width: drawerWidth,
+    width: $drawerWidth,
     boxSizing: "border-box",
   },
 }));

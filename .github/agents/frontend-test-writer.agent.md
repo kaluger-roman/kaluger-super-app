@@ -36,10 +36,10 @@ Stack: Vitest + React Testing Library + MSW + Playwright
 - **Mock**: APIs, timers, localStorage
 - **Real**: Effector stores, utils, simple components
 - **No `export default`** — only named exports/imports
-- **No props drilling** — use Effector stores
-- **No IIFE in JSX** — extract to separate components
-- **No logic in .map()** — extract to a component if callback has calculations
 - **Don't test styled files** — no separate tests for `*.styled.ts`
+- **No ESLint errors, build must pass**
+- **No TypeScript errors, build must pass**
+- **Self-check** — after all changes, verify that changes do not violate all the agent instructions
 
 ## Test Naming
 

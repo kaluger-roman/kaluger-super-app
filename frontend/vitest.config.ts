@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
+    environment: "happy-dom",
+    setupFiles: [path.resolve(__dirname, "./src/__tests__/setup.ts")],
     css: true,
     coverage: {
       provider: "v8",
@@ -24,7 +24,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@app": path.resolve(__dirname, "./src/app"),
+      "@pages": path.resolve(__dirname, "./src/pages"),
+      "@features": path.resolve(__dirname, "./src/features"),
+      "@entities": path.resolve(__dirname, "./src/entities"),
+      "@shared": path.resolve(__dirname, "./src/shared"),
+      "@components": path.resolve(__dirname, "./src/components"),
+      "@widgets": path.resolve(__dirname, "./src/widgets"),
     },
   },
 });

@@ -50,7 +50,11 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
             </Styled.ContentBox>
             <IconButton
               size="small"
-              onClick={(e) => studentsModel.menuOpened({ anchorEl: e.currentTarget, student })}
+              onClick={(e) => {
+                e.stopPropagation();
+                studentsModel.menuOpened({ anchorEl: e.currentTarget, student });
+              }}
+              aria-label="student-menu"
             >
               <MoreVertIcon />
             </IconButton>

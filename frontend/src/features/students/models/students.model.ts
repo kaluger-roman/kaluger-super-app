@@ -226,3 +226,13 @@ sample({
   fn: () => undefined,
   target: $viewingStudent,
 });
+
+sample({
+  clock: studentModel.addStudentFx.doneData,
+  target: dialogClosed,
+});
+
+sample({
+  clock: studentModel.updateStudentFx.doneData,
+  target: dialogClosed,
+});

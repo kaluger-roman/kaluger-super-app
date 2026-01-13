@@ -79,7 +79,7 @@ export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
       variant="temporary"
       open={open}
       onClose={onClose}
-      drawerWidth={drawerWidth}
+      $drawerWidth={drawerWidth}
     >
       <Styled.StyledToolbar>
         <Styled.StyledTitle variant="h6" noWrap component="div">
