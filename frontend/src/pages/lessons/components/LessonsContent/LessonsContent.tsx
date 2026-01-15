@@ -4,8 +4,7 @@ import { Box, Pagination } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { lessonModel } from "@entities";
-import { lessonsModel } from "@features";
-import { LessonsList } from "@shared";
+import { lessonsModel, LessonsList } from "@features";
 
 import { ScheduleView } from "../ScheduleView";
 import { WeekPagination } from "../WeekPagination";
@@ -81,17 +80,6 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
       <LessonsList
         lessons={lessonsSource}
         viewMode={viewMode}
-        onEdit={lessonsModel.dialogOpened}
-        onDelete={lessonsModel.deleteDialogOpened}
-        onCancel={lessonsModel.lessonCancelRequested}
-        onRestore={lessonsModel.lessonRestoreRequested}
-        onReschedule={lessonsModel.rescheduleDialogOpened}
-        onPaymentChange={(lessonId, isPaid) =>
-          lessonsModel.lessonPaymentChanged({ lessonId, isPaid })
-        }
-        onHomeworkSentChange={(lessonId, isSent) =>
-          lessonsModel.lessonHomeworkSentChanged({ lessonId, isSent })
-        }
         onCardClick={lessonsModel.viewDialogOpened}
         type={cfg.type}
       />

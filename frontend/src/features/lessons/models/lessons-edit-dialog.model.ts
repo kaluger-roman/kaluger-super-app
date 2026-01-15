@@ -1,6 +1,9 @@
 import { createStore, createEvent, sample } from "effector";
 
+import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
+
+import * as lessonFormModel from "./lesson-form.model";
 
 // Events
 export const dialogOpened = createEvent<Lesson | undefined>();
@@ -32,4 +35,14 @@ sample({
   clock: dialogClosed,
   fn: () => undefined,
   target: $editingLesson,
+});
+
+sample({
+  clock: lessonFormModel.cancelConfirmed,
+  target: dialogClosed,
+});
+
+sample({
+  clock: lessonModel.addLessonFx.done,
+  target: dialogClosed,
 });

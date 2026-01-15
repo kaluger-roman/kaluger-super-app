@@ -34,6 +34,7 @@ export const $formData = createStore<LessonFormData>({
   isRecurring: false,
   isPaid: false,
   isHomeworkSentByTeacher: false,
+  paymentDate: undefined,
 });
 
 export const $errors = createStore<Record<string, string>>({});
@@ -169,6 +170,18 @@ sample({
   clock: [validFormSubmit, confirmActionTriggered],
   source: { formData: $formData, editingLesson: $editingLesson },
   filter: shouldUpdateDirectly,
+  fn: (state: { formData: LessonFormData; editingLesson: Lesson }) => ({
+    id: state.editingLesson.id,
+    data: prepareSubmitData(state.formData) as UpdateLessonDto,
+  }),
+  target: lessonModel.updateLesson,
+});
+
+sample({
+  clock: confirmActionTriggered,
+  source: { formData: $formData, editingLesson: $editingLesson },
+  filter: (state): state is { formData: LessonFormData; editingLesson: Lesson } =>
+    state.editingLesson !== undefined,
   fn: (state: { formData: LessonFormData; editingLesson: Lesson }) => ({
     id: state.editingLesson.id,
     data: prepareSubmitData(state.formData) as UpdateLessonDto,

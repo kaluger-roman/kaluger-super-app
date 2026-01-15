@@ -3,6 +3,7 @@ import type { FC, Ref, UIEvent } from "react";
 import { Typography } from "@mui/material";
 
 import type { Lesson } from "@shared";
+import { toDateKey } from "@shared";
 
 import { DayColumnView } from "../DayColumnView";
 import * as Styled from "../ScheduleView.styled";
@@ -48,7 +49,7 @@ export const ScheduleMain: FC<ScheduleMainProps> = ({
 
       <Styled.ContentGrid>
         {dateRange.map((date) => {
-          const dateKey = date.toISOString().split("T")[0];
+          const dateKey = toDateKey(date);
           return (
             <DayColumnView
               key={dateKey}

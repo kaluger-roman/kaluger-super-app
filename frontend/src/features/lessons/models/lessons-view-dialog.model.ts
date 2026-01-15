@@ -1,8 +1,14 @@
 import { createStore, createEvent, sample } from "effector";
 
+import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 import { lessonDeleteDialogModel } from "@shared/ui";
 
+import {
+  confirmDialogClosed,
+  confirmDialogOpened,
+  $confirmDialog,
+} from "./lessons-confirm-dialog.model";
 import {
   $isRescheduleDialogOpen,
   $reschedulingLesson,
@@ -20,8 +26,7 @@ export const cancelFromViewRequested = createEvent();
 export const restoreFromViewRequested = createEvent();
 export const rescheduleFromViewRequested = createEvent();
 export const deleteFromViewRequested = createEvent();
-export const confirmDialogOpened = createEvent<ConfirmDialogState>();
-export const confirmDialogClosed = createEvent();
+// confirm dialog events/stores are provided by lessons-confirm-dialog.model
 export const openCancelConfirmForLesson = createEvent<Lesson>();
 export const openRestoreConfirmForLesson = createEvent<Lesson>();
 export const openDeleteConfirmForLesson = createEvent<Lesson>();
@@ -29,12 +34,6 @@ export const openDeleteConfirmForLesson = createEvent<Lesson>();
 // Stores
 export const $isViewDialogOpen = createStore<boolean>(false);
 export const $viewingLesson = createStore<Lesson | undefined>(undefined, { skipVoid: false });
-export const $confirmDialog = createStore<ConfirmDialogState>({
-  open: false,
-  title: "",
-  message: "",
-  action: () => undefined,
-});
 
 // Logic - View Dialog
 sample({
@@ -161,11 +160,16 @@ sample({
 
 sample({
   clock: openCancelConfirmForLesson,
-  fn: (): ConfirmDialogState => ({
+  fn: (lesson): ConfirmDialogState => ({
     open: true,
     title: "Отменить урок",
     message: "Вы уверены, что хотите отменить этот урок?",
-    action: () => cancelFromViewRequested(),
+    action: () => {
+      lessonModel.updateLesson({
+        id: lesson.id,
+        data: { status: "CANCELLED" },
+      });
+    },
     severity: "warning",
   }),
   target: confirmDialogOpened,
@@ -173,11 +177,16 @@ sample({
 
 sample({
   clock: openRestoreConfirmForLesson,
-  fn: (): ConfirmDialogState => ({
+  fn: (lesson): ConfirmDialogState => ({
     open: true,
     title: "Восстановить урок",
     message: "Вы уверены, что хотите восстановить этот урок?",
-    action: () => restoreFromViewRequested(),
+    action: () => {
+      lessonModel.updateLesson({
+        id: lesson.id,
+        data: { status: "SCHEDULED" },
+      });
+    },
     severity: "info",
   }),
   target: confirmDialogOpened,
@@ -201,4 +210,26 @@ sample({
   filter: Boolean,
   fn: (lesson) => lesson || null,
   target: $selectedLesson,
+});
+
+sample({
+  clock: lessonModel.updateLessonFx.doneData,
+  source: $viewingLesson,
+  filter: (viewing, updated): viewing is Lesson => Boolean(viewing && viewing.id === updated.id),
+  fn: (_viewing, updated) => updated,
+  target: $viewingLesson,
+});
+
+sample({
+  clock: lessonModel.updateLessonFx.doneData,
+  source: $viewingLesson,
+  filter: (viewing, updated): viewing is Lesson => Boolean(viewing && viewing.id === updated.id),
+  fn: () => false,
+  target: $isViewDialogOpen,
+});
+
+sample({
+  clock: lessonModel.removeLessonFx.doneData,
+  fn: () => false,
+  target: $isViewDialogOpen,
 });

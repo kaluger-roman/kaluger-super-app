@@ -61,6 +61,7 @@ model Lesson {
   endTime                 DateTime
   price                   Float?
   isPaid                  Boolean      @default(false)
+  paymentDate             DateTime? // Дата оплаты урока
   isHomeworkSentByTeacher Boolean      @default(false)
   homework                String?
   notes                   String?

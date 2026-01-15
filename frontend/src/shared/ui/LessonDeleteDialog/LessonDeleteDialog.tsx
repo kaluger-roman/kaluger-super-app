@@ -19,36 +19,17 @@ import { SUBJECT_LABELS } from "../../constants";
 
 type LessonDeleteDialogProps = {
   onConfirm: (deleteAllFuture?: boolean) => void;
-  onSuccess?: (message: string) => void;
-  onError?: (message: string) => void;
 };
 
-export const LessonDeleteDialog: FC<LessonDeleteDialogProps> = ({
-  onConfirm,
-  onSuccess,
-  onError,
-}) => {
+export const LessonDeleteDialog: FC<LessonDeleteDialogProps> = ({ onConfirm }) => {
   const open = useUnit(lessonDeleteDialogModel.$isOpen);
   const lesson = useUnit(lessonDeleteDialogModel.$lesson);
   const deleteAllFuture = useUnit(lessonDeleteDialogModel.$deleteAllFuture);
   const isLoading = useUnit(lessonDeleteDialogModel.$isLoading);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!lesson) return;
-
-    try {
-      await onConfirm(lesson.isRecurring ? deleteAllFuture : undefined);
-
-      const message =
-        lesson.isRecurring && deleteAllFuture
-          ? "Урок и все несостоявшиеся копии удалены"
-          : "Урок удален";
-
-      onSuccess?.(message);
-      lessonDeleteDialogModel.lessonDeleteDialogClosed();
-    } catch (error) {
-      onError?.("Не удалось удалить урок");
-    }
+    onConfirm(lesson.isRecurring ? deleteAllFuture : undefined);
   };
 
   const handleClose = () => {

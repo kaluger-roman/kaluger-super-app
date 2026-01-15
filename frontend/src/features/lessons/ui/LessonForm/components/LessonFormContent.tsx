@@ -4,15 +4,16 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 
 import type { Lesson } from "@shared";
-import { PaymentStatus, HomeworkSentStatus } from "@shared/ui";
 
+import { DateTimeSelector } from "./DateTimeSelector";
 import * as Styled from "./LessonFormContent.styled";
 import { PastDateNotice } from "./PastDateNotice";
-import type { LessonFormData } from "../types";
-import { DateTimeSelector } from "./DateTimeSelector";
 import { PriceInput } from "./PriceInput";
 import { StudentSelector } from "./StudentSelector";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
+import { HomeworkSentStatus } from "../../HomeworkSentStatus";
+import { PaymentStatus } from "../../PaymentStatus";
+import type { LessonFormData } from "../types";
 
 type LessonFormContentProps = {
   formData: LessonFormData;
@@ -89,14 +90,31 @@ export const LessonFormContent = ({
             onChange={handleChange}
           />
 
+          {formData.isPaid && (
+            <Styled.DateFieldWrapper>
+              <TextField
+                label="Дата оплаты"
+                type="date"
+                fullWidth
+                value={formData.paymentDate || ""}
+                onChange={(e) => setFormData((prev) => ({ ...prev, paymentDate: e.target.value }))}
+                disabled={isLoading}
+                size={isMobile ? "small" : "medium"}
+              />
+            </Styled.DateFieldWrapper>
+          )}
+
           <Styled.CheckboxContainer>
             {lesson && (
               <PaymentStatus
                 lesson={{
                   ...lesson,
                   isPaid: formData.isPaid,
+                  paymentDate: formData.paymentDate,
                 }}
-                onPaymentChange={(_, isPaid) => setFormData((prev) => ({ ...prev, isPaid }))}
+                onPaymentChange={(_lessonId: string, isPaid: boolean, paymentDate?: string) =>
+                  setFormData((prev) => ({ ...prev, isPaid, paymentDate }))
+                }
               />
             )}
             {lesson && (
@@ -105,7 +123,7 @@ export const LessonFormContent = ({
                   ...lesson,
                   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
                 }}
-                onHomeworkSentChange={(_, isSent) =>
+                onHomeworkSentChange={(_lessonId: string, isSent: boolean) =>
                   setFormData((prev) => ({
                     ...prev,
                     isHomeworkSentByTeacher: isSent,
@@ -114,7 +132,6 @@ export const LessonFormContent = ({
               />
             )}
           </Styled.CheckboxContainer>
-          {/* Регулярное занятие */}
           {!lesson && (
             <FormControlLabel
               control={

@@ -4,8 +4,7 @@ import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { lessonsModel } from "@features";
-import { formatWeekRange } from "@shared";
+import { lessonsModel, formatWeekRange } from "@features";
 
 import * as Styled from "./WeekPagination.styled";
 

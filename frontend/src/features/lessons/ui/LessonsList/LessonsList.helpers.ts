@@ -1,0 +1,137 @@
+import type { Lesson } from "@shared";
+
+export type GroupedLessons = {
+  [year: string]: {
+    [month: string]: {
+      [day: string]: Lesson[];
+    };
+  };
+};
+
+export const filterLessonsByType = (
+  lessons: Lesson[],
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+): Lesson[] => {
+  switch (type) {
+    case "scheduled":
+      return lessons.filter(
+        (lesson) =>
+          lesson.status === "SCHEDULED" ||
+          lesson.status === "IN_PROGRESS" ||
+          lesson.status === "RESCHEDULED"
+      );
+    case "completed":
+      return lessons.filter((lesson) => lesson.status === "COMPLETED");
+    case "cancelled":
+      return lessons.filter((lesson) => lesson.status === "CANCELLED");
+    case "rescheduled":
+      return lessons.filter((lesson) => lesson.status === "RESCHEDULED");
+    default:
+      return lessons;
+  }
+};
+
+export const groupLessonsByDate = (
+  lessons: Lesson[],
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+): GroupedLessons => {
+  const grouped: GroupedLessons = {};
+
+  lessons.forEach((lesson) => {
+    const date = new Date(lesson.startTime);
+    const year = date.getFullYear().toString();
+    const month = date.toLocaleDateString("ru-RU", {
+      month: "long",
+      year: "numeric",
+    });
+    const day = date.toLocaleDateString("ru-RU", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+
+    if (!grouped[year]) grouped[year] = {};
+    if (!grouped[year][month]) grouped[year][month] = {};
+    if (!grouped[year][month][day]) grouped[year][month][day] = [];
+
+    grouped[year][month][day].push(lesson);
+  });
+
+  // Sort lessons in each day by time
+  Object.values(grouped).forEach((yearData) => {
+    Object.values(yearData).forEach((monthData) => {
+      Object.values(monthData).forEach((dayLessons) => {
+        dayLessons.sort((a, b) => {
+          if (type === "scheduled") {
+            return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+          } else {
+            return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+          }
+        });
+      });
+    });
+  });
+
+  return grouped;
+};
+
+export const sortYears = (
+  years: string[],
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+): string[] => {
+  return years.sort((a, b) => {
+    if (type === "scheduled") {
+      return parseInt(a) - parseInt(b);
+    } else {
+      return parseInt(b) - parseInt(a);
+    }
+  });
+};
+
+export const sortMonths = (
+  monthEntries: [string, { [day: string]: Lesson[] }][],
+  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+): [string, { [day: string]: Lesson[] }][] => {
+  return monthEntries.sort(([a], [b]) => {
+    const monthOrder = [
+      "январь",
+      "февраль",
+      "март",
+      "апрель",
+      "май",
+      "июнь",
+      "июль",
+      "август",
+      "сентябрь",
+      "октябрь",
+      "ноябрь",
+      "декабрь",
+    ];
+    const aMonth = a.split(" ")[0].toLowerCase();
+    const bMonth = b.split(" ")[0].toLowerCase();
+    if (type === "scheduled") {
+      return monthOrder.indexOf(aMonth) - monthOrder.indexOf(bMonth);
+    } else {
+      return monthOrder.indexOf(bMonth) - monthOrder.indexOf(aMonth);
+    }
+  });
+};
+
+export const getWeekEnd = (weekStart: Date): Date => {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 6);
+  return d;
+};
+
+export const formatWeekRange = (weekStart: Date): string => {
+  const weekEnd = getWeekEnd(weekStart);
+  const startFormatted = weekStart.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+  });
+  const endFormatted = weekEnd.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+  });
+  return `${startFormatted} - ${endFormatted}`;
+};

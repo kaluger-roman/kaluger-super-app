@@ -2,8 +2,10 @@ import { createEvent, sample, createStore } from "effector";
 
 import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
+import { lessonDeleteDialogModel, rescheduleDialogModel } from "@shared/ui";
 
 import { confirmDialogOpened } from "./lessons-confirm-dialog.model";
+import { deleteDialogClosed, rescheduleDialogClosed } from "./lessons-delete-dialog.model";
 import {
   $viewingLesson,
   cancelFromViewRequested,
@@ -11,6 +13,7 @@ import {
 } from "./lessons-view-dialog.model";
 
 export const $isLoading = createStore<boolean>(false);
+export const $isRescheduling = createStore<boolean>(false);
 
 // Events
 export const lessonCancelRequested = createEvent<Lesson>();
@@ -34,6 +37,7 @@ export const lessonDeleteRequestedFromDialog = createEvent<{
 export const lessonPaymentChanged = createEvent<{
   lessonId: string;
   isPaid: boolean;
+  paymentDate?: string;
 }>();
 export const lessonHomeworkSentChanged = createEvent<{
   lessonId: string;
@@ -93,7 +97,7 @@ sample({
 // Reschedule from dialog
 sample({
   clock: lessonRescheduleRequestedFromDialog,
-  source: { lesson: $viewingLesson },
+  source: { lesson: rescheduleDialogModel.$lesson },
   filter: ({ lesson }) => Boolean(lesson),
   fn: ({ lesson }, { newStartTime, newEndTime }) => ({
     lesson: lesson as Lesson,
@@ -101,6 +105,12 @@ sample({
     newEndTime,
   }),
   target: lessonRescheduleRequested,
+});
+
+sample({
+  clock: lessonRescheduleRequested,
+  fn: () => true,
+  target: $isRescheduling,
 });
 
 // Delete lesson - directly remove
@@ -116,7 +126,7 @@ sample({
 // Delete from dialog
 sample({
   clock: lessonDeleteRequestedFromDialog,
-  source: { lesson: $viewingLesson },
+  source: { lesson: lessonDeleteDialogModel.$lesson },
   filter: ({ lesson }) => Boolean(lesson),
   fn: ({ lesson }, { deleteAllFuture }) => ({
     lesson: lesson as Lesson,
@@ -128,9 +138,12 @@ sample({
 // Update payment status - directly update
 sample({
   clock: lessonPaymentChanged,
-  fn: ({ lessonId, isPaid }) => ({
+  fn: ({ lessonId, isPaid, paymentDate }) => ({
     id: lessonId,
-    data: { isPaid },
+    data: {
+      isPaid,
+      paymentDate: paymentDate ? new Date(paymentDate).toISOString() : undefined,
+    },
   }),
   target: lessonModel.updateLesson,
 });
@@ -158,4 +171,25 @@ sample({
   source: $viewingLesson,
   filter: Boolean,
   target: lessonRestoreRequested,
+});
+
+sample({
+  clock: lessonModel.updateLessonFx.doneData,
+  target: rescheduleDialogClosed,
+});
+
+sample({
+  clock: lessonModel.updateLessonFx.finally,
+  fn: () => false,
+  target: $isRescheduling,
+});
+
+sample({
+  clock: lessonModel.removeLessonFx.doneData,
+  target: deleteDialogClosed,
+});
+
+sample({
+  clock: lessonModel.removeLessonFx.pending,
+  target: lessonDeleteDialogModel.$isLoading,
 });

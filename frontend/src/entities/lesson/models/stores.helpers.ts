@@ -1,4 +1,5 @@
 import type { Lesson } from "@shared";
+import { toDateKey } from "@shared";
 
 export const groupLessonsByDay = (
   state: Record<string, Lesson[]>,
@@ -6,7 +7,7 @@ export const groupLessonsByDay = (
 ): Record<string, Lesson[]> => {
   const lessonsByDay: Record<string, Lesson[]> = {};
   lessons.forEach((lesson) => {
-    const dateKey = new Date(lesson.startTime).toISOString().split("T")[0];
+    const dateKey = toDateKey(lesson.startTime);
     if (!lessonsByDay[dateKey]) {
       lessonsByDay[dateKey] = [];
     }
@@ -19,7 +20,7 @@ export const addLessonToSchedule = (
   state: Record<string, Lesson[]>,
   newLesson: Lesson
 ): Record<string, Lesson[]> => {
-  const dateKey = new Date(newLesson.startTime).toISOString().split("T")[0];
+  const dateKey = toDateKey(newLesson.startTime);
   const dayLessons = state[dateKey] || [];
   return {
     ...state,
@@ -31,7 +32,7 @@ export const updateLessonInSchedule = (
   state: Record<string, Lesson[]>,
   updatedLesson: Lesson
 ): Record<string, Lesson[]> => {
-  const dateKey = new Date(updatedLesson.startTime).toISOString().split("T")[0];
+  const dateKey = toDateKey(updatedLesson.startTime);
   const dayLessons = state[dateKey] || [];
   const updatedDayLessons = dayLessons.map((lesson) =>
     lesson.id === updatedLesson.id ? updatedLesson : lesson

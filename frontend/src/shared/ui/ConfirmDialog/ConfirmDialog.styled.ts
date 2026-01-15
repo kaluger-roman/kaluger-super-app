@@ -28,7 +28,7 @@ export const ActionsBox = styled(Box)<ActionsBoxProps>(({ theme, $isMobile }) =>
   paddingTop: theme.spacing(1),
   display: "flex",
   flexDirection: $isMobile ? "column" : "row",
-  gap: $isMobile ? theme.spacing(1) : 0,
+  gap: $isMobile ? theme.spacing(1) : theme.spacing(2),
 }));
 
 type TitleTextProps = {

@@ -7,6 +7,7 @@ import { ConfirmDialog, LessonDeleteDialog, RescheduleDialog } from "@shared/ui"
 
 export const LessonsDialogs: FC = () => {
   const confirmDialog = useUnit(lessonsModel.$confirmDialog);
+  const isRescheduling = useUnit(lessonsModel.$isRescheduling);
 
   const handleDeleteConfirm = (deleteAllFuture?: boolean) => {
     lessonsModel.lessonDeleteRequestedFromDialog({ deleteAllFuture });
@@ -31,14 +32,9 @@ export const LessonsDialogs: FC = () => {
         severity={confirmDialog.severity}
       />
 
-      <LessonDeleteDialog
-        onConfirm={handleDeleteConfirm}
-        onError={(error) => {
-          console.error("Ошибка при удалении урока:", error);
-        }}
-      />
+      <LessonDeleteDialog onConfirm={handleDeleteConfirm} />
 
-      <RescheduleDialog onConfirm={handleRescheduleConfirm} />
+      <RescheduleDialog onConfirm={handleRescheduleConfirm} isLoading={isRescheduling} />
     </>
   );
 };

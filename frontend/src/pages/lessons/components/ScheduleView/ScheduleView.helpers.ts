@@ -1,3 +1,5 @@
+import { toDateKey } from "@shared";
+
 export const generateTimeSlots = (startHour: number, endHour: number) => {
   const slots: string[] = [];
   for (let hour = startHour; hour < endHour; hour++) {
@@ -15,8 +17,7 @@ export const generateDateRange = (centerDate: Date, daysAround = 30) => {
   }
   return dates;
 };
-
-export const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+export const getDateKey = (date: Date) => toDateKey(date);
 
 export const formatDayHeader = (date: Date) => {
   const today = new Date();

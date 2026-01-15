@@ -40,6 +40,7 @@ export type CreateLessonDto = {
 
 export type UpdateLessonDto = Partial<CreateLessonDto> & {
   isPaid?: boolean;
+  paymentDate?: Date;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?:

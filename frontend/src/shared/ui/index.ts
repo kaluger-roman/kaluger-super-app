@@ -13,8 +13,4 @@ export { LessonDeleteDialog, lessonDeleteDialogModel } from "./LessonDeleteDialo
 export { StudentDeleteDialog } from "./StudentDeleteDialog";
 export { RescheduleDialog, rescheduleDialogModel } from "./RescheduleDialog";
 export { RecurringLessonBadge } from "./RecurringLessonBadge";
-export { PaymentStatus, paymentStatusModel } from "./PaymentStatus";
-export { HomeworkSentStatus, homeworkSentStatusModel } from "./HomeworkSentStatus";
-export { LessonsList } from "./LessonsList";
-export { formatWeekRange } from "./LessonsList";
 export { PastDateNotice } from "./PastDateNotice";

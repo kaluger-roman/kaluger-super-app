@@ -1,6 +1,7 @@
 import { createStore, createEvent, sample } from "effector";
 
 import type { Lesson } from "@shared";
+import { lessonDeleteDialogModel, rescheduleDialogModel } from "@shared/ui";
 
 // Events - Reschedule Dialog
 export const rescheduleDialogOpened = createEvent<Lesson>();
@@ -64,4 +65,24 @@ sample({
   clock: deleteDialogClosed,
   fn: () => null,
   target: $selectedLesson,
+});
+
+sample({
+  clock: deleteDialogOpened,
+  target: lessonDeleteDialogModel.lessonDeleteDialogOpened,
+});
+
+sample({
+  clock: deleteDialogClosed,
+  target: lessonDeleteDialogModel.lessonDeleteDialogClosed,
+});
+
+sample({
+  clock: rescheduleDialogOpened,
+  target: rescheduleDialogModel.rescheduleDialogOpened,
+});
+
+sample({
+  clock: rescheduleDialogClosed,
+  target: rescheduleDialogModel.rescheduleDialogClosed,
 });

@@ -40,7 +40,7 @@ export const LessonsPage: FC = () => {
 
       <LessonsContent currentTab={currentTab} />
 
-      <AddLessonFab onClick={lessonsModel.dialogOpened} />
+      <AddLessonFab onClick={() => lessonsModel.dialogOpened(undefined)} />
 
       <LessonsDialogs />
     </Styled.StyledContainer>

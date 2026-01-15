@@ -1,4 +1,5 @@
 import type { Lesson, CreateLessonDto, UpdateLessonDto } from "@shared";
+import { toDateKey } from "@shared";
 
 import type { LessonFormData } from "../ui/LessonForm/types";
 
@@ -17,6 +18,7 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
       isRecurring: lesson.isRecurring || false,
       isPaid: lesson.isPaid || false,
       isHomeworkSentByTeacher: lesson.isHomeworkSentByTeacher || false,
+      paymentDate: lesson.paymentDate ? toDateKey(lesson.paymentDate) : undefined,
     };
   }
 
@@ -36,6 +38,7 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
   };
 };
 
@@ -77,6 +80,7 @@ export const prepareSubmitData = (
   isRecurring: formData.isRecurring || undefined,
   isPaid: formData.isPaid,
   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
+  paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,
 });
 
 export const hasTimeChanged = (lesson: Lesson, formData: LessonFormData): boolean => {

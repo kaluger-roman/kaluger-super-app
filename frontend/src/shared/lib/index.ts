@@ -1,4 +1,4 @@
-export { formatDate, formatDateTime, formatTime, formatDuration } from "./date.helpers";
+export { formatDate, formatDateTime, formatTime, formatDuration, toDateKey } from "./date.helpers";
 export {
   formatCurrency,
   validateEmail,

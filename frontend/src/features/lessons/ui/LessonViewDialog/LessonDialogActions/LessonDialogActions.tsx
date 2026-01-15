@@ -11,7 +11,6 @@ import { Button } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
-import { rescheduleDialogModel } from "@shared/ui";
 
 import * as Styled from "./LessonDialogActions.styled";
 import { lessonsModel } from "../../../models";
@@ -28,6 +27,7 @@ export const LessonDialogActions: FC<LessonDialogActionsProps> = ({ lesson, isMo
     openDeleteConfirmForLesson: lessonsModel.openDeleteConfirmForLesson,
     editFromViewRequested: lessonsModel.editFromViewRequested,
     viewDialogClosed: lessonsModel.viewDialogClosed,
+    rescheduleDialogOpened: lessonsModel.rescheduleDialogOpened,
   });
 
   return (
@@ -36,7 +36,7 @@ export const LessonDialogActions: FC<LessonDialogActionsProps> = ({ lesson, isMo
       <Styled.ActionsColumn>
         {lesson.status !== "CANCELLED" && (
           <Button
-            onClick={() => rescheduleDialogModel.rescheduleDialogOpened(lesson)}
+            onClick={() => actions.rescheduleDialogOpened(lesson)}
             variant="outlined"
             color="info"
             size="small"

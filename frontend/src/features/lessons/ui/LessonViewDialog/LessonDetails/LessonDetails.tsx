@@ -1,35 +1,21 @@
 import type { FC } from "react";
 
 import { Box, Typography, Divider } from "@mui/material";
-import { useUnit } from "effector-react";
 
-import { SUBJECT_LABELS, LESSON_TYPE_LABELS, formatDateTimeLong } from "@shared";
+import { SUBJECT_LABELS, LESSON_TYPE_LABELS, formatDateTimeLong, formatDate } from "@shared";
 import type { Lesson } from "@shared";
-import { PaymentStatus, HomeworkSentStatus } from "@shared/ui";
 
 import * as Styled from "./LessonDetails.styled";
-import { lessonsModel } from "../../../models";
+import { HomeworkSentStatus } from "../../HomeworkSentStatus";
+import { PaymentStatus } from "../../PaymentStatus";
 
 type LessonDetailsProps = {
   lesson: Lesson;
 };
 
 export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
-  const actions = useUnit({
-    lessonPaymentChanged: lessonsModel.lessonPaymentChanged,
-    lessonHomeworkSentChanged: lessonsModel.lessonHomeworkSentChanged,
-  });
-
-  const handlePaymentChange = (lessonId: string, isPaid: boolean) => {
-    actions.lessonPaymentChanged({ lessonId, isPaid });
-  };
-
-  const handleHomeworkSentChange = (lessonId: string, isSent: boolean) => {
-    actions.lessonHomeworkSentChanged({ lessonId, isSent });
-  };
   return (
     <Styled.Container>
-      {/* Основная информация */}
       <Box>
         <Typography variant="h6" gutterBottom>
           👤 {lesson.student?.name}
@@ -41,18 +27,17 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
         </Typography>
         <Styled.PaymentStatusBox>
-          <PaymentStatus needConfirm lesson={lesson} onPaymentChange={handlePaymentChange} />
+          <PaymentStatus lesson={lesson} />
         </Styled.PaymentStatusBox>
-        <HomeworkSentStatus
-          needConfirm
-          lesson={lesson}
-          onHomeworkSentChange={handleHomeworkSentChange}
-        />
+        {lesson.isPaid && lesson.paymentDate && (
+          <Typography variant="body2" color="success.main" gutterBottom>
+            💳 Оплачено: {formatDate(lesson.paymentDate)}
+          </Typography>
+        )}
+        <HomeworkSentStatus needConfirm lesson={lesson} />
       </Box>
 
       <Divider />
-
-      {/* Время */}
       <Box>
         <Styled.SectionTitle variant="subtitle2">📅 Время</Styled.SectionTitle>
         <Typography variant="body2" color="text.secondary">
@@ -62,8 +47,6 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           Окончание: {formatDateTimeLong(lesson.endTime)}
         </Typography>
       </Box>
-
-      {/* Описание */}
       {lesson.description && (
         <Box>
           <Styled.SectionTitle variant="subtitle2">📝 Описание</Styled.SectionTitle>
@@ -72,8 +55,6 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           </Typography>
         </Box>
       )}
-
-      {/* Домашнее задание */}
       {lesson.homework && (
         <Box>
           <Styled.SectionTitle variant="subtitle2">📖 Домашнее задание</Styled.SectionTitle>
@@ -82,8 +63,6 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           </Typography>
         </Box>
       )}
-
-      {/* Заметки */}
       {lesson.notes && (
         <Box>
           <Styled.SectionTitle variant="subtitle2">🗒️ Заметки</Styled.SectionTitle>
@@ -92,8 +71,6 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           </Typography>
         </Box>
       )}
-
-      {/* Оценка */}
       {lesson.grade && (
         <Box>
           <Styled.SectionTitle variant="subtitle2">⭐ Оценка</Styled.SectionTitle>

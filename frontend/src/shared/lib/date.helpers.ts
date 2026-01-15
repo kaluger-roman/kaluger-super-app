@@ -30,13 +30,9 @@ export const formatTime = (date: string | Date): string => {
   }
 };
 
-export const formatDuration = (
-  startTime: string | Date,
-  endTime: string | Date
-): string => {
+export const formatDuration = (startTime: string | Date, endTime: string | Date): string => {
   try {
-    const start =
-      typeof startTime === "string" ? parseISO(startTime) : startTime;
+    const start = typeof startTime === "string" ? parseISO(startTime) : startTime;
     const end = typeof endTime === "string" ? parseISO(endTime) : endTime;
 
     if (!isValid(start) || !isValid(end)) return "";
@@ -49,6 +45,21 @@ export const formatDuration = (
       return `${hours}ч ${minutes}мин`;
     }
     return `${minutes}мин`;
+  } catch {
+    return "";
+  }
+};
+
+export const toDateKey = (date?: Date | string | null): string => {
+  try {
+    if (!date) return "";
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    if (!isValid(dateObj)) return "";
+    // YYYY-MM-DD
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   } catch {
     return "";
   }

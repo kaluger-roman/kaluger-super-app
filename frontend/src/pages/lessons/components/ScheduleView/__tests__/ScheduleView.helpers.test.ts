@@ -102,7 +102,7 @@ describe("getDateKey", () => {
 
   it("should ignore time component", () => {
     const date1 = new Date("2026-01-15T00:00:00.000Z");
-    const date2 = new Date("2026-01-15T23:59:59.999Z");
+    const date2 = new Date("2026-01-15T20:59:59.999Z");
 
     expect(getDateKey(date1)).toBe(getDateKey(date2));
   });

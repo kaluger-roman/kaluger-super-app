@@ -13,6 +13,7 @@ export type LessonFormData = {
   isRecurring: boolean;
   isPaid: boolean;
   isHomeworkSentByTeacher: boolean;
+  paymentDate?: string;
 };
 
 export type LessonFormProps = {

@@ -40,11 +40,16 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
     }
   };
 
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      onConfirm();
+      handleConfirm();
     }
   };
 
@@ -73,7 +78,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
           {cancelText}
         </Button>
         <Button
-          onClick={onConfirm}
+          onClick={handleConfirm}
           variant="contained"
           color={getSeverityColor()}
           fullWidth={isMobile}
