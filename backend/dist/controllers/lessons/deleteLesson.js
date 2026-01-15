@@ -11,7 +11,6 @@ const deleteLesson = async (req, res) => {
         const { id } = req.params;
         const { deleteAllFuture } = req.body;
         const userId = req.user?.userId;
-        // Check if lesson exists and belongs to user
         const existingLesson = await prisma_1.default.lesson.findFirst({
             where: {
                 id,

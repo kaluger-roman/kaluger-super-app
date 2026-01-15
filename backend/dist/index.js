@@ -51,42 +51,48 @@ app.use("*", (req, res) => {
 });
 const PORT = process.env.PORT || 3001;
 // Create HTTP server and WebSocket manager
-const server = (0, http_1.createServer)(app);
-const wsManager = new websocket_1.WebSocketManager(server);
-// Устанавливаем WebSocket менеджер для использования в других модулях
-(0, wsManager_1.setWebSocketManager)(wsManager);
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
-    // Setup cron job to process recurring lessons daily at 2 AM
-    node_cron_1.default.schedule("0 2 * * *", async () => {
-        console.log("Running recurring lessons processing job...");
-        try {
-            await (0, recurringLessons_1.processRecurringLessons)();
-        }
-        catch (error) {
-            console.error("Error in recurring lessons cron job:", error);
-        }
+let server = null;
+if (process.env.NODE_ENV !== "test") {
+    server = (0, http_1.createServer)(app);
+    const wsManager = new websocket_1.WebSocketManager(server);
+    (0, wsManager_1.setWebSocketManager)(wsManager);
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+        node_cron_1.default.schedule("0 2 * * *", async () => {
+            console.log("Running recurring lessons processing job...");
+            try {
+                await (0, recurringLessons_1.processRecurringLessons)();
+            }
+            catch (error) {
+                console.error("Error in recurring lessons cron job:", error);
+            }
+        });
+        node_cron_1.default.schedule("* * * * *", async () => {
+            try {
+                await (0, lessonStatusUpdater_1.updateLessonStatuses)();
+            }
+            catch (error) {
+                console.error("Error in lesson status update cron job:", error);
+            }
+        });
+        console.log("Cron jobs scheduled:");
+        console.log("- Recurring lessons: Daily at 2 AM");
+        console.log("- Lesson status updates: Every minute");
     });
-    // Setup cron job to update lesson statuses every minute
-    node_cron_1.default.schedule("* * * * *", async () => {
-        try {
-            await (0, lessonStatusUpdater_1.updateLessonStatuses)();
-        }
-        catch (error) {
-            console.error("Error in lesson status update cron job:", error);
-        }
-    });
-    console.log("Cron jobs scheduled:");
-    console.log("- Recurring lessons: Daily at 2 AM");
-    console.log("- Lesson status updates: Every minute");
-});
+}
 // Graceful shutdown
 process.on("SIGTERM", async () => {
     console.log("SIGTERM received, shutting down gracefully");
-    server.close(() => {
+    if (server) {
+        server.close(() => {
+            prisma_1.default.$disconnect();
+            console.log("Process terminated");
+        });
+    }
+    else {
         prisma_1.default.$disconnect();
         console.log("Process terminated");
-    });
+    }
 });
 //# sourceMappingURL=index.js.map

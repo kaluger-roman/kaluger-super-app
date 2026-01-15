@@ -13,6 +13,22 @@ const getStatistics = async (req, res) => {
         const { startDate, endDate } = req.query;
         const now = (0, time_1.truncateToMinute)(new Date());
         const where = (0, utils_1.buildStatisticsWhere)(userId, startDate, endDate);
+        // If client provided startDate/endDate, interpret those as UTC-day bounds
+        // to avoid excluding times when client sends ISO date from toISOString().
+        if (startDate || endDate) {
+            const utcGte = startDate
+                ? new Date(`${startDate}T00:00:00.000Z`)
+                : undefined;
+            const utcLte = endDate
+                ? new Date(`${endDate}T23:59:59.999Z`)
+                : undefined;
+            if (utcGte || utcLte) {
+                where.startTime = {
+                    ...(utcGte ? { gte: utcGte } : {}),
+                    ...(utcLte ? { lte: utcLte } : {}),
+                };
+            }
+        }
         const lastMonthRange = (0, utils_1.getLastMonthRange)();
         const [completedLessons, cancelledLessons, totalLessons, earnings, lastMonthEarnings, upcomingLessons, prepaidIncome, upcomingIncome, trialLessonsCount,] = await Promise.all([
             prisma_1.default.lesson.count({

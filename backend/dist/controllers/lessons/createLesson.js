@@ -12,8 +12,6 @@ const createSingleLesson = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
     const start = (0, time_1.truncateToMinute)(new Date(startTime));
     const end = (0, time_1.truncateToMinute)(new Date(endTime));
-    // Determine initial status based on times: if the lesson is already finished -> COMPLETED,
-    // if it's currently ongoing -> IN_PROGRESS, otherwise keep default SCHEDULED.
     let computedStatus = undefined;
     const now = (0, time_1.truncateToMinute)(new Date());
     if (end.getTime() <= now.getTime()) {
@@ -23,12 +21,11 @@ const createSingleLesson = async (userId, data, student, res) => {
         end.getTime() > now.getTime()) {
         computedStatus = "IN_PROGRESS";
     }
-    // Check for scheduling conflicts for single lesson
     const conflicts = await (0, validators_1.checkSchedulingConflicts)(userId, start, end, prisma_1.default);
     if (conflicts.length > 0) {
-        return res.status(400).json({
-            error: "Временной слот конфликтует с существующим уроком",
-        });
+        return res
+            .status(400)
+            .json({ error: "Временной слот конфликтует с существующим уроком" });
     }
     const lesson = await prisma_1.default.lesson.create({
         data: {
@@ -48,7 +45,6 @@ const createSingleLesson = async (userId, data, student, res) => {
         include: { student: true },
     });
     res.status(201).json({ lesson });
-    // Отправляем WebSocket уведомление о статусе урока
     const wsManager = (0, wsManager_1.getWebSocketManager)();
     if (wsManager) {
         wsManager.broadcastLessonStatusUpdate(lesson.id, lesson.status, userId);
@@ -58,14 +54,12 @@ const createRecurringLessons = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
     const start = (0, time_1.truncateToMinute)(new Date(startTime));
     const end = (0, time_1.truncateToMinute)(new Date(endTime));
-    // Создаем регулярные уроки на 3 месяца вперед
     const lessons = [];
     const threeMonthsLater = (0, time_1.truncateToMinute)(new Date(start));
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
     let currentStart = (0, time_1.truncateToMinute)(new Date(start));
     let currentEnd = (0, time_1.truncateToMinute)(new Date(end));
     while (currentStart <= threeMonthsLater) {
-        // Check for scheduling conflicts
         const conflicts = await (0, validators_1.checkSchedulingConflicts)(userId, currentStart, currentEnd, prisma_1.default);
         if (conflicts.length === 0) {
             const lessonData = {
@@ -83,7 +77,6 @@ const createRecurringLessons = async (userId, data, student, res) => {
             };
             lessons.push(lessonData);
         }
-        // Move to next week
         currentStart = (0, time_1.truncateToMinute)(new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000));
         currentEnd = (0, time_1.truncateToMinute)(new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
     }
@@ -92,24 +85,15 @@ const createRecurringLessons = async (userId, data, student, res) => {
             error: "Невозможно создать регулярные уроки из-за конфликтов в расписании",
         });
     }
-    // Create all lessons
-    const createdLessons = await prisma_1.default.lesson.createMany({
-        data: lessons,
-    });
-    // Get the first lesson to return
+    const createdLessons = await prisma_1.default.lesson.createMany({ data: lessons });
     const firstLesson = await prisma_1.default.lesson.findFirst({
-        where: {
-            tutorId: userId,
-            startTime: start,
-            studentId,
-        },
+        where: { tutorId: userId, startTime: start, studentId },
         include: { student: true },
     });
     res.status(201).json({
         lesson: firstLesson,
         message: `Создано ${createdLessons.count} регулярных уроков`,
     });
-    // Отправляем WebSocket уведомление о статусе урока
     const wsManager = (0, wsManager_1.getWebSocketManager)();
     if (wsManager && firstLesson) {
         wsManager.broadcastLessonStatusUpdate(firstLesson.id, firstLesson.status, userId);
@@ -119,12 +103,10 @@ const createLesson = async (req, res) => {
     try {
         const userId = req.user?.userId;
         const data = req.body;
-        // Validation
         const validation = (0, validators_1.validateLessonData)(data);
         if (!validation.isValid) {
             return res.status(400).json({ error: validation.error });
         }
-        // Check if student belongs to user
         const student = await prisma_1.default.student.findFirst({
             where: {
                 id: data.studentId,

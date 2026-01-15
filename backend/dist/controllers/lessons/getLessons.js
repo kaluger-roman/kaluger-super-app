@@ -14,7 +14,6 @@ const getLessons = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
         const where = { tutorId: userId };
-        // Date filtering: for weekly requests we only bound by weekStart..weekEnd
         if (weekly === "true" && weekStart) {
             const startOfWeek = (0, time_1.truncateToMinute)(new Date(weekStart));
             const endOfWeek = new Date(startOfWeek);
@@ -26,13 +25,13 @@ const getLessons = async (req, res) => {
             };
         }
         else {
-            // Non-weekly: allow arbitrary start/end filters
             if (startDate || endDate) {
-                where.startTime = {};
+                const dtFilter = {};
                 if (startDate)
-                    where.startTime.gte = (0, time_1.truncateToMinute)(new Date(startDate));
+                    dtFilter.gte = (0, time_1.truncateToMinute)(new Date(startDate));
                 if (endDate)
-                    where.startTime.lte = (0, time_1.truncateToMinute)(new Date(endDate));
+                    dtFilter.lte = (0, time_1.truncateToMinute)(new Date(endDate));
+                where.startTime = dtFilter;
             }
         }
         if (studentId) {
@@ -45,7 +44,6 @@ const getLessons = async (req, res) => {
         if (onlyWithoutHomework === "true") {
             where.isHomeworkSentByTeacher = false;
         }
-        // Apply status/upcoming filtering only for non-weekly requests.
         if (weekly !== "true") {
             const upcomingFlag = upcoming === "true" && !!currentTime;
             if (upcomingFlag) {
@@ -59,7 +57,9 @@ const getLessons = async (req, res) => {
                 ];
             }
             else if (status && typeof status === "string") {
-                const statuses = status.split(",").map((s) => s.trim());
+                const statuses = status
+                    .split(",")
+                    .map((s) => s.trim());
                 if (statuses.length > 1) {
                     where.status = { in: statuses };
                 }
