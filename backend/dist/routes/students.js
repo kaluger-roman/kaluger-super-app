@@ -10,6 +10,8 @@ router.get("/", students_1.getStudents);
 router.get("/:id", students_1.getStudent);
 router.post("/", students_1.createStudent);
 router.put("/:id", students_1.updateStudent);
+router.put("/:id/archive", students_1.archiveStudent);
+router.put("/:id/unarchive", students_1.unarchiveStudent);
 router.delete("/:id", students_1.deleteStudent);
 exports.default = router;
 //# sourceMappingURL=students.js.map

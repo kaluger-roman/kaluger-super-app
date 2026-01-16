@@ -1,1 +1,1 @@
-{"version":3,"file":"students.js","sourceRoot":"","sources":["../../src/controllers/students.ts"],"names":[],"mappings":";;;AAAA,0CAM0B;AALxB,oGAAA,WAAW,OAAA;AACX,mGAAA,UAAU,OAAA;AACV,sGAAA,aAAa,OAAA;AACb,sGAAA,aAAa,OAAA;AACb,sGAAA,aAAa,OAAA"}
+{"version":3,"file":"students.js","sourceRoot":"","sources":["../../src/controllers/students.ts"],"names":[],"mappings":";;;AAAA,0CAQ0B;AAPxB,oGAAA,WAAW,OAAA;AACX,mGAAA,UAAU,OAAA;AACV,sGAAA,aAAa,OAAA;AACb,sGAAA,aAAa,OAAA;AACb,sGAAA,aAAa,OAAA;AACb,uGAAA,cAAc,OAAA;AACd,yGAAA,gBAAgB,OAAA"}
