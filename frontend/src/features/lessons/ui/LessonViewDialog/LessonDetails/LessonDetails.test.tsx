@@ -37,7 +37,8 @@ describe("LessonDetails", () => {
 
   it("should render student name", () => {
     renderWithTheme(<LessonDetails lesson={mockLesson} />);
-    expect(screen.getByText("👤 Иван Иванов")).toBeInTheDocument();
+    expect(screen.getByText("👤")).toBeInTheDocument();
+    expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
   });
 
   it("should render subject and lesson type", () => {

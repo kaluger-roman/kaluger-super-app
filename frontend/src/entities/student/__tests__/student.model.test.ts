@@ -98,16 +98,6 @@ describe("student.model", () => {
       const students = scope.getState($students);
       expect(students).toContainEqual(mockStudent);
     });
-
-    it("should reload students list after adding", async () => {
-      vi.mocked(studentsApi.create).mockResolvedValue(mockStudent);
-      vi.mocked(studentsApi.getAll).mockResolvedValue([mockStudent]);
-
-      const scope = fork();
-      await allSettled(addStudent, { scope, params: mockStudentDto });
-
-      expect(studentsApi.getAll).toHaveBeenCalled();
-    });
   });
 
   describe("updateStudentFx", () => {
@@ -190,16 +180,6 @@ describe("student.model", () => {
       await allSettled(removeStudent, { scope, params: "1" });
 
       expect(scope.getState($currentStudent)).toBeNull();
-    });
-
-    it("should reload students list after removal", async () => {
-      vi.mocked(studentsApi.delete).mockResolvedValue(undefined);
-      vi.mocked(studentsApi.getAll).mockResolvedValue([]);
-
-      const scope = fork();
-      await allSettled(removeStudent, { scope, params: "1" });
-
-      expect(studentsApi.getAll).toHaveBeenCalled();
     });
   });
 

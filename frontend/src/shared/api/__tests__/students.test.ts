@@ -29,6 +29,7 @@ describe("studentsApi", () => {
           notes: "",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          archived: false,
         },
       ];
       const mockResponse = { data: { students: mockStudents } };
@@ -37,7 +38,7 @@ describe("studentsApi", () => {
 
       const result = await studentsApi.getAll();
 
-      expect(api.get).toHaveBeenCalledWith("/students");
+      expect(api.get).toHaveBeenCalledWith("/students", { params: { archived: "false" } });
       expect(result).toEqual(mockStudents);
     });
   });
@@ -123,6 +124,74 @@ describe("studentsApi", () => {
       await studentsApi.delete("1");
 
       expect(api.delete).toHaveBeenCalledWith("/students/1");
+    });
+  });
+  describe("archive", () => {
+    it("should archive student without reason and comment", async () => {
+      const mockStudent: Student = {
+        id: "1",
+        name: "John Doe",
+        archived: true,
+        archivedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as unknown as Student;
+      const mockResponse = { data: { student: mockStudent } };
+
+      vi.mocked(api.put).mockResolvedValue(mockResponse);
+
+      const result = await studentsApi.archive("1");
+
+      expect(api.put).toHaveBeenCalledWith("/students/1/archive", undefined);
+      expect(result).toEqual(mockStudent);
+    });
+
+    it("should archive student with reason and comment", async () => {
+      const mockStudent: Student = {
+        id: "1",
+        name: "John Doe",
+        archived: true,
+        archivedAt: new Date().toISOString(),
+        archiveReason: "COMPLETED_STUDIES",
+        archiveComment: "Test comment",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as unknown as Student;
+      const mockResponse = { data: { student: mockStudent } };
+
+      vi.mocked(api.put).mockResolvedValue(mockResponse);
+
+      const result = await studentsApi.archive("1", {
+        archiveReason: "COMPLETED_STUDIES",
+        archiveComment: "Test comment",
+      });
+
+      expect(api.put).toHaveBeenCalledWith("/students/1/archive", {
+        archiveReason: "COMPLETED_STUDIES",
+        archiveComment: "Test comment",
+      });
+      expect(result).toEqual(mockStudent);
+    });
+  });
+
+  describe("unarchive", () => {
+    it("should unarchive student", async () => {
+      const mockStudent: Student = {
+        id: "1",
+        name: "John Doe",
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as unknown as Student;
+      const mockResponse = { data: { student: mockStudent } };
+
+      vi.mocked(api.put).mockResolvedValue(mockResponse);
+
+      const result = await studentsApi.unarchive("1");
+
+      expect(api.put).toHaveBeenCalledWith("/students/1/unarchive");
+      expect(result).toEqual(mockStudent);
     });
   });
 });

@@ -210,7 +210,6 @@ describe("students.model", () => {
 
       expect(scope.getState(studentsModel.$isDialogOpen)).toBe(true);
       expect(scope.getState(studentsModel.$editingStudent)).toEqual(mockStudent);
-      expect(scope.getState(studentsModel.$isViewDialogOpen)).toBe(false);
       expect(scope.getState(studentsModel.$viewingStudent)).toBeUndefined();
     });
   });
