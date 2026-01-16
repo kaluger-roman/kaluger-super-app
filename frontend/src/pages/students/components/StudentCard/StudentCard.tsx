@@ -11,6 +11,7 @@ import {
 
 import { studentsModel } from "@features/students";
 import type { Student } from "@shared";
+import { formatDateLong, StudentArchivedInfo } from "@shared";
 
 import * as Styled from "./StudentCard.styled";
 
@@ -46,6 +47,15 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
                 <Typography variant="body2" color="text.secondary">
                   💰 {student.hourlyRate} ₽/урок
                 </Typography>
+              )}
+
+              {student.archived && student.archivedAt && (
+                <StudentArchivedInfo
+                  archivedAt={student.archivedAt}
+                  archiveReason={student.archiveReason}
+                  archiveComment={student.archiveComment}
+                  variant="compact"
+                />
               )}
             </Styled.ContentBox>
             <IconButton
@@ -89,20 +99,10 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
                   )}
                   <Styled.StyledDivider />
                   <Typography variant="body2" color="text.secondary">
-                    Добавлен:{" "}
-                    {new Date(student.createdAt).toLocaleDateString("ru-RU", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    Добавлен: {formatDateLong(student.createdAt)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Обновлен:{" "}
-                    {new Date(student.updatedAt).toLocaleDateString("ru-RU", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    Обновлен: {formatDateLong(student.updatedAt)}
                   </Typography>
                 </Styled.AccordionDetailsBox>
               </AccordionDetails>

@@ -1,2 +1,2 @@
 export * from "./ui";
-export { studentsModel, studentFormModel } from "./models";
+export { studentsModel, studentFormModel, studentsArchiveModel } from "./models";

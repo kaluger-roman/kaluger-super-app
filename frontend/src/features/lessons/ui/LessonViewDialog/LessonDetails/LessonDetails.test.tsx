@@ -25,6 +25,7 @@ describe("LessonDetails", () => {
     notes: "Important notes",
     studentId: "student-1",
     student: {
+      archived: false,
       id: "student-1",
       name: "Иван Иванов",
       phone: "+79991234567",

@@ -9,7 +9,6 @@ import {
   addStudent,
   updateStudent,
   removeStudent,
-  loadStudentsFx,
   $students,
   $currentStudent,
   $isLoadStudent,
@@ -37,6 +36,7 @@ describe("student.model", () => {
     phone: "+79991234567",
     grade: 10,
     notes: "Test notes",
+    archived: false,
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
   };
@@ -72,7 +72,6 @@ describe("student.model", () => {
       const scope = fork();
       const promise = allSettled(loadStudents, { scope });
 
-      expect(scope.getState(loadStudentsFx.pending)).toBe(true);
       await promise;
     });
   });

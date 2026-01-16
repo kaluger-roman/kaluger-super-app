@@ -39,7 +39,11 @@ model Student {
   phone               String?
   notes               String?
   hourlyRate          Float?
-  grade               Int? // Класс от 1 до 11
+  grade               Int?
+  archived            Boolean        @default(false)
+  archivedAt          DateTime?
+  archiveReason       ArchiveReason?
+  archiveComment      String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -103,4 +107,12 @@ enum LessonType {
   OGE // ОГЭ
   OLYMPICS // Олимпиады
   SCHOOL // Школа
+}
+
+enum ArchiveReason {
+  COMPLETED_STUDIES // Закончил обучение
+  FOUND_ANOTHER_TUTOR // Нашел другого преподавателя
+  CHANGED_MIND // Передумал заниматься предметом
+  POOR_EFFORT // Плохо старался на занятиях
+  MISSED_LESSONS // Пропускал занятия
 }

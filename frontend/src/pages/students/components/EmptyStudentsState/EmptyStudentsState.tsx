@@ -4,14 +4,20 @@ import { Typography } from "@mui/material";
 
 import * as Styled from "./EmptyStudentsState.styled";
 
-export const EmptyStudentsState: FC = () => {
+type EmptyStudentsStateProps = {
+  isArchiveTab?: boolean;
+};
+
+export const EmptyStudentsState: FC<EmptyStudentsStateProps> = ({ isArchiveTab = false }) => {
   return (
     <Styled.Container>
       <Typography variant="h5" color="text.secondary" gutterBottom>
-        📚 У вас пока нет учеников
+        {isArchiveTab ? "📦 Архив пуст" : "📚 У вас пока нет учеников"}
       </Typography>
       <Styled.Description color="text.secondary">
-        Добавьте первого ученика, нажав на кнопку "+"
+        {isArchiveTab
+          ? "Здесь будут отображаться архивированные ученики"
+          : 'Добавьте первого ученика, нажав на кнопку "+"'}
       </Styled.Description>
     </Styled.Container>
   );

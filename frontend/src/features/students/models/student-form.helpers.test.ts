@@ -24,6 +24,7 @@ const mockStudent: Student = {
   hourlyRate: 1500,
   grade: 9,
   notes: "Хороший ученик",
+  archived: false,
   createdAt: "2024-01-15T10:00:00Z",
   updatedAt: "2024-12-20T15:30:00Z",
 };
@@ -62,6 +63,7 @@ describe("student-form.helpers", () => {
         hourlyRate: null,
         grade: null,
         notes: null,
+        archived: false,
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
       };

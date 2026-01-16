@@ -8,6 +8,7 @@ const createMockStudent = (id: string, name: string, grade: number | null): Stud
   id,
   name,
   grade,
+  archived: false,
   createdAt: "2024-01-15T10:00:00Z",
   updatedAt: "2024-01-15T10:00:00Z",
 });

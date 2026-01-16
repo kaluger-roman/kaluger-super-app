@@ -1,9 +1,11 @@
 import { api } from "./base";
-import type { Student, CreateStudentDto, UpdateStudentDto } from "../types";
+import type { Student, CreateStudentDto, UpdateStudentDto, ArchiveReason } from "../types";
 
 export const studentsApi = {
-  getAll: async (): Promise<Student[]> => {
-    const response = await api.get("/students");
+  getAll: async (archived = false): Promise<Student[]> => {
+    const response = await api.get("/students", {
+      params: { archived: archived.toString() },
+    });
     return response.data.students;
   },
 
@@ -24,5 +26,18 @@ export const studentsApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/students/${id}`);
+  },
+
+  archive: async (
+    id: string,
+    data?: { archiveReason?: ArchiveReason; archiveComment?: string }
+  ): Promise<Student> => {
+    const response = await api.put(`/students/${id}/archive`, data);
+    return response.data.student;
+  },
+
+  unarchive: async (id: string): Promise<Student> => {
+    const response = await api.put(`/students/${id}/unarchive`);
+    return response.data.student;
   },
 };

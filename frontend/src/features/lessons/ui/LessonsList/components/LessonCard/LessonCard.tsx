@@ -11,6 +11,7 @@ import {
   getStatusLabel,
   formatDate,
   RecurringLessonBadge,
+  StudentName,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -32,7 +33,13 @@ export const LessonCard: FC<LessonCardProps> = ({ lesson, onCardClick, onMenuCli
         <Styled.HeaderRow>
           <Styled.ContentColumn>
             <Styled.TitleRow>
-              <Styled.StudentName variant="h6">{lesson.student?.name}</Styled.StudentName>
+              <StudentName
+                student={lesson.student}
+                variant="h6"
+                component={
+                  <Styled.StudentName variant="h6">{lesson.student?.name}</Styled.StudentName>
+                }
+              />
               <Chip
                 label={getStatusLabel(lesson.status)}
                 color={getStatusColor(lesson.status)}

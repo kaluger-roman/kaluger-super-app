@@ -10,6 +10,7 @@ const mockStudent: Student = {
   name: "Иван Иванов",
   phone: "+79991234567",
   contactMethod: "WHATSAPP",
+  archived: false,
   createdAt: "2024-01-15T10:00:00Z",
   updatedAt: "2024-01-15T10:00:00Z",
 };

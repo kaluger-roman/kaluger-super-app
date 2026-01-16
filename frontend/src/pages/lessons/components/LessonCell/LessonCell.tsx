@@ -20,10 +20,17 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
   if (compact) {
     return (
       <Styled.LessonCard $status={lesson.status} $compact onClick={() => onClick(lesson)}>
-        <Styled.StyledCaption variant="caption" noWrap>
-          {lesson.price ? `${lesson.price}₽ ` : ""}
-          {lesson.student?.name}
-        </Styled.StyledCaption>
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Styled.StyledCaption variant="caption" noWrap>
+            {lesson.price ? `${lesson.price}₽ ` : ""}
+            {lesson.student?.name}
+          </Styled.StyledCaption>
+          {lesson.student?.archived && (
+            <Styled.StyledCaption variant="caption" color="text.secondary">
+              📦
+            </Styled.StyledCaption>
+          )}
+        </Box>
       </Styled.LessonCard>
     );
   }
@@ -37,9 +44,16 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
         <Styled.StatusChip label={getStatusLabel(lesson.status)} size="small" variant="outlined" />
       </Box>
 
-      <Typography variant="body2" fontWeight="medium" noWrap>
-        {lesson.student?.name}
-      </Typography>
+      <Box display="flex" alignItems="center" gap={0.5}>
+        <Typography variant="body2" fontWeight="medium" noWrap>
+          {lesson.student?.name}
+        </Typography>
+        {lesson.student?.archived && (
+          <Typography variant="caption" color="text.secondary">
+            📦
+          </Typography>
+        )}
+      </Box>
 
       <Typography variant="caption" noWrap>
         {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}

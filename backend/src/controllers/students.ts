@@ -4,4 +4,6 @@ export {
   createStudent,
   updateStudent,
   deleteStudent,
+  archiveStudent,
+  unarchiveStudent,
 } from "./students/index";

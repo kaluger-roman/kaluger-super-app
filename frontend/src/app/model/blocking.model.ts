@@ -12,7 +12,7 @@ export const $isBlocking = combine(
     addLesson: lessonModel.addLessonFx.pending,
     updateLesson: lessonModel.updateLessonFx.pending,
     removeLesson: lessonModel.removeLessonFx.pending,
-    loadStudents: studentModel.loadStudentsFx.pending,
+    loadStudents: studentModel.$isStudentsLoading,
     loadStudent: studentModel.loadStudentFx.pending,
     addStudent: studentModel.addStudentFx.pending,
     updateStudent: studentModel.updateStudentFx.pending,

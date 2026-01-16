@@ -5,6 +5,7 @@ import { DialogContent, useMediaQuery, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { studentModel } from "@entities";
+import { StudentArchivedInfo } from "@shared";
 import { StudentDeleteDialog } from "@shared/ui";
 
 import * as Styled from "./StudentForm.styled";
@@ -12,7 +13,6 @@ import { StudentFormActions } from "./StudentFormActions";
 import { StudentFormFields } from "./StudentFormFields";
 import type { StudentFormProps } from "./types";
 import { studentFormModel } from "../../models";
-
 
 export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) => {
   const theme = useTheme();
@@ -68,7 +68,21 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
     >
       <form onSubmit={handleSubmit}>
         <Styled.StyledDialogTitle>
-          {student ? "Редактировать студента" : "Добавить студента"}
+          {student ? (
+            <>
+              Редактировать студента{" "}
+              {student?.archived && student?.archivedAt && (
+                <StudentArchivedInfo
+                  archivedAt={student.archivedAt}
+                  archiveReason={student.archiveReason}
+                  archiveComment={student.archiveComment}
+                  variant="compact"
+                />
+              )}
+            </>
+          ) : (
+            "Добавить студента"
+          )}
         </Styled.StyledDialogTitle>
 
         <DialogContent>

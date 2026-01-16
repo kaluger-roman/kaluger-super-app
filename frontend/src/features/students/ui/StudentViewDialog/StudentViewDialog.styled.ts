@@ -13,24 +13,29 @@ type ActionsContainerProps = {
 
 export const ActionsContainer = styled(DialogActions)<ActionsContainerProps>(
   ({ theme, $isMobile }) => ({
-  padding: theme.spacing(3),
-  paddingTop: theme.spacing(1),
+    padding: theme.spacing(3),
+    paddingTop: theme.spacing(1),
+    display: "flex",
+    flexDirection: $isMobile ? "column" : "row",
+    justifyContent: "space-between",
+    alignItems: $isMobile ? "stretch" : "center",
+    width: "100%",
+    gap: theme.spacing(2),
+  })
+);
+
+export const ActionsLeft = styled(Box)(({ theme }) => ({
   display: "flex",
-  flexDirection: $isMobile ? "column" : "row",
-  justifyContent: "space-between",
-  width: "100%",
-  gap: $isMobile ? theme.spacing(2) : 0,
+  flexDirection: "column",
+  gap: theme.spacing(1),
+  flexGrow: 1,
 }));
 
-type ActionsRightProps = {
-  $isMobile: boolean;
-};
-
-export const ActionsRight = styled(Box)<ActionsRightProps>(
-  ({ theme, $isMobile }) => ({
+export const ActionsRight = styled(Box)(({ theme }) => ({
   display: "flex",
-  flexDirection: $isMobile ? "column" : "row",
+  flexDirection: "column",
   gap: theme.spacing(1),
+  flexGrow: 1,
 }));
 
 type StyledDialogProps = {

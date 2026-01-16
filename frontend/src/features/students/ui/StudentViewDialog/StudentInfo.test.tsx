@@ -16,6 +16,7 @@ describe("StudentInfo", () => {
     name: "Иван Иванов",
     grade: 9,
     hourlyRate: 1500,
+    archived: false,
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-15T10:00:00Z",
   };
@@ -58,6 +59,7 @@ describe("StudentInfo", () => {
     const minimalStudent: Student = {
       id: "1",
       name: "Петр Петров",
+      archived: false,
       createdAt: "2024-01-15T10:00:00Z",
       updatedAt: "2024-01-15T10:00:00Z",
     };

@@ -45,6 +45,7 @@ export const LessonFormContent = ({
             errors={errors}
             isLoading={isLoading}
             isMobile={isMobile}
+            lesson={lesson}
             onChange={handleChange}
           />
 

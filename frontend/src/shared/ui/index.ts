@@ -14,3 +14,5 @@ export { StudentDeleteDialog } from "./StudentDeleteDialog";
 export { RescheduleDialog, rescheduleDialogModel } from "./RescheduleDialog";
 export { RecurringLessonBadge } from "./RecurringLessonBadge";
 export { PastDateNotice } from "./PastDateNotice";
+export { StudentName } from "./StudentName";
+export { StudentArchivedInfo } from "./StudentArchivedInfo";

@@ -8,16 +8,11 @@ export const initializeApp = createEvent<InitializeAppParams>();
 
 // Effects
 export const initializeAppFx = createEffect(
-  async ({ onlyUnpaid = false, onlyWithoutHomework = false }: InitializeAppParams) => {
-    // Загружаем только учеников и предстоящие уроки
-    await Promise.all([
+  async ({ onlyUnpaid = false, onlyWithoutHomework = false }: InitializeAppParams) =>
+    Promise.all([
       studentModel.loadStudents(),
-      lessonModel.loadUpcomingLessons({
-        onlyUnpaid,
-        onlyWithoutHomework,
-      }),
-    ]);
-  }
+      lessonModel.loadUpcomingLessons({ onlyUnpaid, onlyWithoutHomework }),
+    ])
 );
 
 // Stores

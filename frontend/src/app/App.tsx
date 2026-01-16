@@ -23,25 +23,11 @@ const App: FC = () => {
   const isBlocking = useUnit(blockingModel.$isBlocking);
 
   useEffect(() => {
-    // Set auth token from localStorage on app start and restore profile
-    (async () => {
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        userModel.setAuthToken(token);
-        try {
-          // Wait for profile to be fetched before initializing the rest of the app
-          await userModel.getProfileFx();
-        } catch (e) {
-          // Ignore profile fetch errors here; initialize app anyway
-          // (getProfileFx will set stores on success/fail)
-          // eslint-disable-next-line no-console
-          console.error("Failed to restore profile:", e);
-        }
-      }
-
-      // Initialize app (load students, upcoming lessons etc.)
-      appInitModel.initializeApp({});
-    })();
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      userModel.setAuthToken(token);
+      userModel.getProfileFx().finally(() => appInitModel.initializeApp({}));
+    }
   }, []);
 
   useEffect(() => {

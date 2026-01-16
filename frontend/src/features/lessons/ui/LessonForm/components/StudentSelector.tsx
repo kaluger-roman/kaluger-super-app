@@ -1,9 +1,10 @@
 import type { FC } from "react";
 
-import { FormControl, InputLabel, Select } from "@mui/material";
+import { FormControl, InputLabel, Select, Box } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { studentModel } from "@entities";
+import type { Lesson } from "@shared";
 
 import * as Styled from "./StudentSelector.styled";
 import type { LessonFormData } from "../types";
@@ -13,6 +14,7 @@ type StudentSelectorProps = {
   errors: Record<string, string>;
   isLoading: boolean;
   isMobile: boolean;
+  lesson?: Lesson;
   onChange: (field: string) => (e: { target?: { value: unknown } } | unknown) => void;
 };
 
@@ -21,9 +23,15 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   errors,
   isLoading,
   isMobile,
+  lesson,
   onChange,
 }) => {
-  const students = useUnit(studentModel.$students);
+  const activeStudents = useUnit(studentModel.$students);
+  const archivedStudents = useUnit(studentModel.$archivedStudents);
+
+  const isCompletedLesson = lesson?.status === "COMPLETED";
+  const availableStudents = isCompletedLesson ? archivedStudents : activeStudents;
+  const isFieldDisabled = isLoading || isCompletedLesson;
 
   return (
     <FormControl fullWidth error={!!errors.studentId} size={isMobile ? "small" : "medium"}>
@@ -32,13 +40,16 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
         value={formData.studentId}
         onChange={onChange("studentId")}
         label="Ученик *"
-        disabled={isLoading}
+        disabled={isFieldDisabled}
       >
-        {students.map((student) => {
+        {availableStudents.map((student) => {
           return (
             <Styled.StyledMenuItem key={student.id} value={student.id}>
               <Styled.StudentInfoContainer>
-                <Styled.StudentName>{student.name}</Styled.StudentName>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Styled.StudentName>{student.name}</Styled.StudentName>
+                  {student.archived && <span>📦(Архив)</span>}
+                </Box>
                 <Styled.StudentRate>
                   {student.hourlyRate && ` ${student.hourlyRate} ₽/занятие`}
                 </Styled.StudentRate>

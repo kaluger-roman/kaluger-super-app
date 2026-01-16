@@ -2,7 +2,13 @@ import type { FC } from "react";
 
 import { Box, Typography, Divider } from "@mui/material";
 
-import { SUBJECT_LABELS, LESSON_TYPE_LABELS, formatDateTimeLong, formatDate } from "@shared";
+import {
+  SUBJECT_LABELS,
+  LESSON_TYPE_LABELS,
+  formatDateTimeLong,
+  formatDate,
+  StudentName,
+} from "@shared";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonDetails.styled";
@@ -17,9 +23,10 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
   return (
     <Styled.Container>
       <Box>
-        <Typography variant="h6" gutterBottom>
-          👤 {lesson.student?.name}
-        </Typography>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <Typography variant="h6">👤</Typography>
+          <StudentName student={lesson.student} variant="h6" />
+        </Box>
         <Typography variant="body1" color="text.secondary" gutterBottom>
           📚 {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}
         </Typography>

@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 
 import { TextField } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -24,8 +24,14 @@ export const PriceInput: FC<PriceInputProps> = ({
   isMobile,
   onChange,
 }) => {
-  const students = useUnit(studentModel.$students);
-  const selectedStudent = students.find((s) => s.id === formData.studentId);
+  const activeStudents = useUnit(studentModel.$students);
+  const archivedStudents = useUnit(studentModel.$archivedStudents);
+
+  const selectedStudent = useMemo(
+    () => [...activeStudents, ...archivedStudents].find((s) => s.id === formData.studentId),
+    [activeStudents, archivedStudents, formData.studentId]
+  );
+
   const inputRef = useRef<HTMLInputElement | null>(null);
   useDisableNumberScroll(inputRef);
 

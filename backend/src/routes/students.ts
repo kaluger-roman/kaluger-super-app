@@ -5,6 +5,8 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  archiveStudent,
+  unarchiveStudent,
 } from "../controllers/students";
 import { authenticateToken } from "../middleware/auth";
 
@@ -17,6 +19,8 @@ router.get("/", getStudents);
 router.get("/:id", getStudent);
 router.post("/", createStudent);
 router.put("/:id", updateStudent);
+router.put("/:id/archive", archiveStudent);
+router.put("/:id/unarchive", unarchiveStudent);
 router.delete("/:id", deleteStudent);
 
 export default router;

@@ -22,6 +22,7 @@ const mockStudents: Student[] = [
     id: "1",
     name: "Иван 9 класс",
     grade: 9,
+    archived: false,
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-15T10:00:00Z",
   },
@@ -29,6 +30,7 @@ const mockStudents: Student[] = [
     id: "2",
     name: "Петр 9 класс",
     grade: 9,
+    archived: false,
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-15T10:00:00Z",
   },
@@ -36,6 +38,7 @@ const mockStudents: Student[] = [
     id: "3",
     name: "Мария 11 класс",
     grade: 11,
+    archived: false,
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-15T10:00:00Z",
   },
@@ -43,6 +46,7 @@ const mockStudents: Student[] = [
     id: "4",
     name: "Сергей без класса",
     grade: null,
+    archived: false,
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-15T10:00:00Z",
   },
@@ -116,6 +120,7 @@ describe("StudentsList", () => {
         grade: 11,
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
+        archived: false,
       },
       {
         id: "2",
@@ -123,6 +128,7 @@ describe("StudentsList", () => {
         grade: 5,
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
+        archived: false,
       },
       {
         id: "3",
@@ -130,6 +136,7 @@ describe("StudentsList", () => {
         grade: 9,
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
+        archived: false,
       },
     ];
 

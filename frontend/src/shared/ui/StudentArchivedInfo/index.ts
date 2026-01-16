@@ -1,0 +1,1 @@
+export { StudentArchivedInfo } from "./StudentArchivedInfo";

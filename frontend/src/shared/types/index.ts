@@ -18,6 +18,10 @@ export type Student = {
   notes?: string | null;
   hourlyRate?: number | null;
   grade?: number | null; // Класс от 1 до 11
+  archived: boolean;
+  archivedAt?: string | null;
+  archiveReason?: ArchiveReason | null;
+  archiveComment?: string | null;
   createdAt: string;
   updatedAt: string;
   lessons?: Lesson[];
@@ -44,7 +48,16 @@ export type Lesson = {
   studentId: string;
   student?: Pick<
     Student,
-    "id" | "name" | "phone" | "contactMethod" | "parentPhone" | "parentContactMethod"
+    | "id"
+    | "name"
+    | "phone"
+    | "contactMethod"
+    | "parentPhone"
+    | "parentContactMethod"
+    | "archived"
+    | "archivedAt"
+    | "archiveReason"
+    | "archiveComment"
   >;
 };
 
@@ -53,6 +66,13 @@ export type LessonStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULE
 export type Subject = "MATHEMATICS" | "PHYSICS";
 
 export type LessonType = "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
+
+export type ArchiveReason =
+  | "COMPLETED_STUDIES"
+  | "FOUND_ANOTHER_TUTOR"
+  | "CHANGED_MIND"
+  | "POOR_EFFORT"
+  | "MISSED_LESSONS";
 
 export type CreateStudentDto = {
   name: string;

@@ -1,6 +1,11 @@
 import type { FC } from "react";
 
-import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Archive as ArchiveIcon,
+  Unarchive as UnarchiveIcon,
+} from "@mui/icons-material";
 import {
   DialogTitle,
   DialogContent,
@@ -22,7 +27,7 @@ import { StudentMeta } from "./StudentMeta";
 import { StudentNotes } from "./StudentNotes";
 import * as studentViewDialogModel from "./StudentViewDialog.model";
 import * as Styled from "./StudentViewDialog.styled";
-import { studentsModel } from "../../models";
+import { studentsModel, studentsArchiveModel } from "../../models";
 
 type StudentViewDialogProps = {
   open: boolean;
@@ -38,6 +43,8 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
     viewDialogClosed: studentsModel.viewDialogClosed,
     editFromViewRequested: studentsModel.editFromViewRequested,
     deleteFromViewConfirmed: studentsModel.deleteFromViewConfirmed,
+    archiveRequested: studentsArchiveModel.archiveRequested,
+    unarchiveRequested: studentsArchiveModel.unarchiveRequested,
   });
 
   if (!student) return null;
@@ -78,12 +85,42 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
             {student.notes && <StudentNotes notes={student.notes} />}
 
             <Divider />
-            <StudentMeta createdAt={student.createdAt} updatedAt={student.updatedAt} />
+            <StudentMeta
+              createdAt={student.createdAt}
+              updatedAt={student.updatedAt}
+              archived={student.archived}
+              archivedAt={student.archivedAt}
+              archiveReason={student.archiveReason}
+              archiveComment={student.archiveComment}
+            />
           </Box>
         </DialogContent>
 
         <Styled.ActionsContainer $isMobile={isMobile}>
-          <Box>
+          <Styled.ActionsLeft>
+            {student.archived ? (
+              <Button
+                onClick={() => actions.unarchiveRequested(student)}
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<UnarchiveIcon />}
+                fullWidth={isMobile}
+              >
+                Из архива
+              </Button>
+            ) : (
+              <Button
+                onClick={() => actions.archiveRequested(student)}
+                variant="outlined"
+                color="warning"
+                size="small"
+                startIcon={<ArchiveIcon />}
+                fullWidth={isMobile}
+              >
+                В архив
+              </Button>
+            )}
             <Button
               onClick={handleDelete}
               variant="outlined"
@@ -94,8 +131,8 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
             >
               Удалить
             </Button>
-          </Box>
-          <Styled.ActionsRight $isMobile={isMobile}>
+          </Styled.ActionsLeft>
+          <Styled.ActionsRight>
             <Button onClick={actions.viewDialogClosed} variant="outlined" fullWidth={isMobile}>
               Закрыть
             </Button>

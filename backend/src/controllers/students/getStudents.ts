@@ -5,9 +5,15 @@ import prisma from "../../lib/prisma";
 export const getStudents = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
+    const { archived } = req.query;
+
+    const archivedFilter = archived === "true";
 
     const students = await prisma.student.findMany({
-      where: { tutorId: userId },
+      where: {
+        tutorId: userId,
+        archived: archivedFilter,
+      },
       include: {
         lessons: {
           orderBy: { startTime: "desc" },

@@ -25,6 +25,7 @@ export const editFromMenuRequested = createEvent();
 export const deleteFromMenuRequested = createEvent();
 export const editFromViewRequested = createEvent();
 export const deleteFromViewRequested = createEvent();
+export const tabChanged = createEvent<number>();
 
 // Stores (atomic)
 export const $isDialogOpen = createStore<boolean>(false);
@@ -34,6 +35,7 @@ export const $selectedStudent = createStore<Student | null>(null);
 export const $deleteDialogStudent = createStore<Student | null>(null);
 export const $editingStudent = createStore<Student | undefined>(undefined, { skipVoid: false });
 export const $viewingStudent = createStore<Student | undefined>(undefined, { skipVoid: false });
+export const $currentTab = createStore<number>(0);
 
 // Logic
 sample({
@@ -48,7 +50,7 @@ sample({
 });
 
 sample({
-  clock: dialogClosed,
+  clock: [dialogClosed, studentModel.addStudentFx.doneData, studentModel.updateStudentFx.doneData],
   fn: () => false,
   target: $isDialogOpen,
 });
@@ -71,7 +73,7 @@ sample({
 });
 
 sample({
-  clock: viewDialogClosed,
+  clock: [viewDialogClosed, deleteFromViewRequested],
   fn: () => false,
   target: $isViewDialogOpen,
 });
@@ -106,15 +108,16 @@ sample({
 });
 
 sample({
-  clock: menuClosed,
-  fn: () => null,
-  target: $anchorEl,
+  clock: [editFromMenuRequested, editFromViewRequested],
+  fn: () => true,
+  target: $isDialogOpen,
 });
 
 sample({
-  clock: menuClosed,
-  fn: () => null,
-  target: $selectedStudent,
+  clock: deleteFromMenuRequested,
+  source: $selectedStudent,
+  filter: (student): student is Student => student !== null,
+  target: $deleteDialogStudent,
 });
 
 sample({
@@ -126,40 +129,9 @@ sample({
 });
 
 sample({
-  clock: editFromMenuRequested,
-  fn: () => true,
-  target: $isDialogOpen,
-});
-
-sample({
-  clock: editFromMenuRequested,
+  clock: [menuClosed, editFromMenuRequested, deleteFromMenuRequested],
   fn: () => null,
-  target: $anchorEl,
-});
-
-sample({
-  clock: editFromMenuRequested,
-  fn: () => null,
-  target: $selectedStudent,
-});
-
-sample({
-  clock: deleteFromMenuRequested,
-  source: $selectedStudent,
-  filter: (student): student is Student => student !== null,
-  target: $deleteDialogStudent,
-});
-
-sample({
-  clock: deleteFromMenuRequested,
-  fn: () => null,
-  target: $anchorEl,
-});
-
-sample({
-  clock: deleteFromMenuRequested,
-  fn: () => null,
-  target: $selectedStudent,
+  target: [$anchorEl, $selectedStudent],
 });
 
 sample({
@@ -171,26 +143,8 @@ sample({
 
 sample({
   clock: editFromViewRequested,
-  fn: () => true,
-  target: $isDialogOpen,
-});
-
-sample({
-  clock: editFromViewRequested,
-  fn: () => false,
-  target: $isViewDialogOpen,
-});
-
-sample({
-  clock: editFromViewRequested,
   fn: () => undefined,
   target: $viewingStudent,
-});
-
-sample({
-  clock: deleteFromViewRequested,
-  fn: () => false,
-  target: $isViewDialogOpen,
 });
 
 sample({
@@ -217,22 +171,29 @@ sample({
 
 sample({
   clock: deleteFromViewConfirmed,
-  fn: () => false,
-  target: $isViewDialogOpen,
-});
-
-sample({
-  clock: deleteFromViewConfirmed,
   fn: () => undefined,
   target: $viewingStudent,
 });
 
 sample({
-  clock: studentModel.addStudentFx.doneData,
-  target: dialogClosed,
+  clock: tabChanged,
+  target: $currentTab,
 });
 
 sample({
-  clock: studentModel.updateStudentFx.doneData,
-  target: dialogClosed,
+  clock: tabChanged,
+  fn: (tabIndex) => ({ archived: tabIndex === 1 }),
+  target: studentModel.loadStudents,
+});
+
+sample({
+  clock: StudentsPageGate.open,
+  fn: () => ({ archived: false }),
+  target: studentModel.loadStudents,
+});
+
+sample({
+  clock: [studentModel.archiveStudentFx.doneData, studentModel.unarchiveStudentFx.doneData],
+  fn: () => false,
+  target: [$isViewDialogOpen, $isDialogOpen],
 });
