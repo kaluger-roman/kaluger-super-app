@@ -5,6 +5,7 @@ import {
   createLesson,
   updateLesson,
   deleteLesson,
+  getLessonCancellationInfo,
 } from "../controllers/lessons";
 import { authenticateToken } from "../middleware/auth";
 
@@ -15,6 +16,7 @@ router.use(authenticateToken);
 
 router.get("/", getLessons);
 router.get("/:id", getLesson);
+router.get("/:id/cancellation-info", getLessonCancellationInfo);
 router.post("/", createLesson);
 router.put("/:id", updateLesson);
 router.delete("/:id", deleteLesson);

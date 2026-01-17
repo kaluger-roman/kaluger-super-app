@@ -6,17 +6,12 @@ import { lessonDeleteDialogModel, rescheduleDialogModel } from "@shared/ui";
 
 import { confirmDialogOpened } from "./lessons-confirm-dialog.model";
 import { deleteDialogClosed, rescheduleDialogClosed } from "./lessons-delete-dialog.model";
-import {
-  $viewingLesson,
-  cancelFromViewRequested,
-  restoreFromViewRequested,
-} from "./lessons-view-dialog.model";
+import { $viewingLesson, restoreFromViewRequested } from "./lessons-view-dialog.model";
 
 export const $isLoading = createStore<boolean>(false);
 export const $isRescheduling = createStore<boolean>(false);
 
 // Events
-export const lessonCancelRequested = createEvent<Lesson>();
 export const lessonRestoreRequested = createEvent<Lesson>();
 export const lessonRescheduleRequested = createEvent<{
   lesson: Lesson;
@@ -43,24 +38,6 @@ export const lessonHomeworkSentChanged = createEvent<{
   lessonId: string;
   isSent: boolean;
 }>();
-
-// Cancel lesson with confirmation
-sample({
-  clock: lessonCancelRequested,
-  fn: (lesson) => ({
-    open: true,
-    title: "Отменить урок",
-    message: "Вы уверены, что хотите отменить этот урок?",
-    action: () => {
-      lessonModel.updateLesson({
-        id: lesson.id,
-        data: { status: "CANCELLED" },
-      });
-    },
-    severity: "warning" as const,
-  }),
-  target: confirmDialogOpened,
-});
 
 // Restore lesson with confirmation
 sample({
@@ -158,14 +135,7 @@ sample({
   target: lessonModel.updateLesson,
 });
 
-// Connect view dialog actions to lesson actions
-sample({
-  clock: cancelFromViewRequested,
-  source: $viewingLesson,
-  filter: Boolean,
-  target: lessonCancelRequested,
-});
-
+// Connect view dialog restore action
 sample({
   clock: restoreFromViewRequested,
   source: $viewingLesson,

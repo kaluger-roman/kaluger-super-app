@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@shared/ui";
 
 import { LessonFormContent, LessonFormActions } from "./components";
 import * as Styled from "./LessonForm.styled";
-import { lessonsModel, lessonFormModel } from "../../models";
+import { lessonsModel, lessonFormModel, lessonCancellationModel } from "../../models";
 
 export const LessonForm: FC = () => {
   const open = useUnit(lessonsModel.$isDialogOpen);
@@ -59,7 +59,9 @@ export const LessonForm: FC = () => {
   };
 
   const handleCancelLesson = () => {
-    lessonFormModel.cancelLessonRequested();
+    if (lesson) {
+      lessonCancellationModel.lessonCancelRequested(lesson);
+    }
   };
 
   return (

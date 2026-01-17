@@ -1,3 +1,3 @@
 export * from "./ui";
 
-export { lessonsModel } from "./models";
+export { lessonsModel, lessonCancellationModel } from "./models";

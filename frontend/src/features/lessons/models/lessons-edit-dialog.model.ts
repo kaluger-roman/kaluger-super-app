@@ -3,7 +3,7 @@ import { createStore, createEvent, sample } from "effector";
 import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 
-import * as lessonFormModel from "./lesson-form.model";
+import * as lessonCancellationModel from "./lesson-cancellation.model";
 
 // Events
 export const dialogOpened = createEvent<Lesson | undefined>();
@@ -38,7 +38,7 @@ sample({
 });
 
 sample({
-  clock: lessonFormModel.cancelConfirmed,
+  clock: lessonCancellationModel.lessonCancellationConfirmed,
   target: dialogClosed,
 });
 

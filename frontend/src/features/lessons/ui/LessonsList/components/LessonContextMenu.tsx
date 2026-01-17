@@ -2,10 +2,10 @@ import type { FC } from "react";
 
 import { Menu } from "@mui/material";
 
-import { lessonsModel } from "@features/lessons/models";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonContextMenu.styled";
+import { lessonsModel, lessonCancellationModel } from "../../../models";
 
 type LessonContextMenuProps = {
   anchorEl: HTMLElement | null;
@@ -39,7 +39,7 @@ export const LessonContextMenu: FC<LessonContextMenuProps> = ({
       )}
       {selectedLesson?.status !== "CANCELLED" && (
         <Styled.StyledMenuItem
-          onClick={() => withClose(lessonsModel.lessonCancelRequested, selectedLesson)}
+          onClick={() => withClose(lessonCancellationModel.lessonCancelRequested, selectedLesson)}
         >
           <Styled.StyledCancelIcon />
           Отменить урок

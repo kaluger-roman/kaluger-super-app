@@ -45,7 +45,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
 
   return (
     <Styled.Container>
-      {lesson.price ? (
+      {lesson.price && lesson.status !== "CANCELLED" ? (
         <>
           <Tooltip title={lesson.isPaid ? "Оплачено" : "Не оплачено"}>
             <IconButton
@@ -87,6 +87,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                   fullWidth
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
                 />
               </Box>
             )}

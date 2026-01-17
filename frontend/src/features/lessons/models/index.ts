@@ -2,6 +2,7 @@ import "./lessons-reload.model";
 import "./lessons-page-loader.model";
 
 import * as lessonActionsModel from "./lesson-actions.model";
+import * as lessonCancellationModel from "./lesson-cancellation.model";
 import * as lessonsConfirmDialogModel from "./lessons-confirm-dialog.model";
 import * as lessonsDeleteDialogModel from "./lessons-delete-dialog.model";
 import * as lessonsEditDialogModel from "./lessons-edit-dialog.model";
@@ -24,3 +25,4 @@ export const lessonsModel = {
 };
 
 export * as lessonFormModel from "./lesson-form.model";
+export { lessonCancellationModel };

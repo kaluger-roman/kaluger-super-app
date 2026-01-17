@@ -101,6 +101,7 @@ export const LessonFormContent = ({
                 onChange={(e) => setFormData((prev) => ({ ...prev, paymentDate: e.target.value }))}
                 disabled={isLoading}
                 size={isMobile ? "small" : "medium"}
+                InputLabelProps={{ shrink: true }}
               />
             </Styled.DateFieldWrapper>
           )}

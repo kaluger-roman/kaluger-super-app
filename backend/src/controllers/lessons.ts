@@ -4,4 +4,5 @@ export {
   createLesson,
   updateLesson,
   deleteLesson,
+  getLessonCancellationInfo,
 } from "./lessons/index";

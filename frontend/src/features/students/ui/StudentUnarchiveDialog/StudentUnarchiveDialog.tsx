@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { studentsArchiveModel } from "@features/students";
+import { studentsArchiveModel } from "../../models";
 
 export const StudentUnarchiveDialog: FC = () => {
   const student = useUnit(studentsArchiveModel.$unarchiveDialogStudent);

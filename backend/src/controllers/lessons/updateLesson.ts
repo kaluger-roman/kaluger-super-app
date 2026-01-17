@@ -7,6 +7,7 @@ import prisma from "../../lib/prisma";
 import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
 import { updatePriceForFutureRecurringLessons } from "../../services/recurringHelpers";
 import { truncateToMinute } from "../../utils/time";
+import { findNextUnpaidLesson } from "./getCancellationInfo";
 
 const validateUpdateData = async (
   id: string,
@@ -131,17 +132,28 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       ...(computedStatus ? { status: computedStatus } : {}),
     };
 
+    if (
+      updateData.status === "CANCELLED" &&
+      existingLesson.isPaid &&
+      existingLesson.paymentDate
+    ) {
+      const nextLesson = await findNextUnpaidLesson(userId!, existingLesson);
+
+      if (nextLesson) {
+        await prisma.lesson.update({
+          where: { id: nextLesson.id },
+          data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+        });
+      }
+
+      dataToUpdate.isPaid = false;
+      delete dataToUpdate.paymentDate;
+    }
+
     const lesson = await prisma.lesson.update({
       where: { id },
       data: dataToUpdate,
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: { student: { select: { id: true, name: true } } },
     });
 
     if (

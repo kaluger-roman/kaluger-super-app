@@ -139,4 +139,9 @@ export const lessonsApi = {
       data: { deleteAllFuture },
     });
   },
+
+  getCancellationInfo: async (id: string) => {
+    const response = await api.get(`/lessons/${id}/cancellation-info`);
+    return response.data.cancellationInfo || null;
+  },
 };

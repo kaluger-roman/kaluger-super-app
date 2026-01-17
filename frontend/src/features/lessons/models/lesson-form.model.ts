@@ -54,8 +54,6 @@ export const dateChanged = createEvent<{ field: "startTime" | "endTime"; value: 
 export const formSubmitted = createEvent<FormEvent>();
 export const confirmDialogOpened = createEvent<ConfirmDialogData>();
 export const confirmDialogClosed = createEvent();
-export const cancelLessonRequested = createEvent();
-export const cancelConfirmed = createEvent();
 export const confirmActionTriggered = createEvent();
 
 sample({
@@ -191,41 +189,6 @@ sample({
 
 sample({
   clock: confirmActionTriggered,
-  fn: () => ({
-    open: false,
-    title: "",
-    message: "",
-    action: () => undefined,
-  }),
-  target: $confirmDialog,
-});
-
-sample({
-  clock: cancelLessonRequested,
-  source: $editingLesson,
-  filter: (lesson): lesson is Lesson => lesson !== undefined,
-  fn: () => ({
-    open: true,
-    title: "Отменить урок",
-    message: "Вы уверены, что хотите отменить этот урок?",
-    action: () => cancelConfirmed(),
-  }),
-  target: $confirmDialog,
-});
-
-sample({
-  clock: cancelConfirmed,
-  source: $editingLesson,
-  filter: (lesson): lesson is Lesson => lesson !== undefined,
-  fn: (lesson: Lesson) => ({
-    id: lesson.id,
-    data: { status: "CANCELLED" } as UpdateLessonDto,
-  }),
-  target: lessonModel.updateLesson,
-});
-
-sample({
-  clock: cancelConfirmed,
   fn: () => ({
     open: false,
     title: "",

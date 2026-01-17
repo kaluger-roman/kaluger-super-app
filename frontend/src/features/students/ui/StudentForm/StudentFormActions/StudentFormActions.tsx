@@ -10,9 +10,8 @@ import {
 import { Button, CircularProgress } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { studentsArchiveModel } from "@features/students";
-
 import * as Styled from "./StudentFormActions.styled";
+import { studentsArchiveModel } from "../../../models";
 import type { StudentFormActionsProps } from "../types";
 
 export const StudentFormActions: FC<StudentFormActionsProps> = ({

@@ -18,8 +18,7 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { studentsArchiveModel } from "@features/students";
-
+import { studentsArchiveModel } from "../../models";
 import { ARCHIVE_REASON_OPTIONS } from "../../models/students-archive.constants";
 
 export const StudentArchiveDialog: FC = () => {

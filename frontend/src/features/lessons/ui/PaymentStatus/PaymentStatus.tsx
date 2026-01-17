@@ -71,21 +71,23 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
 
   return (
     <>
-      <Styled.StyledFormControlLabel
-        onClick={(e) => e.stopPropagation()}
-        $isPaid={lesson.isPaid}
-        control={
-          <Switch
-            checked={lesson.isPaid}
-            onChange={(_e: ChangeEvent<HTMLInputElement>, next: boolean) =>
-              handlePaymentToggle(next)
-            }
-            size={size}
-            color={lesson.isPaid ? "success" : "error"}
-          />
-        }
-        label={showLabel ? (lesson.isPaid ? "Оплачено" : "Не оплачено") : undefined}
-      />
+      {lesson.status !== "CANCELLED" && (
+        <Styled.StyledFormControlLabel
+          onClick={(e) => e.stopPropagation()}
+          $isPaid={lesson.isPaid}
+          control={
+            <Switch
+              checked={lesson.isPaid}
+              onChange={(_e: ChangeEvent<HTMLInputElement>, next: boolean) =>
+                handlePaymentToggle(next)
+              }
+              size={size}
+              color={lesson.isPaid ? "success" : "error"}
+            />
+          }
+          label={showLabel ? (lesson.isPaid ? "Оплачено" : "Не оплачено") : undefined}
+        />
+      )}
       <Dialog
         onClick={(e) => e.stopPropagation()}
         open={confirmDialogOpen}

@@ -281,3 +281,4 @@ sample({ clock: featureApi.loadFx.doneData, target: $data });
 - Minimal comments — only for non-obvious logic
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian
+- Use `frontend/src/shared/lib/dateFormat.ts` for date formatting

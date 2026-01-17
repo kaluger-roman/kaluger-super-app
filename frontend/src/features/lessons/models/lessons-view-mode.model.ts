@@ -7,7 +7,7 @@ export const setCurrentWeek = createEvent<Date>();
 export const goToNextWeek = createEvent();
 export const goToPrevWeek = createEvent();
 
-export const $lessonsViewMode = createStore<LessonsViewMode>("schedule");
+export const $lessonsViewMode = createStore<LessonsViewMode>("paged");
 
 sample({
   clock: setLessonsViewMode,
