@@ -41,7 +41,8 @@
     "test:unit": "vitest run --testPathPattern=unit --run",
     "test:integration": "vitest run --testPathPattern=integration  --run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "find-cycle": "npx madge --ts-config ./tsconfig.json src --circular --extensions ts,tsx,js,jsx"
   },
   "browserslist": {
     "production": [
