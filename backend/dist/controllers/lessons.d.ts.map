@@ -1,1 +1,1 @@
-{"version":3,"file":"lessons.d.ts","sourceRoot":"","sources":["../../src/controllers/lessons.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,UAAU,EACV,SAAS,EACT,YAAY,EACZ,YAAY,EACZ,YAAY,GACb,MAAM,iBAAiB,CAAC"}
+{"version":3,"file":"lessons.d.ts","sourceRoot":"","sources":["../../src/controllers/lessons.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,UAAU,EACV,SAAS,EACT,YAAY,EACZ,YAAY,EACZ,YAAY,EACZ,yBAAyB,GAC1B,MAAM,iBAAiB,CAAC"}

@@ -8,6 +8,7 @@ const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
 router.get("/", lessons_1.getLessons);
 router.get("/:id", lessons_1.getLesson);
+router.get("/:id/cancellation-info", lessons_1.getLessonCancellationInfo);
 router.post("/", lessons_1.createLesson);
 router.put("/:id", lessons_1.updateLesson);
 router.delete("/:id", lessons_1.deleteLesson);

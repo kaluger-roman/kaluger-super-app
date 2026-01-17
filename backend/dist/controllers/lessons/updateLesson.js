@@ -9,6 +9,7 @@ const prisma_1 = __importDefault(require("../../lib/prisma"));
 const recurringHelpers_1 = require("../../services/recurringHelpers");
 const recurringHelpers_2 = require("../../services/recurringHelpers");
 const time_1 = require("../../utils/time");
+const getCancellationInfo_1 = require("./getCancellationInfo");
 const validateUpdateData = async (id, userId, updateData, existingLesson) => {
     if (updateData.startTime || updateData.endTime) {
         if (existingLesson.status === "CANCELLED") {
@@ -106,17 +107,23 @@ const updateLesson = async (req, res) => {
             ...(updateData.endTime ? { endTime: end } : {}),
             ...(computedStatus ? { status: computedStatus } : {}),
         };
+        if (updateData.status === "CANCELLED" &&
+            existingLesson.isPaid &&
+            existingLesson.paymentDate) {
+            const nextLesson = await (0, getCancellationInfo_1.findNextUnpaidLesson)(userId, existingLesson);
+            if (nextLesson) {
+                await prisma_1.default.lesson.update({
+                    where: { id: nextLesson.id },
+                    data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+                });
+            }
+            dataToUpdate.isPaid = false;
+            delete dataToUpdate.paymentDate;
+        }
         const lesson = await prisma_1.default.lesson.update({
             where: { id },
             data: dataToUpdate,
-            include: {
-                student: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-            },
+            include: { student: { select: { id: true, name: true } } },
         });
         if (existingLesson.isRecurring &&
             (updateData.startTime || updateData.endTime) &&
