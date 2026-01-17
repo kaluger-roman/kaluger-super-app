@@ -132,4 +132,41 @@ describe("get students integration tests", () => {
         expect(returnedIds).toEqual(expected);
       });
   });
+
+  it("handles database errors in getStudents", async () => {
+    const originalFindMany = prisma.student.findMany;
+    prisma.student.findMany = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("DB error"));
+
+    await request(app)
+      .get("/api/students")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(500);
+
+    prisma.student.findMany = originalFindMany;
+  });
+
+  it("handles database errors in getStudent", async () => {
+    const student = await prisma.student.create({
+      data: {
+        name: "TestError",
+        contactMethod: "WHATSAPP",
+        phone: faker.phone.number(),
+        tutorId: userId,
+      },
+    });
+
+    const originalFindFirst = prisma.student.findFirst;
+    prisma.student.findFirst = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("DB error"));
+
+    await request(app)
+      .get(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(500);
+
+    prisma.student.findFirst = originalFindFirst;
+  });
 });

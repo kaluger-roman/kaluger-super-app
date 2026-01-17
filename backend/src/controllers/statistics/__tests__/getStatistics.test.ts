@@ -392,4 +392,18 @@ describe("getStatistics controller", () => {
         );
       });
   });
+
+  it("handles database errors gracefully", async () => {
+    const originalAggregate = prisma.lesson.aggregate;
+    prisma.lesson.aggregate = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("DB error"));
+
+    await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(500);
+
+    prisma.lesson.aggregate = originalAggregate;
+  });
 });

@@ -157,5 +157,61 @@ describe("Auth Controller", () => {
       expect(res.body.user).toBeDefined();
       expect(res.body.user.email).toBeDefined();
     });
+
+    it("returns 500 on database error", async () => {
+      // Mock prisma to throw an error
+      const originalFindUnique = prisma.user.findUnique;
+      prisma.user.findUnique = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("DB error"));
+
+      const res = await request(app)
+        .get("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send();
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Внутренняя ошибка сервера");
+
+      // Restore original function
+      prisma.user.findUnique = originalFindUnique;
+    });
+  });
+
+  describe("error handling", () => {
+    it("handles database errors in register", async () => {
+      const originalFindUnique = prisma.user.findUnique;
+      prisma.user.findUnique = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("DB error"));
+
+      const res = await request(app).post("/api/auth/register").send({
+        email: faker.internet.email(),
+        password: "Password1A",
+        name: "Test User",
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Внутренняя ошибка сервера");
+
+      prisma.user.findUnique = originalFindUnique;
+    });
+
+    it("handles database errors in login", async () => {
+      const originalFindUnique = prisma.user.findUnique;
+      prisma.user.findUnique = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("DB error"));
+
+      const res = await request(app).post("/api/auth/login").send({
+        email: "test@example.com",
+        password: "Password1A",
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Внутренняя ошибка сервера");
+
+      prisma.user.findUnique = originalFindUnique;
+    });
   });
 });

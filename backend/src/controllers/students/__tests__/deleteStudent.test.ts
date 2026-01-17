@@ -50,4 +50,34 @@ describe("deleteStudent integration tests", () => {
         expect(found).toBeNull();
       });
   });
+
+  it("returns 404 when student not found or belongs to another tutor", async () => {
+    await request(app)
+      .delete("/api/students/non-existent-id")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(404);
+  });
+
+  it("handles database errors gracefully", async () => {
+    const student = await prisma.student.create({
+      data: {
+        name: "TestStudent",
+        contactMethod: "WHATSAPP",
+        phone: faker.phone.number(),
+        tutorId: userId,
+      },
+    });
+
+    const originalDelete = prisma.student.delete;
+    prisma.student.delete = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("DB error"));
+
+    await request(app)
+      .delete(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(500);
+
+    prisma.student.delete = originalDelete;
+  });
 });

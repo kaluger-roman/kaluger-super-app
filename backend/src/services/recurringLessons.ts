@@ -72,6 +72,7 @@ export const processRecurringLessons = async () => {
             isRecurring: true,
             tutorId: lastLesson.tutorId,
             studentId: lastLesson.studentId,
+            status: "SCHEDULED" as const,
           });
         }
 
