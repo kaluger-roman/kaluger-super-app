@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Lesson } from "../../../types";
 import { theme } from "../../themeConfig";
 import { PastDateNotice } from "../PastDateNotice";
+import { shouldShowNotice, calculateLessonStatus } from "../PastDateNotice.helpers";
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
@@ -476,6 +477,57 @@ describe("PastDateNotice", () => {
       );
 
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Helper functions", () => {
+    describe("calculateLessonStatus", () => {
+      it("should return COMPLETED when lesson has ended", () => {
+        vi.setSystemTime(new Date("2026-02-15T12:00:00.000Z"));
+        const startTime = new Date("2026-02-15T10:00:00.000Z");
+        const endTime = new Date("2026-02-15T11:30:00.000Z");
+
+        expect(calculateLessonStatus(startTime, endTime)).toBe("COMPLETED");
+      });
+
+      it("should return IN_PROGRESS when lesson is ongoing", () => {
+        vi.setSystemTime(new Date("2026-02-15T10:30:00.000Z"));
+        const startTime = new Date("2026-02-15T10:00:00.000Z");
+        const endTime = new Date("2026-02-15T11:30:00.000Z");
+
+        expect(calculateLessonStatus(startTime, endTime)).toBe("IN_PROGRESS");
+      });
+
+      it("should return SCHEDULED when lesson is in the future", () => {
+        vi.setSystemTime(new Date("2026-02-15T09:00:00.000Z"));
+        const startTime = new Date("2026-02-15T10:00:00.000Z");
+        const endTime = new Date("2026-02-15T11:30:00.000Z");
+
+        expect(calculateLessonStatus(startTime, endTime)).toBe("SCHEDULED");
+      });
+    });
+
+    describe("shouldShowNotice error handling", () => {
+      it("should handle errors gracefully and return default state", () => {
+        const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+          //
+        });
+
+        // Mock getTime to throw an error
+        const invalidStartDate = new Date("2026-02-15T10:00:00.000Z");
+        vi.spyOn(invalidStartDate, "getTime").mockImplementation(() => {
+          throw new Error("Test error");
+        });
+
+        const validDate = new Date("2026-02-15T11:00:00.000Z");
+
+        const result = shouldShowNotice(invalidStartDate, validDate);
+
+        expect(result).toEqual({ visible: false, message: "" });
+        expect(consoleErrorSpy).toHaveBeenCalled();
+
+        consoleErrorSpy.mockRestore();
+      });
     });
   });
 });

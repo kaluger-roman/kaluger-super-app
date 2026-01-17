@@ -178,6 +178,27 @@ describe("lessonsApi", () => {
       expect(callUrl).toContain("weekly=true");
       expect(callUrl).toContain("onlyUnpaid=true");
     });
+
+    it("should fetch lessons by week with onlyWithoutHomework filter", async () => {
+      const filters = {
+        weekStart: "2025-01-13",
+        onlyWithoutHomework: true,
+      };
+      const mockResponse = {
+        data: {
+          lessons: [],
+          pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+        },
+      };
+
+      vi.mocked(api.get).mockResolvedValue(mockResponse);
+
+      lessonsApi.getByWeek(filters);
+
+      expect(api.get).toHaveBeenCalled();
+      const callUrl = vi.mocked(api.get).mock.calls[0][0] as string;
+      expect(callUrl).toContain("onlyWithoutHomework=true");
+    });
   });
 
   describe("getByDateRange", () => {
@@ -321,6 +342,38 @@ describe("lessonsApi", () => {
       expect(api.delete).toHaveBeenCalledWith("/lessons/1", {
         data: { deleteAllFuture: true },
       });
+    });
+  });
+
+  describe("getCancellationInfo", () => {
+    it("should fetch cancellation info", async () => {
+      const mockCancellationInfo = {
+        reason: "Student sick",
+        comment: "Rescheduled to next week",
+      };
+      const mockResponse = {
+        data: { cancellationInfo: mockCancellationInfo },
+      };
+
+      vi.mocked(api.get).mockResolvedValue(mockResponse);
+
+      const result = await lessonsApi.getCancellationInfo("1");
+
+      expect(api.get).toHaveBeenCalledWith("/lessons/1/cancellation-info");
+      expect(result).toEqual(mockCancellationInfo);
+    });
+
+    it("should return null when cancellation info is not available", async () => {
+      const mockResponse = {
+        data: {},
+      };
+
+      vi.mocked(api.get).mockResolvedValue(mockResponse);
+
+      const result = await lessonsApi.getCancellationInfo("1");
+
+      expect(api.get).toHaveBeenCalledWith("/lessons/1/cancellation-info");
+      expect(result).toBeNull();
     });
   });
 });

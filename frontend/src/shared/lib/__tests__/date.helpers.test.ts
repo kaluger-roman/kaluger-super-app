@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { formatDate, formatDateTime, formatTime, formatDuration } from "../date.helpers";
+import { formatDate, formatDateTime, formatTime, formatDuration, toDateKey } from "../date.helpers";
 
 describe("date.helpers", () => {
   describe("formatDate", () => {
@@ -116,6 +116,41 @@ describe("date.helpers", () => {
       const start = "2024-03-15T14:00:00";
       const end = "2024-03-15T14:15:00";
       expect(formatDuration(start, end)).toBe("15мин");
+    });
+  });
+
+  describe("toDateKey", () => {
+    it("should convert Date object to YYYY-MM-DD format", () => {
+      const date = new Date("2024-03-15T14:30:00");
+      expect(toDateKey(date)).toBe("2024-03-15");
+    });
+
+    it("should convert ISO string to YYYY-MM-DD format", () => {
+      expect(toDateKey("2024-03-15T14:30:00")).toBe("2024-03-15");
+    });
+
+    it("should return empty string for null", () => {
+      expect(toDateKey(null)).toBe("");
+    });
+
+    it("should return empty string for undefined", () => {
+      expect(toDateKey(undefined)).toBe("");
+    });
+
+    it("should return empty string for invalid date string", () => {
+      expect(toDateKey("invalid")).toBe("");
+    });
+
+    it("should return empty string for empty string", () => {
+      expect(toDateKey("")).toBe("");
+    });
+
+    it("should handle dates with single digit days and months", () => {
+      expect(toDateKey("2024-01-05T14:30:00")).toBe("2024-01-05");
+    });
+
+    it("should handle end of year dates", () => {
+      expect(toDateKey("2024-12-31T23:59:59")).toBe("2024-12-31");
     });
   });
 });

@@ -1,20 +1,36 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
+import { studentsModel, studentsArchiveModel } from "@features/students";
 import { theme } from "@shared";
 
 import { StudentsMenu } from "./StudentsMenu";
 
-const renderWithTheme = (ui: React.ReactElement) =>
-  render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
+  render(
+    <Provider value={scope}>
+      <ThemeProvider theme={theme}>{ui}</ThemeProvider>
+    </Provider>
+  );
 
 describe("StudentsMenu", () => {
   const mockAnchorEl = document.createElement("div");
   const mockOnClose = vi.fn();
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
+
+  const mockStudent = {
+    id: "1",
+    name: "Test Student",
+    email: "test@example.com",
+    phone: "+1234567890",
+    grade: 10,
+    archived: false,
+  };
 
   it("should render menu when anchorEl is provided", () => {
     renderWithTheme(
@@ -111,5 +127,88 @@ describe("StudentsMenu", () => {
 
     const deleteItem = screen.getByRole("menuitem", { name: /Удалить/ });
     expect(deleteItem).toBeInTheDocument();
+  });
+
+  it("should show archive option for non-archived student", async () => {
+    const scope = fork({
+      values: [[studentsModel.$selectedStudent, mockStudent]],
+    });
+
+    renderWithTheme(
+      <StudentsMenu
+        anchorEl={mockAnchorEl}
+        onClose={mockOnClose}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />,
+      scope
+    );
+
+    expect(screen.getByText("В архив")).toBeInTheDocument();
+    expect(screen.queryByText("Из архива")).not.toBeInTheDocument();
+  });
+
+  it("should show unarchive option for archived student", async () => {
+    const archivedStudent = { ...mockStudent, archived: true };
+    const scope = fork({
+      values: [[studentsModel.$selectedStudent, archivedStudent]],
+    });
+
+    renderWithTheme(
+      <StudentsMenu
+        anchorEl={mockAnchorEl}
+        onClose={mockOnClose}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />,
+      scope
+    );
+
+    expect(screen.getByText("Из архива")).toBeInTheDocument();
+    expect(screen.queryByText("В архив")).not.toBeInTheDocument();
+  });
+
+  it("should call archiveRequested when archive button is clicked", async () => {
+    const scope = fork({
+      values: [[studentsModel.$selectedStudent, mockStudent]],
+    });
+
+    renderWithTheme(
+      <StudentsMenu
+        anchorEl={mockAnchorEl}
+        onClose={mockOnClose}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />,
+      scope
+    );
+
+    const archiveButton = screen.getByText("В архив");
+    await userEvent.click(archiveButton);
+
+    expect(mockOnClose).toHaveBeenCalled();
+    expect(scope.getState(studentsArchiveModel.$archiveDialogStudent)).toEqual(mockStudent);
+  });
+
+  it("should call unarchiveRequested when unarchive button is clicked", async () => {
+    const archivedStudent = { ...mockStudent, archived: true };
+    const scope = fork({
+      values: [[studentsModel.$selectedStudent, archivedStudent]],
+    });
+
+    renderWithTheme(
+      <StudentsMenu
+        anchorEl={mockAnchorEl}
+        onClose={mockOnClose}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />,
+      scope
+    );
+
+    const unarchiveButton = screen.getByText("Из архива");
+    await userEvent.click(unarchiveButton);
+
+    expect(mockOnClose).toHaveBeenCalled();
   });
 });
