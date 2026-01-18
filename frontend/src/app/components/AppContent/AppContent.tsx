@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useState } from "react";
 
 import { useMediaQuery, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -11,6 +12,7 @@ import { Sidebar, sidebarModel } from "@widgets";
 import * as Styled from "./AppContent.styled";
 import { AppHeader } from "../AppHeader";
 import { AppRoutes } from "../AppRoutes";
+import { UserMenu } from "../UserMenu";
 
 type AppContentProps = {
   isLoggedIn: boolean;
@@ -24,6 +26,8 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
 
   const isAuthPage = location.pathname === "/login";
 
@@ -43,6 +47,9 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
             user={user}
             onLogout={handleLogout}
             onMenuClick={sidebarModel.sidebarToggled}
+            onAvatarClick={(event: React.MouseEvent<HTMLElement>) =>
+              setUserMenuAnchor(event.currentTarget)
+            }
             isMobile={isMobile}
           />
           <Sidebar
@@ -50,6 +57,7 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
             open={sidebarOpen}
             onClose={sidebarModel.sidebarClosed}
           />
+          <UserMenu anchorEl={userMenuAnchor} onClose={() => setUserMenuAnchor(null)} />
         </>
       )}
 

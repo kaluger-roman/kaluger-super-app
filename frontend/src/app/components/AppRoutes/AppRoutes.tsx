@@ -3,7 +3,7 @@ import type { FC } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
-import { ReportsPage } from "@pages";
+import { ReportsPage, ProfilePage } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
 import { StudentsPage } from "@pages/students";
@@ -60,6 +60,10 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
       <Route
         path="/reports"
         element={<ProtectedRoute element={<ReportsPage />} isLoggedIn={isLoggedIn} />}
+      />
+      <Route
+        path="/profile"
+        element={<ProtectedRoute element={<ProfilePage />} isLoggedIn={isLoggedIn} />}
       />
       <Route
         path="/"

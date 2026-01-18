@@ -13,6 +13,7 @@ export const registerUser = createEvent<{
 export const logoutUser = createEvent();
 export const setAuthToken = createEvent<string>();
 export const clearAuthError = createEvent();
+export const updateUser = createEvent<User>();
 
 // Effects
 export const loginFx = createEffect(
@@ -78,6 +79,11 @@ sample({
 
 sample({
   clock: getProfileFx.doneData,
+  target: $user,
+});
+
+sample({
+  clock: updateUser,
   target: $user,
 });
 

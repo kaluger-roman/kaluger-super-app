@@ -6,6 +6,7 @@ import {
   Schedule as LessonsIcon,
   Assessment as ReportsIcon,
   Logout as LogoutIcon,
+  Person as PersonIcon,
 } from "@mui/icons-material";
 import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -41,6 +42,11 @@ const navigationItems: NavigationItem[] = [
     label: "Отчеты",
     path: "/reports",
     icon: <ReportsIcon />,
+  },
+  {
+    label: "Мои данные",
+    path: "/profile",
+    icon: <PersonIcon />,
   },
 ];
 

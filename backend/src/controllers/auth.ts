@@ -8,10 +8,11 @@ import {
 } from "../utils/auth";
 import { CreateUserDto, LoginDto } from "../types";
 import prisma from "../lib/prisma";
+import { AuthRequest } from "../middleware/auth";
 
 export const register = async (
   req: Request<{}, {}, CreateUserDto>,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { email, password, name } = req.body;
@@ -115,9 +116,9 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -136,6 +137,33 @@ export const getProfile = async (req: Request, res: Response) => {
     res.json({ user });
   } catch (error) {
     console.error("Get profile error:", error);
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { name } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: "Имя не может быть пустым" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { name: name.trim() },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({ message: "Профиль успешно обновлен", user });
+  } catch (error) {
+    console.error("Update profile error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

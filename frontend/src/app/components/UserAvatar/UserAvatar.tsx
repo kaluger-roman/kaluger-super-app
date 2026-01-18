@@ -7,11 +7,12 @@ import * as Styled from "./UserAvatar.styled";
 type UserAvatarProps = {
   user: User;
   isMobile: boolean;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 };
 
-export const UserAvatar: FC<UserAvatarProps> = ({ user, isMobile }) => {
+export const UserAvatar: FC<UserAvatarProps> = ({ user, isMobile, onClick }) => {
   return (
-    <Styled.Container>
+    <Styled.Container onClick={onClick}>
       <Styled.AvatarBox>
         {user.name
           ?.split(" ")

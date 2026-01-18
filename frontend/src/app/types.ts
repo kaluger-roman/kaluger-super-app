@@ -4,6 +4,7 @@ export type AppHeaderProps = {
   user: User;
   onLogout: () => void;
   onMenuClick: () => void;
+  onAvatarClick: (event: React.MouseEvent<HTMLElement>) => void;
   isMobile: boolean;
 };
 

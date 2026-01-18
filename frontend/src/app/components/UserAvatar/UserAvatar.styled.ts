@@ -14,6 +14,11 @@ export const Container = styled(Box)(({ theme }) => ({
   backgroundColor: "rgba(255,255,255,0.08)",
   boxShadow: theme.shadows[1],
   gap: theme.spacing(0.5),
+  cursor: "pointer",
+  transition: "background-color 0.2s",
+  "&:hover": {
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
   [theme.breakpoints.up("sm")]: {
     marginLeft: theme.spacing(2),
     gap: theme.spacing(1),

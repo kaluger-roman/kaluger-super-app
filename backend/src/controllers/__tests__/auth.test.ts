@@ -33,7 +33,7 @@ describe("Auth Controller", () => {
         .send({ email: "a@b" });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe(
-        "Email, пароль и имя обязательны для заполнения"
+        "Email, пароль и имя обязательны для заполнения",
       );
     });
 
@@ -175,6 +175,69 @@ describe("Auth Controller", () => {
 
       // Restore original function
       prisma.user.findUnique = originalFindUnique;
+    });
+  });
+
+  describe("updateProfile", () => {
+    it("returns 400 when name is empty", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Имя не может быть пустым");
+    });
+
+    it("returns 400 when name is only whitespace", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "   " });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Имя не может быть пустым");
+    });
+
+    it("updates user profile successfully", async () => {
+      const newName = faker.person.fullName();
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: newName });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Профиль успешно обновлен");
+      expect(res.body.user.name).toBe(newName);
+      expect(res.body.user.id).toBe(userId);
+    });
+
+    it("trims whitespace from name", async () => {
+      const newName = faker.person.fullName();
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: `  ${newName}  ` });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.name).toBe(newName);
+    });
+
+    it("returns 500 on database error", async () => {
+      const originalUpdate = prisma.user.update;
+      prisma.user.update = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("DB error"));
+
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test" });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Внутренняя ошибка сервера");
+
+      prisma.user.update = originalUpdate;
     });
   });
 

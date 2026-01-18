@@ -6,7 +6,7 @@ import * as Styled from "./AppHeader.styled";
 import type { AppHeaderProps } from "../../types";
 import { UserAvatar } from "../UserAvatar";
 
-export const AppHeader: FC<AppHeaderProps> = ({ user, onMenuClick, isMobile }) => {
+export const AppHeader: FC<AppHeaderProps> = ({ user, onMenuClick, onAvatarClick, isMobile }) => {
   return (
     <Styled.StyledAppBar position="fixed">
       <Styled.StyledToolbar>
@@ -19,7 +19,7 @@ export const AppHeader: FC<AppHeaderProps> = ({ user, onMenuClick, isMobile }) =
           {isMobile ? "Kaluger" : <>Kaluger Tutor</>}
         </Styled.TitleText>
 
-        <UserAvatar user={user} isMobile={isMobile} />
+        <UserAvatar user={user} isMobile={isMobile} onClick={onAvatarClick} />
       </Styled.StyledToolbar>
     </Styled.StyledAppBar>
   );
