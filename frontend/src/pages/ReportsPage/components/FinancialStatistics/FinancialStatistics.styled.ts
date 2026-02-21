@@ -100,6 +100,16 @@ export const DebtAmount = styled(Typography)({
   fontWeight: "bold",
 });
 
+export const OrangeCard = styled(Card)({
+  backgroundColor: "#fff3e0",
+});
+
+export const OrangeAmount = styled(Typography)(({ theme }) => ({
+  color: "#e65100",
+  fontWeight: "bold",
+  marginBottom: theme.spacing(1),
+}));
+
 export const PurpleCard = styled(Card)({
   backgroundColor: "#f3e5f5",
 });

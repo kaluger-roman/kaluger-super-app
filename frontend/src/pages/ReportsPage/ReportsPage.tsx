@@ -6,6 +6,8 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 import { useGate, useUnit } from "effector-react";
 
+import { userModel } from "@entities";
+
 import {
   DateRangeFilter,
   MainStatistics,
@@ -18,6 +20,7 @@ import * as Styled from "./ReportsPage.styled";
 export const ReportsPage: FC = () => {
   useGate(statisticsModel.ReportsPageGate);
 
+  const user = useUnit(userModel.$user);
   const statistics = useUnit(statisticsModel.$statistics);
   const startDate = useUnit(statisticsModel.$startDate);
   const endDate = useUnit(statisticsModel.$endDate);
@@ -52,7 +55,7 @@ export const ReportsPage: FC = () => {
 
         <MainStatistics statistics={statistics} />
 
-        <FinancialStatistics statistics={statistics} />
+        <FinancialStatistics statistics={statistics} taxRate={user?.taxRate ?? 6} />
 
         <PerformanceMetrics statistics={statistics} />
       </Styled.Container>

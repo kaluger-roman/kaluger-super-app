@@ -69,6 +69,7 @@ export const verifyEmail = async (
         email: user.email,
         name: user.name,
         isEmailVerified: true,
+        taxRate: user.taxRate,
       },
     });
   } catch (error) {

@@ -127,6 +127,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "test-token",
       };
@@ -166,6 +167,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
       };
@@ -191,6 +193,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
       };
@@ -218,6 +221,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
       };
@@ -269,6 +273,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
       });
@@ -324,6 +329,7 @@ describe("entities/verification/verification.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
       });

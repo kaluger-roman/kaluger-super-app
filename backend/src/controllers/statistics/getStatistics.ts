@@ -44,6 +44,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       prepaidIncome,
       upcomingIncome,
       trialLessonsCount,
+      currentUser,
     ] = await Promise.all([
       prisma.lesson.count({
         where: { ...where, status: "COMPLETED" },
@@ -89,6 +90,10 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       prisma.lesson.count({
         where: { ...where, OR: [{ price: 0 }, { price: null }] },
       }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { taxRate: true },
+      }),
     ]);
 
     const lostEarnings = await prisma.lesson.aggregate({
@@ -117,12 +122,16 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       _sum: { price: true },
     });
 
+    const earningsValue = earnings._sum.price || 0;
+    const taxRate = currentUser?.taxRate ?? 6;
+    const taxAmount = Math.round(earningsValue * taxRate / 100);
+
     res.json({
       completedLessons,
       cancelledLessons,
       totalLessons,
       upcomingLessons,
-      earnings: earnings._sum.price || 0,
+      earnings: earningsValue,
       lastMonthEarnings: lastMonthEarnings._sum.price || 0,
       lostEarnings: lostEarnings._sum.price || 0,
       prepaidIncome: prepaidIncome._sum.price || 0,
@@ -132,6 +141,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       unpaidDebtCount: unpaid._count.id || 0,
       unpaidDebtOver24hSum: unpaidOver24h._sum.price || 0,
       unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
+      taxAmount,
     });
   } catch (error) {
     console.error("Get statistics error:", error);

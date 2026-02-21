@@ -11,9 +11,10 @@ import { calculateAveragePrice } from "../../ReportsPage.helpers";
 
 type FinancialStatisticsProps = {
   statistics: Statistics;
+  taxRate: number;
 };
 
-export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }) => {
+export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, taxRate }) => {
   return (
     <Styled.StatsContainer>
       <Styled.StatBox>
@@ -84,6 +85,23 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
             </Typography>
           </CardContent>
         </Styled.RedCard>
+      </Styled.StatBox>
+
+      {/* Tax amount */}
+      <Styled.StatBox flex="1" minWidth={220}>
+        <Styled.OrangeCard>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Налоги ({taxRate}%)
+            </Typography>
+            <Styled.OrangeAmount variant="h4">
+              {formatCurrency(statistics.taxAmount)}
+            </Styled.OrangeAmount>
+            <Typography variant="body2" color="textSecondary">
+              Сумма налога от заработка за период
+            </Typography>
+          </CardContent>
+        </Styled.OrangeCard>
       </Styled.StatBox>
 
       {/* Potential income */}

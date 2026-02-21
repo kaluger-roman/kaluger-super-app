@@ -4,6 +4,7 @@ export type User = {
   name: string;
   createdAt: string;
   isEmailVerified: boolean;
+  taxRate: number;
 };
 
 export type Student = {
@@ -151,4 +152,5 @@ export type Statistics = {
   unpaidDebtOver24hSum?: number;
   unpaidDebtOver24hCount?: number;
   trialLessonsCount?: number;
+  taxAmount: number;
 };

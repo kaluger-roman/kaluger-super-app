@@ -18,6 +18,7 @@ const mockUser: User = {
   name: "Test User",
   createdAt: new Date().toISOString(),
   isEmailVerified: true,
+  taxRate: 6,
 };
 
 describe("UserAvatar", () => {

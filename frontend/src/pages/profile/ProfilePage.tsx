@@ -12,6 +12,7 @@ export const ProfilePage = () => {
 
   const user = useUnit(userModel.$user);
   const name = useUnit(profileModel.$name);
+  const taxRateInput = useUnit(profileModel.$taxRateInput);
   const isEditMode = useUnit(profileModel.$isEditMode);
   const error = useUnit(profileModel.$error);
 
@@ -19,12 +20,16 @@ export const ProfilePage = () => {
     editRequested: profileModel.editRequested,
     editCancelled: profileModel.editCancelled,
     nameChanged: profileModel.nameChanged,
+    taxRateInputChanged: profileModel.taxRateInputChanged,
     saveRequested: profileModel.saveRequested,
   });
 
   if (!user) return null;
 
-  const hasChanges = name.trim() !== user.name && name.trim().length > 0;
+  const hasNameChanged = name.trim() !== user.name;
+  const hasTaxRateChanged = taxRateInput !== String(user.taxRate);
+  const hasChanges =
+    (hasNameChanged || hasTaxRateChanged) && name.trim().length > 0;
 
   return (
     <Styled.StyledContainer maxWidth="md">
@@ -45,6 +50,21 @@ export const ProfilePage = () => {
             />
           ) : (
             <Styled.InfoValue variant="body1">{user.name}</Styled.InfoValue>
+          )}
+        </Styled.InfoSection>
+
+        <Styled.InfoSection>
+          <Styled.InfoLabel variant="body2">Ставка налога (%)</Styled.InfoLabel>
+          {isEditMode ? (
+            <TextField
+              fullWidth
+              type="number"
+              value={taxRateInput}
+              onChange={(e) => actions.taxRateInputChanged(e.target.value)}
+              inputProps={{ min: 0, max: 100, step: 0.1 }}
+            />
+          ) : (
+            <Styled.InfoValue variant="body1">{user.taxRate}%</Styled.InfoValue>
           )}
         </Styled.InfoSection>
 
