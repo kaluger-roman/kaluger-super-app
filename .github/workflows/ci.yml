@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches-ignore: [main]
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
@@ -54,6 +58,7 @@ jobs:
       PORT: 3001
       NODE_ENV: test
       FRONTEND_URL: http://localhost:3000
+      RESEND_API_KEY: re_dummy_ci_key
 
     steps:
       - uses: actions/checkout@v4
