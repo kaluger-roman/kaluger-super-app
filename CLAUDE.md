@@ -103,9 +103,14 @@ Do NOT skip this step. These files contain critical project-specific patterns (E
 - UI text, error messages — Russian
 - Respond to the user in Russian
 
+## Changelog
+
+Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases.
+
 ## Slash Commands
 
 - `/project:frontend <task>` — write frontend code with conventions
 - `/project:backend <task>` — write backend code with conventions
 - `/project:test-frontend <task>` — write frontend tests
 - `/project:test-backend <task>` — write backend tests
+- `/changelog [version]` — generate/update CHANGELOG.md from git history
