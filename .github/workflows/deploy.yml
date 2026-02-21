@@ -28,16 +28,22 @@ jobs:
         run: cd backend && npm ci && npx prisma generate && npm run build
 
       - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          echo "Host vps
-            HostName ${{ secrets.VPS_HOST }}
-            User ${{ secrets.VPS_USER }}
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config << EOF
+          Host vps
+            HostName $VPS_HOST
+            User $VPS_USER
             IdentityFile ~/.ssh/deploy_key
-            StrictHostKeyChecking no" > ~/.ssh/config
+            StrictHostKeyChecking no
+          EOF
 
       - name: Test SSH
         run: ssh vps "echo SSH_OK"
