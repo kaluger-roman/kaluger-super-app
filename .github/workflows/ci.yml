@@ -1,10 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches: ['**']
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
@@ -32,6 +34,30 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: tutor_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U testuser -d tutor_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/tutor_test
+      JWT_SECRET: ci-test-secret
+      PORT: 3001
+      NODE_ENV: test
+      FRONTEND_URL: http://localhost:3000
+      RESEND_API_KEY: re_dummy_ci_key
+
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +73,10 @@ jobs:
       - name: Prisma generate
         run: cd backend && npx prisma generate
 
-      - name: Lint & Type check
+      - name: Run migrations
+        run: cd backend && npx prisma migrate deploy
+
+      - name: Type check
         run: cd backend && npm run build
 
       - name: Tests
