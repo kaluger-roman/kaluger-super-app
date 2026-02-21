@@ -1,34 +1,72 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug SSH key
-        run: |
-          echo "Key length: $(echo '${{ secrets.VPS_SSH_KEY }}' | wc -c)"
-          echo "Key first line: $(echo '${{ secrets.VPS_SSH_KEY }}' | head -1)"
-          echo "Key last line: $(echo '${{ secrets.VPS_SSH_KEY }}' | tail -1)"
-          echo "Key line count: $(echo '${{ secrets.VPS_SSH_KEY }}' | wc -l)"
-          echo "Host: '${{ secrets.VPS_HOST }}'"
-          echo "User: '${{ secrets.VPS_USER }}'"
-
-      - name: Test rsync SSH
-        uses: burnett01/rsync-deployments@7.0.1
+      - uses: actions/setup-node@v4
         with:
-          switches: -avz
-          path: README.md
-          remote_path: /tmp/test-deploy/
-          remote_host: ${{ secrets.VPS_HOST }}
-          remote_user: ${{ secrets.VPS_USER }}
-          remote_key: ${{ secrets.VPS_SSH_KEY }}
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      - name: Build frontend
+        run: cd frontend && npm ci && npm run build
+        env:
+          DISABLE_ESLINT_PLUGIN: 'true'
+
+      - name: Build backend
+        run: cd backend && npm ci && npx prisma generate && npm run build
+
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy/backend
+          cp -r frontend/build deploy/frontend-build
+          cp -r backend/dist deploy/backend/dist
+          cp -r backend/prisma deploy/backend/prisma
+          cp backend/package.json deploy/backend/package.json
+          cp backend/package-lock.json deploy/backend/package-lock.json
+
+      - name: Upload to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: deploy/*
+          target: /tmp/app-deploy
+          strip_components: 1
+
+      - name: Deploy & restart
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            APP_DIR=/home/roman-kaluger/kaluger-super-app
+
+            rm -rf $APP_DIR/frontend/build
+            mv /tmp/app-deploy/frontend-build $APP_DIR/frontend/build
+
+            rm -rf $APP_DIR/backend/dist
+            mv /tmp/app-deploy/backend/dist $APP_DIR/backend/dist
+            cp -r /tmp/app-deploy/backend/prisma $APP_DIR/backend/prisma
+            cp /tmp/app-deploy/backend/package.json $APP_DIR/backend/package.json
+            cp /tmp/app-deploy/backend/package-lock.json $APP_DIR/backend/package-lock.json
+
+            cd $APP_DIR/backend
+            npm ci --omit=dev
+            npx prisma migrate deploy
+            pm2 restart backend || pm2 start dist/index.js --name backend --max-memory-restart 300M
+
+            rm -rf /tmp/app-deploy
