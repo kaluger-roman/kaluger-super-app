@@ -27,6 +27,14 @@ jobs:
       - name: Build backend
         run: cd backend && npm ci && npx prisma generate && npm run build
 
+      - name: Debug SSH connection
+        run: |
+          echo '${{ secrets.VPS_SSH_KEY }}' > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh-keygen -l -f /tmp/deploy_key || echo "INVALID KEY"
+          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK"
+          rm /tmp/deploy_key
+
       - name: Prepare deploy package
         run: |
           mkdir -p deploy/backend
