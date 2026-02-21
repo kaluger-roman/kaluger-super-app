@@ -27,54 +27,35 @@ jobs:
       - name: Build backend
         run: cd backend && npm ci && npx prisma generate && npm run build
 
-      - name: Debug SSH connection
+      - name: Setup SSH
         run: |
-          echo '${{ secrets.VPS_SSH_KEY }}' > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh-keygen -l -f /tmp/deploy_key || echo "INVALID KEY"
-          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK"
-          rm /tmp/deploy_key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          echo "Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no" > ~/.ssh/config
 
-      - name: Prepare deploy package
+      - name: Test SSH
+        run: ssh vps "echo SSH_OK"
+
+      - name: Deploy frontend
+        run: rsync -avz --delete frontend/build/ vps:/home/roman-kaluger/kaluger-super-app/frontend/build/
+
+      - name: Deploy backend
         run: |
-          mkdir -p deploy/backend
-          cp -r frontend/build deploy/frontend-build
-          cp -r backend/dist deploy/backend/dist
-          cp -r backend/prisma deploy/backend/prisma
-          cp backend/package.json deploy/backend/package.json
-          cp backend/package-lock.json deploy/backend/package-lock.json
+          rsync -avz --delete backend/dist/ vps:/home/roman-kaluger/kaluger-super-app/backend/dist/
+          rsync -avz backend/prisma/ vps:/home/roman-kaluger/kaluger-super-app/backend/prisma/
+          rsync -avz backend/package.json backend/package-lock.json vps:/home/roman-kaluger/kaluger-super-app/backend/
 
-      - name: Upload to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: deploy/*
-          target: /tmp/app-deploy
-          strip_components: 1
-
-      - name: Deploy & restart
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            APP_DIR=/home/roman-kaluger/kaluger-super-app
-
-            rm -rf $APP_DIR/frontend/build
-            mv /tmp/app-deploy/frontend-build $APP_DIR/frontend/build
-
-            rm -rf $APP_DIR/backend/dist
-            mv /tmp/app-deploy/backend/dist $APP_DIR/backend/dist
-            cp -r /tmp/app-deploy/backend/prisma $APP_DIR/backend/prisma
-            cp /tmp/app-deploy/backend/package.json $APP_DIR/backend/package.json
-            cp /tmp/app-deploy/backend/package-lock.json $APP_DIR/backend/package-lock.json
-
-            cd $APP_DIR/backend
+      - name: Install deps, migrate & restart
+        run: |
+          ssh vps << 'EOF'
+            cd /home/roman-kaluger/kaluger-super-app/backend
             npm ci --omit=dev
             npx prisma migrate deploy
             pm2 restart backend || pm2 start dist/index.js --name backend --max-memory-restart 300M
-
-            rm -rf /tmp/app-deploy
+          EOF
