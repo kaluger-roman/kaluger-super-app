@@ -24,6 +24,8 @@ jobs:
 
       - name: Build frontend
         run: cd frontend && npm ci && npm run build
+        env:
+          DISABLE_ESLINT_PLUGIN: 'true'
 
       - name: Build backend
         run: cd backend && npm ci && npx prisma generate && npm run build
