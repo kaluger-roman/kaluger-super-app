@@ -65,15 +65,20 @@ describe("Auth Controller", () => {
       expect(res.body.error).toBe("Пользователь уже существует");
     });
 
-    it("creates user and returns token on success", async () => {
+    it("creates user and sends verification code", async () => {
       const email = faker.internet.email();
       const res = await request(app)
         .post("/api/auth/register")
         .send({ email, password: "Password1A", name: "User" });
 
       expect(res.status).toBe(201);
-      expect(res.body.token).toBeDefined();
-      expect(res.body.user).toMatchObject({ email, name: "User" });
+      expect(res.body.token).toBeUndefined();
+      expect(res.body.user).toMatchObject({
+        email,
+        name: "User",
+        isEmailVerified: false,
+      });
+      expect(res.body.message).toMatch(/подтверждения/);
 
       // Clean up created user
       await prisma.user.delete({ where: { id: res.body.user.id } });
@@ -111,11 +116,38 @@ describe("Auth Controller", () => {
       await prisma.user.delete({ where: { id: temp.id } });
     });
 
-    it("returns token and user on success", async () => {
-      // create user with known password using utils.hashPassword
+    it("returns token and user on successful login", async () => {
       const password = "Password1A";
-      // create via register route to ensure hashing
       const email = faker.internet.email();
+
+      // Create and immediately verify the user
+      await request(app)
+        .post("/api/auth/register")
+        .send({ email, password, name: "L" })
+        .expect(201);
+
+      // Verify email manually (emails aren't sent in tests)
+      const user = await prisma.user.findUnique({ where: { email } });
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { isEmailVerified: true },
+      });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email, password });
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.user.email).toBe(email);
+
+      // cleanup
+      await prisma.user.delete({ where: { email } }).catch(() => undefined);
+    });
+
+    it("returns 403 when email not verified", async () => {
+      const password = "Password1A";
+      const email = faker.internet.email();
+
       await request(app)
         .post("/api/auth/register")
         .send({ email, password, name: "L" })
@@ -124,9 +156,9 @@ describe("Auth Controller", () => {
       const res = await request(app)
         .post("/api/auth/login")
         .send({ email, password });
-      expect(res.status).toBe(200);
-      expect(res.body.token).toBeDefined();
-      expect(res.body.user.email).toBe(email);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/Email не подтвержден/);
 
       // cleanup
       await prisma.user.delete({ where: { email } }).catch(() => undefined);

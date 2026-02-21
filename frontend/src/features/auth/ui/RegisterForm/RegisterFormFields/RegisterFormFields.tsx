@@ -1,7 +1,8 @@
 import type { ChangeEvent } from "react";
 
-import { userModel } from "@entities";
 import { TextField } from "@shared";
+
+import { registerFormModel } from "../../../models";
 
 type RegisterFormFieldsProps = {
   formData: {
@@ -33,7 +34,7 @@ export const RegisterFormFields = ({
       setter(e.target.value);
       onClearValidationError();
       if (authError) {
-        userModel.clearAuthError();
+        registerFormModel.$registerError.reinit();
       }
     };
 

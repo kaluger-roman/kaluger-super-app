@@ -1,38 +1,25 @@
 import type { FC, FormEvent } from "react";
-import { useEffect } from "react";
 
 import { useMediaQuery, useTheme } from "@mui/material";
-import { useUnit } from "effector-react";
-import { useNavigate } from "react-router-dom";
-
-import { userModel } from "@entities";
+import { useGate, useUnit } from "effector-react";
 
 import { useRegisterForm } from "./RegisterForm.hooks";
 import * as Styled from "./RegisterForm.styled";
 import { RegisterFormActions } from "./RegisterFormActions";
 import { RegisterFormFields } from "./RegisterFormFields";
 import { RegisterFormHeader } from "./RegisterFormHeader";
+import { registerFormModel } from "../../models";
 
 export const RegisterForm: FC = () => {
+  useGate(registerFormModel.RegisterFormGate);
+
   const { formData, setters, validation } = useRegisterForm();
   const { validationError, validateForm, clearValidationError } = validation;
 
-  const isLoading = useUnit(userModel.$isLoading);
-  const authError = useUnit(userModel.$authError);
-  const isAuthenticated = useUnit(userModel.$isAuthenticated);
-  const navigate = useNavigate();
+  const isLoading = useUnit(registerFormModel.$isLoading);
+  const authError = useUnit(registerFormModel.$registerError);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  useEffect(() => {
-    userModel.clearAuthError();
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -41,7 +28,7 @@ export const RegisterForm: FC = () => {
       return;
     }
 
-    userModel.registerUser({
+    registerFormModel.submitRegister({
       name: formData.name,
       email: formData.email,
       password: formData.password,

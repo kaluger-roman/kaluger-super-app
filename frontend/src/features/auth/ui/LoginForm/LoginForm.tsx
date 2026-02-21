@@ -1,11 +1,9 @@
 import type { FC, FormEvent } from "react";
-import { useEffect } from "react";
 
 import { Typography, Alert, useMediaQuery, useTheme } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-import { userModel } from "@entities";
 import { TextField, Button } from "@shared";
 
 import * as Styled from "./LoginForm.styled";
@@ -17,24 +15,10 @@ export const LoginForm: FC = () => {
   const email = useUnit(loginFormModel.$email);
   const password = useUnit(loginFormModel.$password);
 
-  const isLoading = useUnit(userModel.$isLoading);
-  const authError = useUnit(userModel.$authError);
-  const isAuthenticated = useUnit(userModel.$isAuthenticated);
-  const navigate = useNavigate();
+  const isLoading = useUnit(loginFormModel.$isLoading);
+  const authError = useUnit(loginFormModel.$loginError);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  useEffect(() => {
-    userModel.clearAuthError();
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const redirectPath = sessionStorage.getItem("redirectAfterLogin") || "/";
-      sessionStorage.removeItem("redirectAfterLogin");
-      navigate(redirectPath, { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -43,7 +27,7 @@ export const LoginForm: FC = () => {
       return;
     }
 
-    userModel.loginUser({ email, password });
+    loginFormModel.submitLogin({ email, password });
   };
 
   return (
@@ -69,7 +53,7 @@ export const LoginForm: FC = () => {
           onChange={(e) => {
             loginFormModel.emailChanged(e.target.value);
             if (authError) {
-              userModel.clearAuthError();
+              loginFormModel.$loginError.reinit();
             }
           }}
           margin="normal"
@@ -86,7 +70,7 @@ export const LoginForm: FC = () => {
           onChange={(e) => {
             loginFormModel.passwordChanged(e.target.value);
             if (authError) {
-              userModel.clearAuthError();
+              loginFormModel.$loginError.reinit();
             }
           }}
           margin="normal"
@@ -102,18 +86,16 @@ export const LoginForm: FC = () => {
           variant="contained"
           size={isMobile ? "medium" : "large"}
           disabled={isLoading}
+          sx={{ mt: 2, mb: 2 }}
         >
           {isLoading ? "Вход..." : "Войти"}
         </Button>
 
-        <Button
-          fullWidth
-          variant="text"
-          size={isMobile ? "medium" : "large"}
-          onClick={() => navigate("/register")}
-        >
-          Нет аккаунта? Зарегистрироваться
-        </Button>
+        <Link to="/register" style={{ textDecoration: "none", width: "100%" }}>
+          <Button fullWidth variant="text" size={isMobile ? "medium" : "large"}>
+            Нет аккаунта? Зарегистрироваться
+          </Button>
+        </Link>
       </form>
     </Styled.FormPaper>
   );

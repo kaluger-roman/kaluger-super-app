@@ -5,10 +5,13 @@ import {
   generateToken,
   validateEmail,
   validatePassword,
-} from "../utils/auth";
+  generateVerificationCode,
+  getVerificationCodeExpiry,
+} from "../utils";
 import { CreateUserDto, LoginDto } from "../types";
 import prisma from "../lib/prisma";
 import { AuthRequest } from "../middleware/auth";
+import { sendVerificationEmail } from "../services";
 
 export const register = async (
   req: Request<{}, {}, CreateUserDto>,
@@ -46,24 +49,36 @@ export const register = async (
 
     // Create user
     const hashedPassword = await hashPassword(password);
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpiry = getVerificationCodeExpiry();
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
+        verificationCode,
+        verificationCodeExpiry,
+        isEmailVerified: false,
       },
     });
 
-    // Generate token
-    const token = generateToken({ userId: user.id, email: user.email });
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, verificationCode);
+    } catch (emailError) {
+      console.error("Error sending verification email:", emailError);
+      // Продолжаем даже если письмо не отправилось
+    }
 
     res.status(201).json({
-      message: "Пользователь успешно создан",
-      token,
+      message:
+        "Пользователь успешно создан. Проверьте email для подтверждения регистрации",
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        isEmailVerified: user.isEmailVerified,
       },
     });
   } catch (error) {
@@ -98,6 +113,14 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
       return res.status(401).json({ error: "Неверные учетные данные" });
     }
 
+    // Check email verification
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        error:
+          "Email не подтвержден. Проверьте почту или запросите новый код подтверждения",
+      });
+    }
+
     // Generate token
     const token = generateToken({ userId: user.id, email: user.email });
 
@@ -127,6 +150,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         email: true,
         name: true,
         createdAt: true,
+        isEmailVerified: true,
       },
     });
 
@@ -158,6 +182,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         email: true,
         name: true,
         createdAt: true,
+        isEmailVerified: true,
       },
     });
 

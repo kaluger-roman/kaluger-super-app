@@ -30,6 +30,14 @@ const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
     </Provider>
   );
 
+const mockStudent = {
+  id: "student-1",
+  name: "Иван Иванов",
+  phone: "+79991234567",
+  contactMethod: "WHATSAPP" as const,
+  archived: false,
+};
+
 const mockLesson: Lesson = {
   id: "lesson-1",
   subject: "MATHEMATICS",
@@ -43,13 +51,7 @@ const mockLesson: Lesson = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   studentId: "student-1",
-  student: {
-    id: "student-1",
-    name: "Иван Иванов",
-    phone: "+79991234567",
-    contactMethod: "WHATSAPP",
-    archived: false,
-  },
+  student: mockStudent,
 };
 
 describe("LessonViewDialog", () => {
@@ -453,7 +455,7 @@ describe("LessonViewDialog", () => {
       const lesson = {
         ...mockLesson,
         student: {
-          ...mockLesson.student!,
+          ...mockStudent,
           name: "Мария Петрова",
         },
       };
@@ -558,7 +560,7 @@ describe("LessonViewDialog", () => {
       const newLesson = {
         ...mockLesson,
         student: {
-          ...mockLesson.student!,
+          ...mockStudent,
           name: "Петр Сидоров",
         },
       };

@@ -3,6 +3,7 @@ export type User = {
   email: string;
   name: string;
   createdAt: string;
+  isEmailVerified: boolean;
 };
 
 export type Student = {
@@ -121,8 +122,18 @@ export type RegisterRequest = AuthRequest & {
 };
 
 export type AuthResponse = {
-  token: string;
-  user: User;
+  token?: string;
+  user: User & { isEmailVerified?: boolean };
+  message?: string;
+};
+
+export type VerifyEmailRequest = {
+  email: string;
+  code: string;
+};
+
+export type ResendVerificationRequest = {
+  email: string;
 };
 
 export type Statistics = {

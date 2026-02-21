@@ -3,6 +3,7 @@ import type { FC } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
+import { EmailVerificationForm } from "@features/emailVerification";
 import { ReportsPage, ProfilePage } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
@@ -39,6 +40,19 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
             element={
               <AuthLayout>
                 <RegisterForm />
+              </AuthLayout>
+            }
+            isLoggedIn={isLoggedIn}
+          />
+        }
+      />
+      <Route
+        path="/verify-email"
+        element={
+          <AuthRoute
+            element={
+              <AuthLayout>
+                <EmailVerificationForm />
               </AuthLayout>
             }
             isLoggedIn={isLoggedIn}

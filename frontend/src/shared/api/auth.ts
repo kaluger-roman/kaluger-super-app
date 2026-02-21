@@ -1,5 +1,12 @@
 import { api } from "./base";
-import type { AuthRequest, RegisterRequest, AuthResponse, User } from "../types";
+import type {
+  AuthRequest,
+  RegisterRequest,
+  AuthResponse,
+  User,
+  VerifyEmailRequest,
+  ResendVerificationRequest,
+} from "../types";
 
 export const authApi = {
   login: async (credentials: AuthRequest): Promise<AuthResponse> => {
@@ -9,6 +16,16 @@ export const authApi = {
 
   register: async (userData: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post("/auth/register", userData);
+    return response.data;
+  },
+
+  verifyEmail: async (data: VerifyEmailRequest): Promise<AuthResponse> => {
+    const response = await api.post("/auth/verify-email", data);
+    return response.data;
+  },
+
+  resendVerification: async (data: ResendVerificationRequest): Promise<{ message: string }> => {
+    const response = await api.post("/auth/resend-verification", data);
     return response.data;
   },
 
