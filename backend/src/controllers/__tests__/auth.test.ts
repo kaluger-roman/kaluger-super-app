@@ -271,6 +271,75 @@ describe("Auth Controller", () => {
 
       prisma.user.update = originalUpdate;
     });
+
+    it("should update taxRate successfully", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: 13 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxRate).toBe(13);
+    });
+
+    it("should return default taxRate of 6 for new users", async () => {
+      const res = await request(app)
+        .get("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxRate).toBeDefined();
+    });
+
+    it("should accept taxRate 0", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: 0 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxRate).toBe(0);
+    });
+
+    it("should accept taxRate 100", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: 100 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxRate).toBe(100);
+    });
+
+    it("should reject taxRate greater than 100", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: 101 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Ставка налога должна быть от 0 до 100");
+    });
+
+    it("should reject negative taxRate", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: -1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Ставка налога должна быть от 0 до 100");
+    });
+
+    it("should round taxRate to one decimal place", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test", taxRate: 6.55 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxRate).toBe(6.6);
+    });
   });
 
   describe("error handling", () => {

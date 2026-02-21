@@ -1,3 +1,4 @@
+import type { AxiosError } from "axios";
 import { createStore, createEvent, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
@@ -10,18 +11,22 @@ export const ProfilePageGate = createGate();
 // Stores
 export const $isEditMode = createStore<boolean>(false);
 export const $name = createStore<string>("");
+export const $taxRateInput = createStore<string>("6");
 export const $error = createStore<string>("");
 
 // Events
 export const editRequested = createEvent();
 export const editCancelled = createEvent();
 export const nameChanged = createEvent<string>();
+export const taxRateInputChanged = createEvent<string>();
 export const saveRequested = createEvent();
 
 // Effects
-export const updateProfileFx = createEffect(async (name: string) => {
-  return await authApi.updateProfile({ name });
-});
+export const updateProfileFx = createEffect(
+  async ({ name, taxRate }: { name: string; taxRate: number }) => {
+    return await authApi.updateProfile({ name, taxRate });
+  }
+);
 
 // Samples
 
@@ -32,6 +37,15 @@ sample({
   filter: (user): user is NonNullable<typeof user> => user !== null,
   fn: (user) => user?.name || "",
   target: $name,
+});
+
+// Initialize taxRateInput from current user
+sample({
+  clock: [ProfilePageGate.open, userModel.$user],
+  source: userModel.$user,
+  filter: (user): user is NonNullable<typeof user> => user !== null,
+  fn: (user) => String(user?.taxRate ?? 6),
+  target: $taxRateInput,
 });
 
 // Enter edit mode
@@ -57,6 +71,15 @@ sample({
   target: $name,
 });
 
+// Reset taxRateInput to original on cancel
+sample({
+  clock: editCancelled,
+  source: userModel.$user,
+  filter: (user): user is NonNullable<typeof user> => user !== null,
+  fn: (user) => String(user?.taxRate ?? 6),
+  target: $taxRateInput,
+});
+
 // Reset error on cancel
 sample({
   clock: editCancelled,
@@ -70,6 +93,12 @@ sample({
   target: $name,
 });
 
+// Update taxRateInput
+sample({
+  clock: taxRateInputChanged,
+  target: $taxRateInput,
+});
+
 // Reset error on name change
 sample({
   clock: nameChanged,
@@ -77,10 +106,21 @@ sample({
   target: $error,
 });
 
-// Save profile
+// Reset error on taxRate change
+sample({
+  clock: taxRateInputChanged,
+  fn: () => "",
+  target: $error,
+});
+
+// Save profile — parse taxRateInput to number before sending
 sample({
   clock: saveRequested,
-  source: $name,
+  source: { name: $name, taxRateInput: $taxRateInput },
+  fn: ({ name, taxRateInput }) => ({
+    name,
+    taxRate: parseFloat(taxRateInput) || 0,
+  }),
   target: updateProfileFx,
 });
 
@@ -105,10 +145,13 @@ sample({
   target: notificationsModel.showSuccessEvent,
 });
 
-// Handle errors
+// Handle errors — extract server message from axios response
 sample({
   clock: updateProfileFx.failData,
-  fn: (error) => error.message || "Не удалось обновить профиль",
+  fn: (error) => {
+    const axiosError = error as AxiosError<{ error: string }>;
+    return axiosError.response?.data?.error || error.message || "Не удалось обновить профиль";
+  },
   target: notificationsModel.showErrorEvent,
 });
 

@@ -79,6 +79,7 @@ export const register = async (
         email: user.email,
         name: user.name,
         isEmailVerified: user.isEmailVerified,
+        taxRate: user.taxRate,
       },
     });
   } catch (error) {
@@ -131,6 +132,7 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        taxRate: user.taxRate,
       },
     });
   } catch (error) {
@@ -151,6 +153,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         name: true,
         createdAt: true,
         isEmailVerified: true,
+        taxRate: true,
       },
     });
 
@@ -168,21 +171,35 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { name } = req.body;
+    const { name, taxRate } = req.body;
 
-    if (!name || name.trim().length === 0) {
+    if (name !== undefined && (!name || name.trim().length === 0)) {
       return res.status(400).json({ error: "Имя не может быть пустым" });
     }
 
+    if (taxRate !== undefined) {
+      if (typeof taxRate !== "number" || taxRate < 0 || taxRate > 100) {
+        return res
+          .status(400)
+          .json({ error: "Ставка налога должна быть от 0 до 100" });
+      }
+    }
+
+    const data: { name?: string; taxRate?: number } = {};
+    if (name !== undefined) data.name = name.trim();
+    if (taxRate !== undefined)
+      data.taxRate = Math.round(taxRate * 10) / 10;
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { name: name.trim() },
+      data,
       select: {
         id: true,
         email: true,
         name: true,
         createdAt: true,
         isEmailVerified: true,
+        taxRate: true,
       },
     });
 

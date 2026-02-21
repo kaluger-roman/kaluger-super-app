@@ -38,6 +38,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Пользователь успешно создан",
       };
@@ -106,6 +107,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       };
@@ -138,6 +140,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       });
@@ -160,6 +163,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       };
@@ -182,6 +186,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       };
@@ -205,6 +210,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       };
@@ -227,6 +233,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
+          taxRate: 6,
         },
         token: "token",
         message: "Успешно",
@@ -253,6 +260,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       };
@@ -290,6 +298,7 @@ describe("features/auth/models/register-form.model", () => {
               name: "New User",
               createdAt: "2024-01-01T00:00:00Z",
               isEmailVerified: true,
+              taxRate: 6,
             },
           ],
         ],
@@ -330,6 +339,7 @@ describe("features/auth/models/register-form.model", () => {
           name: "New User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: false,
+          taxRate: 6,
         },
         message: "Успешно",
       });
