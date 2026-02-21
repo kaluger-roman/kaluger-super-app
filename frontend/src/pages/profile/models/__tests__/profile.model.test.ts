@@ -31,6 +31,7 @@ describe("profile.model", () => {
     email: "test@example.com",
     name: "Test User",
     createdAt: "2024-01-01T00:00:00Z",
+    isEmailVerified: true,
   };
 
   beforeEach(() => {
