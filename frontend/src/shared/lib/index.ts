@@ -14,6 +14,7 @@ export {
   truncateText,
   capitalizeFirst,
 } from "./lib.helpers";
+export { setNavigate, navigate } from "./navigation";
 export {
   getStatusLabel,
   getStatusColor,

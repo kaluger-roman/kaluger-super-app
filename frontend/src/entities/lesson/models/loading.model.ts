@@ -1,7 +1,7 @@
 import { sample } from "effector";
 
 import {
-  $isLoading,
+  $lessonApiIsLoading,
   loadCompletedLessonsFx,
   loadCancelledLessonsFx,
   loadLessonFx,
@@ -26,7 +26,7 @@ sample({
     removeLessonFx,
   ],
   fn: () => true,
-  target: $isLoading,
+  target: $lessonApiIsLoading,
 });
 
 sample({
@@ -51,5 +51,5 @@ sample({
     removeLessonFx.fail,
   ],
   fn: () => false,
-  target: $isLoading,
+  target: $lessonApiIsLoading,
 });

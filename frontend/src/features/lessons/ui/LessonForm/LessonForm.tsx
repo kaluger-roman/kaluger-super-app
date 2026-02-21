@@ -16,7 +16,7 @@ export const LessonForm: FC = () => {
   const lesson = useUnit(lessonsModel.$editingLesson);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isLoading = useUnit(lessonModel.$isLoading);
+  const isLoading = useUnit(lessonModel.$lessonApiIsLoading);
 
   const formData = useUnit(lessonFormModel.$formData);
   const errors = useUnit(lessonFormModel.$errors);

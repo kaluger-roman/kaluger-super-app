@@ -11,3 +11,5 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   OLYMPICS: "Олимпиады",
   SCHOOL: "Школа",
 };
+
+export const EMAIL_VERIFICATION_CODE_LENGTH = 6;

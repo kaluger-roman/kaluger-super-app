@@ -55,3 +55,12 @@ export type JwtPayload = {
   userId: string;
   email: string;
 };
+
+export type VerifyEmailDto = {
+  email: string;
+  code: string;
+};
+
+export type ResendVerificationDto = {
+  email: string;
+};

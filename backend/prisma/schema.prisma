@@ -14,12 +14,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password               String
+  name                   String
+  isEmailVerified        Boolean   @default(false)
+  verificationCode       String?
+  verificationCodeExpiry DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   students Student[]
   lessons  Lesson[]

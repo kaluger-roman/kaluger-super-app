@@ -3,7 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { lessonsApi } from "@shared";
 
-import { loadCompletedLessons, loadLesson, loadUpcomingLessons, $isLoading } from "../api.model";
+import {
+  loadCompletedLessons,
+  loadLesson,
+  loadUpcomingLessons,
+  $lessonApiIsLoading,
+} from "../api.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");
@@ -40,7 +45,7 @@ describe("entities/lesson/models/loading.model", () => {
       params: {},
     });
 
-    expect(scope.getState($isLoading)).toBe(false);
+    expect(scope.getState($lessonApiIsLoading)).toBe(false);
   });
 
   it("should set loading to false when effect fails", async () => {
@@ -53,7 +58,7 @@ describe("entities/lesson/models/loading.model", () => {
       params: "invalid-id",
     });
 
-    expect(scope.getState($isLoading)).toBe(false);
+    expect(scope.getState($lessonApiIsLoading)).toBe(false);
   });
 
   it("should handle multiple concurrent effects", async () => {
@@ -73,6 +78,6 @@ describe("entities/lesson/models/loading.model", () => {
       allSettled(loadUpcomingLessons, { scope, params: {} }),
     ]);
 
-    expect(scope.getState($isLoading)).toBe(false);
+    expect(scope.getState($lessonApiIsLoading)).toBe(false);
   });
 });

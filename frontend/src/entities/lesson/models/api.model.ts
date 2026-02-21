@@ -112,7 +112,7 @@ export const $upcomingPagination = createStore({
   limit: 10,
   totalPages: 0,
 });
-export const $isLoading = createStore(false);
+export const $lessonApiIsLoading = createStore(false);
 
 sample({
   clock: loadCompletedLessons,

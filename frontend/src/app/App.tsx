@@ -7,26 +7,40 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 import { useUnit } from "effector-react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
 import { userModel } from "@entities";
-import { theme, NotificationProvider } from "@shared";
+import { theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
 import { AppContent } from "./components";
 import { appInitModel, blockingModel, webSocketModel } from "./model";
 
-const App: FC = () => {
+const AppRouter: FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
+
   const isAuthenticated = useUnit(userModel.$isAuthenticated);
   const user = useUnit(userModel.$user);
+
+  return <AppContent isLoggedIn={isAuthenticated} user={user} />;
+};
+
+const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
   const isBlocking = useUnit(blockingModel.$isBlocking);
+  const isAuthenticated = useUnit(userModel.$isAuthenticated);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (token) {
       userModel.setAuthToken(token);
       userModel.getProfileFx().finally(() => appInitModel.initializeApp({}));
+    } else {
+      appInitModel.initializeApp({});
     }
   }, []);
 
@@ -58,7 +72,7 @@ const App: FC = () => {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Router>
-          <AppContent isLoggedIn={isAuthenticated} user={user} />
+          <AppRouter />
           <NotificationProvider />
           <Styled.ModalBackdrop open={isBlocking}>
             <CircularProgress color="inherit" />

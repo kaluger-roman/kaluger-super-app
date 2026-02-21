@@ -29,7 +29,10 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
 
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
 
-  const isAuthPage = location.pathname === "/login";
+  const isAuthPage =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/verify-email";
 
   const handleLogout = () => {
     userModel.logoutUser();
