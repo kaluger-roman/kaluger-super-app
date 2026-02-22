@@ -1,6 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { lessonModel, studentModel } from "@entities";
+import { lessonModel, newsModel, studentModel } from "@entities";
 
 import type { InitializeAppParams } from "./app-init.types";
 
@@ -12,6 +12,7 @@ export const initializeAppFx = createEffect(
     Promise.all([
       studentModel.loadStudents(),
       lessonModel.loadUpcomingLessons({ onlyUnpaid, onlyWithoutHomework }),
+      newsModel.checkUnreadFx(),
     ])
 );
 

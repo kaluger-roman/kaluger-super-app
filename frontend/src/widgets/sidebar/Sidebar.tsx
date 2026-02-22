@@ -5,14 +5,23 @@ import {
   School as StudentsIcon,
   Schedule as LessonsIcon,
   Assessment as ReportsIcon,
+  Newspaper as NewsIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
 } from "@mui/icons-material";
-import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from "@mui/material";
+import {
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Badge,
+} from "@mui/material";
 import { useUnit } from "effector-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { userModel } from "@entities";
+import { newsModel, userModel } from "@entities";
 
 import * as Styled from "./Sidebar.styled";
 
@@ -44,6 +53,11 @@ const navigationItems: NavigationItem[] = [
     icon: <ReportsIcon />,
   },
   {
+    label: "Новости",
+    path: "/news",
+    icon: <NewsIcon />,
+  },
+  {
     label: "Мои данные",
     path: "/profile",
     icon: <PersonIcon />,
@@ -60,6 +74,7 @@ export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useUnit(userModel.$user);
+  const hasUnreadNews = useUnit(newsModel.$hasUnread);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -103,7 +118,15 @@ export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
                 selected={location.pathname === item.path}
                 onClick={() => handleNavigate(item.path)}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemIcon>
+                  {item.path === "/news" ? (
+                    <Badge color="error" variant="dot" invisible={!hasUnreadNews}>
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
+                </ListItemIcon>
                 <ListItemText primary={item.label} />
               </ListItemButton>
             </ListItem>
