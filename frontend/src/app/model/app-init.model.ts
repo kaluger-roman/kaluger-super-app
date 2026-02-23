@@ -1,6 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { lessonModel, newsModel, studentModel } from "@entities";
+import { lessonModel, newsModel, studentModel, userModel } from "@entities";
 
 import type { InitializeAppParams } from "./app-init.types";
 
@@ -12,7 +12,6 @@ export const initializeAppFx = createEffect(
     Promise.all([
       studentModel.loadStudents(),
       lessonModel.loadUpcomingLessons({ onlyUnpaid, onlyWithoutHomework }),
-      newsModel.checkUnreadFx(),
     ])
 );
 
@@ -31,6 +30,14 @@ sample({
   clock: initializeAppFx.doneData,
   fn: () => true,
   target: $appInitialized,
+});
+
+// Check unread news only for authenticated users
+sample({
+  clock: initializeAppFx.doneData,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: newsModel.checkUnread,
 });
 
 // Handle errors
