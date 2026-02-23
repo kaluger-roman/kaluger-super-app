@@ -59,5 +59,6 @@ jobs:
             cd /home/roman-kaluger/kaluger-super-app/backend
             npm ci --omit=dev
             npx prisma migrate deploy
+            node dist/scripts/syncNews.js
             pm2 restart backend || pm2 start dist/index.js --name backend --max-memory-restart 300M
           EOF
