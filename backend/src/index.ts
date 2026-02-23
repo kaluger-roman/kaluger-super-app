@@ -14,6 +14,7 @@ import authRoutes from "./routes/auth";
 import studentRoutes from "./routes/students";
 import lessonRoutes from "./routes/lessons";
 import statisticsRoutes from "./routes/statistics";
+import newsRoutes from "./routes/news";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/statistics", statisticsRoutes);
+app.use("/api/news", newsRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

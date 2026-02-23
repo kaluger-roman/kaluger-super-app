@@ -44,6 +44,7 @@ describe("entities/user/user.model", () => {
         name: "Test User",
         createdAt: "2024-01-01T00:00:00Z",
         isEmailVerified: true,
+        taxRate: 6,
       };
       vi.mocked(authApi.getProfile).mockResolvedValue(verifiedUser);
 
@@ -66,6 +67,7 @@ describe("entities/user/user.model", () => {
         name: "Test User",
         createdAt: "2024-01-01T00:00:00Z",
         isEmailVerified: false,
+        taxRate: 6,
       };
       vi.mocked(authApi.getProfile).mockResolvedValue(unverifiedUser);
 
@@ -84,6 +86,7 @@ describe("entities/user/user.model", () => {
         name: "Test User",
         createdAt: "2024-01-01T00:00:00Z",
         isEmailVerified: true,
+        taxRate: 6,
       };
       vi.mocked(authApi.getProfile).mockResolvedValue(user);
 

@@ -18,7 +18,9 @@
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "jest --testPathPattern=e2e"
+    "test:e2e": "jest --testPathPattern=e2e",
+    "news:generate": "npx tsx src/scripts/generateNews.ts",
+    "news:sync": "npx tsx src/scripts/syncNews.ts"
   },
   "keywords": [
     "tutor",
