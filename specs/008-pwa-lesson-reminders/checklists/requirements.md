@@ -48,6 +48,8 @@
 - [x] Past-interval handling is defined (no notification if interval time already passed)
 - [x] Multiple simultaneous lessons are handled
 - [x] Enable/disable toggle preserves configured intervals
+- [x] "Do not disturb during lesson" toggle is specified (FR-026, FR-027, FR-028)
+- [x] Active lesson detection uses scheduled time, not actual (FR-028)
 
 ## Notes
 
