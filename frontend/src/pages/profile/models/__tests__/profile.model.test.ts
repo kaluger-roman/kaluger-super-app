@@ -8,10 +8,12 @@ import {
   ProfilePageGate,
   $isEditMode,
   $name,
+  $taxRateInput,
   $error,
   editRequested,
   editCancelled,
   nameChanged,
+  taxRateInputChanged,
   saveRequested,
 } from "../profile.model";
 
@@ -32,6 +34,7 @@ describe("profile.model", () => {
     name: "Test User",
     createdAt: "2024-01-01T00:00:00Z",
     isEmailVerified: true,
+    taxRate: 6,
   };
 
   beforeEach(() => {
@@ -47,6 +50,26 @@ describe("profile.model", () => {
       await allSettled(ProfilePageGate.open, { scope, params: undefined });
 
       expect(scope.getState($name)).toBe("Test User");
+    });
+
+    it("should initialize taxRateInput from current user on gate open", async () => {
+      const scope = fork({
+        values: [[userModel.$user, { ...mockUser, taxRate: 13 }]],
+      });
+
+      await allSettled(ProfilePageGate.open, { scope, params: undefined });
+
+      expect(scope.getState($taxRateInput)).toBe("13");
+    });
+
+    it("should use default taxRate 6 when user has no taxRate", async () => {
+      const scope = fork({
+        values: [[userModel.$user, { ...mockUser, taxRate: undefined }]],
+      });
+
+      await allSettled(ProfilePageGate.open, { scope, params: undefined });
+
+      expect(scope.getState($taxRateInput)).toBe("6");
     });
 
     it("should handle null user", async () => {
@@ -65,6 +88,7 @@ describe("profile.model", () => {
           [userModel.$user, mockUser],
           [$isEditMode, true],
           [$name, "Changed Name"],
+          [$taxRateInput, "15"],
           [$error, "Some error"],
         ],
       });
@@ -74,6 +98,7 @@ describe("profile.model", () => {
       expect(scope.getState($isEditMode)).toBe(false);
       expect(scope.getState($error)).toBe("");
       expect(scope.getState($name)).toBe("Test User");
+      expect(scope.getState($taxRateInput)).toBe("6");
     });
   });
 
@@ -111,6 +136,20 @@ describe("profile.model", () => {
       await allSettled(editCancelled, { scope });
 
       expect(scope.getState($name)).toBe("Test User");
+    });
+
+    it("should reset taxRateInput to original on cancel", async () => {
+      const scope = fork({
+        values: [
+          [userModel.$user, mockUser],
+          [$isEditMode, true],
+          [$taxRateInput, "15"],
+        ],
+      });
+
+      await allSettled(editCancelled, { scope });
+
+      expect(scope.getState($taxRateInput)).toBe("6");
     });
 
     it("should clear error on cancel", async () => {
@@ -153,6 +192,34 @@ describe("profile.model", () => {
     });
   });
 
+  describe("taxRateInputChanged", () => {
+    it("should update taxRateInput as string", async () => {
+      const scope = fork();
+
+      await allSettled(taxRateInputChanged, { scope, params: "13" });
+
+      expect(scope.getState($taxRateInput)).toBe("13");
+    });
+
+    it("should allow empty string for free editing", async () => {
+      const scope = fork();
+
+      await allSettled(taxRateInputChanged, { scope, params: "" });
+
+      expect(scope.getState($taxRateInput)).toBe("");
+    });
+
+    it("should clear error on taxRate change", async () => {
+      const scope = fork({
+        values: [[$error, "Previous error"]],
+      });
+
+      await allSettled(taxRateInputChanged, { scope, params: "13" });
+
+      expect(scope.getState($error)).toBe("");
+    });
+  });
+
   describe("updateProfileFx", () => {
     it("should update profile successfully", async () => {
       const updatedUser = { ...mockUser, name: "Updated Name" };
@@ -162,14 +229,60 @@ describe("profile.model", () => {
         values: [
           [userModel.$user, mockUser],
           [$name, "Updated Name"],
+          [$taxRateInput, "6"],
           [$isEditMode, true],
         ],
       });
 
       await allSettled(saveRequested, { scope });
 
-      expect(authApi.updateProfile).toHaveBeenCalledWith({ name: "Updated Name" });
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        name: "Updated Name",
+        taxRate: 6,
+      });
       expect(scope.getState($isEditMode)).toBe(false);
+    });
+
+    it("should parse taxRateInput to number when saving", async () => {
+      const updatedUser = { ...mockUser, taxRate: 13 };
+      vi.mocked(authApi.updateProfile).mockResolvedValue(updatedUser);
+
+      const scope = fork({
+        values: [
+          [userModel.$user, mockUser],
+          [$name, "Test User"],
+          [$taxRateInput, "13"],
+          [$isEditMode, true],
+        ],
+      });
+
+      await allSettled(saveRequested, { scope });
+
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        name: "Test User",
+        taxRate: 13,
+      });
+    });
+
+    it("should send 0 when taxRateInput is empty", async () => {
+      const updatedUser = { ...mockUser, taxRate: 0 };
+      vi.mocked(authApi.updateProfile).mockResolvedValue(updatedUser);
+
+      const scope = fork({
+        values: [
+          [userModel.$user, mockUser],
+          [$name, "Test User"],
+          [$taxRateInput, ""],
+          [$isEditMode, true],
+        ],
+      });
+
+      await allSettled(saveRequested, { scope });
+
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        name: "Test User",
+        taxRate: 0,
+      });
     });
 
     it("should update user in global state", async () => {
@@ -180,6 +293,7 @@ describe("profile.model", () => {
         values: [
           [userModel.$user, mockUser],
           [$name, "Updated Name"],
+          [$taxRateInput, "6"],
         ],
       });
 
@@ -196,6 +310,7 @@ describe("profile.model", () => {
         values: [
           [userModel.$user, mockUser],
           [$name, "New Name"],
+          [$taxRateInput, "6"],
           [$isEditMode, true],
         ],
       });
@@ -213,13 +328,12 @@ describe("profile.model", () => {
         values: [
           [userModel.$user, mockUser],
           [$name, "New Name"],
+          [$taxRateInput, "6"],
         ],
       });
 
       await allSettled(saveRequested, { scope });
 
-      // Error is handled by showing notification
-      // Edit mode is not explicitly changed on error, so it stays false
       expect(scope.getState($isEditMode)).toBe(false);
     });
   });
@@ -236,6 +350,7 @@ describe("profile.model", () => {
       // Open page
       await allSettled(ProfilePageGate.open, { scope, params: undefined });
       expect(scope.getState($name)).toBe("Test User");
+      expect(scope.getState($taxRateInput)).toBe("6");
 
       // Start editing
       await allSettled(editRequested, { scope });
@@ -251,6 +366,34 @@ describe("profile.model", () => {
       expect(scope.getState(userModel.$user)).toEqual(updatedUser);
     });
 
+    it("should handle taxRate edit flow", async () => {
+      const updatedUser = { ...mockUser, taxRate: 13 };
+      vi.mocked(authApi.updateProfile).mockResolvedValue(updatedUser);
+
+      const scope = fork({
+        values: [[userModel.$user, mockUser]],
+      });
+
+      // Open page
+      await allSettled(ProfilePageGate.open, { scope, params: undefined });
+      expect(scope.getState($taxRateInput)).toBe("6");
+
+      // Start editing
+      await allSettled(editRequested, { scope });
+
+      // Change taxRate
+      await allSettled(taxRateInputChanged, { scope, params: "13" });
+      expect(scope.getState($taxRateInput)).toBe("13");
+
+      // Save
+      await allSettled(saveRequested, { scope });
+      expect(scope.getState($isEditMode)).toBe(false);
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        name: "Test User",
+        taxRate: 13,
+      });
+    });
+
     it("should handle cancel after changes", async () => {
       const scope = fork({
         values: [[userModel.$user, mockUser]],
@@ -262,14 +405,17 @@ describe("profile.model", () => {
       // Start editing
       await allSettled(editRequested, { scope });
 
-      // Change name
+      // Change name and taxRate
       await allSettled(nameChanged, { scope, params: "Changed" });
+      await allSettled(taxRateInputChanged, { scope, params: "15" });
       expect(scope.getState($name)).toBe("Changed");
+      expect(scope.getState($taxRateInput)).toBe("15");
 
       // Cancel
       await allSettled(editCancelled, { scope });
       expect(scope.getState($isEditMode)).toBe(false);
       expect(scope.getState($name)).toBe("Test User");
+      expect(scope.getState($taxRateInput)).toBe("6");
     });
   });
 });

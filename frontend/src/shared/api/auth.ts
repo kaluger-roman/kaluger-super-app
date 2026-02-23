@@ -34,7 +34,7 @@ export const authApi = {
     return response.data.user;
   },
 
-  updateProfile: async (data: { name: string }): Promise<User> => {
+  updateProfile: async (data: { name: string; taxRate: number }): Promise<User> => {
     const response = await api.put("/auth/profile", data);
     return response.data.user;
   },

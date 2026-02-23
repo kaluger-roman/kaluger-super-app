@@ -51,6 +51,11 @@ export type UpdateLessonDto = Partial<CreateLessonDto> & {
     | "IN_PROGRESS";
 };
 
+export type UpdateProfileDto = {
+  name?: string;
+  taxRate?: number;
+};
+
 export type JwtPayload = {
   userId: string;
   email: string;

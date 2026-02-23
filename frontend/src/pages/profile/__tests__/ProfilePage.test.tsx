@@ -35,6 +35,8 @@ describe("ProfilePage", () => {
     email: "test@example.com",
     name: "Test User",
     createdAt: "2024-01-01T00:00:00Z",
+    isEmailVerified: true,
+    taxRate: 6,
   };
 
   beforeEach(() => {
@@ -109,6 +111,7 @@ describe("ProfilePage", () => {
       values: [
         [userModel.$user, mockUser],
         [profileModel.$name, "Test User"],
+        [profileModel.$taxRateInput, "6"],
         [profileModel.$isEditMode, true],
         [profileModel.$error, ""],
       ],

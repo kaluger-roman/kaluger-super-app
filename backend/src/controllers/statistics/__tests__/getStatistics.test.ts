@@ -63,7 +63,105 @@ describe("getStatistics controller", () => {
         expect(res.body.unpaidDebtCount).toBe(0);
         expect(res.body.unpaidDebtOver24hSum).toBe(0);
         expect(res.body.unpaidDebtOver24hCount).toBe(0);
+        expect(res.body.taxAmount).toBe(0);
       });
+  });
+
+  it("should return taxAmount with default rate (6%) when no custom rate set", async () => {
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 10000,
+        status: "COMPLETED",
+      },
+    });
+
+    const res = await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(res.body.earnings).toBe(10000);
+    expect(res.body.taxAmount).toBe(600); // 10000 * 6 / 100
+  });
+
+  it("should return taxAmount with custom tax rate", async () => {
+    // Set custom tax rate
+    await prisma.user.update({
+      where: { id: userId },
+      data: { taxRate: 13 },
+    });
+
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 50000,
+        status: "COMPLETED",
+      },
+    });
+
+    const res = await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(res.body.earnings).toBe(50000);
+    expect(res.body.taxAmount).toBe(6500); // 50000 * 13 / 100
+
+    // Reset tax rate
+    await prisma.user.update({
+      where: { id: userId },
+      data: { taxRate: 6 },
+    });
+  });
+
+  it("should return taxAmount 0 when tax rate is 0", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { taxRate: 0 },
+    });
+
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 5000,
+        status: "COMPLETED",
+      },
+    });
+
+    const res = await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(res.body.taxAmount).toBe(0);
+
+    // Reset tax rate
+    await prisma.user.update({
+      where: { id: userId },
+      data: { taxRate: 6 },
+    });
   });
 
   it("calculates completed, cancelled, total and earnings correctly", async () => {
