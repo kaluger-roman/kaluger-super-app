@@ -92,9 +92,13 @@ Before writing or modifying code, you MUST read the relevant convention file:
 
 Do NOT skip this step. These files contain critical project-specific patterns (Effector, FSD, Prisma, styled-components) that are not covered in this summary.
 
-## Bug Fixes
+## Testing Requirements
 
-- Always add a regression test covering the specific scenario when fixing a bug
+- **All new code must have full test coverage.** Every new feature, module, utility, or component must be accompanied by corresponding tests.
+- **Bug fixes**: always add a regression test covering the specific scenario being fixed.
+- **Frontend**: unit tests for Effector models (stores, effects, events), utility functions, and hooks. Component tests for non-trivial UI logic.
+- **Backend**: unit tests for services and utility functions. Integration tests for controllers/routes.
+- Do NOT skip tests or defer them to a later PR. Tests are part of the definition of done.
 
 ## Language
 
