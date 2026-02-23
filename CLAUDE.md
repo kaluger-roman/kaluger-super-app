@@ -114,3 +114,10 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/project:test-frontend <task>` — write frontend tests
 - `/project:test-backend <task>` — write backend tests
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
+
+## Active Technologies
+- TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
+- PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)
+
+## Recent Changes
+- 008-pwa-lesson-reminders: Added TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend)
