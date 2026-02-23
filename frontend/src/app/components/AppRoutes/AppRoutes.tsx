@@ -4,7 +4,7 @@ import { Routes, Route } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
-import { ReportsPage, ProfilePage } from "@pages";
+import { ReportsPage, ProfilePage, NewsPage } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
 import { StudentsPage } from "@pages/students";
@@ -74,6 +74,10 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
       <Route
         path="/reports"
         element={<ProtectedRoute element={<ReportsPage />} isLoggedIn={isLoggedIn} />}
+      />
+      <Route
+        path="/news"
+        element={<ProtectedRoute element={<NewsPage />} isLoggedIn={isLoggedIn} />}
       />
       <Route
         path="/profile"

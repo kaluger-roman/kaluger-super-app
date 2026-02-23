@@ -9,6 +9,7 @@ Tutor management app (private tutoring for Math/Physics, Russian market). Monore
 ## Commands
 
 ### Frontend (run from `frontend/`)
+
 ```bash
 npm start                # Dev server (craco)
 npm run build            # Production build
@@ -22,6 +23,7 @@ npm run find-cycle       # Circular dependency check (madge)
 ```
 
 ### Backend (run from `backend/`)
+
 ```bash
 npm run dev              # Dev server (nodemon)
 npm run build            # TypeScript compile
@@ -32,6 +34,8 @@ npm run db:generate      # Prisma generate client
 npm run db:studio        # Prisma Studio GUI
 npm run db:seed          # Seed database
 npm run db:migrate:test  # Migrate test database (.env.test)
+npm run news:generate    # Save news entry as JSON file (--title, --content, --version)
+npm run news:sync        # Sync news JSON files to database (runs on deploy)
 ```
 
 ## Architecture
@@ -105,7 +109,7 @@ Do NOT skip this step. These files contain critical project-specific patterns (E
 
 ## Changelog
 
-Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases.
+Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database.
 
 ## Slash Commands
 
