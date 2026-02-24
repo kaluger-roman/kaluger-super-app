@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useEffect } from "react";
 
-import { CssBaseline, CircularProgress } from "@mui/material";
+import { CssBaseline, CircularProgress, Snackbar, Alert } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -29,6 +29,21 @@ const AppRouter: FC = () => {
   return <AppContent isLoggedIn={isAuthenticated} user={user} />;
 };
 
+const OfflineIndicator: FC = () => {
+  const isOnline = useUnit(appInitModel.$isOnline);
+
+  return (
+    <Snackbar
+      open={!isOnline}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert severity="warning" variant="filled">
+        Нет подключения к интернету. Данные могут быть неактуальны
+      </Alert>
+    </Snackbar>
+  );
+};
+
 const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
   const isBlocking = useUnit(blockingModel.$isBlocking);
@@ -42,6 +57,17 @@ const App: FC = () => {
     } else {
       appInitModel.initializeApp({});
     }
+
+    const handleOnline = () => appInitModel.onlineStatusChanged(true);
+    const handleOffline = () => appInitModel.onlineStatusChanged(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -74,6 +100,7 @@ const App: FC = () => {
         <Router>
           <AppRouter />
           <NotificationProvider />
+          <OfflineIndicator />
           <Styled.ModalBackdrop open={isBlocking}>
             <CircularProgress color="inherit" />
           </Styled.ModalBackdrop>

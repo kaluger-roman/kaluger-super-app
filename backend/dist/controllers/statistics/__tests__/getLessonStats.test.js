@@ -176,5 +176,27 @@ describe("statistics integration tests", () => {
             }
         });
     });
+    it("handles database errors in by-subject", async () => {
+        const originalGroupBy = prisma_1.default.lesson.groupBy;
+        prisma_1.default.lesson.groupBy = jest
+            .fn()
+            .mockRejectedValueOnce(new Error("DB error"));
+        await (0, supertest_1.default)(index_1.app)
+            .get("/api/statistics/by-subject")
+            .set("Authorization", `Bearer ${authToken}`)
+            .expect(500);
+        prisma_1.default.lesson.groupBy = originalGroupBy;
+    });
+    it("handles database errors in by-type", async () => {
+        const originalGroupBy = prisma_1.default.lesson.groupBy;
+        prisma_1.default.lesson.groupBy = jest
+            .fn()
+            .mockRejectedValueOnce(new Error("DB error"));
+        await (0, supertest_1.default)(index_1.app)
+            .get("/api/statistics/by-type")
+            .set("Authorization", `Bearer ${authToken}`)
+            .expect(500);
+        prisma_1.default.lesson.groupBy = originalGroupBy;
+    });
 });
 //# sourceMappingURL=getLessonStats.test.js.map

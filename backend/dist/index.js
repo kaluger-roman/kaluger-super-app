@@ -16,10 +16,14 @@ const websocket_1 = require("./lib/websocket");
 const wsManager_1 = require("./lib/wsManager");
 const recurringLessons_1 = require("./services/recurringLessons");
 const lessonStatusUpdater_1 = require("./services/lessonStatusUpdater");
+const reminderProcessor_1 = require("./services/reminderProcessor");
 const auth_1 = __importDefault(require("./routes/auth"));
 const students_1 = __importDefault(require("./routes/students"));
 const lessons_1 = __importDefault(require("./routes/lessons"));
 const statistics_1 = __importDefault(require("./routes/statistics"));
+const news_1 = __importDefault(require("./routes/news"));
+const push_1 = __importDefault(require("./routes/push"));
+const reminderSettings_1 = __importDefault(require("./routes/reminderSettings"));
 const app = (0, express_1.default)();
 exports.app = app;
 // Middleware
@@ -36,6 +40,9 @@ app.use("/api/auth", auth_1.default);
 app.use("/api/students", students_1.default);
 app.use("/api/lessons", lessons_1.default);
 app.use("/api/statistics", statistics_1.default);
+app.use("/api/news", news_1.default);
+app.use("/api/push", push_1.default);
+app.use("/api/reminder-settings", reminderSettings_1.default);
 // Health check
 app.get("/health", (req, res) => {
     res.json({ status: "OK", timestamp: new Date().toISOString() });
@@ -76,9 +83,18 @@ if (process.env.NODE_ENV !== "test") {
                 console.error("Error in lesson status update cron job:", error);
             }
         });
+        node_cron_1.default.schedule("* * * * *", async () => {
+            try {
+                await (0, reminderProcessor_1.processScheduledReminders)();
+            }
+            catch (error) {
+                console.error("Error in reminder processing cron job:", error);
+            }
+        });
         console.log("Cron jobs scheduled:");
         console.log("- Recurring lessons: Daily at 2 AM");
         console.log("- Lesson status updates: Every minute");
+        console.log("- Reminder processing: Every minute");
     });
 }
 // Graceful shutdown

@@ -30,7 +30,7 @@ const getStatistics = async (req, res) => {
             }
         }
         const lastMonthRange = (0, utils_1.getLastMonthRange)();
-        const [completedLessons, cancelledLessons, totalLessons, earnings, lastMonthEarnings, upcomingLessons, prepaidIncome, upcomingIncome, trialLessonsCount,] = await Promise.all([
+        const [completedLessons, cancelledLessons, totalLessons, earnings, lastMonthEarnings, upcomingLessons, prepaidIncome, upcomingIncome, trialLessonsCount, currentUser,] = await Promise.all([
             prisma_1.default.lesson.count({
                 where: { ...where, status: "COMPLETED" },
             }),
@@ -75,6 +75,10 @@ const getStatistics = async (req, res) => {
             prisma_1.default.lesson.count({
                 where: { ...where, OR: [{ price: 0 }, { price: null }] },
             }),
+            prisma_1.default.user.findUnique({
+                where: { id: userId },
+                select: { taxRate: true },
+            }),
         ]);
         const lostEarnings = await prisma_1.default.lesson.aggregate({
             where: { ...where, status: "CANCELLED" },
@@ -97,12 +101,15 @@ const getStatistics = async (req, res) => {
             _count: { id: true },
             _sum: { price: true },
         });
+        const earningsValue = earnings._sum.price || 0;
+        const taxRate = currentUser?.taxRate ?? 6;
+        const taxAmount = Math.round(earningsValue * taxRate / 100);
         res.json({
             completedLessons,
             cancelledLessons,
             totalLessons,
             upcomingLessons,
-            earnings: earnings._sum.price || 0,
+            earnings: earningsValue,
             lastMonthEarnings: lastMonthEarnings._sum.price || 0,
             lostEarnings: lostEarnings._sum.price || 0,
             prepaidIncome: prepaidIncome._sum.price || 0,
@@ -112,6 +119,7 @@ const getStatistics = async (req, res) => {
             unpaidDebtCount: unpaid._count.id || 0,
             unpaidDebtOver24hSum: unpaidOver24h._sum.price || 0,
             unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
+            taxAmount,
         });
     }
     catch (error) {

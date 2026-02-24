@@ -8,6 +8,7 @@ const wsManager_1 = require("../../lib/wsManager");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const validators_1 = require("./validators");
 const time_1 = require("../../utils/time");
+const reminderScheduler_1 = require("../../services/reminderScheduler");
 const createSingleLesson = async (userId, data, student, res) => {
     const { subject, lessonType, description, startTime, endTime, price, homework, notes, studentId, } = data;
     const start = (0, time_1.truncateToMinute)(new Date(startTime));
@@ -45,6 +46,10 @@ const createSingleLesson = async (userId, data, student, res) => {
         include: { student: true },
     });
     res.status(201).json({ lesson });
+    // Schedule reminders for the new lesson
+    if (lesson.status === "SCHEDULED") {
+        (0, reminderScheduler_1.scheduleRemindersForLesson)(lesson.id).catch((err) => console.error("Failed to schedule reminders:", err));
+    }
     const wsManager = (0, wsManager_1.getWebSocketManager)();
     if (wsManager) {
         wsManager.broadcastLessonStatusUpdate(lesson.id, lesson.status, userId);
@@ -94,6 +99,19 @@ const createRecurringLessons = async (userId, data, student, res) => {
         lesson: firstLesson,
         message: `Создано ${createdLessons.count} регулярных уроков`,
     });
+    // Schedule reminders for all new recurring lessons
+    const newLessons = await prisma_1.default.lesson.findMany({
+        where: {
+            tutorId: userId,
+            studentId,
+            isRecurring: true,
+            status: "SCHEDULED",
+            startTime: { gte: start },
+        },
+    });
+    for (const l of newLessons) {
+        (0, reminderScheduler_1.scheduleRemindersForLesson)(l.id).catch((err) => console.error("Failed to schedule reminders for recurring lesson:", err));
+    }
     const wsManager = (0, wsManager_1.getWebSocketManager)();
     if (wsManager && firstLesson) {
         wsManager.broadcastLessonStatusUpdate(firstLesson.id, firstLesson.status, userId);

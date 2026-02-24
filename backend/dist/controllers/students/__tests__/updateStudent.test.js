@@ -124,5 +124,25 @@ describe("updateStudent integration tests", () => {
             expect(updated?.grade).toBeNull();
         });
     });
+    it("handles database errors gracefully", async () => {
+        const student = await prisma_1.default.student.create({
+            data: {
+                name: "ErrorTest",
+                contactMethod: "WHATSAPP",
+                phone: faker_1.faker.phone.number(),
+                tutorId: userId,
+            },
+        });
+        const originalUpdate = prisma_1.default.student.update;
+        prisma_1.default.student.update = jest
+            .fn()
+            .mockRejectedValueOnce(new Error("DB error"));
+        await (0, supertest_1.default)(index_1.app)
+            .put(`/api/students/${student.id}`)
+            .set("Authorization", `Bearer ${authToken}`)
+            .send({ name: "NewName" })
+            .expect(500);
+        prisma_1.default.student.update = originalUpdate;
+    });
 });
 //# sourceMappingURL=updateStudent.test.js.map

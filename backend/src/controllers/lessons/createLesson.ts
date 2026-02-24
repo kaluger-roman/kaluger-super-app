@@ -5,6 +5,7 @@ import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
 import { truncateToMinute } from "../../utils/time";
+import { scheduleRemindersForLesson } from "../../services/reminderScheduler";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
 
@@ -66,6 +67,13 @@ const createSingleLesson = async (
   });
 
   res.status(201).json({ lesson });
+
+  // Schedule reminders for the new lesson
+  if (lesson.status === "SCHEDULED") {
+    scheduleRemindersForLesson(lesson.id).catch((err) =>
+      console.error("Failed to schedule reminders:", err)
+    );
+  }
 
   const wsManager = getWebSocketManager();
   if (wsManager) {
@@ -153,6 +161,22 @@ const createRecurringLessons = async (
     lesson: firstLesson,
     message: `Создано ${createdLessons.count} регулярных уроков`,
   });
+
+  // Schedule reminders for all new recurring lessons
+  const newLessons = await prisma.lesson.findMany({
+    where: {
+      tutorId: userId,
+      studentId,
+      isRecurring: true,
+      status: "SCHEDULED",
+      startTime: { gte: start },
+    },
+  });
+  for (const l of newLessons) {
+    scheduleRemindersForLesson(l.id).catch((err) =>
+      console.error("Failed to schedule reminders for recurring lesson:", err)
+    );
+  }
 
   const wsManager = getWebSocketManager();
   if (wsManager && firstLesson) {

@@ -8,6 +8,7 @@ import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
 import { updatePriceForFutureRecurringLessons } from "../../services/recurringHelpers";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
+import { cancelRemindersForLesson, scheduleRemindersForLesson } from "../../services/reminderScheduler";
 
 const validateUpdateData = async (
   id: string,
@@ -185,6 +186,19 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     ) {
       const newPrice = updateData.price ?? null;
       await updatePriceForFutureRecurringLessons(existingLesson, newPrice);
+    }
+
+    // Recalculate reminders if time or status changed
+    const timeChanged = !!(updateData.startTime || updateData.endTime);
+    const statusChanged = !!(updateData.status && updateData.status !== existingLesson.status);
+
+    if (timeChanged || statusChanged) {
+      await cancelRemindersForLesson(id);
+
+      const newStatus = lesson.status;
+      if (newStatus === "SCHEDULED" || newStatus === "RESCHEDULED") {
+        await scheduleRemindersForLesson(id);
+      }
     }
 
     res.json({

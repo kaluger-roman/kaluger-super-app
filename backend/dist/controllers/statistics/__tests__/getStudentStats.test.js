@@ -264,5 +264,16 @@ describe("getStudentStatistics integration tests", () => {
             where: { id: { in: [tmp1.id, tmp2.id] } },
         });
     });
+    it("handles database errors gracefully", async () => {
+        const originalGroupBy = prisma_1.default.lesson.groupBy;
+        prisma_1.default.lesson.groupBy = jest
+            .fn()
+            .mockRejectedValueOnce(new Error("DB error"));
+        await (0, supertest_1.default)(index_1.app)
+            .get("/api/statistics/by-student")
+            .set("Authorization", `Bearer ${authToken}`)
+            .expect(500);
+        prisma_1.default.lesson.groupBy = originalGroupBy;
+    });
 });
 //# sourceMappingURL=getStudentStats.test.js.map

@@ -9,12 +9,15 @@ import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
+import { processScheduledReminders } from "./services/reminderProcessor";
 
 import authRoutes from "./routes/auth";
 import studentRoutes from "./routes/students";
 import lessonRoutes from "./routes/lessons";
 import statisticsRoutes from "./routes/statistics";
 import newsRoutes from "./routes/news";
+import pushRoutes from "./routes/push";
+import reminderSettingsRoutes from "./routes/reminderSettings";
 
 const app = express();
 
@@ -36,6 +39,8 @@ app.use("/api/students", studentRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/statistics", statisticsRoutes);
 app.use("/api/news", newsRoutes);
+app.use("/api/push", pushRoutes);
+app.use("/api/reminder-settings", reminderSettingsRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -91,9 +96,18 @@ if (process.env.NODE_ENV !== "test") {
       }
     });
 
+    cron.schedule("* * * * *", async () => {
+      try {
+        await processScheduledReminders();
+      } catch (error) {
+        console.error("Error in reminder processing cron job:", error);
+      }
+    });
+
     console.log("Cron jobs scheduled:");
     console.log("- Recurring lessons: Daily at 2 AM");
     console.log("- Lesson status updates: Every minute");
+    console.log("- Reminder processing: Every minute");
   });
 }
 

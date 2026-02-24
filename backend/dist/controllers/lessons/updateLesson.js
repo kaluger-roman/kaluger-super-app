@@ -10,6 +10,7 @@ const recurringHelpers_1 = require("../../services/recurringHelpers");
 const recurringHelpers_2 = require("../../services/recurringHelpers");
 const time_1 = require("../../utils/time");
 const getCancellationInfo_1 = require("./getCancellationInfo");
+const reminderScheduler_1 = require("../../services/reminderScheduler");
 const validateUpdateData = async (id, userId, updateData, existingLesson) => {
     if (updateData.startTime || updateData.endTime) {
         if (existingLesson.status === "CANCELLED") {
@@ -145,6 +146,16 @@ const updateLesson = async (req, res) => {
             updateData.status !== "RESCHEDULED") {
             const newPrice = updateData.price ?? null;
             await (0, recurringHelpers_2.updatePriceForFutureRecurringLessons)(existingLesson, newPrice);
+        }
+        // Recalculate reminders if time or status changed
+        const timeChanged = !!(updateData.startTime || updateData.endTime);
+        const statusChanged = !!(updateData.status && updateData.status !== existingLesson.status);
+        if (timeChanged || statusChanged) {
+            await (0, reminderScheduler_1.cancelRemindersForLesson)(id);
+            const newStatus = lesson.status;
+            if (newStatus === "SCHEDULED" || newStatus === "RESCHEDULED") {
+                await (0, reminderScheduler_1.scheduleRemindersForLesson)(id);
+            }
         }
         res.json({
             message: "Урок успешно обновлен",
