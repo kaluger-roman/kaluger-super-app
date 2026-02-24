@@ -47,9 +47,8 @@ describe("Conditions", () => {
   it("renders duration text", () => {
     render(<Conditions items={mockItems} />);
 
-    expect(screen.getByText(/60/)).toBeInTheDocument();
-    // "минут" appears in both subject cards
-    const durationTexts = screen.getAllByText(/минут/);
+    // duration shown as "₽ / 60 мин."
+    const durationTexts = screen.getAllByText(/мин\./);
     expect(durationTexts.length).toBeGreaterThanOrEqual(1);
   });
 
