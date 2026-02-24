@@ -1,0 +1,9 @@
+export { Header } from "./header";
+export { Hero } from "./hero";
+export { EducationSection } from "./education";
+export { CertificatesSection } from "./certificates";
+export { Conditions } from "./conditions";
+export { ReviewsSection } from "./reviews";
+export { Contacts } from "./contacts";
+export { Footer } from "./footer";
+export { AnimateOnScroll } from "./animate-on-scroll";

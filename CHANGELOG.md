@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-02-24
+
+### Added
+- Tutor landing page at `teacher.kaluger.ru` — single-page static site built with Next.js and Tailwind CSS v4
+- Hero section with tutor name, tagline, about text, experience badge, and CTA button
+- Education section with timeline-style layout showing degrees and institutions
+- Certificates section with responsive grid cards and image support
+- Lesson conditions section with subject cards displaying levels, duration, and pricing
+- Reviews section with star ratings, text truncation with "read more", and "show more" pagination
+- Contacts section with social links: Профи.ру, VK, WhatsApp, Telegram, Max (custom SVG icons for Профи.ру and Max)
+- Sticky header with responsive navigation and mobile hamburger menu
+- Scroll-triggered fade-in animations via custom `useInView` hook (Intersection Observer API)
+- Full SEO metadata: Open Graph, canonical URL, robots, sitemap.xml
+- Static export to `out/` directory for Nginx serving
+- Comprehensive test suite: 66 tests covering all components, hooks, and icons
+
+### Infrastructure
+- Added `landing/` project to CI pipeline (lint, type check, tests, build)
+- Added landing build and deploy steps to deploy workflow (rsync `out/` to VPS)
+- Created Nginx server block config for `teacher.kaluger.ru` with SSL, caching, and gzip
+
 ## 2026-02-22
 
 ### Added
