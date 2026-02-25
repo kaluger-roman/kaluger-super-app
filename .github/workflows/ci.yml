@@ -9,7 +9,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      landing: ${{ steps.filter.outputs.landing }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+            landing:
+              - 'landing/**'
+
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +53,8 @@ jobs:
         run: cd frontend && npx tsc --noEmit
 
   frontend-tests:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -50,6 +75,8 @@ jobs:
         run: cd frontend && npx vitest --run --shard=${{ matrix.shard }}
 
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -100,6 +127,8 @@ jobs:
         run: cd backend && npm test
 
   landing:
+    needs: changes
+    if: needs.changes.outputs.landing == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
