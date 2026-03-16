@@ -131,6 +131,7 @@ enum ReminderStatus {
   PENDING
   SENT
   CANCELLED
+  FAILED
 }
 
 model PushSubscription {

@@ -85,10 +85,9 @@ sample({
   target: $isOnline,
 });
 
-// Handle errors
+// Handle errors — still mark app as initialized so user can reach login page
 sample({
   clock: initializeAppFx.failData,
-  fn: (error) => {
-    console.error("App initialization error:", error);
-  },
+  fn: () => true,
+  target: $appInitialized,
 });

@@ -101,6 +101,45 @@ describe("push subscription integration tests", () => {
       expect(count).toBe(1);
     });
 
+    it("should reject subscribe when endpoint belongs to another user", async () => {
+      const otherUser = await prisma.user.create({
+        data: {
+          email: faker.internet.email(),
+          password: "hashed",
+          name: faker.person.fullName(),
+        },
+      });
+
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+
+      // Create subscription owned by other user
+      await prisma.pushSubscription.create({
+        data: {
+          endpoint,
+          p256dh: "key",
+          auth: "auth",
+          userId: otherUser.id,
+        },
+      });
+
+      const res = await request(app)
+        .post("/api/push/subscribe")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          subscription: {
+            endpoint,
+            keys: { p256dh: "new-key", auth: "new-auth" },
+          },
+        })
+        .expect(403);
+
+      expect(res.body.error).toBe("Подписка принадлежит другому пользователю");
+
+      // Cleanup
+      await prisma.pushSubscription.deleteMany({ where: { userId: otherUser.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    });
+
     it("should return 400 when subscription data is invalid", async () => {
       const res = await request(app)
         .post("/api/push/subscribe")

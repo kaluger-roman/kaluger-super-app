@@ -207,6 +207,59 @@ describe("reminderProcessor service", () => {
     expect(reminder!.status).toBe("CANCELLED");
   });
 
+  it("should mark reminder as FAILED when sendPushToUser throws", async () => {
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    await prisma.reminderSettings.create({
+      data: {
+        userId,
+        enabled: true,
+        intervals: [30],
+        muteWhenInLesson: false,
+      },
+    });
+
+    const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const lesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: futureTime,
+        endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+        status: "SCHEDULED",
+        tutorId: userId,
+        studentId,
+      },
+    });
+
+    await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: lesson.id,
+        userId,
+        status: "PENDING",
+      },
+    });
+
+    (webpush.sendNotification as jest.Mock).mockRejectedValue(new Error("Push service unavailable"));
+
+    await processScheduledReminders();
+
+    const reminder = await prisma.scheduledReminder.findFirst({
+      where: { lessonId: lesson.id },
+    });
+    expect(reminder!.status).toBe("FAILED");
+    expect(reminder!.sentAt).toBeNull();
+  });
+
   it("should not process future reminders", async () => {
     await prisma.pushSubscription.create({
       data: {

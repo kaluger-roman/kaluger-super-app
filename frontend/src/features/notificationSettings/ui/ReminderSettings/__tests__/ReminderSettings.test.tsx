@@ -166,6 +166,34 @@ describe("ReminderSettings", () => {
     ).toBeInTheDocument();
   });
 
+  it("should call unsubscribePushFx when disabling reminders while subscribed", async () => {
+    const user = userEvent.setup();
+    const mockSwRegistration = {} as ServiceWorkerRegistration;
+
+    const scope = fork({
+      values: [
+        [notificationsModel.$isPushSupported, true],
+        [notificationsModel.$reminderSettings, { enabled: true, intervals: [30], muteWhenInLesson: false }],
+        [notificationsModel.$pushPermission, "granted"],
+        [notificationsModel.$isPushSubscribed, true],
+        [notificationsModel.$vapidKey, "key"],
+        [notificationsModel.$serviceWorkerRegistration, mockSwRegistration],
+      ],
+      handlers: [
+        [notificationsModel.unsubscribePushFx, vi.fn()],
+        [notificationsModel.updateSettingsFx, vi.fn().mockResolvedValue({ enabled: false, intervals: [30], muteWhenInLesson: false })],
+      ],
+    });
+
+    renderWithProviders(<ReminderSettings />, scope);
+
+    const toggles = screen.getAllByRole("checkbox");
+    // First toggle is "Включить напоминания"
+    await user.click(toggles[0]);
+
+    expect(scope.getState(notificationsModel.$isPushSubscribed)).toBe(false);
+  });
+
   it("should handle interval chip click", async () => {
     const user = userEvent.setup();
     const scope = fork({

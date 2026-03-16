@@ -48,6 +48,10 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
     };
 
     if (existing) {
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Подписка принадлежит другому пользователю" });
+      }
+
       const updated = await prisma.pushSubscription.update({
         where: { endpoint: data.subscription.endpoint },
         data: subscriptionData,

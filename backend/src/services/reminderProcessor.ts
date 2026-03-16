@@ -5,12 +5,28 @@ import type { PushNotificationPayload } from "../types";
 export const processScheduledReminders = async () => {
   const now = new Date();
 
-  // Find all PENDING reminders that should have been sent by now
+  // Atomically claim PENDING reminders by transitioning them, preventing duplicate processing on cron overlap
   const pendingReminders = await prisma.scheduledReminder.findMany({
     where: {
       status: "PENDING",
       scheduledAt: { lte: now },
     },
+    select: { id: true },
+  });
+
+  if (pendingReminders.length === 0) return;
+
+  const claimedIds = pendingReminders.map((r) => r.id);
+
+  // Mark all as SENT upfront to prevent re-processing; will revert to FAILED/CANCELLED as needed
+  await prisma.scheduledReminder.updateMany({
+    where: { id: { in: claimedIds }, status: "PENDING" },
+    data: { status: "SENT", sentAt: now },
+  });
+
+  // Re-fetch claimed reminders with full data
+  const reminders = await prisma.scheduledReminder.findMany({
+    where: { id: { in: claimedIds } },
     include: {
       lesson: {
         include: {
@@ -20,19 +36,18 @@ export const processScheduledReminders = async () => {
     },
   });
 
-  if (pendingReminders.length === 0) return;
-
   let sentCount = 0;
   let cancelledCount = 0;
+  let failedCount = 0;
 
-  for (const reminder of pendingReminders) {
+  for (const reminder of reminders) {
     const { lesson } = reminder;
 
     // Cancel if lesson is not in a schedulable status
     if (lesson.status !== "SCHEDULED" && lesson.status !== "RESCHEDULED") {
       await prisma.scheduledReminder.update({
         where: { id: reminder.id },
-        data: { status: "CANCELLED" },
+        data: { status: "CANCELLED", sentAt: null },
       });
       cancelledCount++;
       continue;
@@ -57,7 +72,7 @@ export const processScheduledReminders = async () => {
         // Muted — mark as cancelled since we won't retry
         await prisma.scheduledReminder.update({
           where: { id: reminder.id },
-          data: { status: "CANCELLED" },
+          data: { status: "CANCELLED", sentAt: null },
         });
         cancelledCount++;
         continue;
@@ -84,23 +99,30 @@ export const processScheduledReminders = async () => {
 
     // Send push notification
     try {
-      await sendPushToUser(reminder.userId, payload);
+      const result = await sendPushToUser(reminder.userId, payload);
 
-      await prisma.scheduledReminder.update({
-        where: { id: reminder.id },
-        data: {
-          status: "SENT",
-          sentAt: new Date(),
-        },
-      });
-
-      sentCount++;
+      if (result.sent === 0) {
+        // All deliveries failed or no subscriptions — mark as FAILED
+        await prisma.scheduledReminder.update({
+          where: { id: reminder.id },
+          data: { status: "FAILED", sentAt: null },
+        });
+        failedCount++;
+      } else {
+        // Already marked as SENT above
+        sentCount++;
+      }
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}:`, error);
+      await prisma.scheduledReminder.update({
+        where: { id: reminder.id },
+        data: { status: "FAILED", sentAt: null },
+      });
+      failedCount++;
     }
   }
 
-  if (sentCount > 0 || cancelledCount > 0) {
-    console.log(`Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled`);
+  if (sentCount > 0 || cancelledCount > 0 || failedCount > 0) {
+    console.log(`Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled, ${failedCount} failed`);
   }
 };

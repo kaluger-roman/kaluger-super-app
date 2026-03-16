@@ -37,6 +37,14 @@ export const ReminderSettings = () => {
       }
     }
 
+    if (!newEnabled && isPushSubscribed && swRegistration) {
+      try {
+        await actions.unsubscribePushFx(swRegistration);
+      } catch {
+        // Continue to disable even if unsubscribe fails
+      }
+    }
+
     actions.settingsUpdated({ enabled: newEnabled });
   };
 
