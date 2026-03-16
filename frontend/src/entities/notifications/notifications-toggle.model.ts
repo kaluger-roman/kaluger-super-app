@@ -12,8 +12,21 @@ import {
   settingsUpdated,
   subscribePushFx,
   unsubscribePushFx,
+  loadSettingsFx,
+  loadVapidKeyFx,
+  checkPushSubscriptionFx,
 } from "./notifications.model";
 import type { ReminderSettings } from "./notifications.types";
+
+// Auto-subscribe device on initial load when server has enabled=true but no local push subscription
+sample({
+  clock: [loadSettingsFx.doneData, loadVapidKeyFx.doneData, checkPushSubscriptionFx.doneData],
+  source: { settings: $reminderSettings, subscribed: $isPushSubscribed, vapidKey: $vapidKey, reg: $serviceWorkerRegistration },
+  filter: ({ settings, subscribed, vapidKey, reg }) =>
+    settings.enabled && !subscribed && vapidKey !== null && reg !== null,
+  fn: ({ vapidKey, reg }) => ({ vapidKey: vapidKey!, registration: reg! }),
+  target: subscribePushFx,
+});
 
 // Interval toggle → compute new intervals and update
 sample({
