@@ -103,13 +103,7 @@ Before committing code, you MUST verify:
 1. **Tests pass** — `npm test` in the relevant directory (frontend/backend)
 2. **ESLint clean** — `npm run lint` in `frontend/`
 3. **TypeScript clean** — `npm run build` in `backend/`
-4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule. Pay special attention to:
-   - One component per file in its own directory
-   - Separate files for constants, helpers, hooks, types
-   - Business logic in models, not components (no direct effect calls from UI)
-   - Model structure order: Gates → Stores → Events → Effects → Samples
-   - Models < 200 lines, components < 150 lines
-   - Named exports, import type, no any, no deep imports
+4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
 
 ## Bug Fixes
 
@@ -135,8 +129,10 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
 
 ## Active Technologies
+
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)
 
 ## Recent Changes
+
 - 008-pwa-lesson-reminders: Added TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend)
