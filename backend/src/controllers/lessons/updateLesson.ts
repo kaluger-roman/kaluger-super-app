@@ -4,10 +4,15 @@ import type { Lesson } from "@prisma/client";
 import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
-import { shiftFutureRecurringLessons, updatePriceForFutureRecurringLessons } from "../../services";
+import {
+  shiftFutureRecurringLessons,
+  updatePriceForFutureRecurringLessons,
+  cancelRemindersForLesson,
+  scheduleRemindersForLesson,
+} from "../../services";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
-import { cancelRemindersForLesson, scheduleRemindersForLesson } from "../../services";
+import type { ShiftResult } from "../../types";
 
 const validateUpdateData = async (
   id: string,
@@ -156,7 +161,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       include: { student: { select: { id: true, name: true } } },
     });
 
-    let result: { shifted: number; shiftedIds?: string[]; conflicts?: Array<{ lessonId: string; conflictingLessonId: string }> } | undefined;
+    let result: ShiftResult | undefined;
 
     if (
       existingLesson.isRecurring &&

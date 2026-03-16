@@ -1,5 +1,6 @@
 import type { Lesson } from "@prisma/client";
 import prisma from "../lib/prisma";
+import type { ShiftResult } from "../types";
 import { truncateToMinute } from "../utils/time";
 
 // Build a stable grouping key for recurring lessons
@@ -38,11 +39,7 @@ export const shiftFutureRecurringLessons = async (
   existingLesson: Lesson,
   newStart: Date,
   newEnd: Date
-): Promise<{
-  shifted: number;
-  shiftedIds?: string[];
-  conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
-}> => {
+): Promise<ShiftResult> => {
   const oldStart = truncateToMinute(new Date(existingLesson.startTime));
   const oldEnd = truncateToMinute(new Date(existingLesson.endTime));
 

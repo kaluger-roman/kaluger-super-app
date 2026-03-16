@@ -120,6 +120,12 @@ export type PushSubscriptionResponse = {
   createdAt: string;
 };
 
+export type ShiftResult = {
+  shifted: number;
+  shiftedIds?: string[];
+  conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
+};
+
 export type PushNotificationPayload = {
   title: string;
   body: string;
