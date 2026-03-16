@@ -10,7 +10,6 @@ export const InstallPrompt = () => {
   const installPrompt = useUnit(appInitModel.$installPrompt);
 
   const actions = useUnit({
-    installApp: appInitModel.installApp,
     dismiss: appInitModel.installPromptDismissed,
   });
 

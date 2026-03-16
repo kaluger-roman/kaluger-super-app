@@ -1,4 +1,4 @@
-import { sample, combine } from "effector";
+import { createStore, sample, combine } from "effector";
 
 import { toggleInterval } from "./notifications.helpers";
 import {
@@ -45,6 +45,12 @@ sample({
   target: settingsUpdated,
 });
 
+// Track whether subscribe was triggered by manual toggle (vs auto-subscribe)
+const $isManualToggle = createStore(false);
+
+sample({ clock: remindersToggled, fn: () => true, target: $isManualToggle });
+sample({ clock: subscribePushFx.finally, fn: () => false, target: $isManualToggle });
+
 // Reminders toggle logic — subscribe/unsubscribe then update settings
 const $canSubscribe = combine(
   $isPushSupported, $vapidKey, $serviceWorkerRegistration,
@@ -65,9 +71,11 @@ sample({
   target: subscribePushFx,
 });
 
-// Subscribe succeeded → enable
+// Subscribe succeeded via manual toggle → enable on server
 sample({
   clock: subscribePushFx.done,
+  source: $isManualToggle,
+  filter: (isManual) => isManual,
   fn: () => ({ enabled: true } as Partial<ReminderSettings>),
   target: settingsUpdated,
 });

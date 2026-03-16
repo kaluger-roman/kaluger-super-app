@@ -202,24 +202,26 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       await updatePriceForFutureRecurringLessons(existingLesson, newPrice);
     }
 
-    // Recalculate reminders if time or status changed (skip if already handled by shift loop)
+    res.json({
+      message: "Урок успешно обновлен",
+      lesson,
+    });
+
+    // Recalculate reminders after response (fire-and-forget, skip if already handled by shift loop)
     const timeChanged = !!(updateData.startTime || updateData.endTime);
     const statusChanged = !!(updateData.status && updateData.status !== existingLesson.status);
     const alreadyRecalculated = result?.shiftedIds?.includes(id);
 
     if ((timeChanged || statusChanged) && !alreadyRecalculated) {
-      await cancelRemindersForLesson(id);
-
-      const newStatus = lesson.status;
-      if (newStatus === "SCHEDULED" || newStatus === "RESCHEDULED") {
-        await scheduleRemindersForLesson(id);
-      }
+      cancelRemindersForLesson(id)
+        .then(() => {
+          const newStatus = lesson.status;
+          if (newStatus === "SCHEDULED" || newStatus === "RESCHEDULED") {
+            return scheduleRemindersForLesson(id);
+          }
+        })
+        .catch((err) => console.error("Failed to recalculate reminders:", err));
     }
-
-    res.json({
-      message: "Урок успешно обновлен",
-      lesson,
-    });
 
     if (updateData.status && updateData.status !== existingLesson.status) {
       const wsManager = getWebSocketManager();

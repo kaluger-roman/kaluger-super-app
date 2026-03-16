@@ -42,7 +42,6 @@ export const $isOnline = createStore(typeof navigator !== "undefined" ? navigato
 // PWA install prompt
 export const installPromptCaptured = createEvent<BeforeInstallPromptEvent>();
 export const installPromptDismissed = createEvent();
-export const installApp = createEvent();
 
 export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
 export const $showInstallBanner = createStore(false);
