@@ -1,1 +1,0 @@
-{"version":3,"file":"updateReminderSettings.d.ts","sourceRoot":"","sources":["../../../src/controllers/reminderSettings/updateReminderSettings.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACxC,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,uBAAuB,CAAC;AA+BzD,eAAO,MAAM,sBAAsB,GAAU,KAAK,WAAW,EAAE,KAAK,QAAQ,4DAmF3E,CAAC"}
