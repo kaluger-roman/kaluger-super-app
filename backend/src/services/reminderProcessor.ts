@@ -63,10 +63,11 @@ export const processScheduledReminders = async () => {
     });
 
     if (settings?.muteWhenInLesson) {
+      // FR-028: detect active lesson by scheduled time, not actual status
       const activeLesson = await prisma.lesson.findFirst({
         where: {
           tutorId: reminder.userId,
-          status: "IN_PROGRESS",
+          status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
           startTime: { lte: now },
           endTime: { gt: now },
         },

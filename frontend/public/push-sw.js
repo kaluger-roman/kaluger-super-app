@@ -106,7 +106,7 @@ self.addEventListener("push", function (event) {
   }
 });
 
-// Notification click handler — navigate to /lessons
+// Notification click handler — focus existing window and navigate, or open new one
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
@@ -114,11 +114,15 @@ self.addEventListener("notificationclick", function (event) {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
-      // Focus existing window if found
+      // Focus any existing app window and navigate to the target URL
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
-        if (client.url.includes(url) && "focus" in client) {
-          return client.focus();
+        if ("focus" in client) {
+          return client.focus().then(function (focused) {
+            if (focused && "navigate" in focused) {
+              return focused.navigate(url);
+            }
+          });
         }
       }
       // Open new window if no existing window found

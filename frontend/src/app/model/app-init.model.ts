@@ -2,7 +2,7 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
 
-import type { InitializeAppParams } from "./app-init.types";
+import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
 
 export const initializeApp = createEvent<InitializeAppParams>();
 
@@ -38,6 +38,14 @@ export const $appInitializing = initializeAppFx.pending;
 export const onlineStatusChanged = createEvent<boolean>();
 
 export const $isOnline = createStore(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+// PWA install prompt
+export const installPromptCaptured = createEvent<BeforeInstallPromptEvent>();
+export const installPromptDismissed = createEvent();
+export const installApp = createEvent();
+
+export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
+export const $showInstallBanner = createStore(false);
 
 // Connect events
 sample({
@@ -83,6 +91,24 @@ sample({
 sample({
   clock: onlineStatusChanged,
   target: $isOnline,
+});
+
+// PWA install prompt
+sample({
+  clock: installPromptCaptured,
+  target: $installPrompt,
+});
+
+sample({
+  clock: installPromptCaptured,
+  fn: () => true,
+  target: $showInstallBanner,
+});
+
+sample({
+  clock: installPromptDismissed,
+  fn: () => false,
+  target: $showInstallBanner,
 });
 
 // Handle errors — still mark app as initialized so user can reach login page

@@ -4,6 +4,7 @@ import { toggleInterval } from "./notifications.helpers";
 import {
   $reminderSettings,
   $isPushSubscribed,
+  $isPushSupported,
   $vapidKey,
   $serviceWorkerRegistration,
   remindersToggled,
@@ -45,9 +46,14 @@ sample({
 });
 
 // Reminders toggle logic — subscribe/unsubscribe then update settings
+const $canSubscribe = combine(
+  $isPushSupported, $vapidKey, $serviceWorkerRegistration,
+  (supported, key, reg) => supported && key !== null && reg !== null
+);
+
 const $needsSubscribeOnEnable = combine(
-  $isPushSubscribed, $vapidKey, $serviceWorkerRegistration,
-  (subscribed, key, reg) => !subscribed && key !== null && reg !== null
+  $isPushSubscribed, $canSubscribe,
+  (subscribed, canSub) => !subscribed && canSub
 );
 
 // Enabling + needs subscribe → subscribe first
@@ -66,11 +72,11 @@ sample({
   target: settingsUpdated,
 });
 
-// Enabling + already subscribed (or can't subscribe) → enable directly
+// Enabling + already subscribed → enable directly
 sample({
   clock: remindersToggled,
-  source: { settings: $reminderSettings, needsSub: $needsSubscribeOnEnable },
-  filter: ({ settings, needsSub }) => !settings.enabled && !needsSub,
+  source: { settings: $reminderSettings, subscribed: $isPushSubscribed, canSub: $canSubscribe },
+  filter: ({ settings, subscribed, canSub }) => !settings.enabled && subscribed && canSub,
   fn: () => ({ enabled: true } as Partial<ReminderSettings>),
   target: settingsUpdated,
 });

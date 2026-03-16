@@ -162,7 +162,7 @@ describe("ReminderSettings", () => {
     renderWithProviders(<ReminderSettings />, scope);
 
     expect(
-      screen.getByText("Уведомления заблокированы в настройках браузера. Разрешите уведомления для этого сайта")
+      screen.getByText(/Уведомления заблокированы/)
     ).toBeInTheDocument();
   });
 

@@ -79,7 +79,8 @@ export const ReminderSettings = () => {
 
       {pushPermission === "denied" && (
         <Styled.PermissionAlert severity="warning">
-          Уведомления заблокированы в настройках браузера. Разрешите уведомления для этого сайта
+          Уведомления заблокированы. Чтобы разрешить: Android — Настройки сайта → Уведомления;
+          iOS — Настройки → Safari → Уведомления; Desktop — значок 🔒 в адресной строке → Уведомления
         </Styled.PermissionAlert>
       )}
     </Styled.SettingsPaper>

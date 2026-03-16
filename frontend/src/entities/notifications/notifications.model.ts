@@ -45,9 +45,22 @@ export const subscribePushFx = createEffect(
     }
 
     const existingSub = await registration.pushManager.getSubscription();
+
+    // FR-025: reuse existing subscription if valid, only re-register on backend
     if (existingSub) {
-      await notificationsApi.unsubscribe(existingSub.endpoint);
-      await existingSub.unsubscribe();
+      const subJson = existingSub.toJSON();
+
+      const result = await notificationsApi.subscribe({
+        subscription: {
+          endpoint: existingSub.endpoint,
+          keys: {
+            p256dh: subJson.keys?.p256dh ?? "",
+            auth: subJson.keys?.auth ?? "",
+          },
+        },
+      });
+
+      return { subscription: existingSub, serverResponse: result };
     }
 
     const subscription = await registration.pushManager.subscribe({

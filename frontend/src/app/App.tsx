@@ -13,8 +13,9 @@ import { userModel } from "@entities";
 import { theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent, OfflineIndicator } from "./components";
+import { AppContent, OfflineIndicator, InstallPrompt } from "./components";
 import { appInitModel, blockingModel, webSocketModel } from "./model";
+import type { BeforeInstallPromptEvent } from "./model/app-init.types";
 
 const AppRouter: FC = () => {
   const navigate = useNavigate();
@@ -46,12 +47,19 @@ const App: FC = () => {
     const handleOnline = () => appInitModel.onlineStatusChanged(true);
     const handleOffline = () => appInitModel.onlineStatusChanged(false);
 
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      appInitModel.installPromptCaptured(e as BeforeInstallPromptEvent);
+    };
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
     };
   }, []);
 
@@ -86,6 +94,7 @@ const App: FC = () => {
           <AppRouter />
           <NotificationProvider />
           <OfflineIndicator />
+          <InstallPrompt />
           <Styled.ModalBackdrop open={isBlocking}>
             <CircularProgress color="inherit" />
           </Styled.ModalBackdrop>
