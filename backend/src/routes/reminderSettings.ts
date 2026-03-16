@@ -2,11 +2,9 @@ import { Router } from "express";
 import { getReminderSettings, updateReminderSettings } from "../controllers/reminderSettings";
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const reminderSettingsRouter = Router();
 
-router.use(authenticateToken);
+reminderSettingsRouter.use(authenticateToken);
 
-router.get("/", getReminderSettings);
-router.put("/", updateReminderSettings);
-
-export default router;
+reminderSettingsRouter.get("/", getReminderSettings);
+reminderSettingsRouter.put("/", updateReminderSettings);

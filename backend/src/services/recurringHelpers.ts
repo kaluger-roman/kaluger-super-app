@@ -39,6 +39,7 @@ export const shiftFutureRecurringLessons = async (
   newEnd: Date
 ): Promise<{
   shifted: number;
+  shiftedIds?: string[];
   conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
 }> => {
   const oldStart = truncateToMinute(new Date(existingLesson.startTime));
@@ -122,7 +123,7 @@ export const shiftFutureRecurringLessons = async (
     )
   );
 
-  return { shifted: planned.length };
+  return { shifted: planned.length, shiftedIds: planned.map((p) => p.original.id) };
 };
 
 // Update price for future recurring lessons in the same group

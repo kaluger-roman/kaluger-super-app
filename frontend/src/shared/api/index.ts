@@ -12,4 +12,5 @@ export type {
   PushSubscriptionInfo,
   ReminderSettingsResponse,
   UpdateReminderSettingsRequest,
-} from "./notifications";
+  SubscribeRequest,
+} from "./notifications.types";

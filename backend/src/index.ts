@@ -16,8 +16,8 @@ import studentRoutes from "./routes/students";
 import lessonRoutes from "./routes/lessons";
 import statisticsRoutes from "./routes/statistics";
 import newsRoutes from "./routes/news";
-import pushRoutes from "./routes/push";
-import reminderSettingsRoutes from "./routes/reminderSettings";
+import { pushRouter as pushRoutes } from "./routes/push";
+import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
 
 const app = express();
 

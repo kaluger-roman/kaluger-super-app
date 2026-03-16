@@ -2,11 +2,24 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { notificationsApi } from "@shared";
 
+import { urlBase64ToUint8Array } from "./notifications.helpers";
 import type { ReminderSettings, PushPermissionState } from "./notifications.types";
 
+// Stores
+export const $vapidKey = createStore<string | null>(null);
+export const $pushPermission = createStore<PushPermissionState>("default");
+export const $isPushSupported = createStore(
+  typeof window !== "undefined" && "PushManager" in window && "serviceWorker" in navigator
+);
+export const $isPushSubscribed = createStore(false);
+export const $reminderSettings = createStore<ReminderSettings>({
+  enabled: false,
+  intervals: [],
+  muteWhenInLesson: false,
+});
+export const $serviceWorkerRegistration = createStore<ServiceWorkerRegistration | null>(null);
+
 // Events
-export const subscribePush = createEvent();
-export const unsubscribePush = createEvent();
 export const loadSettings = createEvent();
 export const settingsUpdated = createEvent<Partial<ReminderSettings>>();
 export const serviceWorkerRegistered = createEvent<ServiceWorkerRegistration | null>();
@@ -26,6 +39,7 @@ export const subscribePushFx = createEffect(
 
     const existingSub = await registration.pushManager.getSubscription();
     if (existingSub) {
+      await notificationsApi.unsubscribe(existingSub.endpoint);
       await existingSub.unsubscribe();
     }
 
@@ -66,34 +80,19 @@ export const updateSettingsFx = createEffect(async (data: Partial<ReminderSettin
   return await notificationsApi.updateSettings(data);
 });
 
-// Stores
-export const $vapidKey = createStore<string | null>(null);
-export const $pushPermission = createStore<PushPermissionState>("default");
-export const $isPushSupported = createStore(
-  typeof window !== "undefined" && "PushManager" in window && "serviceWorker" in navigator
-);
-export const $isPushSubscribed = createStore(false);
-export const $reminderSettings = createStore<ReminderSettings>({
-  enabled: false,
-  intervals: [],
-  muteWhenInLesson: false,
-});
 export const $isSettingsLoading = loadSettingsFx.pending;
-export const $serviceWorkerRegistration = createStore<ServiceWorkerRegistration | null>(null);
 
-// Service worker registration
+// Samples
 sample({
   clock: serviceWorkerRegistered,
   target: $serviceWorkerRegistration,
 });
 
-// VAPID key loading
 sample({
   clock: loadVapidKeyFx.doneData,
   target: $vapidKey,
 });
 
-// Push subscription
 sample({
   clock: subscribePushFx.doneData,
   fn: () => true,
@@ -112,7 +111,6 @@ sample({
   target: $isPushSubscribed,
 });
 
-// Settings
 sample({
   clock: loadSettings,
   target: loadSettingsFx,
@@ -132,17 +130,3 @@ sample({
   clock: updateSettingsFx.doneData,
   target: $reminderSettings,
 });
-
-// Helper to convert VAPID key
-const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-};

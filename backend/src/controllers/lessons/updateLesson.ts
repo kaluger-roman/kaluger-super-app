@@ -175,6 +175,14 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
         throw new Error("Перенесенная серия конфликтует с другими уроками");
       } else if (result.shifted && result.shifted > 0) {
         console.log(`Shifted ${result.shifted} future recurring lessons`);
+
+        // Recalculate reminders for all shifted lessons
+        if (result.shiftedIds) {
+          for (const shiftedId of result.shiftedIds) {
+            await cancelRemindersForLesson(shiftedId);
+            await scheduleRemindersForLesson(shiftedId);
+          }
+        }
       }
     }
 

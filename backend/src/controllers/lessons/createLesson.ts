@@ -162,14 +162,15 @@ const createRecurringLessons = async (
     message: `Создано ${createdLessons.count} регулярных уроков`,
   });
 
-  // Schedule reminders for all new recurring lessons
+  // Schedule reminders for all new recurring lessons (scoped to exact created startTimes)
+  const createdStartTimes = lessons.map((l) => l.startTime as Date);
   const newLessons = await prisma.lesson.findMany({
     where: {
       tutorId: userId,
       studentId,
       isRecurring: true,
       status: "SCHEDULED",
-      startTime: { gte: start },
+      startTime: { in: createdStartTimes },
     },
   });
   for (const l of newLessons) {
