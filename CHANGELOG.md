@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-03-16
+
+### Added
+- PWA support: app installable as standalone with proper manifest, iOS meta-tags, and service worker for push events and offline caching (1cfdb6a)
+- Push notification reminders before lessons with configurable intervals (5, 10, 15, 30, 60 min) (1cfdb6a)
+- "Do not disturb during lesson" setting — suppresses reminders when another lesson is in progress (1cfdb6a)
+- Reminder settings UI in profile page with toggle, interval chips, and mute option (1cfdb6a)
+- Push subscription management: subscribe, unsubscribe, list devices (1cfdb6a)
+- Offline indicator snackbar when network connection is lost (1cfdb6a)
+- Backend cron job to process scheduled reminders every minute with atomic claim to prevent duplicates (1cfdb6a)
+- Automatic reminder scheduling/cancellation when lessons are created, updated, or rescheduled (1cfdb6a)
+
+### Fixed
+- Security: push subscription endpoint ownership check to prevent subscription takeover (c29f1b9)
+- App stuck on loading spinner when initialization fails — now sets `$appInitialized = true` on error (c29f1b9)
+- Push subscription not revoked when user disables reminders (c29f1b9)
+- Failed push delivery now marks reminder as `FAILED` instead of retrying indefinitely (c29f1b9)
+- Reminders for shifted recurring lessons now recalculated after time change (59a49a2)
+- Recurring lesson reminder query scoped to exact created startTimes to avoid duplicates (59a49a2)
+- Old push subscription cleaned up from backend database when re-subscribing (59a49a2)
+- Reminder cancel+recreate wrapped in `prisma.$transaction` to prevent race conditions (59a49a2)
+- Flaky `createLesson` test — increased conflict weeks from 13 to 14 to cover 3-month boundary (7c3b1d5)
+
+### Infrastructure
+- Added `PushSubscription`, `ReminderSettings`, and `ScheduledReminder` Prisma models with migrations (1cfdb6a)
+- Added `web-push` npm dependency for VAPID-based push notifications (1cfdb6a)
+- Added `FAILED` status to `ReminderStatus` enum (c29f1b9)
+- Removed `backend/dist/` from git tracking (abe86e9)
+
 ## 2026-02-22
 
 ### Added
