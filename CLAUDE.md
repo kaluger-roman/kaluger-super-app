@@ -96,6 +96,21 @@ Before writing or modifying code, you MUST read the relevant convention file:
 
 Do NOT skip this step. These files contain critical project-specific patterns (Effector, FSD, Prisma, styled-components) that are not covered in this summary.
 
+## MANDATORY: Verify Before Committing
+
+Before committing code, you MUST verify:
+
+1. **Tests pass** — `npm test` in the relevant directory (frontend/backend)
+2. **ESLint clean** — `npm run lint` in `frontend/`
+3. **TypeScript clean** — `npm run build` in `backend/`
+4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule. Pay special attention to:
+   - One component per file in its own directory
+   - Separate files for constants, helpers, hooks, types
+   - Business logic in models, not components (no direct effect calls from UI)
+   - Model structure order: Gates → Stores → Events → Effects → Samples
+   - Models < 200 lines, components < 150 lines
+   - Named exports, import type, no any, no deep imports
+
 ## Bug Fixes
 
 - Always add a regression test covering the specific scenario when fixing a bug
