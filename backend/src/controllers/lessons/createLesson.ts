@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { CreateLessonDto } from "../../types";
-import { AuthRequest } from "../../middleware/auth";
+import type { Response } from "express";
+import type { CreateLessonDto } from "../../types";
+import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
@@ -150,33 +150,25 @@ const createRecurringLessons = async (
     });
   }
 
-  const createdLessons = await prisma.lesson.createMany({ data: lessons });
+  const createdLessons = await prisma.lesson.createManyAndReturn({ data: lessons });
 
   const firstLesson = await prisma.lesson.findFirst({
-    where: { tutorId: userId, startTime: start, studentId },
+    where: { id: createdLessons[0]?.id },
     include: { student: true },
   });
 
   res.status(201).json({
     lesson: firstLesson,
-    message: `Создано ${createdLessons.count} регулярных уроков`,
+    message: `Создано ${createdLessons.length} регулярных уроков`,
   });
 
-  // Schedule reminders for all new recurring lessons (scoped to exact created startTimes)
-  const createdStartTimes = lessons.map((l) => l.startTime as Date);
-  const newLessons = await prisma.lesson.findMany({
-    where: {
-      tutorId: userId,
-      studentId,
-      isRecurring: true,
-      status: "SCHEDULED",
-      startTime: { in: createdStartTimes },
-    },
-  });
-  for (const l of newLessons) {
-    scheduleRemindersForLesson(l.id).catch((err) =>
-      console.error("Failed to schedule reminders for recurring lesson:", err)
-    );
+  // Schedule reminders for all new recurring lessons (using exact IDs from createManyAndReturn)
+  for (const l of createdLessons) {
+    if (l.status === "SCHEDULED") {
+      scheduleRemindersForLesson(l.id).catch((err) =>
+        console.error("Failed to schedule reminders for recurring lesson:", err)
+      );
+    }
   }
 
   const wsManager = getWebSocketManager();

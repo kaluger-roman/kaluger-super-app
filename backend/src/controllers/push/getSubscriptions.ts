@@ -12,7 +12,7 @@ export const getSubscriptions = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      subscriptions: subscriptions.map((sub: { id: string; endpoint: string; deviceName: string | null; createdAt: Date }) => ({
+      subscriptions: subscriptions.map((sub) => ({
         id: sub.id,
         endpoint: sub.endpoint,
         deviceName: sub.deviceName,

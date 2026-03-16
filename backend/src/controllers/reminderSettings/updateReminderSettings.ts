@@ -92,7 +92,7 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
     const enabledChanged = data.enabled !== undefined && data.enabled !== existing.enabled;
     const intervalsChanged =
       data.intervals !== undefined &&
-      JSON.stringify(data.intervals.sort()) !== JSON.stringify(existing.intervals.sort());
+      JSON.stringify([...data.intervals].sort()) !== JSON.stringify([...existing.intervals].sort());
 
     if (enabledChanged && !settings.enabled) {
       // Disabled — cancel all pending reminders

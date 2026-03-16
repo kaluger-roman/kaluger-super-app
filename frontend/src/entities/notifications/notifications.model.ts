@@ -7,7 +7,11 @@ import type { ReminderSettings, PushPermissionState } from "./notifications.type
 
 // Stores
 export const $vapidKey = createStore<string | null>(null);
-export const $pushPermission = createStore<PushPermissionState>("default");
+export const $pushPermission = createStore<PushPermissionState>(
+  typeof window !== "undefined" && "Notification" in window
+    ? (Notification.permission as PushPermissionState)
+    : "default"
+);
 export const $isPushSupported = createStore(
   typeof window !== "undefined" && "PushManager" in window && "serviceWorker" in navigator
 );

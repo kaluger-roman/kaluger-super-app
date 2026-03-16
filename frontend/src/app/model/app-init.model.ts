@@ -37,7 +37,7 @@ export const $appInitializing = initializeAppFx.pending;
 // Online/offline detection
 export const onlineStatusChanged = createEvent<boolean>();
 
-export const $isOnline = createStore(true);
+export const $isOnline = createStore(typeof navigator !== "undefined" ? navigator.onLine : true);
 
 // Connect events
 sample({

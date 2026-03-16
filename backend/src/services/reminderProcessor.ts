@@ -5,36 +5,40 @@ import type { PushNotificationPayload } from "../types";
 export const processScheduledReminders = async () => {
   const now = new Date();
 
-  // Atomically claim PENDING reminders by transitioning them, preventing duplicate processing on cron overlap
-  const pendingReminders = await prisma.scheduledReminder.findMany({
-    where: {
-      status: "PENDING",
-      scheduledAt: { lte: now },
-    },
-    select: { id: true },
-  });
+  // Atomically claim PENDING reminders inside a transaction to prevent duplicate processing on cron overlap
+  const reminders = await prisma.$transaction(async (tx) => {
+    const pending = await tx.scheduledReminder.findMany({
+      where: {
+        status: "PENDING",
+        scheduledAt: { lte: now },
+      },
+      select: { id: true },
+    });
 
-  if (pendingReminders.length === 0) return;
+    if (pending.length === 0) return [];
 
-  const claimedIds = pendingReminders.map((r) => r.id);
+    const ids = pending.map((r) => r.id);
 
-  // Mark all as SENT upfront to prevent re-processing; will revert to FAILED/CANCELLED as needed
-  await prisma.scheduledReminder.updateMany({
-    where: { id: { in: claimedIds }, status: "PENDING" },
-    data: { status: "SENT", sentAt: now },
-  });
+    // Mark all as SENT upfront; will revert to FAILED/CANCELLED as needed
+    await tx.scheduledReminder.updateMany({
+      where: { id: { in: ids }, status: "PENDING" },
+      data: { status: "SENT", sentAt: now },
+    });
 
-  // Re-fetch claimed reminders with full data
-  const reminders = await prisma.scheduledReminder.findMany({
-    where: { id: { in: claimedIds } },
-    include: {
-      lesson: {
-        include: {
-          student: true,
+    // Re-fetch claimed reminders with full data (only those actually transitioned)
+    return tx.scheduledReminder.findMany({
+      where: { id: { in: ids }, status: "SENT" },
+      include: {
+        lesson: {
+          include: {
+            student: true,
+          },
         },
       },
-    },
+    });
   });
+
+  if (reminders.length === 0) return;
 
   let sentCount = 0;
   let cancelledCount = 0;

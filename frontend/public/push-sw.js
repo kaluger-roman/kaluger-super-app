@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-globals */
 
-var CACHE_NAME = "tutor-app-v1";
+// Bump version on every deploy to invalidate stale caches
+var CACHE_NAME = "tutor-app-2026-03-16";
 
 var PRECACHE_URLS = ["/", "/manifest.json", "/logo192.png", "/logo512.png"];
 
@@ -32,7 +33,7 @@ self.addEventListener("activate", function (event) {
   self.clients.claim();
 });
 
-// Fetch — network-first with cache fallback for navigation, cache-first for static assets
+// Fetch — network-first with cache fallback for both navigation and static assets
 self.addEventListener("fetch", function (event) {
   // Skip non-GET requests
   if (event.request.method !== "GET") return;
