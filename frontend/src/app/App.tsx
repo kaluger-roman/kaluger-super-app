@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useEffect } from "react";
 
-import { CssBaseline, CircularProgress, Snackbar, Alert } from "@mui/material";
+import { CssBaseline, CircularProgress } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -13,7 +13,7 @@ import { userModel } from "@entities";
 import { theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent } from "./components";
+import { AppContent, OfflineIndicator } from "./components";
 import { appInitModel, blockingModel, webSocketModel } from "./model";
 
 const AppRouter: FC = () => {
@@ -27,21 +27,6 @@ const AppRouter: FC = () => {
   const user = useUnit(userModel.$user);
 
   return <AppContent isLoggedIn={isAuthenticated} user={user} />;
-};
-
-const OfflineIndicator: FC = () => {
-  const isOnline = useUnit(appInitModel.$isOnline);
-
-  return (
-    <Snackbar
-      open={!isOnline}
-      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-    >
-      <Alert severity="warning" variant="filled">
-        Нет подключения к интернету. Данные могут быть неактуальны
-      </Alert>
-    </Snackbar>
-  );
 };
 
 const App: FC = () => {

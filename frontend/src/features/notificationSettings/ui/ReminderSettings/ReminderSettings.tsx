@@ -3,63 +3,20 @@ import { useUnit } from "effector-react";
 
 import { notificationsModel } from "@entities";
 
+import { AVAILABLE_INTERVALS } from "./ReminderSettings.constants";
+import { formatInterval } from "./ReminderSettings.helpers";
 import * as Styled from "./ReminderSettings.styled";
-
-const AVAILABLE_INTERVALS = [5, 10, 15, 30, 60];
-
-const formatInterval = (minutes: number): string => {
-  if (minutes === 60) return "1 час";
-  return `${minutes} мин`;
-};
 
 export const ReminderSettings = () => {
   const settings = useUnit(notificationsModel.$reminderSettings);
   const isPushSupported = useUnit(notificationsModel.$isPushSupported);
   const pushPermission = useUnit(notificationsModel.$pushPermission);
-  const isPushSubscribed = useUnit(notificationsModel.$isPushSubscribed);
-  const vapidKey = useUnit(notificationsModel.$vapidKey);
-  const swRegistration = useUnit(notificationsModel.$serviceWorkerRegistration);
 
   const actions = useUnit({
-    settingsUpdated: notificationsModel.settingsUpdated,
-    subscribePushFx: notificationsModel.subscribePushFx,
-    unsubscribePushFx: notificationsModel.unsubscribePushFx,
+    remindersToggled: notificationsModel.remindersToggled,
+    intervalToggled: notificationsModel.intervalToggled,
+    muteToggled: notificationsModel.muteToggled,
   });
-
-  const handleToggleEnabled = async () => {
-    const newEnabled = !settings.enabled;
-
-    if (newEnabled && !isPushSubscribed && vapidKey && swRegistration) {
-      try {
-        await actions.subscribePushFx({ vapidKey, registration: swRegistration });
-      } catch {
-        return;
-      }
-    }
-
-    if (!newEnabled && isPushSubscribed && swRegistration) {
-      try {
-        await actions.unsubscribePushFx(swRegistration);
-      } catch {
-        // Continue to disable even if unsubscribe fails
-      }
-    }
-
-    actions.settingsUpdated({ enabled: newEnabled });
-  };
-
-  const handleToggleInterval = (interval: number) => {
-    const currentIntervals = settings.intervals;
-    const newIntervals = currentIntervals.includes(interval)
-      ? currentIntervals.filter((i) => i !== interval)
-      : [...currentIntervals, interval];
-
-    actions.settingsUpdated({ intervals: newIntervals });
-  };
-
-  const handleToggleMute = () => {
-    actions.settingsUpdated({ muteWhenInLesson: !settings.muteWhenInLesson });
-  };
 
   if (!isPushSupported) {
     return (
@@ -87,7 +44,7 @@ export const ReminderSettings = () => {
             Получайте уведомления перед началом урока
           </Styled.SettingDescription>
         </div>
-        <Switch checked={settings.enabled} onChange={handleToggleEnabled} />
+        <Switch checked={settings.enabled} onChange={() => actions.remindersToggled()} />
       </Styled.SettingRow>
 
       {settings.enabled && (
@@ -100,7 +57,7 @@ export const ReminderSettings = () => {
                 label={formatInterval(interval)}
                 color={settings.intervals.includes(interval) ? "primary" : "default"}
                 variant={settings.intervals.includes(interval) ? "filled" : "outlined"}
-                onClick={() => handleToggleInterval(interval)}
+                onClick={() => actions.intervalToggled(interval)}
               />
             ))}
           </Styled.IntervalsContainer>
@@ -114,7 +71,7 @@ export const ReminderSettings = () => {
             </div>
             <Switch
               checked={settings.muteWhenInLesson}
-              onChange={handleToggleMute}
+              onChange={() => actions.muteToggled()}
             />
           </Styled.SettingRow>
         </>

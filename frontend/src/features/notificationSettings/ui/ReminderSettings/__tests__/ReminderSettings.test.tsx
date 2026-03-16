@@ -169,6 +169,7 @@ describe("ReminderSettings", () => {
   it("should call unsubscribePushFx when disabling reminders while subscribed", async () => {
     const user = userEvent.setup();
     const mockSwRegistration = {} as ServiceWorkerRegistration;
+    const unsubscribeMock = vi.fn();
 
     const scope = fork({
       values: [
@@ -180,7 +181,7 @@ describe("ReminderSettings", () => {
         [notificationsModel.$serviceWorkerRegistration, mockSwRegistration],
       ],
       handlers: [
-        [notificationsModel.unsubscribePushFx, vi.fn()],
+        [notificationsModel.unsubscribePushFx, unsubscribeMock],
         [notificationsModel.updateSettingsFx, vi.fn().mockResolvedValue({ enabled: false, intervals: [30], muteWhenInLesson: false })],
       ],
     });
@@ -191,7 +192,7 @@ describe("ReminderSettings", () => {
     // First toggle is "Включить напоминания"
     await user.click(toggles[0]);
 
-    expect(scope.getState(notificationsModel.$isPushSubscribed)).toBe(false);
+    expect(unsubscribeMock).toHaveBeenCalledWith(mockSwRegistration);
   });
 
   it("should handle interval chip click", async () => {
