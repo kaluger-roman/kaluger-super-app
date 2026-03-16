@@ -9,7 +9,7 @@ import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
-import { processScheduledReminders } from "./services/reminderProcessor";
+import { processScheduledReminders } from "./services";
 
 import authRoutes from "./routes/auth";
 import studentRoutes from "./routes/students";

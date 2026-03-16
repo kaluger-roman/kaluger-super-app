@@ -5,7 +5,7 @@ import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
 import { truncateToMinute } from "../../utils/time";
-import { scheduleRemindersForLesson } from "../../services/reminderScheduler";
+import { scheduleRemindersForLesson } from "../../services";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
 

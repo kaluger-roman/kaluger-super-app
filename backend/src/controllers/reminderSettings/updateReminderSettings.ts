@@ -2,7 +2,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { ReminderSettingsDto } from "../../types";
 import prisma from "../../lib/prisma";
-import { recalculateRemindersForUser, cancelAllPendingReminders } from "../../services/reminderScheduler";
+import { recalculateRemindersForUser, cancelAllPendingReminders } from "../../services";
 
 const VALID_INTERVALS = [5, 10, 15, 30, 60];
 

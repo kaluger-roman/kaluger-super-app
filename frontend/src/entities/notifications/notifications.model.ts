@@ -84,12 +84,29 @@ export const updateSettingsFx = createEffect(async (data: Partial<ReminderSettin
   return await notificationsApi.updateSettings(data);
 });
 
+export const checkPushSubscriptionFx = createEffect(async (registration: ServiceWorkerRegistration) => {
+  const subscription = await registration.pushManager.getSubscription();
+  return subscription !== null;
+});
+
 export const $isSettingsLoading = loadSettingsFx.pending;
 
 // Samples
 sample({
   clock: serviceWorkerRegistered,
   target: $serviceWorkerRegistration,
+});
+
+// Check real push subscription state when SW is registered
+sample({
+  clock: serviceWorkerRegistered,
+  filter: (reg): reg is ServiceWorkerRegistration => reg !== null,
+  target: checkPushSubscriptionFx,
+});
+
+sample({
+  clock: checkPushSubscriptionFx.doneData,
+  target: $isPushSubscribed,
 });
 
 sample({

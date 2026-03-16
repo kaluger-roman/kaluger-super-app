@@ -34,9 +34,23 @@ export const scheduleRemindersForLesson = async (lessonId: string) => {
   }
 
   if (reminders.length > 0) {
-    await prisma.scheduledReminder.createMany({
-      data: reminders,
+    // Skip reminders that already exist (idempotency guard)
+    const existing = await prisma.scheduledReminder.findMany({
+      where: {
+        lessonId: lesson.id,
+        status: "PENDING",
+      },
+      select: { intervalMinutes: true },
     });
+
+    const existingIntervals = new Set(existing.map((r) => r.intervalMinutes));
+    const newReminders = reminders.filter((r) => !existingIntervals.has(r.intervalMinutes));
+
+    if (newReminders.length > 0) {
+      await prisma.scheduledReminder.createMany({
+        data: newReminders,
+      });
+    }
   }
 };
 
@@ -53,11 +67,6 @@ export const cancelRemindersForLesson = async (lessonId: string) => {
 };
 
 export const recalculateRemindersForUser = async (userId: string) => {
-  // Get user settings
-  const settings = await prisma.reminderSettings.findUnique({
-    where: { userId },
-  });
-
   const now = new Date();
 
   // Cancel + recreate atomically to avoid race conditions
@@ -71,6 +80,11 @@ export const recalculateRemindersForUser = async (userId: string) => {
       data: {
         status: "CANCELLED",
       },
+    });
+
+    // Read settings inside transaction to avoid stale data
+    const settings = await tx.reminderSettings.findUnique({
+      where: { userId },
     });
 
     if (!settings || !settings.enabled || settings.intervals.length === 0) return;
