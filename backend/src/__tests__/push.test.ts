@@ -9,6 +9,10 @@ describe("push subscription integration tests", () => {
   let userId: string;
 
   beforeAll(async () => {
+    process.env.VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "test-vapid-public-key";
+    process.env.VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "test-vapid-private-key";
+    process.env.VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:test@test.com";
+
     const user = await prisma.user.create({
       data: {
         email: faker.internet.email(),
