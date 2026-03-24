@@ -1,7 +1,7 @@
 import { CircularProgress, Switch } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { notificationsModel } from "@entities";
+import { notificationsModel, $isToggling } from "@entities";
 
 import { AVAILABLE_INTERVALS } from "./ReminderSettings.constants";
 import { formatInterval } from "./ReminderSettings.helpers";
@@ -11,7 +11,7 @@ export const ReminderSettings = () => {
   const settings = useUnit(notificationsModel.$reminderSettings);
   const isPushSupported = useUnit(notificationsModel.$isPushSupported);
   const pushPermission = useUnit(notificationsModel.$pushPermission);
-  const isToggling = useUnit(notificationsModel.$isToggling);
+  const isToggling = useUnit($isToggling);
 
   const actions = useUnit({
     remindersToggled: notificationsModel.remindersToggled,

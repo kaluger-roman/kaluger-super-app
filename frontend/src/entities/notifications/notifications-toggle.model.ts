@@ -1,6 +1,6 @@
 import { createStore, sample, combine } from "effector";
 
-import { notificationsModel as toastModel } from "@shared";
+import { showNotification } from "@shared";
 
 import { toggleInterval } from "./notifications.helpers";
 import {
@@ -49,7 +49,15 @@ sample({
 });
 
 // Track whether subscribe was triggered by manual toggle (vs auto-subscribe)
-const $isManualToggle = createStore(false);
+export const $isManualToggle = createStore(false);
+
+export const $isToggling = combine(
+  $isManualToggle,
+  subscribePushFx.pending,
+  unsubscribePushFx.pending,
+  updateSettingsFx.pending,
+  (isManual, sub, unsub, update) => isManual && (sub || unsub || update)
+);
 
 sample({ clock: remindersToggled, fn: () => true, target: $isManualToggle });
 sample({ clock: [updateSettingsFx.finally, subscribePushFx.fail], fn: () => false, target: $isManualToggle });
@@ -122,8 +130,11 @@ sample({
   clock: updateSettingsFx.doneData,
   source: $isManualToggle,
   filter: (isManual) => isManual,
-  fn: (_, settings) => settings.enabled ? "Напоминания включены" : "Напоминания отключены",
-  target: toastModel.showSuccessEvent,
+  fn: (_, settings) => ({
+    message: settings.enabled ? "Напоминания включены" : "Напоминания отключены",
+    type: "success" as const,
+  }),
+  target: showNotification,
 });
 
 // Toggle feedback — error on subscribe failure
@@ -131,6 +142,9 @@ sample({
   clock: subscribePushFx.fail,
   source: $isManualToggle,
   filter: (isManual) => isManual,
-  fn: () => "Не удалось подписаться на уведомления",
-  target: toastModel.showErrorEvent,
+  fn: () => ({
+    message: "Не удалось подписаться на уведомления",
+    type: "error" as const,
+  }),
+  target: showNotification,
 });
