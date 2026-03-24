@@ -209,8 +209,8 @@ describe("ReminderSettings", () => {
         [notificationsModel.$serviceWorkerRegistration, mockSwRegistration],
       ],
       handlers: [
-        [notificationsModel.unsubscribePushFx, () => new Promise(() => {})],
-        [notificationsModel.updateSettingsFx, () => new Promise(() => {})],
+        [notificationsModel.unsubscribePushFx, () => new Promise((_resolve) => undefined)],
+        [notificationsModel.updateSettingsFx, () => new Promise((_resolve) => undefined)],
       ],
     });
 
