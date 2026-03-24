@@ -1,9 +1,9 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
+import { isIos, isInStandaloneMode } from "@shared";
 
 import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
-import { isIos, isInStandaloneMode } from "../components/InstallPrompt/InstallPrompt.helpers";
 
 export const initializeApp = createEvent<InitializeAppParams>();
 
