@@ -22,3 +22,8 @@ export const Text = styled(MuiTypography)`
 export const InstallButton = styled(MuiButton)`
   white-space: nowrap;
 `;
+
+export const IosInstruction = styled(MuiTypography)`
+  font-size: 13px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
