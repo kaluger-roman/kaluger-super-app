@@ -1,5 +1,4 @@
 import CloseIcon from "@mui/icons-material/Close";
-import IosShareIcon from "@mui/icons-material/IosShare";
 import { IconButton } from "@mui/material";
 import { useUnit } from "effector-react";
 
@@ -25,7 +24,7 @@ export const InstallPrompt = () => {
 
     return (
       <Styled.Banner elevation={3}>
-        <Styled.Text>Установите приложение для быстрого доступа</Styled.Text>
+        <Styled.Text>Установите приложение для быстрого доступа и push-уведомлений</Styled.Text>
         <Styled.InstallButton variant="contained" size="small" onClick={handleInstall}>
           Установить
         </Styled.InstallButton>
@@ -41,9 +40,9 @@ export const InstallPrompt = () => {
     return (
       <Styled.Banner elevation={3}>
         <div>
-          <Styled.Text>Установите приложение на домашний экран</Styled.Text>
+          <Styled.Text>Установите приложение для push-уведомлений</Styled.Text>
           <Styled.IosInstruction>
-            Нажмите <IosShareIcon sx={{ fontSize: 16, verticalAlign: "middle" }} /> → «На экран Домой»
+            Нажмите <Styled.ShareIcon /> → «На экран Домой»
           </Styled.IosInstruction>
         </div>
         <IconButton size="small" onClick={() => actions.dismissIos()}>
