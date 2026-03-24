@@ -1,6 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { notificationsApi } from "@shared";
+import { notificationsApi, showNotification } from "@shared";
 
 import { urlBase64ToUint8Array } from "./notifications.helpers";
 import type { ReminderSettings, PushPermissionState } from "./notifications.types";
@@ -166,5 +166,18 @@ sample({
 sample({
   clock: updateSettingsFx.doneData,
   target: $reminderSettings,
+});
+
+// Toast feedback on settings update
+sample({
+  clock: updateSettingsFx.doneData,
+  fn: () => ({ message: "Настройки обновлены", type: "success" as const }),
+  target: showNotification,
+});
+
+sample({
+  clock: subscribePushFx.fail,
+  fn: () => ({ message: "Не удалось подписаться на уведомления", type: "error" as const }),
+  target: showNotification,
 });
 
