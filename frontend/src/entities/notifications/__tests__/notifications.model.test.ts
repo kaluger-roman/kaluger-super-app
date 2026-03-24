@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { notificationsApi } from "@shared";
 
-import { $isToggling } from "../notifications-toggle.model";
 import * as notificationsModel from "../notifications.model";
 
 vi.mock("@shared", async () => {
@@ -162,10 +161,4 @@ describe("notifications.model", () => {
     });
   });
 
-  describe("$isToggling", () => {
-    it("should be false when no effects are pending", () => {
-      const scope = fork();
-      expect(scope.getState($isToggling)).toBe(false);
-    });
-  });
 });

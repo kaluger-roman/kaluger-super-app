@@ -48,16 +48,8 @@ sample({
   target: settingsUpdated,
 });
 
-// Track whether subscribe was triggered by manual toggle (vs auto-subscribe)
-export const $isManualToggle = createStore(false);
-
-export const $isToggling = combine(
-  $isManualToggle,
-  subscribePushFx.pending,
-  unsubscribePushFx.pending,
-  updateSettingsFx.pending,
-  (isManual, sub, unsub, update) => isManual && (sub || unsub || update)
-);
+// Track whether toggle was manual (for toast feedback, not auto-subscribe)
+const $isManualToggle = createStore(false);
 
 sample({ clock: remindersToggled, fn: () => true, target: $isManualToggle });
 sample({ clock: [updateSettingsFx.finally, subscribePushFx.fail], fn: () => false, target: $isManualToggle });
