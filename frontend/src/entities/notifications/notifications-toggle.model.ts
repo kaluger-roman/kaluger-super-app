@@ -1,5 +1,7 @@
 import { createStore, sample, combine } from "effector";
 
+import { notificationsModel as toastModel } from "@shared";
+
 import { toggleInterval } from "./notifications.helpers";
 import {
   $reminderSettings,
@@ -13,6 +15,7 @@ import {
   settingsUpdated,
   subscribePushFx,
   unsubscribePushFx,
+  updateSettingsFx,
   loadSettingsFx,
   loadVapidKeyFx,
   checkPushSubscriptionFx,
@@ -112,4 +115,22 @@ sample({
   filter: ({ settings, subscribed }) => settings.enabled && !subscribed,
   fn: () => ({ enabled: false } as Partial<ReminderSettings>),
   target: settingsUpdated,
+});
+
+// Toggle feedback — success notification after settings update completes
+sample({
+  clock: updateSettingsFx.doneData,
+  source: $isManualToggle,
+  filter: (isManual) => isManual,
+  fn: (_, settings) => settings.enabled ? "Напоминания включены" : "Напоминания отключены",
+  target: toastModel.showSuccessEvent,
+});
+
+// Toggle feedback — error on subscribe failure
+sample({
+  clock: subscribePushFx.fail,
+  source: $isManualToggle,
+  filter: (isManual) => isManual,
+  fn: () => "Не удалось подписаться на уведомления",
+  target: toastModel.showErrorEvent,
 });
