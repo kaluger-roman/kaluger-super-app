@@ -15,42 +15,40 @@ export const InstallPrompt = () => {
     dismissIos: appInitModel.iosInstallHintDismissed,
   });
 
-  // Chrome/Edge install prompt
-  if (showBanner && installPrompt) {
-    const handleInstall = () => {
-      installPrompt.prompt();
-      installPrompt.userChoice.then(() => actions.dismiss());
-    };
+  const isChrome = showBanner && installPrompt;
 
-    return (
-      <Styled.Banner elevation={3}>
-        <Styled.Text>Установите приложение для быстрого доступа и push-уведомлений</Styled.Text>
-        <Styled.InstallButton variant="contained" size="small" onClick={handleInstall}>
-          Установить
-        </Styled.InstallButton>
-        <IconButton size="small" onClick={() => actions.dismiss()}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Styled.Banner>
-    );
-  }
+  if (!isChrome && !showIosHint) return null;
 
-  // iOS Safari install hint
-  if (showIosHint) {
-    return (
-      <Styled.Banner elevation={3}>
-        <div>
-          <Styled.Text>Установите приложение для push-уведомлений</Styled.Text>
+  const handleInstall = () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt.userChoice.then(() => actions.dismiss());
+  };
+
+  const handleDismiss = () => (isChrome ? actions.dismiss() : actions.dismissIos());
+
+  return (
+    <Styled.Banner elevation={3}>
+      <div>
+        <Styled.Text>
+          {isChrome
+            ? "Установите приложение для быстрого доступа и push-уведомлений"
+            : "Установите приложение для push-уведомлений"}
+        </Styled.Text>
+        {!isChrome && (
           <Styled.IosInstruction>
             Нажмите <Styled.ShareIcon /> → «На экран Домой»
           </Styled.IosInstruction>
-        </div>
-        <IconButton size="small" onClick={() => actions.dismissIos()}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Styled.Banner>
-    );
-  }
-
-  return null;
+        )}
+      </div>
+      {isChrome && (
+        <Styled.InstallButton variant="contained" size="small" onClick={handleInstall}>
+          Установить
+        </Styled.InstallButton>
+      )}
+      <IconButton size="small" onClick={handleDismiss}>
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </Styled.Banner>
+  );
 };

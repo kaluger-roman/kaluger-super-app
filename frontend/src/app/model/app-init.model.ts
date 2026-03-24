@@ -3,6 +3,7 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
 
 import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
+import { isIos, isInStandaloneMode } from "../components/InstallPrompt/InstallPrompt.helpers";
 
 export const initializeApp = createEvent<InitializeAppParams>();
 
@@ -46,13 +47,9 @@ export const installPromptDismissed = createEvent();
 export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
 export const $showInstallBanner = createStore(false);
 
-// iOS install hint — show when iOS Safari not in standalone mode
-const isIos = typeof navigator !== "undefined" &&
-  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-const isStandalone = typeof window !== "undefined" &&
-  "standalone" in window.navigator && (window.navigator as unknown as { standalone: boolean }).standalone === true;
-
-export const $showIosInstallHint = createStore(isIos && !isStandalone);
+export const $showIosInstallHint = createStore(
+  isIos() && !isInStandaloneMode()
+);
 export const iosInstallHintDismissed = createEvent();
 
 // Connect events
