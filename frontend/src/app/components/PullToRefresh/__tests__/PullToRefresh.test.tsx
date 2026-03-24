@@ -21,6 +21,13 @@ vi.mock("@shared/lib/platform.helpers", () => ({
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
+const getTouchContainer = () => {
+  // Outer div with touch handlers → contains Indicator + Wrapper(Box) → contains children
+  const content = screen.getByText("Контент");
+  // content → Wrapper(Box) → touchDiv
+  return content.closest("[class]")!.parentElement!;
+};
+
 describe("PullToRefresh", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,7 +59,7 @@ describe("PullToRefresh", () => {
     expect(screen.getByText("Контент")).toBeInTheDocument();
   });
 
-  it("should show spinner during pull down in standalone mode", () => {
+  it("should show spinner and shift content during pull down", () => {
     mockIsInStandaloneMode.mockReturnValue(true);
 
     renderWithTheme(
@@ -61,12 +68,16 @@ describe("PullToRefresh", () => {
       </PullToRefresh>
     );
 
-    const wrapper = screen.getByText("Контент").parentElement!;
+    const container = getTouchContainer();
 
-    fireEvent.touchStart(wrapper, { touches: [{ clientY: 0 }] });
-    fireEvent.touchMove(wrapper, { touches: [{ clientY: 50 }] });
+    fireEvent.touchStart(container, { touches: [{ clientY: 0 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 50 }] });
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    // Content wrapper should have translateY applied
+    const contentWrapper = screen.getByText("Контент").closest("[class]")!;
+    expect(contentWrapper).toHaveStyle("transform: translateY(50px)");
   });
 
   it("should not show spinner when scrolled down", () => {
@@ -79,15 +90,15 @@ describe("PullToRefresh", () => {
       </PullToRefresh>
     );
 
-    const wrapper = screen.getByText("Контент").parentElement!;
+    const container = getTouchContainer();
 
-    fireEvent.touchStart(wrapper, { touches: [{ clientY: 0 }] });
-    fireEvent.touchMove(wrapper, { touches: [{ clientY: 100 }] });
+    fireEvent.touchStart(container, { touches: [{ clientY: 0 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 100 }] });
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
-  it("should reset pull distance on touch end below threshold", () => {
+  it("should reset content position on touch end below threshold", () => {
     mockIsInStandaloneMode.mockReturnValue(true);
 
     renderWithTheme(
@@ -96,16 +107,19 @@ describe("PullToRefresh", () => {
       </PullToRefresh>
     );
 
-    const wrapper = screen.getByText("Контент").parentElement!;
+    const container = getTouchContainer();
 
-    fireEvent.touchStart(wrapper, { touches: [{ clientY: 0 }] });
-    fireEvent.touchMove(wrapper, { touches: [{ clientY: 30 }] });
+    fireEvent.touchStart(container, { touches: [{ clientY: 0 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 30 }] });
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
 
-    fireEvent.touchEnd(wrapper);
+    fireEvent.touchEnd(container);
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    const contentWrapper = screen.getByText("Контент").closest("[class]")!;
+    expect(contentWrapper).toHaveStyle("transform: translateY(0px)");
   });
 
   it("should trigger reload when pull exceeds threshold", () => {
@@ -122,11 +136,11 @@ describe("PullToRefresh", () => {
       </PullToRefresh>
     );
 
-    const wrapper = screen.getByText("Контент").parentElement!;
+    const container = getTouchContainer();
 
-    fireEvent.touchStart(wrapper, { touches: [{ clientY: 0 }] });
-    fireEvent.touchMove(wrapper, { touches: [{ clientY: 100 }] });
-    fireEvent.touchEnd(wrapper);
+    fireEvent.touchStart(container, { touches: [{ clientY: 0 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 100 }] });
+    fireEvent.touchEnd(container);
 
     expect(reloadMock).toHaveBeenCalled();
   });
@@ -140,11 +154,30 @@ describe("PullToRefresh", () => {
       </PullToRefresh>
     );
 
-    const wrapper = screen.getByText("Контент").parentElement!;
+    const container = getTouchContainer();
 
-    fireEvent.touchStart(wrapper, { touches: [{ clientY: 100 }] });
-    fireEvent.touchMove(wrapper, { touches: [{ clientY: 50 }] });
+    fireEvent.touchStart(container, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 50 }] });
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("should cap pull distance at max pull", () => {
+    mockIsInStandaloneMode.mockReturnValue(true);
+
+    renderWithTheme(
+      <PullToRefresh>
+        <span>Контент</span>
+      </PullToRefresh>
+    );
+
+    const container = getTouchContainer();
+
+    fireEvent.touchStart(container, { touches: [{ clientY: 0 }] });
+    fireEvent.touchMove(container, { touches: [{ clientY: 200 }] });
+
+    const contentWrapper = screen.getByText("Контент").closest("[class]")!;
+    // MAX_PULL = 120
+    expect(contentWrapper).toHaveStyle("transform: translateY(120px)");
   });
 });

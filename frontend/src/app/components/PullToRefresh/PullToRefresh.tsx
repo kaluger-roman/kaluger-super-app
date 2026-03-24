@@ -14,11 +14,13 @@ export const PullToRefresh = ({ children }: { children: ReactNode }) => {
   return (
     <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       {pullDistance > 0 && (
-        <Styled.Indicator $pullDistance={pullDistance} $isRefreshing={isRefreshing}>
+        <Styled.Indicator $pullDistance={pullDistance}>
           <CircularProgress size={24} />
         </Styled.Indicator>
       )}
-      {children}
+      <Styled.Wrapper $pullDistance={pullDistance} $isRefreshing={isRefreshing}>
+        {children}
+      </Styled.Wrapper>
     </div>
   );
 };
