@@ -1,4 +1,4 @@
-import { CircularProgress, Switch } from "@mui/material";
+import { Switch } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { notificationsModel } from "@entities";
@@ -11,7 +11,6 @@ export const ReminderSettings = () => {
   const settings = useUnit(notificationsModel.$reminderSettings);
   const isPushSupported = useUnit(notificationsModel.$isPushSupported);
   const pushPermission = useUnit(notificationsModel.$pushPermission);
-  const isToggling = useUnit(notificationsModel.$isToggling);
 
   const actions = useUnit({
     remindersToggled: notificationsModel.remindersToggled,
@@ -45,9 +44,7 @@ export const ReminderSettings = () => {
             Получайте уведомления перед началом урока
           </Styled.SettingDescription>
         </div>
-        {isToggling ? <CircularProgress size={24} /> : (
-          <Switch checked={settings.enabled} onChange={() => actions.remindersToggled()} />
-        )}
+        <Switch checked={settings.enabled} onChange={() => actions.remindersToggled()} />
       </Styled.SettingRow>
 
       {settings.enabled && (

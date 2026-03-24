@@ -161,10 +161,4 @@ describe("notifications.model", () => {
     });
   });
 
-  describe("$isToggling", () => {
-    it("should be false when no effects are pending", () => {
-      const scope = fork();
-      expect(scope.getState(notificationsModel.$isToggling)).toBe(false);
-    });
-  });
 });

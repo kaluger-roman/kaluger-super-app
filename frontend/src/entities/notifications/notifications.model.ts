@@ -1,4 +1,4 @@
-import { createStore, createEvent, createEffect, sample, combine } from "effector";
+import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { notificationsApi } from "@shared";
 
@@ -106,12 +106,6 @@ export const checkPushSubscriptionFx = createEffect(async (registration: Service
 });
 
 export const $isSettingsLoading = loadSettingsFx.pending;
-export const $isToggling = combine(
-  subscribePushFx.pending,
-  unsubscribePushFx.pending,
-  updateSettingsFx.pending,
-  (subscribing, unsubscribing, updating) => subscribing || unsubscribing || updating
-);
 
 // Samples
 sample({
