@@ -52,7 +52,7 @@ sample({
 const $isManualToggle = createStore(false);
 
 sample({ clock: remindersToggled, fn: () => true, target: $isManualToggle });
-sample({ clock: subscribePushFx.finally, fn: () => false, target: $isManualToggle });
+sample({ clock: [updateSettingsFx.finally, subscribePushFx.fail], fn: () => false, target: $isManualToggle });
 
 // Reminders toggle logic — subscribe/unsubscribe then update settings
 const $canSubscribe = combine(
