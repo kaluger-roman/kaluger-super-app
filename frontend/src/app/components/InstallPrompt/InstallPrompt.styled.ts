@@ -1,3 +1,4 @@
+import IosShareIcon from "@mui/icons-material/IosShare";
 import { Button as MuiButton, Paper as MuiPaper, Typography as MuiTypography } from "@mui/material";
 
 import { styled } from "@shared";
@@ -21,4 +22,14 @@ export const Text = styled(MuiTypography)`
 
 export const InstallButton = styled(MuiButton)`
   white-space: nowrap;
+`;
+
+export const IosInstruction = styled(MuiTypography)`
+  font-size: 13px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+export const ShareIcon = styled(IosShareIcon)`
+  font-size: 16px;
+  vertical-align: middle;
 `;

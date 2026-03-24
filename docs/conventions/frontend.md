@@ -61,6 +61,7 @@ feature/models/
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file
 - **Components < 150 lines** — split if larger
+- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
 ### Types
 

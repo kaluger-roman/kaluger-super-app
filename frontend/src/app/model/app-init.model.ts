@@ -1,6 +1,7 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
+import { isIos, isInStandaloneMode } from "@shared";
 
 import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
 
@@ -45,6 +46,11 @@ export const installPromptDismissed = createEvent();
 
 export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
 export const $showInstallBanner = createStore(false);
+
+export const $showIosInstallHint = createStore(
+  isIos() && !isInStandaloneMode()
+);
+export const iosInstallHintDismissed = createEvent();
 
 // Connect events
 sample({
@@ -108,6 +114,12 @@ sample({
   clock: installPromptDismissed,
   fn: () => false,
   target: $showInstallBanner,
+});
+
+sample({
+  clock: iosInstallHintDismissed,
+  fn: () => false,
+  target: $showIosInstallHint,
 });
 
 // Handle errors — still mark app as initialized so user can reach login page
