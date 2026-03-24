@@ -195,6 +195,33 @@ describe("ReminderSettings", () => {
     expect(unsubscribeMock).toHaveBeenCalledWith(mockSwRegistration);
   });
 
+  it("should show loading spinner while toggling", async () => {
+    const user = userEvent.setup();
+    const mockSwRegistration = {} as ServiceWorkerRegistration;
+
+    const scope = fork({
+      values: [
+        [notificationsModel.$isPushSupported, true],
+        [notificationsModel.$reminderSettings, { enabled: true, intervals: [30], muteWhenInLesson: false }],
+        [notificationsModel.$pushPermission, "granted"],
+        [notificationsModel.$isPushSubscribed, true],
+        [notificationsModel.$vapidKey, "key"],
+        [notificationsModel.$serviceWorkerRegistration, mockSwRegistration],
+      ],
+      handlers: [
+        [notificationsModel.unsubscribePushFx, () => new Promise((_resolve) => undefined)],
+        [notificationsModel.updateSettingsFx, () => new Promise((_resolve) => undefined)],
+      ],
+    });
+
+    renderWithProviders(<ReminderSettings />, scope);
+
+    const toggles = screen.getAllByRole("checkbox");
+    await user.click(toggles[0]);
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
   it("should handle interval chip click", async () => {
     const user = userEvent.setup();
     const scope = fork({

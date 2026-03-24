@@ -13,7 +13,7 @@ import { userModel } from "@entities";
 import { theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent, OfflineIndicator, InstallPrompt } from "./components";
+import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
 import { appInitModel, blockingModel, webSocketModel } from "./model";
 import type { BeforeInstallPromptEvent } from "./model/app-init.types";
 
@@ -91,13 +91,15 @@ const App: FC = () => {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Router>
-          <AppRouter />
-          <NotificationProvider />
-          <OfflineIndicator />
-          <InstallPrompt />
-          <Styled.ModalBackdrop open={isBlocking}>
-            <CircularProgress color="inherit" />
-          </Styled.ModalBackdrop>
+          <PullToRefresh>
+            <AppRouter />
+            <NotificationProvider />
+            <OfflineIndicator />
+            <InstallPrompt />
+            <Styled.ModalBackdrop open={isBlocking}>
+              <CircularProgress color="inherit" />
+            </Styled.ModalBackdrop>
+          </PullToRefresh>
         </Router>
       </LocalizationProvider>
     </ThemeProvider>
