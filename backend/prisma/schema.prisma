@@ -22,6 +22,7 @@ model User {
   verificationCode       String?
   verificationCodeExpiry DateTime?
   taxRate                Float     @default(6.0)
+  timezone               String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 

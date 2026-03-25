@@ -78,7 +78,8 @@ export const formatReminderBody = (
   lessonType: string,
   studentName: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  timezone?: string | null
 ): string => {
   const subjectMap: Record<string, string> = {
     MATHEMATICS: "Математика",
@@ -96,10 +97,16 @@ export const formatReminderBody = (
   const typeName = lessonTypeMap[lessonType] || lessonType;
 
   const formatTime = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
+    const options: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: false };
+    if (timezone) options.timeZone = timezone;
+    return date.toLocaleTimeString("ru-RU", options);
   };
 
-  return `${subjectName} (${typeName}) — ${studentName}, ${formatTime(startTime)}–${formatTime(endTime)}`;
+  const timePart = `${formatTime(startTime)}–${formatTime(endTime)}`;
+
+  const tzLabel = timezone
+    ? ` (${startTime.toLocaleTimeString("ru-RU", { timeZoneName: "short", timeZone: timezone }).split(" ").pop()})`
+    : "";
+
+  return `${subjectName} (${typeName}) — ${studentName}, ${timePart}${tzLabel}`;
 };

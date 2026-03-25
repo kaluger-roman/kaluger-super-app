@@ -5,6 +5,7 @@ import { allSettled, fork } from "effector";
 import { Provider as EffectorProvider, useUnit } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
+import { userModel } from "@entities";
 import { theme } from "@shared";
 
 import { appInitModel } from "../model";
@@ -69,5 +70,41 @@ describe("offline indicator", () => {
     // Go online
     await allSettled(appInitModel.onlineStatusChanged, { scope, params: true });
     expect(scope.getState(appInitModel.$isOnline)).toBe(true);
+  });
+});
+
+describe("appResumed", () => {
+  it("should trigger initializeAppFx when authenticated user resumes", async () => {
+    const initMock = vi.fn().mockResolvedValue([[], []]);
+
+    const scope = fork({
+      values: [
+        [userModel.$user, { id: "1", name: "Test", email: "t@t.com" }],
+      ],
+      handlers: [
+        [appInitModel.initializeAppFx, initMock],
+      ],
+    });
+
+    await allSettled(appInitModel.appResumed, { scope });
+
+    expect(initMock).toHaveBeenCalled();
+  });
+
+  it("should not trigger initializeAppFx when user is not authenticated", async () => {
+    const initMock = vi.fn().mockResolvedValue([[], []]);
+
+    const scope = fork({
+      values: [
+        [userModel.$user, null],
+      ],
+      handlers: [
+        [appInitModel.initializeAppFx, initMock],
+      ],
+    });
+
+    await allSettled(appInitModel.appResumed, { scope });
+
+    expect(initMock).not.toHaveBeenCalled();
   });
 });

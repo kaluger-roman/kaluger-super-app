@@ -9,12 +9,13 @@ export const api = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add auth token and timezone to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("authToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  config.headers["X-Timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return config;
 });
 

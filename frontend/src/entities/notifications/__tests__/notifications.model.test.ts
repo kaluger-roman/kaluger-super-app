@@ -1,7 +1,7 @@
 import { allSettled, fork } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { notificationsApi } from "@shared";
+import { notificationsApi, showNotification } from "@shared";
 
 import * as notificationsModel from "../notifications.model";
 
@@ -158,6 +158,57 @@ describe("notifications.model", () => {
       const scope = fork();
       const isPending = scope.getState(notificationsModel.$isSettingsLoading);
       expect(isPending).toBe(false);
+    });
+  });
+
+  describe("toast feedback", () => {
+    it("should show success toast after settings update", async () => {
+      const updatedSettings = { enabled: true, intervals: [30], muteWhenInLesson: false };
+      const messages: Array<{ message: string; type: string }> = [];
+
+      const unwatch = showNotification.watch((payload) => messages.push(payload));
+
+      const scope = fork({
+        handlers: [
+          [notificationsModel.updateSettingsFx, () => updatedSettings],
+        ],
+      });
+
+      await allSettled(notificationsModel.settingsUpdated, {
+        scope,
+        params: { enabled: true },
+      });
+
+      unwatch();
+
+      expect(messages).toContainEqual({
+        message: "Настройки обновлены",
+        type: "success",
+      });
+    });
+
+    it("should show error toast on subscribe failure", async () => {
+      const messages: Array<{ message: string; type: string }> = [];
+
+      const unwatch = showNotification.watch((payload) => messages.push(payload));
+
+      const scope = fork({
+        handlers: [
+          [notificationsModel.subscribePushFx, () => { throw new Error("denied"); }],
+        ],
+      });
+
+      await allSettled(notificationsModel.subscribePushFx, {
+        scope,
+        params: { vapidKey: "key", registration: {} as ServiceWorkerRegistration },
+      });
+
+      unwatch();
+
+      expect(messages).toContainEqual({
+        message: "Не удалось подписаться на уведомления",
+        type: "error",
+      });
     });
   });
 

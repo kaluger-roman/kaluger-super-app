@@ -52,14 +52,22 @@ const App: FC = () => {
       appInitModel.installPromptCaptured(e as BeforeInstallPromptEvent);
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        appInitModel.appResumed();
+      }
+    };
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

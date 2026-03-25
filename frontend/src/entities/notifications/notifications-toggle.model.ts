@@ -1,7 +1,5 @@
 import { createStore, sample, combine } from "effector";
 
-import { showNotification } from "@shared";
-
 import { toggleInterval } from "./notifications.helpers";
 import {
   $reminderSettings,
@@ -117,26 +115,3 @@ sample({
   target: settingsUpdated,
 });
 
-// Toggle feedback — success notification after settings update completes
-sample({
-  clock: updateSettingsFx.doneData,
-  source: $isManualToggle,
-  filter: (isManual) => isManual,
-  fn: (_, settings) => ({
-    message: settings.enabled ? "Напоминания включены" : "Напоминания отключены",
-    type: "success" as const,
-  }),
-  target: showNotification,
-});
-
-// Toggle feedback — error on subscribe failure
-sample({
-  clock: subscribePushFx.fail,
-  source: $isManualToggle,
-  filter: (isManual) => isManual,
-  fn: () => ({
-    message: "Не удалось подписаться на уведомления",
-    type: "error" as const,
-  }),
-  target: showNotification,
-});

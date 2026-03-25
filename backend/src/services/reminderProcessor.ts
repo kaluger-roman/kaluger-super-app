@@ -84,6 +84,12 @@ export const processScheduledReminders = async () => {
       }
     }
 
+    // Get user timezone for correct time formatting
+    const user = await prisma.user.findUnique({
+      where: { id: reminder.userId },
+      select: { timezone: true },
+    });
+
     // Build notification payload
     const payload: PushNotificationPayload = {
       title: formatReminderTitle(reminder.intervalMinutes),
@@ -92,7 +98,8 @@ export const processScheduledReminders = async () => {
         lesson.lessonType,
         lesson.student.name,
         lesson.startTime,
-        lesson.endTime
+        lesson.endTime,
+        user?.timezone
       ),
       tag: `lesson-reminder-${lesson.id}-${reminder.intervalMinutes}`,
       data: {

@@ -35,6 +35,9 @@ export const $appInitialized = createStore(false);
 
 export const $appInitializing = initializeAppFx.pending;
 
+// PWA resume — refresh data when app returns to foreground
+export const appResumed = createEvent();
+
 // Online/offline detection
 export const onlineStatusChanged = createEvent<boolean>();
 
@@ -120,6 +123,21 @@ sample({
   clock: iosInstallHintDismissed,
   fn: () => false,
   target: $showIosInstallHint,
+});
+
+// Refresh data when PWA resumes from background
+sample({
+  clock: appResumed,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: initializeAppFx.prepend(() => ({})),
+});
+
+sample({
+  clock: appResumed,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: [notificationsModel.loadSettings, newsModel.checkUnread],
 });
 
 // Handle errors — still mark app as initialized so user can reach login page
