@@ -13,12 +13,16 @@ sample({
     pagination: lessonModel.$upcomingPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
-  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: pagination.page,
     limit: pagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -36,12 +40,16 @@ sample({
     currentWeek: viewModeModel.$currentWeek,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
   filter: ({ lessonsViewMode }) => lessonsViewMode === "weekly",
-  fn: ({ currentWeek, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ currentWeek, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     weekStart: currentWeek.toISOString() || "",
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadWeeklyLessonsFx,
 });
@@ -61,13 +69,17 @@ sample({
     upcomingPagination: lessonModel.$upcomingPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
   filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
-  fn: ({ upcomingPagination, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ upcomingPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: upcomingPagination.page,
     limit: upcomingPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -79,13 +91,17 @@ sample({
     completedPagination: lessonModel.$completedPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
   filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
-  fn: ({ completedPagination, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ completedPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: completedPagination.page,
     limit: completedPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadCompletedLessonsFx,
 });
@@ -97,13 +113,17 @@ sample({
     cancelledPagination: lessonModel.$cancelledPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
   filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
-  fn: ({ cancelledPagination, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ cancelledPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: cancelledPagination.page,
     limit: cancelledPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadCancelledLessonsFx,
 });
@@ -120,12 +140,16 @@ sample({
     pagination: lessonModel.$upcomingPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
   },
-  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework }) => ({
+  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: pagination.page,
     limit: pagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });

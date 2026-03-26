@@ -15,27 +15,42 @@ export const getScheduleDateRangeParams = () => {
 type LoadParams = {
   onlyUnpaid: boolean;
   onlyWithoutHomework: boolean;
+  paymentDateFrom: Date | null;
+  paymentDateTo: Date | null;
 };
 
-export const createPagedLessonParams = ({ onlyUnpaid, onlyWithoutHomework }: LoadParams) => ({
+export const createPagedLessonParams = ({
+  onlyUnpaid,
+  onlyWithoutHomework,
+  paymentDateFrom,
+  paymentDateTo,
+}: LoadParams) => ({
   page: 1,
   limit: 10,
   onlyUnpaid,
   onlyWithoutHomework,
+  ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+  ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
 });
 
 type WeeklyParams = {
   currentWeek: Date;
   onlyUnpaid: boolean;
   onlyWithoutHomework: boolean;
+  paymentDateFrom: Date | null;
+  paymentDateTo: Date | null;
 };
 
 export const createWeeklyLessonParams = ({
   currentWeek,
   onlyUnpaid,
   onlyWithoutHomework,
+  paymentDateFrom,
+  paymentDateTo,
 }: WeeklyParams) => ({
   weekStart: currentWeek.toISOString(),
   onlyUnpaid,
   onlyWithoutHomework,
+  ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+  ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
 });

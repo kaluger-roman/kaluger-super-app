@@ -44,6 +44,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
   const scheduleLessons = useUnit(lessonModel.$scheduleLessons);
   const onlyUnpaid = useUnit(lessonsModel.$onlyUnpaid);
   const onlyWithoutHomework = useUnit(lessonsModel.$onlyWithoutHomework);
+  const paymentDateFrom = useUnit(lessonsModel.$paymentDateFrom);
+  const paymentDateTo = useUnit(lessonsModel.$paymentDateTo);
 
   const lessonsSource = useUnit(viewMode === "weekly" ? lessonModel.$weeklyLessons : cfg.listStore);
   const pagination = useUnit(cfg.paginationStore);
@@ -54,6 +56,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
       limit: 10,
       onlyUnpaid,
       onlyWithoutHomework,
+      ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
+      ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
     });
   };
 
