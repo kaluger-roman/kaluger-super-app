@@ -5,6 +5,7 @@ import { useUnit } from "effector-react";
 
 import { lessonModel } from "@entities";
 import { lessonsModel, LessonsList } from "@features";
+import { toLocalStartOfDay, toLocalEndOfDay } from "@features";
 
 import { ScheduleView } from "../ScheduleView";
 import { WeekPagination } from "../WeekPagination";
@@ -56,8 +57,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
       limit: 10,
       onlyUnpaid,
       onlyWithoutHomework,
-      ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-      ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+      ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+      ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
     });
   };
 

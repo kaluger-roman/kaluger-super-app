@@ -1,5 +1,17 @@
 import type { PaymentDatePreset } from "./lessons-filters.model";
 
+export const toLocalStartOfDay = (date: Date): string => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+};
+
+export const toLocalEndOfDay = (date: Date): string => {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+};
+
 export const calculatePresetDates = (preset: PaymentDatePreset): { from: Date; to: Date } => {
   const now = new Date();
 

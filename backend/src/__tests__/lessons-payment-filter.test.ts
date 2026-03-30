@@ -169,6 +169,18 @@ describe("getLessons paymentDate filter", () => {
     });
   });
 
+  it("should not return 400 when onlyUnpaid is true even with invalid date range", async () => {
+    await request(app)
+      .get("/api/lessons")
+      .set("Authorization", `Bearer ${authToken}`)
+      .query({
+        onlyUnpaid: "true",
+        paymentDateFrom: "2026-04-01",
+        paymentDateTo: "2026-03-01",
+      })
+      .expect(200);
+  });
+
   it("should exclude unpaid lessons (null paymentDate) when payment date filter is active", async () => {
     const res = await request(app)
       .get("/api/lessons")

@@ -36,14 +36,7 @@ sample({
 });
 
 sample({
-  clock: [
-    LessonsPageGate.open,
-    lessonsViewModeModel.$lessonsViewMode,
-    lessonsFiltersModel.$onlyUnpaid,
-    lessonsFiltersModel.$onlyWithoutHomework,
-    lessonsFiltersModel.$paymentDateFrom,
-    lessonsFiltersModel.$paymentDateTo,
-  ],
+  clock: [LessonsPageGate.open, lessonsViewModeModel.$lessonsViewMode],
   source: lessonsViewModeModel.$lessonsViewMode,
   filter: (lessonsViewMode) => lessonsViewMode === "schedule",
   fn: getScheduleDateRangeParams,

@@ -1,3 +1,5 @@
+import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
+
 export const getScheduleDateRangeParams = () => {
   const now = new Date();
   const startDate = new Date(now);
@@ -29,8 +31,8 @@ export const createPagedLessonParams = ({
   limit: 10,
   onlyUnpaid,
   onlyWithoutHomework,
-  ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-  ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+  ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+  ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
 });
 
 type WeeklyParams = {
@@ -51,6 +53,6 @@ export const createWeeklyLessonParams = ({
   weekStart: currentWeek.toISOString(),
   onlyUnpaid,
   onlyWithoutHomework,
-  ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-  ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+  ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+  ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
 });

@@ -3,6 +3,7 @@ import { sample } from "effector";
 import { lessonModel } from "@entities";
 import { notificationsModel } from "@shared/model";
 
+import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
 import * as filtersModel from "./lessons-filters.model";
 import { getScheduleDateRange, extractErrorMessage } from "./lessons-reload.helpers";
 import * as viewModeModel from "./lessons-view-mode.model";
@@ -21,8 +22,8 @@ sample({
     limit: pagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -48,8 +49,8 @@ sample({
     weekStart: currentWeek.toISOString() || "",
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadWeeklyLessonsFx,
 });
@@ -78,8 +79,8 @@ sample({
     limit: upcomingPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -100,8 +101,8 @@ sample({
     limit: completedPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadCompletedLessonsFx,
 });
@@ -122,8 +123,8 @@ sample({
     limit: cancelledPagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadCancelledLessonsFx,
 });
@@ -148,8 +149,8 @@ sample({
     limit: pagination.limit,
     onlyUnpaid,
     onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: paymentDateFrom.toISOString() }),
-    ...(paymentDateTo && { paymentDateTo: paymentDateTo.toISOString() }),
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
 });
