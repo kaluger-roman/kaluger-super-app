@@ -5,6 +5,7 @@ import { useUnit } from "effector-react";
 
 import { lessonModel } from "@entities";
 import { lessonsModel, LessonsList } from "@features";
+import { toLocalStartOfDay, toLocalEndOfDay } from "@features";
 
 import { ScheduleView } from "../ScheduleView";
 import { WeekPagination } from "../WeekPagination";
@@ -44,6 +45,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
   const scheduleLessons = useUnit(lessonModel.$scheduleLessons);
   const onlyUnpaid = useUnit(lessonsModel.$onlyUnpaid);
   const onlyWithoutHomework = useUnit(lessonsModel.$onlyWithoutHomework);
+  const paymentDateFrom = useUnit(lessonsModel.$paymentDateFrom);
+  const paymentDateTo = useUnit(lessonsModel.$paymentDateTo);
 
   const lessonsSource = useUnit(viewMode === "weekly" ? lessonModel.$weeklyLessons : cfg.listStore);
   const pagination = useUnit(cfg.paginationStore);
@@ -54,6 +57,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
       limit: 10,
       onlyUnpaid,
       onlyWithoutHomework,
+      ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+      ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
     });
   };
 

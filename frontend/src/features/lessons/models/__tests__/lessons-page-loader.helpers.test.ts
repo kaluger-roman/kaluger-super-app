@@ -38,6 +38,8 @@ describe("createPagedLessonParams", () => {
     const result = createPagedLessonParams({
       onlyUnpaid: false,
       onlyWithoutHomework: false,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.page).toBe(1);
@@ -50,6 +52,8 @@ describe("createPagedLessonParams", () => {
     const result = createPagedLessonParams({
       onlyUnpaid: true,
       onlyWithoutHomework: false,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.onlyUnpaid).toBe(true);
@@ -60,6 +64,8 @@ describe("createPagedLessonParams", () => {
     const result = createPagedLessonParams({
       onlyUnpaid: false,
       onlyWithoutHomework: true,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.onlyUnpaid).toBe(false);
@@ -70,6 +76,8 @@ describe("createPagedLessonParams", () => {
     const result = createPagedLessonParams({
       onlyUnpaid: true,
       onlyWithoutHomework: true,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.onlyUnpaid).toBe(true);
@@ -85,6 +93,8 @@ describe("createWeeklyLessonParams", () => {
       currentWeek,
       onlyUnpaid: false,
       onlyWithoutHomework: false,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.weekStart).toBe(currentWeek.toISOString());
@@ -99,6 +109,8 @@ describe("createWeeklyLessonParams", () => {
       currentWeek,
       onlyUnpaid: true,
       onlyWithoutHomework: true,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.weekStart).toBe(currentWeek.toISOString());
@@ -113,6 +125,8 @@ describe("createWeeklyLessonParams", () => {
       currentWeek,
       onlyUnpaid: false,
       onlyWithoutHomework: false,
+      paymentDateFrom: null,
+      paymentDateTo: null,
     });
 
     expect(result.weekStart).toBe(currentWeek.toISOString());

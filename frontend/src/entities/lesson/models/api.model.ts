@@ -8,6 +8,8 @@ type LoadPagedFilters = {
   limit?: number;
   onlyUnpaid?: boolean;
   onlyWithoutHomework?: boolean;
+  paymentDateFrom?: string;
+  paymentDateTo?: string;
 };
 
 export const loadCompletedLessons = createEvent<LoadPagedFilters>();
@@ -18,6 +20,8 @@ export const loadWeeklyLessons = createEvent<{
   weekStart: string;
   onlyUnpaid?: boolean;
   onlyWithoutHomework?: boolean;
+  paymentDateFrom?: string;
+  paymentDateTo?: string;
 }>();
 export const loadScheduleLessons = createEvent<{
   startDate: string;
@@ -59,7 +63,13 @@ export const loadUpcomingLessonsFx = createEffect(async (filters?: LoadPagedFilt
 });
 
 export const loadWeeklyLessonsFx = createEffect(
-  async (filters: { weekStart: string; onlyUnpaid?: boolean; onlyWithoutHomework?: boolean }) => {
+  async (filters: {
+    weekStart: string;
+    onlyUnpaid?: boolean;
+    onlyWithoutHomework?: boolean;
+    paymentDateFrom?: string;
+    paymentDateTo?: string;
+  }) => {
     return await lessonsApi.getByWeek(filters);
   }
 );
