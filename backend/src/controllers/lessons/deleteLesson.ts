@@ -1,8 +1,7 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
-import { getRecurringLessonKey } from "../../services/recurringHelpers";
-import { truncateToMinute } from "../../utils/time";
+import { getRecurringLessonKey, cancelRemindersForLesson } from "../../services";
 
 export const deleteLesson = async (req: AuthRequest, res: Response) => {
   try {
@@ -40,6 +39,9 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
         .map((l) => l.id);
 
       if (toDeleteIds.length > 0) {
+        for (const lessonId of toDeleteIds) {
+          await cancelRemindersForLesson(lessonId);
+        }
         await prisma.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
       }
 
@@ -48,6 +50,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
         deleted: toDeleteIds.length,
       });
     } else {
+      await cancelRemindersForLesson(id);
       await prisma.lesson.delete({ where: { id } });
 
       res.json({ message: "Урок успешно удален" });

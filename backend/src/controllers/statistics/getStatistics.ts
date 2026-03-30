@@ -8,31 +8,16 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { startDate, endDate } = req.query;
+    const timezone = req.headers["x-timezone"] as string | undefined;
 
     const now = truncateToMinute(new Date());
     const where = buildStatisticsWhere(
       userId!,
       startDate as string,
-      endDate as string
+      endDate as string,
+      timezone
     );
-    // If client provided startDate/endDate, interpret those as UTC-day bounds
-    // to avoid excluding times when client sends ISO date from toISOString().
-    if (startDate || endDate) {
-      const utcGte = startDate
-        ? new Date(`${(startDate as string)}T00:00:00.000Z`)
-        : undefined;
-      const utcLte = endDate
-        ? new Date(`${(endDate as string)}T23:59:59.999Z`)
-        : undefined;
-
-      if (utcGte || utcLte) {
-        where.startTime = {
-          ...(utcGte ? { gte: utcGte } : {}),
-          ...(utcLte ? { lte: utcLte } : {}),
-        } as any;
-      }
-    }
-    const lastMonthRange = getLastMonthRange();
+    const lastMonthRange = getLastMonthRange(timezone);
 
     const [
       completedLessons,

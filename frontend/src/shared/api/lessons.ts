@@ -20,6 +20,8 @@ type LessonsFilters = {
   limit?: number;
   onlyUnpaid?: boolean;
   onlyWithoutHomework?: boolean;
+  paymentDateFrom?: string;
+  paymentDateTo?: string;
 };
 
 export const lessonsApi = {
@@ -47,6 +49,8 @@ export const lessonsApi = {
     limit?: number;
     onlyUnpaid?: boolean;
     onlyWithoutHomework?: boolean;
+    paymentDateFrom?: string;
+    paymentDateTo?: string;
   }): Promise<LessonsResponse> => {
     const params = new URLSearchParams();
 
@@ -62,6 +66,8 @@ export const lessonsApi = {
     if (filters?.onlyUnpaid) params.append("onlyUnpaid", String(filters.onlyUnpaid));
     if (filters?.onlyWithoutHomework)
       params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
+    if (filters?.paymentDateFrom) params.append("paymentDateFrom", filters.paymentDateFrom);
+    if (filters?.paymentDateTo) params.append("paymentDateTo", filters.paymentDateTo);
 
     if (filters?.page) {
       params.append("page", filters.page.toString());
@@ -78,6 +84,8 @@ export const lessonsApi = {
     weekStart: string;
     onlyUnpaid?: boolean;
     onlyWithoutHomework?: boolean;
+    paymentDateFrom?: string;
+    paymentDateTo?: string;
   }): Promise<LessonsResponse> => {
     const params = new URLSearchParams();
 
@@ -86,6 +94,8 @@ export const lessonsApi = {
     if (filters.onlyUnpaid) params.append("onlyUnpaid", String(filters.onlyUnpaid));
     if (filters.onlyWithoutHomework)
       params.append("onlyWithoutHomework", String(filters.onlyWithoutHomework));
+    if (filters.paymentDateFrom) params.append("paymentDateFrom", filters.paymentDateFrom);
+    if (filters.paymentDateTo) params.append("paymentDateTo", filters.paymentDateTo);
 
     const response = await api.get(`/lessons?${params.toString()}`);
     return response.data;

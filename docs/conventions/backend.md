@@ -114,6 +114,19 @@ type AuthRequest = Request & { user?: JwtPayload };
 6. Add service if complex logic needed
 7. Update Prisma schema if new entities
 
+## Timezone Handling
+
+All dates in DB are UTC. User's timezone arrives via `X-Timezone` header (IANA string, e.g. `Europe/Moscow`), set automatically by frontend on every request. Middleware in `auth.ts` silently saves it to `User.timezone`.
+
+**Rules:**
+
+- **Never use server local time for user-facing logic** — `new Date()` is fine for UTC comparisons (status updates, cron), but not for computing "user's today/month"
+- **Default date ranges** (when no explicit dates from frontend) — use `getCurrentMonthRange(timezone)` / `getLastMonthBounds(timezone)` from `utils/time.ts`
+- **Explicit date ranges from frontend** — frontend already converts to UTC boundaries via `toLocalStartOfDay`/`toLocalEndOfDay`, just parse with `new Date(isoString)`
+- **Extract timezone in controllers:** `const timezone = req.headers["x-timezone"] as string | undefined`
+- **Push notifications** — format times using stored `user.timezone` via `Intl.DateTimeFormat({ timeZone })`
+- **Timezone-aware boundaries** — use `startOfMonthInTimezone()` / `endOfMonthInTimezone()` from `utils/time.ts` when computing month boundaries on the server
+
 ## Code Style
 
 - Extract functions only if reused 2+ times

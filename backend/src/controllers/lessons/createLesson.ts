@@ -1,10 +1,11 @@
-import { Response } from "express";
-import { CreateLessonDto } from "../../types";
-import { AuthRequest } from "../../middleware/auth";
+import type { Response } from "express";
+import type { CreateLessonDto } from "../../types";
+import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
 import { truncateToMinute } from "../../utils/time";
+import { scheduleRemindersForLesson } from "../../services";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
 
@@ -66,6 +67,13 @@ const createSingleLesson = async (
   });
 
   res.status(201).json({ lesson });
+
+  // Schedule reminders for the new lesson
+  if (lesson.status === "SCHEDULED") {
+    scheduleRemindersForLesson(lesson.id).catch((err) =>
+      console.error("Failed to schedule reminders:", err)
+    );
+  }
 
   const wsManager = getWebSocketManager();
   if (wsManager) {
@@ -142,17 +150,26 @@ const createRecurringLessons = async (
     });
   }
 
-  const createdLessons = await prisma.lesson.createMany({ data: lessons });
+  const createdLessons = await prisma.lesson.createManyAndReturn({ data: lessons });
 
   const firstLesson = await prisma.lesson.findFirst({
-    where: { tutorId: userId, startTime: start, studentId },
+    where: { id: createdLessons[0]?.id },
     include: { student: true },
   });
 
   res.status(201).json({
     lesson: firstLesson,
-    message: `Создано ${createdLessons.count} регулярных уроков`,
+    message: `Создано ${createdLessons.length} регулярных уроков`,
   });
+
+  // Schedule reminders for all new recurring lessons (using exact IDs from createManyAndReturn)
+  for (const l of createdLessons) {
+    if (l.status === "SCHEDULED") {
+      scheduleRemindersForLesson(l.id).catch((err) =>
+        console.error("Failed to schedule reminders for recurring lesson:", err)
+      );
+    }
+  }
 
   const wsManager = getWebSocketManager();
   if (wsManager && firstLesson) {

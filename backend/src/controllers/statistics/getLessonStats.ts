@@ -7,11 +7,13 @@ export const getLessonsBySubject = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { startDate, endDate } = req.query;
+    const timezone = req.headers["x-timezone"] as string | undefined;
 
     const where = buildStatisticsWhere(
       userId!,
       startDate as string,
-      endDate as string
+      endDate as string,
+      timezone
     );
 
     const lessonsBySubject = await prisma.lesson.groupBy({
@@ -36,11 +38,13 @@ export const getLessonsByType = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { startDate, endDate } = req.query;
+    const timezone = req.headers["x-timezone"] as string | undefined;
 
     const where = buildStatisticsWhere(
       userId!,
       startDate as string,
-      endDate as string
+      endDate as string,
+      timezone
     );
 
     const lessonsByType = await prisma.lesson.groupBy({

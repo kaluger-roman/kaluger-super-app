@@ -61,6 +61,7 @@ feature/models/
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file
 - **Components < 150 lines** — split if larger
+- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
 ### Types
 
@@ -211,6 +212,34 @@ export const $isLoading = featureApi.loadFx.pending;
 sample({ clock: PageGate.open, target: featureApi.loadFx });
 sample({ clock: featureApi.loadFx.doneData, target: $data });
 ```
+
+## Loading Indicators
+
+Use the **global blocking overlay** (`$isBlocking` in `app/model/blocking.model.ts`) for all API requests. Do NOT add per-component spinners — add the effect's `.pending` to the `$isBlocking` combine instead. The overlay covers the whole screen with a `CircularProgress`.
+
+```typescript
+// app/model/blocking.model.ts
+export const $isBlocking = combine(
+  {
+    addLesson: lessonModel.addLessonFx.pending,
+    updateSettings: notificationsModel.updateSettingsFx.pending,
+    // ... add new effects here
+  },
+  (pending) => Boolean(Object.values(pending).some(Boolean))
+);
+```
+
+## Timezone Handling
+
+User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), sent automatically as `X-Timezone` header on every API request (`shared/api/base.ts`).
+
+**Rules:**
+
+- **Date display** — use `toLocaleDateString("ru-RU")` / `toLocaleTimeString("ru-RU")` which automatically use browser timezone
+- **Date formatting** — use helpers from `shared/lib/dateFormat.ts`
+- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessons-filters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
+- **Never send raw `Date` objects** — always convert through `toLocalStartOfDay`/`toLocalEndOfDay` or `.toISOString()`
+- **MUI DatePicker values** are in browser local time — no extra conversion needed before passing to `toLocalStartOfDay`/`toLocalEndOfDay`
 
 ## Code Style
 

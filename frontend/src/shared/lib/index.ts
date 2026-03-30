@@ -26,3 +26,4 @@ export {
 export { useNotifications } from "./notifications.hooks";
 export { useDisableNumberScroll } from "./disable-number-scroll.hooks";
 export { styled } from "./styled.helpers";
+export { isIos, isInStandaloneMode } from "./platform.helpers";

@@ -67,7 +67,7 @@ export const disconnectWebSocketFx = createEffect((ws: WebSocket | null) => {
 export const $webSocketConnection = createStore<WebSocket | null>(null);
 
 export const $isWebSocketConnected = $webSocketConnection.map(
-  (connection) => connection?.readyState === WebSocket.OPEN
+  (connection) => connection?.readyState === (typeof WebSocket !== "undefined" ? WebSocket.OPEN : 1)
 );
 
 export const $isWebSocketEnabled = createStore(true);
