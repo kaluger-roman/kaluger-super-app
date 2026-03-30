@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
-import { comparePassword, validateEmail } from "../../utils/auth";
-import { generateAdminToken } from "../../middleware/adminAuth";
+import { comparePassword, validateEmail, generateAdminToken } from "../../utils/auth";
 import type { AdminLoginDto } from "../../types";
 
 export const adminLogin = async (req: Request, res: Response) => {
@@ -31,7 +30,7 @@ export const adminLogin = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Неверный email или пароль" });
     }
 
-    const token = generateAdminToken(email);
+    const token = generateAdminToken({ email, isAdmin: true });
 
     res.json({ token });
   } catch (error) {

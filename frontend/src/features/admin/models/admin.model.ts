@@ -99,7 +99,7 @@ sample({
 
 sample({
   clock: loginFx.doneData,
-  target: $adminToken,
+  target: [$adminToken, getOverviewFx, getBackupSettingsFx],
 });
 
 sample({
@@ -130,6 +130,8 @@ sample({
 
 sample({
   clock: [AdminPageGate.open, overviewRequested],
+  source: $isAdminAuthenticated,
+  filter: (isAuth) => isAuth,
   target: getOverviewFx,
 });
 
@@ -140,6 +142,8 @@ sample({
 
 sample({
   clock: [AdminPageGate.open, backupSettingsRequested],
+  source: $isAdminAuthenticated,
+  filter: (isAuth) => isAuth,
   target: getBackupSettingsFx,
 });
 

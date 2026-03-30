@@ -1,7 +1,10 @@
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import prisma from "../lib/prisma";
+
+const execAsync = promisify(exec);
 
 const getBackupDir = (): string => {
   const dir = path.resolve(
@@ -58,7 +61,7 @@ export const getBackupFiles = (): Array<{
         name,
         path: filePath,
         sizeMb: stats.size / (1024 * 1024),
-        createdAt: stats.birthtime,
+        createdAt: stats.mtime,
       };
     })
     .sort((a, b) => b.name.localeCompare(a.name));
@@ -89,7 +92,7 @@ export const cleanupOldBackups = (maxStorageMb: number): number => {
   return deletedCount;
 };
 
-export const performBackup = (): string => {
+export const performBackup = async (): Promise<string> => {
   const dir = getBackupDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const filename = `backup-${timestamp}.sql.gz`;
@@ -100,9 +103,10 @@ export const performBackup = (): string => {
     throw new Error("DATABASE_URL не задан");
   }
 
-  execSync(`pg_dump "${databaseUrl}" | gzip > "${filePath}"`, {
-    stdio: "pipe",
-    timeout: 300000, // 5 минут таймаут
+  await execAsync(`pg_dump | gzip > "${filePath}"`, {
+    timeout: 300000,
+    env: { ...process.env, PGDATABASE: undefined, DATABASE_URL: databaseUrl },
+    shell: "/bin/sh",
   });
 
   // Проверяем что файл создан и не пуст
@@ -113,6 +117,30 @@ export const performBackup = (): string => {
   }
 
   return filePath;
+};
+
+export const createManualBackup = async (): Promise<{
+  name: string;
+  sizeMb: number;
+  createdAt: Date;
+}> => {
+  const filePath = await performBackup();
+  const stats = fs.statSync(filePath);
+
+  const settings = await getBackupSettings();
+
+  await prisma.backupSettings.update({
+    where: { id: settings.id },
+    data: { lastBackupAt: new Date() },
+  });
+
+  cleanupOldBackups(settings.maxStorageMb);
+
+  return {
+    name: path.basename(filePath),
+    sizeMb: Math.round((stats.size / (1024 * 1024)) * 100) / 100,
+    createdAt: stats.mtime,
+  };
 };
 
 export const runBackupJob = async (): Promise<void> => {
@@ -134,7 +162,7 @@ export const runBackupJob = async (): Promise<void> => {
 
   console.log("Начинаю создание бэкапа базы данных...");
 
-  const filePath = performBackup();
+  const filePath = await performBackup();
   const stats = fs.statSync(filePath);
   const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
 

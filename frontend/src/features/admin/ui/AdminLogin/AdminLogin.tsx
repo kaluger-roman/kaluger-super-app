@@ -4,7 +4,7 @@ import { TextField } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import * as Styled from "./AdminLogin.styled";
-import * as adminModel from "../../models/admin.model";
+import { adminModel } from "../../models";
 
 export const AdminLogin: FC = () => {
   const email = useUnit(adminModel.$email);

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { JwtPayload } from "../types";
+import type { AdminJwtPayload, JwtPayload } from "../types";
 
 export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 12;
@@ -14,18 +14,35 @@ export const comparePassword = async (
   return bcrypt.compare(password, hashedPassword);
 };
 
+const getJwtSecret = (): string =>
+  process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
+
 export const generateToken = (payload: JwtPayload): string => {
-  const secret =
-    process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
-  return jwt.sign(payload, secret, { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
+};
+
+export const generateAdminToken = (
+  payload: AdminJwtPayload
+): string => {
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "24h" });
 };
 
 export const verifyToken = (token: string): JwtPayload | null => {
   try {
-    const secret =
-      process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
-    return jwt.verify(token, secret) as JwtPayload;
-  } catch (error) {
+    return jwt.verify(token, getJwtSecret()) as JwtPayload;
+  } catch {
+    return null;
+  }
+};
+
+export const verifyAdminToken = (
+  token: string
+): AdminJwtPayload | null => {
+  try {
+    const payload = jwt.verify(token, getJwtSecret()) as AdminJwtPayload;
+    if (!payload.isAdmin) return null;
+    return payload;
+  } catch {
     return null;
   }
 };

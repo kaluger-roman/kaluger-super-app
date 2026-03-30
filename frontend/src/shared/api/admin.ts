@@ -1,6 +1,12 @@
 import axios from "axios";
 
 import { API_BASE_URL } from "../config";
+import type {
+  AdminOverviewResponse,
+  BackupSettingsData,
+  BackupFileData,
+  BackupSettingsFullResponse,
+} from "./admin.types";
 
 const ADMIN_TOKEN_KEY = "adminToken";
 
@@ -24,39 +30,10 @@ adminApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem(ADMIN_TOKEN_KEY);
-      if (window.location.pathname.startsWith("/admin")) {
-        window.location.href = "/admin";
-      }
     }
     return Promise.reject(error);
   }
 );
-
-export type AdminOverviewResponse = {
-  usersCount: number;
-  studentsCount: number;
-  lessonsCount: number;
-  serverUptime: number;
-};
-
-export type BackupSettingsData = {
-  enabled: boolean;
-  intervalHours: number;
-  maxStorageMb: number;
-  lastBackupAt: string | null;
-};
-
-export type BackupFileData = {
-  name: string;
-  sizeMb: number;
-  createdAt: string;
-};
-
-export type BackupSettingsFullResponse = {
-  settings: BackupSettingsData;
-  files: BackupFileData[];
-  totalSizeMb: number;
-};
 
 export const adminApiMethods = {
   login: async (email: string, password: string): Promise<{ token: string }> => {

@@ -1,18 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import type { AdminJwtPayload } from "../types";
-
-export type AdminRequest = Request & {
-  admin?: AdminJwtPayload;
-};
-
-export const generateAdminToken = (email: string): string => {
-  const secret =
-    process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
-  return jwt.sign({ email, isAdmin: true } as AdminJwtPayload, secret, {
-    expiresIn: "24h",
-  });
-};
+import type { Response, NextFunction } from "express";
+import type { AdminRequest } from "../types";
+import { verifyAdminToken } from "../utils/auth";
 
 export const authenticateAdmin = (
   req: AdminRequest,
@@ -26,20 +14,13 @@ export const authenticateAdmin = (
     return res.status(401).json({ error: "Токен доступа обязателен" });
   }
 
-  try {
-    const secret =
-      process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
-    const payload = jwt.verify(token, secret) as AdminJwtPayload;
-
-    if (!payload.isAdmin) {
-      return res.status(403).json({ error: "Доступ запрещён" });
-    }
-
-    req.admin = payload;
-    next();
-  } catch {
+  const payload = verifyAdminToken(token);
+  if (!payload) {
     return res
       .status(403)
       .json({ error: "Недействительный или истекший токен" });
   }
+
+  req.admin = payload;
+  next();
 };

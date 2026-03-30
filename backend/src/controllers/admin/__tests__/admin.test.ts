@@ -3,8 +3,7 @@ import { faker } from "@faker-js/faker";
 import bcrypt from "bcryptjs";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
-import { generateAdminToken } from "../../../middleware/adminAuth";
-import { generateToken } from "../../../utils/auth";
+import { generateAdminToken, generateToken } from "../../../utils/auth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -18,7 +17,7 @@ describe("admin integration tests", () => {
     adminPasswordHash = await bcrypt.hash(adminPassword, 12);
     process.env.ADMIN_EMAIL = adminEmail;
     process.env.ADMIN_PASSWORD = adminPasswordHash;
-    adminToken = generateAdminToken(adminEmail);
+    adminToken = generateAdminToken({ email: adminEmail, isAdmin: true });
   });
 
   afterAll(async () => {

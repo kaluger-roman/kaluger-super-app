@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AdminRequest } from "../../middleware/adminAuth";
+import type { AdminRequest } from "../../types";
 import prisma from "../../lib/prisma";
 
 export const getOverview = async (req: AdminRequest, res: Response) => {

@@ -1,3 +1,5 @@
+import type { Request } from "express";
+
 export type CreateUserDto = {
   email: string;
   password: string;
@@ -148,6 +150,10 @@ export type BackupFileResponse = {
 export type AdminJwtPayload = {
   email: string;
   isAdmin: true;
+};
+
+export type AdminRequest = Request & {
+  admin?: AdminJwtPayload;
 };
 
 export type AdminLoginDto = {

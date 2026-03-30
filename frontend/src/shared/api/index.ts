@@ -20,4 +20,4 @@ export type {
   BackupSettingsData,
   BackupFileData,
   BackupSettingsFullResponse,
-} from "./admin";
+} from "./admin.types";

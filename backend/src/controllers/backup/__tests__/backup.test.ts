@@ -4,7 +4,7 @@ import path from "path";
 import os from "os";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
-import { generateAdminToken } from "../../../middleware/adminAuth";
+import { generateAdminToken } from "../../../utils/auth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -16,7 +16,7 @@ describe("backup admin integration tests", () => {
   beforeAll(() => {
     process.env.ADMIN_EMAIL = "admin@test.com";
     process.env.ADMIN_PASSWORD = "$2b$12$test";
-    adminToken = generateAdminToken("admin@test.com");
+    adminToken = generateAdminToken({ email: "admin@test.com", isAdmin: true });
   });
 
   beforeEach(async () => {

@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AdminRequest } from "../../middleware/adminAuth";
+import type { AdminRequest } from "../../types";
 import type { UpdateBackupSettingsDto } from "../../types";
 import { updateBackupSettings } from "../../services";
 

@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AdminRequest } from "../../middleware/adminAuth";
+import type { AdminRequest } from "../../types";
 import { getBackupSettings, getBackupFiles, getTotalSizeMb } from "../../services";
 
 export const getSettings = async (req: AdminRequest, res: Response) => {

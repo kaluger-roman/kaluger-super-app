@@ -1,29 +1,15 @@
 import type { Response } from "express";
-import type { AdminRequest } from "../../middleware/adminAuth";
-import { performBackup, cleanupOldBackups, getBackupSettings } from "../../services";
-import fs from "fs";
-import path from "path";
-import prisma from "../../lib/prisma";
+import type { AdminRequest } from "../../types";
+import { createManualBackup } from "../../services";
 
 export const createBackup = async (req: AdminRequest, res: Response) => {
   try {
-    const filePath = performBackup();
-    const stats = fs.statSync(filePath);
-    const sizeMb = Math.round((stats.size / (1024 * 1024)) * 100) / 100;
-
-    const settings = await getBackupSettings();
-
-    await prisma.backupSettings.update({
-      where: { id: settings.id },
-      data: { lastBackupAt: new Date() },
-    });
-
-    cleanupOldBackups(settings.maxStorageMb);
+    const result = await createManualBackup();
 
     res.json({
-      name: path.basename(filePath),
-      sizeMb,
-      createdAt: stats.birthtime.toISOString(),
+      name: result.name,
+      sizeMb: result.sizeMb,
+      createdAt: result.createdAt.toISOString(),
     });
   } catch (error) {
     console.error("Error creating backup:", error);
