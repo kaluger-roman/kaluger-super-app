@@ -96,6 +96,15 @@ Before writing or modifying code, you MUST read the relevant convention file:
 
 Do NOT skip this step. These files contain critical project-specific patterns (Effector, FSD, Prisma, styled-components) that are not covered in this summary.
 
+## MANDATORY: Verify Before Committing
+
+Before committing code, you MUST verify:
+
+1. **Tests pass** — `npm test` in the relevant directory (frontend/backend)
+2. **ESLint clean** — `npm run lint` in `frontend/`
+3. **TypeScript clean** — `npm run build` in `backend/`
+4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
+
 ## Bug Fixes
 
 - Always add a regression test covering the specific scenario when fixing a bug
@@ -118,3 +127,12 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/project:test-frontend <task>` — write frontend tests
 - `/project:test-backend <task>` — write backend tests
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
+
+## Active Technologies
+
+- TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
+- PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)
+
+## Recent Changes
+
+- 008-pwa-lesson-reminders: Added TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend)

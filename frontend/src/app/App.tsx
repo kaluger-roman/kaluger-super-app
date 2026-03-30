@@ -13,8 +13,9 @@ import { userModel } from "@entities";
 import { theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent } from "./components";
+import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
 import { appInitModel, blockingModel, webSocketModel } from "./model";
+import type { BeforeInstallPromptEvent } from "./model/app-init.types";
 
 const AppRouter: FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,32 @@ const App: FC = () => {
     } else {
       appInitModel.initializeApp({});
     }
+
+    const handleOnline = () => appInitModel.onlineStatusChanged(true);
+    const handleOffline = () => appInitModel.onlineStatusChanged(false);
+
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      appInitModel.installPromptCaptured(e as BeforeInstallPromptEvent);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        appInitModel.appResumed();
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,11 +99,15 @@ const App: FC = () => {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Router>
-          <AppRouter />
-          <NotificationProvider />
-          <Styled.ModalBackdrop open={isBlocking}>
-            <CircularProgress color="inherit" />
-          </Styled.ModalBackdrop>
+          <PullToRefresh>
+            <AppRouter />
+            <NotificationProvider />
+            <OfflineIndicator />
+            <InstallPrompt />
+            <Styled.ModalBackdrop open={isBlocking}>
+              <CircularProgress color="inherit" />
+            </Styled.ModalBackdrop>
+          </PullToRefresh>
         </Router>
       </LocalizationProvider>
     </ThemeProvider>

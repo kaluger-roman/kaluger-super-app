@@ -61,6 +61,7 @@ feature/models/
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file
 - **Components < 150 lines** — split if larger
+- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
 ### Types
 
@@ -210,6 +211,22 @@ export const $isLoading = featureApi.loadFx.pending;
 
 sample({ clock: PageGate.open, target: featureApi.loadFx });
 sample({ clock: featureApi.loadFx.doneData, target: $data });
+```
+
+## Loading Indicators
+
+Use the **global blocking overlay** (`$isBlocking` in `app/model/blocking.model.ts`) for all API requests. Do NOT add per-component spinners — add the effect's `.pending` to the `$isBlocking` combine instead. The overlay covers the whole screen with a `CircularProgress`.
+
+```typescript
+// app/model/blocking.model.ts
+export const $isBlocking = combine(
+  {
+    addLesson: lessonModel.addLessonFx.pending,
+    updateSettings: notificationsModel.updateSettingsFx.pending,
+    // ... add new effects here
+  },
+  (pending) => Boolean(Object.values(pending).some(Boolean))
+);
 ```
 
 ## Code Style

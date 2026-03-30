@@ -22,12 +22,16 @@ model User {
   verificationCode       String?
   verificationCodeExpiry DateTime?
   taxRate                Float     @default(6.0)
+  timezone               String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  students       Student[]
-  lessons        Lesson[]
-  newsReadStatus NewsReadStatus?
+  students           Student[]
+  lessons            Lesson[]
+  newsReadStatus     NewsReadStatus?
+  pushSubscriptions  PushSubscription[]
+  reminderSettings   ReminderSettings?
+  scheduledReminders ScheduledReminder[]
 
   @@map("users")
 }
@@ -86,6 +90,8 @@ model Lesson {
   studentId String
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  scheduledReminders ScheduledReminder[]
+
   @@map("lessons")
 }
 
@@ -120,6 +126,62 @@ enum ArchiveReason {
   CHANGED_MIND // Передумал заниматься предметом
   POOR_EFFORT // Плохо старался на занятиях
   MISSED_LESSONS // Пропускал занятия
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  deviceName String?
+  createdAt  DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model ReminderSettings {
+  id               String   @id @default(cuid())
+  enabled          Boolean  @default(false)
+  intervals        Int[]    @default([])
+  muteWhenInLesson Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_settings")
+}
+
+model ScheduledReminder {
+  id              String         @id @default(cuid())
+  scheduledAt     DateTime
+  intervalMinutes Int
+  status          ReminderStatus @default(PENDING)
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@index([lessonId])
+  @@index([userId, status])
+  @@map("scheduled_reminders")
 }
 
 model NewsItem {

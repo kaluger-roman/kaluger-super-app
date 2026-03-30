@@ -1,8 +1,10 @@
+import type { Lesson } from "@prisma/client";
 import prisma from "../lib/prisma";
+import type { ShiftResult } from "../types";
 import { truncateToMinute } from "../utils/time";
 
 // Build a stable grouping key for recurring lessons
-export const getRecurringLessonKey = (lesson: any) => {
+export const getRecurringLessonKey = (lesson: Lesson) => {
   const t = truncateToMinute(new Date(lesson.startTime));
   const weekday = t.getDay();
   const hour = t.getHours();
@@ -11,9 +13,9 @@ export const getRecurringLessonKey = (lesson: any) => {
   return `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}`;
 };
 
-// Group recurring lessons by a pattern: tutorId-studentId-weekday-hour-minute-duration
+// Group recurring lessons by a pattern: tutorId-studentId-weekday-hour-minute
 // Returns a Map where the value is the latest lesson for that pattern
-export const groupRecurringLessonsByPattern = (lessons: Array<any>) => {
+export const groupRecurringLessonsByPattern = (lessons: Array<Lesson>) => {
   const lessonGroups = new Map<string, (typeof lessons)[0]>();
 
   for (const lesson of lessons) {
@@ -34,13 +36,10 @@ export const groupRecurringLessonsByPattern = (lessons: Array<any>) => {
 // Shift future recurring lessons in the same group when a base lesson time changes.
 // If any planned shift conflicts with existing lessons, abort all shifts and return conflicts.
 export const shiftFutureRecurringLessons = async (
-  existingLesson: any,
+  existingLesson: Lesson,
   newStart: Date,
   newEnd: Date
-): Promise<{
-  shifted: number;
-  conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
-}> => {
+): Promise<ShiftResult> => {
   const oldStart = truncateToMinute(new Date(existingLesson.startTime));
   const oldEnd = truncateToMinute(new Date(existingLesson.endTime));
 
@@ -122,12 +121,12 @@ export const shiftFutureRecurringLessons = async (
     )
   );
 
-  return { shifted: planned.length };
+  return { shifted: planned.length, shiftedIds: planned.map((p) => p.original.id) };
 };
 
 // Update price for future recurring lessons in the same group
 export const updatePriceForFutureRecurringLessons = async (
-  existingLesson: any,
+  existingLesson: Lesson,
   newPrice: number | null
 ): Promise<{ updated: number }> => {
   const key = getRecurringLessonKey(existingLesson);

@@ -44,6 +44,13 @@ sample({
 });
 
 sample({
+  clock: getProfileFx.doneData,
+  filter: (user) => user.isEmailVerified,
+  fn: () => null,
+  target: verificationModel.setVerificationEmail,
+});
+
+sample({
   clock: updateUser,
   target: $user,
 });

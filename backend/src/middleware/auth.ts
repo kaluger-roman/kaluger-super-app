@@ -1,10 +1,11 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
+import prisma from "../lib/prisma";
+import type { JwtPayload } from "../types";
 import { verifyToken } from "../utils/auth";
-import { JwtPayload } from "../types";
 
-export interface AuthRequest extends Request {
+export type AuthRequest = Request & {
   user?: JwtPayload;
-}
+};
 
 export const authenticateToken = (
   req: AuthRequest,
@@ -26,5 +27,17 @@ export const authenticateToken = (
   }
 
   req.user = payload;
+
+  // Silently save client timezone from header
+  const timezone = req.headers["x-timezone"] as string | undefined;
+  if (timezone && payload.userId) {
+    prisma.user.update({
+      where: { id: payload.userId },
+      data: { timezone },
+    }).catch(() => {
+      // Non-critical, ignore errors
+    });
+  }
+
   next();
 };
