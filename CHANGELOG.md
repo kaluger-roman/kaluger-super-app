@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-03-30
+
+### Added
+- Payment date filter on lessons page — filter by date range with presets: current month, last month, current week (2559796)
+- Payment date range filter in backend `getLessons` controller with validation (2559796)
+- Timezone-aware statistics: all date range queries use user's timezone from `X-Timezone` header for correct month/day boundaries (2559796)
+
+### Changed
+- Statistics endpoints (`getStatistics`, `getLessonStats`, `getStudentStats`) now accept and use `X-Timezone` header for default date ranges (3da5fc1)
+- Weekly lesson view sends `weekStart` as ISO string preserving user's local midnight (3da5fc1)
+
 ## 2026-03-16
 
 ### Added
