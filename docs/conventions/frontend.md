@@ -229,6 +229,18 @@ export const $isBlocking = combine(
 );
 ```
 
+## Timezone Handling
+
+User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), sent automatically as `X-Timezone` header on every API request (`shared/api/base.ts`).
+
+**Rules:**
+
+- **Date display** — use `toLocaleDateString("ru-RU")` / `toLocaleTimeString("ru-RU")` which automatically use browser timezone
+- **Date formatting** — use helpers from `shared/lib/dateFormat.ts`
+- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessons-filters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
+- **Never send raw `Date` objects** — always convert through `toLocalStartOfDay`/`toLocalEndOfDay` or `.toISOString()`
+- **MUI DatePicker values** are in browser local time — no extra conversion needed before passing to `toLocalStartOfDay`/`toLocalEndOfDay`
+
 ## Code Style
 
 - Extract functions only if reused 2+ times

@@ -1,8 +1,9 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
+import { toLocalStartOfDay, toLocalEndOfDay } from "@features";
 import type { Statistics } from "@shared";
-import { statisticsApi, toDateKey } from "@shared";
+import { statisticsApi } from "@shared";
 
 export const ReportsPageGate = createGate();
 
@@ -70,8 +71,8 @@ sample({
   clock: [ReportsPageGate.open, statisticsLoadRequested],
   source: { startDate: $startDate, endDate: $endDate },
   fn: ({ startDate, endDate }) => ({
-    startDate: toDateKey(startDate),
-    endDate: toDateKey(endDate),
+    startDate: toLocalStartOfDay(startDate),
+    endDate: toLocalEndOfDay(endDate),
   }),
   target: loadStatisticsFx,
 });

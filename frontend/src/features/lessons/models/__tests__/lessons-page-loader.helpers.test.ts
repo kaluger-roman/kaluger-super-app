@@ -83,6 +83,54 @@ describe("createPagedLessonParams", () => {
     expect(result.onlyUnpaid).toBe(true);
     expect(result.onlyWithoutHomework).toBe(true);
   });
+
+  it("should include paymentDateFrom as start-of-day ISO string when provided", () => {
+    const date = new Date(2026, 2, 15, 14, 30);
+    const result = createPagedLessonParams({
+      onlyUnpaid: false,
+      onlyWithoutHomework: false,
+      paymentDateFrom: date,
+      paymentDateTo: null,
+    });
+
+    expect(result.paymentDateFrom).toBeDefined();
+    const parsed = new Date(result.paymentDateFrom!);
+    expect(parsed.getHours()).toBe(0);
+    expect(parsed.getMinutes()).toBe(0);
+    expect(parsed.getSeconds()).toBe(0);
+    expect("paymentDateTo" in result).toBe(false);
+  });
+
+  it("should include paymentDateTo as end-of-day ISO string when provided", () => {
+    const date = new Date(2026, 2, 15, 8, 0);
+    const result = createPagedLessonParams({
+      onlyUnpaid: false,
+      onlyWithoutHomework: false,
+      paymentDateFrom: null,
+      paymentDateTo: date,
+    });
+
+    expect(result.paymentDateTo).toBeDefined();
+    const parsed = new Date(result.paymentDateTo!);
+    expect(parsed.getHours()).toBe(23);
+    expect(parsed.getMinutes()).toBe(59);
+    expect(parsed.getSeconds()).toBe(59);
+    expect("paymentDateFrom" in result).toBe(false);
+  });
+
+  it("should include both paymentDateFrom and paymentDateTo when provided", () => {
+    const from = new Date(2026, 2, 1);
+    const to = new Date(2026, 2, 31);
+    const result = createPagedLessonParams({
+      onlyUnpaid: false,
+      onlyWithoutHomework: false,
+      paymentDateFrom: from,
+      paymentDateTo: to,
+    });
+
+    expect(result.paymentDateFrom).toBeDefined();
+    expect(result.paymentDateTo).toBeDefined();
+  });
 });
 
 describe("createWeeklyLessonParams", () => {
