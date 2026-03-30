@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { FC } from "react";
 
 import { TextField } from "@mui/material";
@@ -8,15 +7,15 @@ import * as Styled from "./AdminLogin.styled";
 import * as adminModel from "../../models/admin.model";
 
 export const AdminLogin: FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const email = useUnit(adminModel.$email);
+  const password = useUnit(adminModel.$password);
   const loginError = useUnit(adminModel.$loginError);
   const isLoading = useUnit(adminModel.loginFx.pending);
-  const actions = useUnit({ login: adminModel.loginSubmitted });
-
-  const handleLogin = () => {
-    actions.login({ email, password });
-  };
+  const actions = useUnit({
+    login: adminModel.loginSubmitted,
+    changeEmail: adminModel.emailChanged,
+    changePassword: adminModel.passwordChanged,
+  });
 
   return (
     <Styled.StyledWrapper>
@@ -29,7 +28,7 @@ export const AdminLogin: FC = () => {
           label="Email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => actions.changeEmail(e.target.value)}
           margin="normal"
         />
         <TextField
@@ -37,7 +36,7 @@ export const AdminLogin: FC = () => {
           label="Пароль"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => actions.changePassword(e.target.value)}
           margin="normal"
         />
         {loginError && (
@@ -49,7 +48,7 @@ export const AdminLogin: FC = () => {
           fullWidth
           variant="contained"
           disabled={isLoading}
-          onClick={handleLogin}
+          onClick={() => actions.login()}
         >
           {isLoading ? "Вход..." : "Войти"}
         </Styled.StyledButton>

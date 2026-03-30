@@ -20,6 +20,8 @@ export const $adminToken = createStore<string | null>(
 );
 export const $isAdminAuthenticated = $adminToken.map((token) => token !== null);
 export const $loginError = createStore<string | null>(null);
+export const $email = createStore("");
+export const $password = createStore("");
 export const $overview = createStore<AdminOverviewResponse | null>(null);
 export const $backupSettings = createStore<BackupSettingsData | null>(null);
 export const $backupFiles = createStore<BackupFileData[]>([]);
@@ -28,7 +30,9 @@ export const $intervalHours = createStore<string>("");
 export const $maxStorageMb = createStore<string>("");
 
 // Events
-export const loginSubmitted = createEvent<{ email: string; password: string }>();
+export const emailChanged = createEvent<string>();
+export const passwordChanged = createEvent<string>();
+export const loginSubmitted = createEvent();
 export const loggedOut = createEvent();
 export const overviewRequested = createEvent();
 export const backupSettingsRequested = createEvent();
@@ -45,9 +49,14 @@ export const maxStorageMbChanged = createEvent<string>();
 export const loginFx = createEffect(
   async ({ email, password }: { email: string; password: string }) => {
     const result = await adminApiMethods.login(email, password);
+    localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
     return result.token;
   }
 );
+
+export const logoutFx = createEffect(async () => {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+});
 
 export const getOverviewFx = createEffect(async () => {
   return adminApiMethods.getOverview();
@@ -73,16 +82,23 @@ export const createBackupFx = createEffect(async () => {
 
 // Samples
 sample({
+  clock: emailChanged,
+  target: $email,
+});
+
+sample({
+  clock: passwordChanged,
+  target: $password,
+});
+
+sample({
   clock: loginSubmitted,
+  source: { email: $email, password: $password },
   target: loginFx,
 });
 
 sample({
   clock: loginFx.doneData,
-  fn: (token) => {
-    localStorage.setItem(ADMIN_TOKEN_KEY, token);
-    return token;
-  },
   target: $adminToken,
 });
 
@@ -103,10 +119,12 @@ sample({
 
 sample({
   clock: loggedOut,
-  fn: () => {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    return null;
-  },
+  target: logoutFx,
+});
+
+sample({
+  clock: logoutFx.done,
+  fn: () => null,
   target: $adminToken,
 });
 
