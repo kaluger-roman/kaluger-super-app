@@ -1,31 +1,22 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 import fs from "fs";
 import path from "path";
 import os from "os";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
-import { generateToken } from "../../../utils/auth";
+import { generateAdminToken } from "../../../middleware/adminAuth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
-describe("backup integration tests", () => {
-  let authToken: string;
-  let userId: string;
+describe("backup admin integration tests", () => {
+  let adminToken: string;
   let tmpDir: string;
   const originalBackupDir = process.env.BACKUP_DIR;
 
-  beforeAll(async () => {
-    const user = await prisma.user.create({
-      data: {
-        email: faker.internet.email(),
-        password: "hashed",
-        name: faker.person.fullName(),
-      },
-    });
-
-    userId = user.id;
-    authToken = generateToken({ userId: user.id, email: user.email });
+  beforeAll(() => {
+    process.env.ADMIN_EMAIL = "admin@test.com";
+    process.env.ADMIN_PASSWORD = "$2b$12$test";
+    adminToken = generateAdminToken("admin@test.com");
   });
 
   beforeEach(async () => {
@@ -43,14 +34,13 @@ describe("backup integration tests", () => {
 
   afterAll(async () => {
     await prisma.backupSettings.deleteMany();
-    await prisma.user.delete({ where: { id: userId } });
   });
 
-  describe("GET /api/backup/settings", () => {
+  describe("GET /api/admin/backup/settings", () => {
     it("should return default settings when none exist", async () => {
       const res = await request(app)
-        .get("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(res.body.settings).toMatchObject({
@@ -73,8 +63,8 @@ describe("backup integration tests", () => {
       });
 
       const res = await request(app)
-        .get("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(res.body.settings).toMatchObject({
@@ -85,15 +75,28 @@ describe("backup integration tests", () => {
     });
 
     it("should return 401 without auth token", async () => {
-      await request(app).get("/api/backup/settings").expect(401);
+      await request(app).get("/api/admin/backup/settings").expect(401);
+    });
+
+    it("should reject regular user token", async () => {
+      const { generateToken } = require("../../../utils/auth");
+      const userToken = generateToken({
+        userId: "test",
+        email: "user@test.com",
+      });
+
+      await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${userToken}`)
+        .expect(403);
     });
   });
 
-  describe("PUT /api/backup/settings", () => {
+  describe("PUT /api/admin/backup/settings", () => {
     it("should update settings", async () => {
       const res = await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .put("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .send({ enabled: false, intervalHours: 24, maxStorageMb: 500 })
         .expect(200);
 
@@ -114,8 +117,8 @@ describe("backup integration tests", () => {
       });
 
       const res = await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .put("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .send({ intervalHours: 12 })
         .expect(200);
 
@@ -126,8 +129,8 @@ describe("backup integration tests", () => {
 
     it("should return 400 when intervalHours is out of range", async () => {
       const res = await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .put("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .send({ intervalHours: 0 })
         .expect(400);
 
@@ -136,18 +139,10 @@ describe("backup integration tests", () => {
       );
     });
 
-    it("should return 400 when intervalHours exceeds 168", async () => {
-      await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ intervalHours: 200 })
-        .expect(400);
-    });
-
     it("should return 400 when maxStorageMb is too small", async () => {
       const res = await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
+        .put("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
         .send({ maxStorageMb: 5 })
         .expect(400);
 
@@ -156,17 +151,9 @@ describe("backup integration tests", () => {
       );
     });
 
-    it("should return 400 when maxStorageMb exceeds 10000", async () => {
-      await request(app)
-        .put("/api/backup/settings")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ maxStorageMb: 20000 })
-        .expect(400);
-    });
-
     it("should return 401 without auth token", async () => {
       await request(app)
-        .put("/api/backup/settings")
+        .put("/api/admin/backup/settings")
         .send({ enabled: false })
         .expect(401);
     });

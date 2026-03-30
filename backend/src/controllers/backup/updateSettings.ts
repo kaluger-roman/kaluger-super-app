@@ -1,9 +1,9 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../middleware/auth";
+import type { AdminRequest } from "../../middleware/adminAuth";
 import type { UpdateBackupSettingsDto } from "../../types";
 import { updateBackupSettings } from "../../services";
 
-export const updateSettings = async (req: AuthRequest, res: Response) => {
+export const updateSettings = async (req: AdminRequest, res: Response) => {
   try {
     const { enabled, intervalHours, maxStorageMb } =
       req.body as UpdateBackupSettingsDto;

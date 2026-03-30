@@ -4,8 +4,7 @@ import { Box, Pagination } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { lessonModel } from "@entities";
-import { lessonsModel, LessonsList } from "@features";
-import { toLocalStartOfDay, toLocalEndOfDay } from "@features";
+import { lessonsModel, LessonsList , toLocalStartOfDay, toLocalEndOfDay } from "@features";
 
 import { ScheduleView } from "../ScheduleView";
 import { WeekPagination } from "../WeekPagination";

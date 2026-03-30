@@ -1,11 +1,11 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../middleware/auth";
+import type { AdminRequest } from "../../middleware/adminAuth";
 import { performBackup, cleanupOldBackups, getBackupSettings } from "../../services";
 import fs from "fs";
 import path from "path";
 import prisma from "../../lib/prisma";
 
-export const createBackup = async (req: AuthRequest, res: Response) => {
+export const createBackup = async (req: AdminRequest, res: Response) => {
   try {
     const filePath = performBackup();
     const stats = fs.statSync(filePath);

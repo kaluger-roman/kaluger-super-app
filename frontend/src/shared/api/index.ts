@@ -1,3 +1,4 @@
+export { adminApiMethods } from "./admin";
 export { authApi } from "./auth";
 export { studentsApi } from "./students";
 export { lessonsApi } from "./lessons";
@@ -14,3 +15,9 @@ export type {
   UpdateReminderSettingsRequest,
   SubscribeRequest,
 } from "./notifications.types";
+export type {
+  AdminOverviewResponse,
+  BackupSettingsData,
+  BackupFileData,
+  BackupSettingsFullResponse,
+} from "./admin";

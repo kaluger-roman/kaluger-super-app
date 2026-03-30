@@ -1,8 +1,8 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../middleware/auth";
+import type { AdminRequest } from "../../middleware/adminAuth";
 import { getBackupSettings, getBackupFiles, getTotalSizeMb } from "../../services";
 
-export const getSettings = async (req: AuthRequest, res: Response) => {
+export const getSettings = async (req: AdminRequest, res: Response) => {
   try {
     const settings = await getBackupSettings();
     const files = getBackupFiles();

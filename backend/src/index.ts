@@ -18,7 +18,7 @@ import statisticsRoutes from "./routes/statistics";
 import newsRoutes from "./routes/news";
 import { pushRouter as pushRoutes } from "./routes/push";
 import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
-import { backupRouter as backupRoutes } from "./routes/backup";
+import { adminRouter as adminRoutes } from "./routes/admin";
 
 const app = express();
 
@@ -42,7 +42,7 @@ app.use("/api/statistics", statisticsRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/reminder-settings", reminderSettingsRoutes);
-app.use("/api/backup", backupRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
