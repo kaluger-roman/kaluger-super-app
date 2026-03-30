@@ -9,37 +9,26 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { adminModel } from "@features/admin";
+import { adminDataModel } from "@features/admin";
 
 import * as Styled from "./BackupSection.styled";
 
 export const BackupSection: FC = () => {
-  const backupSettings = useUnit(adminModel.$backupSettings);
-  const backupFiles = useUnit(adminModel.$backupFiles);
-  const totalSizeMb = useUnit(adminModel.$totalSizeMb);
-  const intervalHours = useUnit(adminModel.$intervalHours);
-  const maxStorageMb = useUnit(adminModel.$maxStorageMb);
+  const backupSettings = useUnit(adminDataModel.$backupSettings);
+  const backupFiles = useUnit(adminDataModel.$backupFiles);
+  const totalSizeMb = useUnit(adminDataModel.$totalSizeMb);
+  const intervalHours = useUnit(adminDataModel.$intervalHours);
+  const maxStorageMb = useUnit(adminDataModel.$maxStorageMb);
 
   const actions = useUnit({
-    update: adminModel.backupSettingsUpdated,
-    create: adminModel.backupCreated,
-    changeInterval: adminModel.intervalHoursChanged,
-    changeMaxStorage: adminModel.maxStorageMbChanged,
+    toggle: adminDataModel.backupToggled,
+    save: adminDataModel.backupSettingsSaved,
+    create: adminDataModel.backupCreated,
+    changeInterval: adminDataModel.intervalHoursChanged,
+    changeMaxStorage: adminDataModel.maxStorageMbChanged,
   });
 
   if (!backupSettings) return null;
-
-  const handleToggle = () => {
-    actions.update({ enabled: !backupSettings.enabled });
-  };
-
-  const handleSave = () => {
-    const hours = parseInt(intervalHours, 10);
-    const mb = parseInt(maxStorageMb, 10);
-    if (hours >= 1 && hours <= 168 && mb >= 10 && mb <= 10000) {
-      actions.update({ intervalHours: hours, maxStorageMb: mb });
-    }
-  };
 
   return (
     <div>
@@ -48,7 +37,7 @@ export const BackupSection: FC = () => {
           control={
             <Switch
               checked={backupSettings.enabled}
-              onChange={handleToggle}
+              onChange={() => actions.toggle()}
             />
           }
           label="Автоматические бэкапы"
@@ -78,7 +67,7 @@ export const BackupSection: FC = () => {
           size="small"
           inputProps={{ min: 10, max: 10000 }}
         />
-        <Button variant="outlined" onClick={handleSave}>
+        <Button variant="outlined" onClick={() => actions.save()}>
           Сохранить
         </Button>
       </Styled.StyledSettingsRow>

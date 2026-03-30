@@ -1,14 +1,13 @@
 import axios from "axios";
 
 import { API_BASE_URL } from "../config";
+import { ADMIN_TOKEN_KEY } from "./admin.constants";
 import type {
   AdminOverviewResponse,
   BackupSettingsData,
   BackupFileData,
   BackupSettingsFullResponse,
 } from "./admin.types";
-
-const ADMIN_TOKEN_KEY = "adminToken";
 
 export const adminApi = axios.create({
   baseURL: API_BASE_URL,

@@ -4,17 +4,16 @@ import { TextField } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import * as Styled from "./AdminLogin.styled";
-import { adminModel } from "../../models";
+import { adminAuthModel } from "../../models";
 
 export const AdminLogin: FC = () => {
-  const email = useUnit(adminModel.$email);
-  const password = useUnit(adminModel.$password);
-  const loginError = useUnit(adminModel.$loginError);
-  const isLoading = useUnit(adminModel.loginFx.pending);
+  const email = useUnit(adminAuthModel.$email);
+  const password = useUnit(adminAuthModel.$password);
+  const loginError = useUnit(adminAuthModel.$loginError);
   const actions = useUnit({
-    login: adminModel.loginSubmitted,
-    changeEmail: adminModel.emailChanged,
-    changePassword: adminModel.passwordChanged,
+    login: adminAuthModel.loginSubmitted,
+    changeEmail: adminAuthModel.emailChanged,
+    changePassword: adminAuthModel.passwordChanged,
   });
 
   return (
@@ -47,10 +46,9 @@ export const AdminLogin: FC = () => {
         <Styled.StyledButton
           fullWidth
           variant="contained"
-          disabled={isLoading}
           onClick={() => actions.login()}
         >
-          {isLoading ? "Вход..." : "Войти"}
+          Войти
         </Styled.StyledButton>
       </Styled.StyledPaper>
     </Styled.StyledWrapper>

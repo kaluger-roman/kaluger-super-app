@@ -1,20 +1,22 @@
-import { useState } from "react";
 import type { FC } from "react";
 
 import { Button, Tabs } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
-import { AdminLogin, adminModel } from "@features/admin";
+import { AdminLogin, adminAuthModel, adminDataModel } from "@features/admin";
 
 import * as Styled from "./AdminPage.styled";
 import { OverviewSection, BackupSection } from "./components";
 
 export const AdminPage: FC = () => {
-  const isAuthenticated = useUnit(adminModel.$isAdminAuthenticated);
-  const actions = useUnit({ logout: adminModel.loggedOut });
-  const [tabIndex, setTabIndex] = useState(0);
+  const isAuthenticated = useUnit(adminAuthModel.$isAdminAuthenticated);
+  const tabIndex = useUnit(adminDataModel.$tabIndex);
+  const actions = useUnit({
+    logout: adminAuthModel.loggedOut,
+    changeTab: adminDataModel.tabChanged,
+  });
 
-  useGate(adminModel.AdminPageGate);
+  useGate(adminDataModel.AdminPageGate);
 
   if (!isAuthenticated) {
     return <AdminLogin />;
@@ -32,7 +34,7 @@ export const AdminPage: FC = () => {
       <Styled.StyledPaper>
         <Tabs
           value={tabIndex}
-          onChange={(_, value) => setTabIndex(value)}
+          onChange={(_, value) => actions.changeTab(value)}
         >
           <Styled.StyledTab label="Обзор" />
           <Styled.StyledTab label="Бэкапы" />

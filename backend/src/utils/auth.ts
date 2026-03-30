@@ -17,6 +17,9 @@ export const comparePassword = async (
 const getJwtSecret = (): string =>
   process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
 
+const getAdminJwtSecret = (): string =>
+  process.env.ADMIN_JWT_SECRET || "fallback-admin-secret-key-aabbccdd";
+
 export const generateToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 };
@@ -24,7 +27,7 @@ export const generateToken = (payload: JwtPayload): string => {
 export const generateAdminToken = (
   payload: AdminJwtPayload
 ): string => {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: "24h" });
+  return jwt.sign(payload, getAdminJwtSecret(), { expiresIn: "24h" });
 };
 
 export const verifyToken = (token: string): JwtPayload | null => {
@@ -39,7 +42,10 @@ export const verifyAdminToken = (
   token: string
 ): AdminJwtPayload | null => {
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as AdminJwtPayload;
+    const payload = jwt.verify(
+      token,
+      getAdminJwtSecret()
+    ) as AdminJwtPayload;
     if (!payload.isAdmin) return null;
     return payload;
   } catch {

@@ -4,7 +4,7 @@ import path from "path";
 import os from "os";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
-import { generateAdminToken } from "../../../utils/auth";
+import { generateAdminToken, generateToken } from "../../../utils/auth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -79,7 +79,6 @@ describe("backup admin integration tests", () => {
     });
 
     it("should reject regular user token", async () => {
-      const { generateToken } = require("../../../utils/auth");
       const userToken = generateToken({
         userId: "test",
         email: "user@test.com",

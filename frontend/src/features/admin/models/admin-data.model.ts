@@ -9,19 +9,17 @@ import type {
   BackupFileData,
 } from "@shared";
 
-const ADMIN_TOKEN_KEY = "adminToken";
+import * as adminAuthModel from "./admin-auth.model";
+import {
+  isBackupSettingsValid,
+  prepareBackupSettings,
+} from "./admin-data.helpers";
 
 // Gates
 export const AdminPageGate = createGate();
 
 // Stores
-export const $adminToken = createStore<string | null>(
-  localStorage.getItem(ADMIN_TOKEN_KEY)
-);
-export const $isAdminAuthenticated = $adminToken.map((token) => token !== null);
-export const $loginError = createStore<string | null>(null);
-export const $email = createStore("");
-export const $password = createStore("");
+export const $tabIndex = createStore(0);
 export const $overview = createStore<AdminOverviewResponse | null>(null);
 export const $backupSettings = createStore<BackupSettingsData | null>(null);
 export const $backupFiles = createStore<BackupFileData[]>([]);
@@ -30,34 +28,16 @@ export const $intervalHours = createStore<string>("");
 export const $maxStorageMb = createStore<string>("");
 
 // Events
-export const emailChanged = createEvent<string>();
-export const passwordChanged = createEvent<string>();
-export const loginSubmitted = createEvent();
-export const loggedOut = createEvent();
+export const tabChanged = createEvent<number>();
 export const overviewRequested = createEvent();
 export const backupSettingsRequested = createEvent();
-export const backupSettingsUpdated = createEvent<{
-  enabled?: boolean;
-  intervalHours?: number;
-  maxStorageMb?: number;
-}>();
+export const backupToggled = createEvent();
+export const backupSettingsSaved = createEvent();
 export const backupCreated = createEvent();
 export const intervalHoursChanged = createEvent<string>();
 export const maxStorageMbChanged = createEvent<string>();
 
 // Effects
-export const loginFx = createEffect(
-  async ({ email, password }: { email: string; password: string }) => {
-    const result = await adminApiMethods.login(email, password);
-    localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
-    return result.token;
-  }
-);
-
-export const logoutFx = createEffect(async () => {
-  localStorage.removeItem(ADMIN_TOKEN_KEY);
-});
-
 export const getOverviewFx = createEffect(async () => {
   return adminApiMethods.getOverview();
 });
@@ -81,56 +61,11 @@ export const createBackupFx = createEffect(async () => {
 });
 
 // Samples
-sample({
-  clock: emailChanged,
-  target: $email,
-});
+sample({ clock: tabChanged, target: $tabIndex });
 
 sample({
-  clock: passwordChanged,
-  target: $password,
-});
-
-sample({
-  clock: loginSubmitted,
-  source: { email: $email, password: $password },
-  target: loginFx,
-});
-
-sample({
-  clock: loginFx.doneData,
-  target: [$adminToken, getOverviewFx, getBackupSettingsFx],
-});
-
-sample({
-  clock: loginFx.failData,
-  fn: (error) => {
-    const axiosError = error as { response?: { data?: { error?: string } } };
-    return axiosError.response?.data?.error ?? "Ошибка авторизации";
-  },
-  target: $loginError,
-});
-
-sample({
-  clock: loginSubmitted,
-  fn: () => null,
-  target: $loginError,
-});
-
-sample({
-  clock: loggedOut,
-  target: logoutFx,
-});
-
-sample({
-  clock: logoutFx.done,
-  fn: () => null,
-  target: $adminToken,
-});
-
-sample({
-  clock: [AdminPageGate.open, overviewRequested],
-  source: $isAdminAuthenticated,
+  clock: [AdminPageGate.open, adminAuthModel.loginFx.done, overviewRequested],
+  source: adminAuthModel.$isAdminAuthenticated,
   filter: (isAuth) => isAuth,
   target: getOverviewFx,
 });
@@ -141,8 +76,12 @@ sample({
 });
 
 sample({
-  clock: [AdminPageGate.open, backupSettingsRequested],
-  source: $isAdminAuthenticated,
+  clock: [
+    AdminPageGate.open,
+    adminAuthModel.loginFx.done,
+    backupSettingsRequested,
+  ],
+  source: adminAuthModel.$isAdminAuthenticated,
   filter: (isAuth) => isAuth,
   target: getBackupSettingsFx,
 });
@@ -165,30 +104,37 @@ sample({
   target: $totalSizeMb,
 });
 
-sample({
-  clock: intervalHoursChanged,
-  target: $intervalHours,
-});
+sample({ clock: intervalHoursChanged, target: $intervalHours });
 
-sample({
-  clock: maxStorageMbChanged,
-  target: $maxStorageMb,
-});
+sample({ clock: maxStorageMbChanged, target: $maxStorageMb });
 
 sample({
   clock: getBackupSettingsFx.doneData,
-  fn: (data: BackupSettingsFullResponse) => String(data.settings.intervalHours),
+  fn: (data: BackupSettingsFullResponse) =>
+    String(data.settings.intervalHours),
   target: $intervalHours,
 });
 
 sample({
   clock: getBackupSettingsFx.doneData,
-  fn: (data: BackupSettingsFullResponse) => String(data.settings.maxStorageMb),
+  fn: (data: BackupSettingsFullResponse) =>
+    String(data.settings.maxStorageMb),
   target: $maxStorageMb,
 });
 
 sample({
-  clock: backupSettingsUpdated,
+  clock: backupToggled,
+  source: $backupSettings,
+  filter: Boolean,
+  fn: (settings) => ({ enabled: !settings.enabled }),
+  target: updateBackupSettingsFx,
+});
+
+sample({
+  clock: backupSettingsSaved,
+  source: { intervalHours: $intervalHours, maxStorageMb: $maxStorageMb },
+  filter: isBackupSettingsValid,
+  fn: prepareBackupSettings,
   target: updateBackupSettingsFx,
 });
 
@@ -197,10 +143,7 @@ sample({
   target: backupSettingsRequested,
 });
 
-sample({
-  clock: backupCreated,
-  target: createBackupFx,
-});
+sample({ clock: backupCreated, target: createBackupFx });
 
 sample({
   clock: createBackupFx.done,

@@ -78,7 +78,7 @@ export const cleanupOldBackups = (maxStorageMb: number): number => {
   let totalSize = getTotalSizeMb(files);
   let deletedCount = 0;
 
-  // Удаляем самые старые файлы, пока превышен лимит (оставляем минимум 1)
+  // Remove oldest files while over storage limit (keep at least 1)
   const sortedOldestFirst = [...files].reverse();
 
   for (const file of sortedOldestFirst) {
@@ -103,13 +103,13 @@ export const performBackup = async (): Promise<string> => {
     throw new Error("DATABASE_URL не задан");
   }
 
-  await execAsync(`pg_dump | gzip > "${filePath}"`, {
+  await execAsync(`pg_dump "$DATABASE_URL" | gzip > "${filePath}"`, {
     timeout: 300000,
-    env: { ...process.env, PGDATABASE: undefined, DATABASE_URL: databaseUrl },
+    env: { ...process.env, DATABASE_URL: databaseUrl },
     shell: "/bin/sh",
   });
 
-  // Проверяем что файл создан и не пуст
+  // Verify backup file was created and is not empty
   const stats = fs.statSync(filePath);
   if (stats.size === 0) {
     fs.unlinkSync(filePath);
@@ -150,7 +150,7 @@ export const runBackupJob = async (): Promise<void> => {
     return;
   }
 
-  // Проверяем, прошло ли достаточно времени с последнего бэкапа
+  // Check if enough time has passed since last backup
   if (settings.lastBackupAt) {
     const hoursSinceLastBackup =
       (Date.now() - settings.lastBackupAt.getTime()) / (1000 * 60 * 60);
@@ -160,23 +160,23 @@ export const runBackupJob = async (): Promise<void> => {
     }
   }
 
-  console.log("Начинаю создание бэкапа базы данных...");
+  console.log("Starting database backup...");
 
   const filePath = await performBackup();
   const stats = fs.statSync(filePath);
   const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
 
-  console.log(`Бэкап создан: ${path.basename(filePath)} (${sizeMb} MB)`);
+  console.log(`Backup created: ${path.basename(filePath)} (${sizeMb} MB)`);
 
-  // Обновляем время последнего бэкапа
+  // Update last backup timestamp
   await prisma.backupSettings.update({
     where: { id: settings.id },
     data: { lastBackupAt: new Date() },
   });
 
-  // Очищаем старые бэкапы
+  // Clean up old backups
   const deletedCount = cleanupOldBackups(settings.maxStorageMb);
   if (deletedCount > 0) {
-    console.log(`Удалено ${deletedCount} старых бэкапов`);
+    console.log(`Deleted ${deletedCount} old backup(s)`);
   }
 };
