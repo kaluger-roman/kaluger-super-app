@@ -342,7 +342,7 @@ describe("LessonStatusIcons", () => {
       expect(dateInput.value).toBe("2026-02-10");
     });
 
-    it("should initialize date input with today's date if no payment date exists", async () => {
+    it("should initialize date input with lesson start date if no payment date exists", async () => {
       const scope = fork();
       const lesson = createMockLesson({ price: 2000, isPaid: false, paymentDate: undefined });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
@@ -350,8 +350,7 @@ describe("LessonStatusIcons", () => {
       await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
 
       const dateInput = screen.getByLabelText(/дата оплаты/i) as HTMLInputElement;
-      const today = new Date().toISOString().split("T")[0];
-      expect(dateInput.value).toBe(today);
+      expect(dateInput.value).toBe("2026-02-15");
     });
   });
 
