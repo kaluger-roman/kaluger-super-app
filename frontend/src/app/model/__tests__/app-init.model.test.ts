@@ -36,7 +36,10 @@ describe("app/model/app-init.model", () => {
   describe("initializeAppFx re-fire after login", () => {
     it("should refire initializeAppFx on successful login", async () => {
       vi.mocked(studentsApi.getAll).mockResolvedValue([]);
-      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue([]);
+      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue({
+        lessons: [],
+        pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
       vi.mocked(authApi.login).mockResolvedValue({
         user: {
           id: "1",
@@ -64,7 +67,10 @@ describe("app/model/app-init.model", () => {
 
     it("should not refire initializeAppFx on failed login", async () => {
       vi.mocked(studentsApi.getAll).mockResolvedValue([]);
-      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue([]);
+      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue({
+        lessons: [],
+        pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
       vi.mocked(authApi.login).mockRejectedValue({
         response: { status: 401, data: { error: "Неверные данные" } },
       });
@@ -84,7 +90,10 @@ describe("app/model/app-init.model", () => {
   describe("initializeAppFx", () => {
     it("should load students and upcoming lessons", async () => {
       vi.mocked(studentsApi.getAll).mockResolvedValue([]);
-      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue([]);
+      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue({
+        lessons: [],
+        pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
 
       const scope = fork();
 
