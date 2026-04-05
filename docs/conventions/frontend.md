@@ -93,6 +93,7 @@ feature/models/
 - **No IIFE in JSX** — extract to components
 - **No logic in .map()** — extract complex callbacks to components
 - **Business logic in models**, not components
+- **No `<form>` tags** — use explicit `onClick` handlers on buttons instead of `onSubmit`
 
 ### Code Quality
 
@@ -125,6 +126,7 @@ feature/models/
 - `useStore` — use `useUnit`
 - `useUnit` with array destructuring — use separate calls for stores
 - Side effects in `fn` — `fn` must be a pure function (no API calls, no mutations, no model events calls, no model effects calls)
+- `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
 
 **useUnit pattern:**
 
@@ -142,7 +144,7 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 
 **sample order:** `{ clock, source, filter, fn, target }`
 
-**Form state:** Keep in Effector stores, not React useState.
+**Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
 **Atomic stores:** Avoid large object stores. Instead of `$uiState: { isOpen, selected, anchor }` use separate `$isOpen`, `$selected`, `$anchor`.
 

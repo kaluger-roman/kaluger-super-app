@@ -1,11 +1,13 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
+import { loginFormModel } from "@features/auth";
 import { isIos, isInStandaloneMode } from "@shared";
 
 import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
 
 export const initializeApp = createEvent<InitializeAppParams>();
+export const appBootedUnauthenticated = createEvent();
 
 // Effects
 export const initializeAppFx = createEffect(
@@ -143,6 +145,21 @@ sample({
 // Handle errors — still mark app as initialized so user can reach login page
 sample({
   clock: initializeAppFx.failData,
+  fn: () => true,
+  target: $appInitialized,
+});
+
+// After successful login, load app data. On first mount without a token we
+// skip initializeApp entirely (to avoid unauthenticated requests that 401)
+// and only mark the app as ready so the login screen can render.
+sample({
+  clock: loginFormModel.loginFx.doneData,
+  fn: (): InitializeAppParams => ({}),
+  target: initializeApp,
+});
+
+sample({
+  clock: appBootedUnauthenticated,
   fn: () => true,
   target: $appInitialized,
 });
