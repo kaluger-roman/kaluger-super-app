@@ -1,17 +1,15 @@
 import type { Request, Response } from "express";
-import { comparePassword, validateEmail, generateAdminToken } from "../../utils/auth";
+import { comparePassword, generateAdminToken } from "../../utils/auth";
 import type { AdminLoginDto } from "../../types";
+import { validateAdminLoginDto } from "./validators";
 
 export const adminLogin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as AdminLoginDto;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email и пароль обязательны" });
-    }
-
-    if (!validateEmail(email)) {
-      return res.status(400).json({ error: "Некорректный формат email" });
+    const errors = validateAdminLoginDto({ email, password });
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors[0] });
     }
 
     const adminEmail = process.env.ADMIN_EMAIL;

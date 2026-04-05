@@ -1,6 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { adminApiMethods, ADMIN_TOKEN_KEY } from "@shared";
+import { adminApiMethods, adminTokenInvalidated, ADMIN_TOKEN_KEY } from "@shared";
 
 // Stores
 export const $adminToken = createStore<string | null>(null);
@@ -67,6 +67,18 @@ sample({
   clock: logoutFx.done,
   fn: () => null,
   target: $adminToken,
+});
+
+sample({
+  clock: adminTokenInvalidated,
+  fn: () => null,
+  target: $adminToken,
+});
+
+sample({
+  clock: loginFx.done,
+  fn: () => "",
+  target: $password,
 });
 
 // Restore token from localStorage on module load

@@ -5,6 +5,7 @@ import os from "os";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
+import * as backupService from "../../../services/backup";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -155,6 +156,59 @@ describe("backup admin integration tests", () => {
         .put("/api/admin/backup/settings")
         .send({ enabled: false })
         .expect(401);
+    });
+  });
+
+  describe("POST /api/admin/backup/create", () => {
+    it("should create backup and return file info", async () => {
+      const mockResult = {
+        name: "backup-2026-03-30.sql.gz",
+        sizeMb: 1.5,
+        createdAt: new Date("2026-03-30T12:00:00Z"),
+      };
+      jest
+        .spyOn(backupService, "createManualBackup")
+        .mockResolvedValue(mockResult);
+
+      const res = await request(app)
+        .post("/api/admin/backup/create")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        name: "backup-2026-03-30.sql.gz",
+        sizeMb: 1.5,
+      });
+      expect(res.body.createdAt).toBeDefined();
+    });
+
+    it("should return 500 when backup fails", async () => {
+      jest
+        .spyOn(backupService, "createManualBackup")
+        .mockRejectedValue(new Error("pg_dump failed"));
+
+      const res = await request(app)
+        .post("/api/admin/backup/create")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(500);
+
+      expect(res.body.error).toBe("Ошибка создания бэкапа");
+    });
+
+    it("should return 401 without auth token", async () => {
+      await request(app).post("/api/admin/backup/create").expect(401);
+    });
+
+    it("should reject regular user token", async () => {
+      const userToken = generateToken({
+        userId: "test",
+        email: "user@test.com",
+      });
+
+      await request(app)
+        .post("/api/admin/backup/create")
+        .set("Authorization", `Bearer ${userToken}`)
+        .expect(403);
     });
   });
 });

@@ -1,4 +1,4 @@
-export { adminApiMethods } from "./admin";
+export { adminApiMethods, adminTokenInvalidated } from "./admin";
 export { ADMIN_TOKEN_KEY } from "./admin.constants";
 export { authApi } from "./auth";
 export { studentsApi } from "./students";

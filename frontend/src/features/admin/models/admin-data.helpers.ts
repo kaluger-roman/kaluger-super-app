@@ -1,7 +1,4 @@
-type BackupSettingsInput = {
-  intervalHours: string;
-  maxStorageMb: string;
-};
+import type { BackupSettingsInput } from "./admin-data.types";
 
 export const isBackupSettingsValid = ({
   intervalHours,

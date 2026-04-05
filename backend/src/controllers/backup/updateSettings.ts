@@ -1,23 +1,20 @@
 import type { Response } from "express";
-import type { AdminRequest } from "../../types";
-import type { UpdateBackupSettingsDto } from "../../types";
+import type { AdminRequest, UpdateBackupSettingsDto } from "../../types";
 import { updateBackupSettings } from "../../services";
+import { validateUpdateBackupSettingsDto } from "./validators";
 
 export const updateSettings = async (req: AdminRequest, res: Response) => {
   try {
     const { enabled, intervalHours, maxStorageMb } =
       req.body as UpdateBackupSettingsDto;
 
-    if (intervalHours !== undefined && (intervalHours < 1 || intervalHours > 168)) {
-      return res
-        .status(400)
-        .json({ error: "Интервал должен быть от 1 до 168 часов" });
-    }
-
-    if (maxStorageMb !== undefined && (maxStorageMb < 10 || maxStorageMb > 10000)) {
-      return res
-        .status(400)
-        .json({ error: "Максимальный размер должен быть от 10 до 10000 МБ" });
+    const errors = validateUpdateBackupSettingsDto({
+      enabled,
+      intervalHours,
+      maxStorageMb,
+    });
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors[0] });
     }
 
     const settings = await updateBackupSettings({

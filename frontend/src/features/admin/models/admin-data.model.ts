@@ -1,7 +1,7 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
-import { adminApiMethods } from "@shared";
+import { adminApiMethods, notificationsModel } from "@shared";
 import type {
   AdminOverviewResponse,
   BackupSettingsFullResponse,
@@ -148,4 +148,28 @@ sample({ clock: backupCreated, target: createBackupFx });
 sample({
   clock: createBackupFx.done,
   target: backupSettingsRequested,
+});
+
+sample({
+  clock: getOverviewFx.failData,
+  fn: () => "Ошибка загрузки обзора системы",
+  target: notificationsModel.showErrorEvent,
+});
+
+sample({
+  clock: getBackupSettingsFx.failData,
+  fn: () => "Ошибка загрузки настроек бэкапов",
+  target: notificationsModel.showErrorEvent,
+});
+
+sample({
+  clock: updateBackupSettingsFx.failData,
+  fn: () => "Ошибка обновления настроек бэкапов",
+  target: notificationsModel.showErrorEvent,
+});
+
+sample({
+  clock: createBackupFx.failData,
+  fn: () => "Ошибка создания бэкапа",
+  target: notificationsModel.showErrorEvent,
 });

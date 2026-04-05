@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createEvent } from "effector";
 
 import { API_BASE_URL } from "../config";
 import { ADMIN_TOKEN_KEY } from "./admin.constants";
@@ -8,6 +9,8 @@ import type {
   BackupFileData,
   BackupSettingsFullResponse,
 } from "./admin.types";
+
+export const adminTokenInvalidated = createEvent();
 
 export const adminApi = axios.create({
   baseURL: API_BASE_URL,
@@ -29,6 +32,7 @@ adminApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem(ADMIN_TOKEN_KEY);
+      adminTokenInvalidated();
     }
     return Promise.reject(error);
   }
