@@ -29,7 +29,8 @@ api.interceptors.response.use(
       // Only redirect if we're not already on login/register pages
       if (
         window.location.pathname !== "/login" &&
-        window.location.pathname !== "/register"
+        window.location.pathname !== "/register" &&
+        window.location.pathname !== "/admin"
       ) {
         window.location.href = "/login";
       }

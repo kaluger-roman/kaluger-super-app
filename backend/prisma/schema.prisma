@@ -184,6 +184,18 @@ model ScheduledReminder {
   @@map("scheduled_reminders")
 }
 
+model BackupSettings {
+  id            String    @id @default(cuid())
+  enabled       Boolean   @default(true)
+  intervalHours Int       @default(6)
+  maxStorageMb  Int       @default(300)
+  lastBackupAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("backup_settings")
+}
+
 model NewsItem {
   id          String   @id @default(cuid())
   title       String   @db.VarChar(200)
