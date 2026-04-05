@@ -41,7 +41,7 @@ const App: FC = () => {
       userModel.setAuthToken(token);
       userModel.getProfileFx().finally(() => appInitModel.initializeApp({}));
     } else {
-      appInitModel.initializeApp({});
+      appInitModel.appBootedUnauthenticated();
     }
 
     const handleOnline = () => appInitModel.onlineStatusChanged(true);
