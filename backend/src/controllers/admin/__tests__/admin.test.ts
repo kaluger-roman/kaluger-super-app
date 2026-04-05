@@ -1,6 +1,5 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
-import bcrypt from "bcryptjs";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
@@ -10,17 +9,15 @@ jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 describe("admin integration tests", () => {
   const adminEmail = "admin@test.com";
   const adminPassword = "TestAdmin123";
-  let adminPasswordHash: string;
   let adminToken: string;
 
-  beforeAll(async () => {
-    adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+  beforeAll(() => {
     process.env.ADMIN_EMAIL = adminEmail;
-    process.env.ADMIN_PASSWORD = adminPasswordHash;
+    process.env.ADMIN_PASSWORD = adminPassword;
     adminToken = generateAdminToken({ email: adminEmail, isAdmin: true });
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     delete process.env.ADMIN_EMAIL;
     delete process.env.ADMIN_PASSWORD;
   });

@@ -16,7 +16,7 @@ describe("backup admin integration tests", () => {
 
   beforeAll(() => {
     process.env.ADMIN_EMAIL = "admin@test.com";
-    process.env.ADMIN_PASSWORD = "$2b$12$test";
+    process.env.ADMIN_PASSWORD = "TestAdmin123";
     adminToken = generateAdminToken({ email: "admin@test.com", isAdmin: true });
   });
 
@@ -34,6 +34,8 @@ describe("backup admin integration tests", () => {
   });
 
   afterAll(async () => {
+    delete process.env.ADMIN_EMAIL;
+    delete process.env.ADMIN_PASSWORD;
     await prisma.backupSettings.deleteMany();
   });
 
