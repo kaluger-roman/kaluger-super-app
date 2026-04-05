@@ -1,6 +1,6 @@
 import type { FC } from "react";
 
-import { Button, Tabs } from "@mui/material";
+import { Button } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { AdminLogin, adminAuthModel, adminDataModel } from "@features/admin";
@@ -32,13 +32,13 @@ export const AdminPage: FC = () => {
       </Styled.StyledHeader>
 
       <Styled.StyledPaper>
-        <Tabs
+        <Styled.StyledTabs
           value={tabIndex}
           onChange={(_, value) => actions.changeTab(value)}
         >
           <Styled.StyledTab label="Обзор" />
           <Styled.StyledTab label="Бэкапы" />
-        </Tabs>
+        </Styled.StyledTabs>
 
         {tabIndex === 0 && <OverviewSection />}
         {tabIndex === 1 && <BackupSection />}

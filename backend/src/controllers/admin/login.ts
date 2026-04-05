@@ -13,9 +13,9 @@ export const adminLogin = async (req: Request, res: Response) => {
     }
 
     const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPasswordHash = process.env.ADMIN_PASSWORD;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!adminEmail || !adminPasswordHash) {
+    if (!adminEmail || !adminPassword) {
       return res.status(500).json({ error: "Админ не настроен" });
     }
 
@@ -23,7 +23,8 @@ export const adminLogin = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Неверный email или пароль" });
     }
 
-    const isPasswordValid = await comparePassword(password, adminPasswordHash);
+    const isPasswordValid = password === adminPassword;
+
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Неверный email или пароль" });
     }

@@ -70,6 +70,18 @@ sample({
 });
 
 sample({
+  clock: loggedOut,
+  fn: () => "",
+  target: [$email, $password],
+});
+
+sample({
+  clock: loggedOut,
+  fn: () => null,
+  target: $loginError,
+});
+
+sample({
   clock: adminTokenInvalidated,
   fn: () => null,
   target: $adminToken,

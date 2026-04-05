@@ -1,4 +1,4 @@
-import { Box, Container, Paper, Tab, Typography } from "@mui/material";
+import { Box, Container, Paper, Tab, Tabs, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -28,3 +28,8 @@ export const StyledTab = styled(Tab)({
   textTransform: "none",
   fontWeight: 600,
 });
+
+export const StyledTabs = styled(Tabs)(({ theme }) => ({
+  marginBottom: "24px",
+  borderBottom: `1px solid ${theme.palette.divider}`,
+}));

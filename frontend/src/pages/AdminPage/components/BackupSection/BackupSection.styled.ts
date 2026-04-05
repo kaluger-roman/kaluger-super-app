@@ -1,4 +1,4 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, TextField, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -44,4 +44,8 @@ export const StyledSettingsRow = styled(Box)({
   gap: "16px",
   alignItems: "center",
   flexWrap: "wrap",
+});
+
+export const StyledSettingsField = styled(TextField)({
+  minWidth: "220px",
 });

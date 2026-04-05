@@ -92,6 +92,21 @@ export const cleanupOldBackups = (maxStorageMb: number): number => {
   return deletedCount;
 };
 
+// Prisma supports `?schema=...` in DATABASE_URL, but pg_dump rejects it.
+// Strip Prisma-specific query params before passing the URL to pg_dump.
+const stripPrismaParams = (databaseUrl: string): string => {
+  try {
+    const url = new URL(databaseUrl);
+    url.searchParams.delete("schema");
+    url.searchParams.delete("connection_limit");
+    url.searchParams.delete("pool_timeout");
+    url.searchParams.delete("pgbouncer");
+    return url.toString();
+  } catch {
+    return databaseUrl;
+  }
+};
+
 export const performBackup = async (): Promise<string> => {
   const dir = getBackupDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -103,17 +118,39 @@ export const performBackup = async (): Promise<string> => {
     throw new Error("DATABASE_URL не задан");
   }
 
-  await execAsync(`pg_dump "$DATABASE_URL" | gzip > "${filePath}"`, {
-    timeout: 300000,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    shell: "/bin/sh",
-  });
+  const pgDumpUrl = stripPrismaParams(databaseUrl);
 
-  // Verify backup file was created and is not empty
+  // pipefail ensures the pipeline fails if pg_dump fails (not just gzip).
+  // Without it, gzip produces a ~20-byte empty file on pg_dump errors.
+  try {
+    await execAsync(
+      `set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`,
+      {
+        timeout: 300000,
+        env: { ...process.env, DATABASE_URL: pgDumpUrl },
+        shell: "/bin/bash",
+      }
+    );
+  } catch (error) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    const stderr = (error as { stderr?: string }).stderr?.trim();
+    const message = stderr
+      ? `Ошибка pg_dump: ${stderr}`
+      : `Ошибка pg_dump: ${(error as Error).message}`;
+    throw new Error(message);
+  }
+
+  // Verify backup file is not just an empty gzip header (~20 bytes).
+  // A valid pg_dump (even for an empty DB) includes schema info >> 100 bytes.
+  const MIN_BACKUP_SIZE_BYTES = 100;
   const stats = fs.statSync(filePath);
-  if (stats.size === 0) {
+  if (stats.size < MIN_BACKUP_SIZE_BYTES) {
     fs.unlinkSync(filePath);
-    throw new Error("Бэкап пуст — pg_dump вернул пустой результат");
+    throw new Error(
+      `Бэкап слишком мал (${stats.size} байт) — pg_dump вероятно завершился с ошибкой`
+    );
   }
 
   return filePath;

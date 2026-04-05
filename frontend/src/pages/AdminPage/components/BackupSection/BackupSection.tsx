@@ -2,7 +2,6 @@ import type { FC } from "react";
 
 import {
   Button,
-  TextField,
   Switch,
   FormControlLabel,
   Typography,
@@ -51,21 +50,25 @@ export const BackupSection: FC = () => {
       </Styled.StyledControls>
 
       <Styled.StyledSettingsRow>
-        <TextField
+        <Styled.StyledSettingsField
           label="Интервал (часы)"
           type="number"
           value={intervalHours}
           onChange={(e) => actions.changeInterval(e.target.value)}
-          size="small"
-          inputProps={{ min: 1, max: 168 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+            htmlInput: { min: 1, max: 168 },
+          }}
         />
-        <TextField
+        <Styled.StyledSettingsField
           label="Макс. размер (МБ)"
           type="number"
           value={maxStorageMb}
           onChange={(e) => actions.changeMaxStorage(e.target.value)}
-          size="small"
-          inputProps={{ min: 10, max: 10000 }}
+          slotProps={{
+            inputLabel: { shrink: true },
+            htmlInput: { min: 10, max: 10000 },
+          }}
         />
         <Button variant="outlined" onClick={() => actions.save()}>
           Сохранить
