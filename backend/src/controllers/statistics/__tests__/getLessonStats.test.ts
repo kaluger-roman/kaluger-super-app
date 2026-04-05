@@ -178,12 +178,18 @@ describe("statistics integration tests", () => {
     });
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
 
     await request(app)
       .get(`/api/statistics/by-subject`)
       .set("Authorization", `Bearer ${authToken}`)
-      .query({ startDate: todayStr, endDate: todayStr })
+      .query({
+        startDate: startOfToday.toISOString(),
+        endDate: endOfToday.toISOString(),
+      })
       .expect(200)
       .then((res) => {
         // should not include the old lesson

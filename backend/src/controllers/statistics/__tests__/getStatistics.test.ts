@@ -382,7 +382,10 @@ describe("getStatistics controller", () => {
     });
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
 
     // create a today lesson
     await prisma.lesson.create({
@@ -402,7 +405,10 @@ describe("getStatistics controller", () => {
     await request(app)
       .get(`/api/statistics`)
       .set("Authorization", `Bearer ${authToken}`)
-      .query({ startDate: todayStr, endDate: todayStr })
+      .query({
+        startDate: startOfToday.toISOString(),
+        endDate: endOfToday.toISOString(),
+      })
       .expect(200)
       .then((res) => {
         // should not include the old lesson

@@ -14,12 +14,14 @@ sample({
   target: $lessonsViewMode,
 });
 
-// Get current week start (Monday)
+// Get current week start (Monday at local midnight)
 const getCurrentWeekStart = (): Date => {
   const now = new Date();
   const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-  return new Date(now.setDate(diff));
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
 };
 
 export const $currentWeek = createStore<Date>(getCurrentWeekStart());

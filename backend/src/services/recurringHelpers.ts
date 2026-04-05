@@ -6,9 +6,9 @@ import { truncateToMinute } from "../utils/time";
 // Build a stable grouping key for recurring lessons
 export const getRecurringLessonKey = (lesson: Lesson) => {
   const t = truncateToMinute(new Date(lesson.startTime));
-  const weekday = t.getDay();
-  const hour = t.getHours();
-  const minute = t.getMinutes();
+  const weekday = t.getUTCDay();
+  const hour = t.getUTCHours();
+  const minute = t.getUTCMinutes();
 
   return `${lesson.tutorId}-${lesson.studentId}-${weekday}-${hour}-${minute}`;
 };
