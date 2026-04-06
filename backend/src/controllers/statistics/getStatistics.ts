@@ -86,42 +86,31 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
     ]);
 
-    const lostEarnings = await prisma.lesson.aggregate({
-      where: { ...where, status: "CANCELLED" },
-      _sum: { price: true },
-    });
-
-    const unpaid = await prisma.lesson.aggregate({
-      where: { ...where, status: "COMPLETED", isPaid: false, price: { gt: 0 } },
-      _count: { id: true },
-      _sum: { price: true },
-    });
-
     const twentyFourHoursAgo = truncateToMinute(
       new Date(now.getTime() - 24 * 60 * 60 * 1000)
     );
-    const unpaidOver24h = await prisma.lesson.aggregate({
-      where: {
-        ...where,
-        status: "COMPLETED",
-        isPaid: false,
-        endTime: { lte: twentyFourHoursAgo },
-        price: { gt: 0 },
-      },
-      _count: { id: true },
-      _sum: { price: true },
-    });
 
-    const paymentsInRange = await prisma.lesson.aggregate({
-      where: {
-        tutorId: userId,
-        isPaid: true,
-        paymentDate: paymentDateRange,
-        price: { gt: 0 },
-      },
-      _count: { id: true },
-      _sum: { price: true },
-    });
+    const [lostEarnings, unpaid, unpaidOver24h, paymentsInRange] = await Promise.all([
+      prisma.lesson.aggregate({
+        where: { ...where, status: "CANCELLED" },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { ...where, status: "COMPLETED", isPaid: false, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { ...where, status: "COMPLETED", isPaid: false, endTime: { lte: twentyFourHoursAgo }, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { tutorId: userId, isPaid: true, paymentDate: paymentDateRange, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+    ]);
 
     const earningsValue = earnings._sum.price || 0;
     const taxRate = currentUser?.taxRate ?? 6;

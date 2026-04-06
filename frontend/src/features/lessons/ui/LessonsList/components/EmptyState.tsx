@@ -30,6 +30,11 @@ export const EmptyState: FC<EmptyStateProps> = ({ type }) => {
           title: "📆 Нет перенесенных уроков",
           description: "Перенесенные уроки будут отображаться здесь",
         };
+      case "all":
+        return {
+          title: "📋 Нет уроков с оплатой в выбранный период",
+          description: "Попробуйте изменить диапазон дат в фильтре",
+        };
       default:
         return {
           title: "📋 Нет уроков",

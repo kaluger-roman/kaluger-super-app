@@ -18,6 +18,23 @@ import * as lessonsTabsModel from "./lessons-tabs.model";
 import * as lessonsViewModeModel from "./lessons-view-mode.model";
 import { LessonsPageGate } from "./lessons.model";
 
+const pagedTabClock = [
+  LessonsPageGate.open,
+  lessonsTabsModel.$currentTab,
+  lessonsViewModeModel.$lessonsViewMode,
+  lessonsFiltersModel.$onlyUnpaid,
+  lessonsFiltersModel.$onlyWithoutHomework,
+];
+
+const pagedTabSource = {
+  currentTab: lessonsTabsModel.$currentTab,
+  lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
+  onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
+  onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
+  paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
+  paymentDateTo: lessonsFiltersModel.$paymentDateTo,
+};
+
 sample({
   clock: [
     LessonsPageGate.open,
@@ -49,93 +66,40 @@ sample({
   target: lessonModel.loadScheduleLessonsFx,
 });
 
+// Tabs 0/1/2: do NOT include $paymentDateFrom/$paymentDateTo in clock —
+// payment filter activation auto-switches to ALL tab, which has its own sample.
 sample({
-  clock: [
-    LessonsPageGate.open,
-    lessonsTabsModel.$currentTab,
-    lessonsViewModeModel.$lessonsViewMode,
-    lessonsFiltersModel.$onlyUnpaid,
-    lessonsFiltersModel.$onlyWithoutHomework,
-    lessonsFiltersModel.$paymentDateFrom,
-    lessonsFiltersModel.$paymentDateTo,
-  ],
-  source: {
-    currentTab: lessonsTabsModel.$currentTab,
-    lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
-    onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
-    onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
-    paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
-    paymentDateTo: lessonsFiltersModel.$paymentDateTo,
-  },
+  clock: pagedTabClock,
+  source: pagedTabSource,
   filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadUpcomingLessonsFx,
 });
 
 sample({
-  clock: [
-    LessonsPageGate.open,
-    lessonsTabsModel.$currentTab,
-    lessonsViewModeModel.$lessonsViewMode,
-    lessonsFiltersModel.$onlyUnpaid,
-    lessonsFiltersModel.$onlyWithoutHomework,
-    lessonsFiltersModel.$paymentDateFrom,
-    lessonsFiltersModel.$paymentDateTo,
-  ],
-  source: {
-    currentTab: lessonsTabsModel.$currentTab,
-    lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
-    onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
-    onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
-    paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
-    paymentDateTo: lessonsFiltersModel.$paymentDateTo,
-  },
+  clock: pagedTabClock,
+  source: pagedTabSource,
   filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCompletedLessonsFx,
 });
 
 sample({
-  clock: [
-    LessonsPageGate.open,
-    lessonsTabsModel.$currentTab,
-    lessonsViewModeModel.$lessonsViewMode,
-    lessonsFiltersModel.$onlyUnpaid,
-    lessonsFiltersModel.$onlyWithoutHomework,
-    lessonsFiltersModel.$paymentDateFrom,
-    lessonsFiltersModel.$paymentDateTo,
-  ],
-  source: {
-    currentTab: lessonsTabsModel.$currentTab,
-    lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
-    onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
-    onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
-    paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
-    paymentDateTo: lessonsFiltersModel.$paymentDateTo,
-  },
+  clock: pagedTabClock,
+  source: pagedTabSource,
   filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCancelledLessonsFx,
 });
 
+// ALL tab: includes payment date stores in clock since filter changes should reload.
 sample({
   clock: [
-    LessonsPageGate.open,
-    lessonsTabsModel.$currentTab,
-    lessonsViewModeModel.$lessonsViewMode,
-    lessonsFiltersModel.$onlyUnpaid,
-    lessonsFiltersModel.$onlyWithoutHomework,
+    ...pagedTabClock,
     lessonsFiltersModel.$paymentDateFrom,
     lessonsFiltersModel.$paymentDateTo,
   ],
-  source: {
-    currentTab: lessonsTabsModel.$currentTab,
-    lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
-    onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
-    onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
-    paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
-    paymentDateTo: lessonsFiltersModel.$paymentDateTo,
-  },
+  source: pagedTabSource,
   filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === ALL_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadAllLessonsFx,

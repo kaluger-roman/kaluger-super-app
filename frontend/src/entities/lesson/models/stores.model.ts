@@ -68,13 +68,7 @@ sample({
 });
 
 sample({
-  clock: [
-    loadAllLessonsFx.doneData,
-    loadUpcomingLessonsFx.doneData,
-    loadCompletedLessonsFx.doneData,
-    loadCancelledLessonsFx.doneData,
-    loadWeeklyLessonsFx.doneData,
-  ],
+  clock: loadAllLessonsFx.doneData,
   fn: ({ paymentsSummary }) => paymentsSummary ?? null,
   target: $paymentsSummary,
 });

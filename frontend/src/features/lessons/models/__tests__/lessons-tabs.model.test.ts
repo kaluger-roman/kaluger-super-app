@@ -8,7 +8,8 @@ import {
   $paymentDateFrom,
   $paymentDateTo,
 } from "../lessons-filters.model";
-import { $currentTab, tabChanged, ALL_TAB_INDEX } from "../lessons-tabs.model";
+import { ALL_TAB_INDEX } from "../lessons-tabs.constants";
+import { $currentTab, tabChanged } from "../lessons-tabs.model";
 
 describe("lessons-tabs.model", () => {
   describe("tabChanged", () => {

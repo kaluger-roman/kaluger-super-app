@@ -1,23 +1,7 @@
 import { createStore, createEvent, sample } from "effector";
 
 import * as filtersModel from "./lessons-filters.model";
-import {
-  ALL_TAB_INDEX,
-  BASE_TAB_LABELS,
-  CANCELLED_TAB_INDEX,
-  COMPLETED_TAB_INDEX,
-  TAB_LABELS,
-  UPCOMING_TAB_INDEX,
-} from "./lessons-tabs.constants";
-
-export {
-  ALL_TAB_INDEX,
-  BASE_TAB_LABELS,
-  CANCELLED_TAB_INDEX,
-  COMPLETED_TAB_INDEX,
-  TAB_LABELS,
-  UPCOMING_TAB_INDEX,
-};
+import { ALL_TAB_INDEX } from "./lessons-tabs.constants";
 
 // Events
 export const tabChanged = createEvent<number>();

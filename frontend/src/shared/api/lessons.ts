@@ -1,10 +1,8 @@
 import { api } from "./base";
 import type { Lesson, CreateLessonDto, UpdateLessonDto, Statistics } from "../types";
+import type { PaymentsSummary } from "./lessons.types";
 
-export type PaymentsSummary = {
-  sum: number;
-  count: number;
-};
+export type { PaymentsSummary };
 
 type LessonsResponse = {
   lessons: Lesson[];

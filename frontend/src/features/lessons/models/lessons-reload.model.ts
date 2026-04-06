@@ -1,11 +1,10 @@
 import { sample } from "effector";
 
 import { lessonModel } from "@entities";
-import { notificationsModel } from "@shared/model";
 
 import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
 import * as filtersModel from "./lessons-filters.model";
-import { getScheduleDateRange, extractErrorMessage } from "./lessons-reload.helpers";
+import { getScheduleDateRange } from "./lessons-reload.helpers";
 import * as viewModeModel from "./lessons-view-mode.model";
 
 sample({
@@ -26,12 +25,6 @@ sample({
     ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
-});
-
-sample({
-  clock: lessonModel.addLessonFx.doneData,
-  fn: () => "Урок создан",
-  target: notificationsModel.showSuccessEvent,
 });
 
 sample({
@@ -153,12 +146,6 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
-  fn: () => "Урок обновлен",
-  target: notificationsModel.showSuccessEvent,
-});
-
-sample({
   clock: lessonModel.removeLessonFx.doneData,
   source: {
     pagination: lessonModel.$upcomingPagination,
@@ -178,26 +165,3 @@ sample({
   target: lessonModel.loadUpcomingLessonsFx,
 });
 
-sample({
-  clock: lessonModel.removeLessonFx.doneData,
-  fn: () => "Урок удален",
-  target: notificationsModel.showSuccessEvent,
-});
-
-sample({
-  clock: lessonModel.addLessonFx.failData,
-  fn: (error) => extractErrorMessage(error, "Ошибка при создании урока"),
-  target: notificationsModel.showErrorEvent,
-});
-
-sample({
-  clock: lessonModel.updateLessonFx.failData,
-  fn: (error) => extractErrorMessage(error, "Ошибка при обновлении урока"),
-  target: notificationsModel.showErrorEvent,
-});
-
-sample({
-  clock: lessonModel.removeLessonFx.failData,
-  fn: (error) => extractErrorMessage(error, "Ошибка при удалении урока"),
-  target: notificationsModel.showErrorEvent,
-});
