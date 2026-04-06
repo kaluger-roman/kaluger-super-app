@@ -21,17 +21,19 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       weekStart,
       onlyUnpaid,
       onlyWithoutHomework,
+      paymentDateFrom,
+      paymentDateTo,
     } = req.query;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
     const where: Prisma.LessonWhereInput = { tutorId: userId };
+
     if (weekly === "true" && weekStart) {
       const startOfWeek = truncateToMinute(new Date(weekStart as string));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(endOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
+      // End of week = start + 7 days - 1ms (timezone-agnostic arithmetic)
+      const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
 
       where.startTime = {
         gte: startOfWeek,
@@ -55,6 +57,25 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     if (onlyUnpaid === "true") {
       where.isPaid = false;
       where.price = { gt: 0 } as Prisma.LessonWhereInput["price"];
+    } else if (paymentDateFrom || paymentDateTo) {
+      if (
+        paymentDateFrom &&
+        paymentDateTo &&
+        new Date(paymentDateFrom as string) > new Date(paymentDateTo as string)
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Дата начала оплаты не может быть позже даты окончания" });
+      }
+
+      const pdFilter: { not: null; gte?: Date; lte?: Date } = { not: null };
+      if (paymentDateFrom) {
+        pdFilter.gte = new Date(paymentDateFrom as string);
+      }
+      if (paymentDateTo) {
+        pdFilter.lte = new Date(paymentDateTo as string);
+      }
+      where.paymentDate = pdFilter as Prisma.LessonWhereInput["paymentDate"];
     }
 
     if (onlyWithoutHomework === "true") {

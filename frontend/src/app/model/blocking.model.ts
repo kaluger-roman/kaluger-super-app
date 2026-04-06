@@ -1,6 +1,7 @@
 import { combine } from "effector";
 
 import { lessonModel } from "@entities/lesson";
+import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
 import { profileModel } from "@pages/profile";
 import { statisticsModel } from "@pages/ReportsPage";
@@ -20,35 +21,9 @@ export const $isBlocking = combine(
     removeStudent: studentModel.removeStudentFx.pending,
     loadStatistics: statisticsModel.loadStatisticsFx.pending,
     updateProfile: profileModel.updateProfileFx.pending,
+    subscribePush: notificationsModel.subscribePushFx.pending,
+    unsubscribePush: notificationsModel.unsubscribePushFx.pending,
+    updateSettings: notificationsModel.updateSettingsFx.pending,
   },
-  ({
-    loadCompletedLessons,
-    loadLesson,
-    loadUpcomingLessons,
-    addLesson,
-    updateLesson,
-    removeLesson,
-    loadStudents,
-    loadStudent,
-    addStudent,
-    updateStudent,
-    removeStudent,
-    loadStatistics,
-    updateProfile,
-  }) =>
-    Boolean(
-      loadCompletedLessons ||
-        loadLesson ||
-        loadUpcomingLessons ||
-        addLesson ||
-        updateLesson ||
-        removeLesson ||
-        loadStudents ||
-        loadStudent ||
-        addStudent ||
-        updateStudent ||
-        removeStudent ||
-        loadStatistics ||
-        updateProfile
-    )
+  (pending) => Boolean(Object.values(pending).some(Boolean))
 );

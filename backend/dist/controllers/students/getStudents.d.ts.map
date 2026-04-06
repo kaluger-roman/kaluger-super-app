@@ -1,1 +1,0 @@
-{"version":3,"file":"getStudents.d.ts","sourceRoot":"","sources":["../../../src/controllers/students/getStudents.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACnC,OAAO,EAAE,WAAW,EAAE,MAAM,uBAAuB,CAAC;AAGpD,eAAO,MAAM,WAAW,GAAU,KAAK,WAAW,EAAE,KAAK,QAAQ,kBA0BhE,CAAC;AAEF,eAAO,MAAM,UAAU,GAAU,KAAK,WAAW,EAAE,KAAK,QAAQ,4DA0B/D,CAAC"}

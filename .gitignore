@@ -21,3 +21,11 @@ yarn-debug.log*
 yarn-error.log*
 
 /backend/src/generated/prisma
+
+# Build artifacts
+/backend/dist
+/frontend/build
+
+# Landing
+/landing/.next
+/landing/out

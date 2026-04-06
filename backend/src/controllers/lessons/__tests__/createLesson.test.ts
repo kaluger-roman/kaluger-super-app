@@ -316,8 +316,8 @@ describe("createLesson integration tests", () => {
     const start = new Date();
     const end = new Date(start.getTime() + 3600000);
 
-    // Create conflicts on every week for ~13 weeks
-    const weeks = 13;
+    // Create conflicts on every week for ~14 weeks (3 months can span up to 14 weekly slots)
+    const weeks = 14;
     for (let i = 0; i < weeks; i++) {
       const s = new Date(start.getTime() + i * 7 * 24 * 3600 * 1000);
       const e = new Date(s.getTime() + 3600000);

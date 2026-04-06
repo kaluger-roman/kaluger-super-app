@@ -1,8 +1,9 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { lessonModel, newsModel, studentModel, userModel } from "@entities";
+import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
+import { isIos, isInStandaloneMode } from "@shared";
 
-import type { InitializeAppParams } from "./app-init.types";
+import type { InitializeAppParams, BeforeInstallPromptEvent } from "./app-init.types";
 
 export const initializeApp = createEvent<InitializeAppParams>();
 
@@ -15,10 +16,44 @@ export const initializeAppFx = createEffect(
     ])
 );
 
+export const registerServiceWorkerFx = createEffect(async () => {
+  if (!("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register("/push-sw.js");
+    return registration;
+  } catch (error) {
+    console.error("Service worker registration failed:", error);
+    return null;
+  }
+});
+
 // Stores
 export const $appInitialized = createStore(false);
 
 export const $appInitializing = initializeAppFx.pending;
+
+// PWA resume — refresh data when app returns to foreground
+export const appResumed = createEvent();
+
+// Online/offline detection
+export const onlineStatusChanged = createEvent<boolean>();
+
+export const $isOnline = createStore(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+// PWA install prompt
+export const installPromptCaptured = createEvent<BeforeInstallPromptEvent>();
+export const installPromptDismissed = createEvent();
+
+export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
+export const $showInstallBanner = createStore(false);
+
+export const $showIosInstallHint = createStore(
+  isIos() && !isInStandaloneMode()
+);
+export const iosInstallHintDismissed = createEvent();
 
 // Connect events
 sample({
@@ -32,6 +67,26 @@ sample({
   target: $appInitialized,
 });
 
+// Register service worker on app init
+sample({
+  clock: initializeAppFx.doneData,
+  target: registerServiceWorkerFx,
+});
+
+// Forward SW registration to notifications model
+sample({
+  clock: registerServiceWorkerFx.doneData,
+  target: notificationsModel.serviceWorkerRegistered,
+});
+
+// Load VAPID key and settings for authenticated users after SW registration
+sample({
+  clock: registerServiceWorkerFx.doneData,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: [notificationsModel.loadVapidKeyFx, notificationsModel.loadSettings],
+});
+
 // Check unread news only for authenticated users
 sample({
   clock: initializeAppFx.doneData,
@@ -40,10 +95,54 @@ sample({
   target: newsModel.checkUnread,
 });
 
-// Handle errors
+// Online/offline status
+sample({
+  clock: onlineStatusChanged,
+  target: $isOnline,
+});
+
+// PWA install prompt
+sample({
+  clock: installPromptCaptured,
+  target: $installPrompt,
+});
+
+sample({
+  clock: installPromptCaptured,
+  fn: () => true,
+  target: $showInstallBanner,
+});
+
+sample({
+  clock: installPromptDismissed,
+  fn: () => false,
+  target: $showInstallBanner,
+});
+
+sample({
+  clock: iosInstallHintDismissed,
+  fn: () => false,
+  target: $showIosInstallHint,
+});
+
+// Refresh data when PWA resumes from background
+sample({
+  clock: appResumed,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: initializeAppFx.prepend(() => ({})),
+});
+
+sample({
+  clock: appResumed,
+  source: userModel.$isAuthenticated,
+  filter: (isAuthenticated) => isAuthenticated,
+  target: [notificationsModel.loadSettings, newsModel.checkUnread],
+});
+
+// Handle errors — still mark app as initialized so user can reach login page
 sample({
   clock: initializeAppFx.failData,
-  fn: (error) => {
-    console.error("App initialization error:", error);
-  },
+  fn: () => true,
+  target: $appInitialized,
 });

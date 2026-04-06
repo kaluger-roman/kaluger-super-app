@@ -3,12 +3,10 @@ import {
   getLastMonthRange,
   buildStatisticsWhere,
 } from "../utils";
-import { truncateToMinute } from "../../../utils/time";
 
 describe("statistics utils", () => {
   beforeAll(() => {
     const fixed = new Date("2025-12-15T12:34:56.789Z");
-    // Use Jest modern fake timers to set system time
     // @ts-ignore
     jest.useFakeTimers("modern");
     // @ts-ignore
@@ -20,107 +18,147 @@ describe("statistics utils", () => {
     jest.useRealTimers();
   });
 
-  it("getDateRange returns current month when no dates provided", () => {
+  it("getDateRange returns current month in UTC when no dates and no timezone provided", () => {
     const { gte, lte } = getDateRange();
 
-    // For frozen date 2025-12-15, current month start is 2025-12-01 00:00:00
-    expect(gte.getFullYear()).toBe(2025);
-    expect(gte.getMonth()).toBe(11); // months are 0-based
-    expect(gte.getDate()).toBe(1);
-    expect(gte.getHours()).toBe(0);
+    expect(gte.getUTCFullYear()).toBe(2025);
+    expect(gte.getUTCMonth()).toBe(11);
+    expect(gte.getUTCDate()).toBe(1);
+    expect(gte.getUTCHours()).toBe(0);
 
-    // lte should be end of month 2025-12-31 23:59:59.999
-    expect(lte.getFullYear()).toBe(2025);
-    expect(lte.getMonth()).toBe(11);
-    expect(lte.getDate()).toBe(31);
-    expect(lte.getHours()).toBe(23);
-    expect(lte.getMinutes()).toBe(59);
-    expect(lte.getSeconds()).toBe(59);
-    expect(lte.getMilliseconds()).toBe(999);
+    expect(lte.getUTCFullYear()).toBe(2025);
+    expect(lte.getUTCMonth()).toBe(11);
+    expect(lte.getUTCDate()).toBe(31);
+    expect(lte.getUTCHours()).toBe(23);
+    expect(lte.getUTCMinutes()).toBe(59);
+    expect(lte.getUTCSeconds()).toBe(59);
+    expect(lte.getUTCMilliseconds()).toBe(999);
   });
 
-  it("getDateRange sets gte when startDate provided and lte to current month end when endDate missing", () => {
-    const { gte, lte } = getDateRange("2025-11-05");
+  it("getDateRange returns timezone-adjusted month boundaries when timezone provided", () => {
+    // Frozen: 2025-12-15T12:34:56.789Z
+    // In Europe/Moscow (UTC+3): 2025-12-15 15:34 — still December
+    const { gte, lte } = getDateRange(undefined, undefined, "Europe/Moscow");
 
-    expect(gte.getFullYear()).toBe(2025);
-    expect(gte.getMonth()).toBe(10);
-    expect(gte.getDate()).toBe(5);
-
-    // lte remains current month end (December)
-    expect(lte.getMonth()).toBe(11);
-    expect(lte.getDate()).toBe(31);
+    // Start: Dec 1 00:00 Moscow = Nov 30 21:00 UTC
+    expect(gte.toISOString()).toBe("2025-11-30T21:00:00.000Z");
+    // End: Dec 31 23:59:59.999 Moscow = Dec 31 20:59:59.999 UTC
+    expect(lte.toISOString()).toBe("2025-12-31T20:59:59.999Z");
   });
 
-  it("getDateRange sets lte to end of provided endDate when endDate provided", () => {
-    const { gte, lte } = getDateRange(undefined, "2025-10-03");
+  it("getDateRange parses ISO startDate and falls back to current month end", () => {
+    const { gte, lte } = getDateRange("2025-11-04T21:00:00.000Z");
 
-    // gte default is start of current month (Dec 1)
-    expect(gte.getMonth()).toBe(11);
-    expect(gte.getDate()).toBe(1);
+    expect(gte.getUTCFullYear()).toBe(2025);
+    expect(gte.getUTCMonth()).toBe(10);
+    expect(gte.getUTCDate()).toBe(4);
+    expect(gte.getUTCHours()).toBe(21);
 
-    // lte should reflect provided endDate at 23:59:59.999 of that day
-    expect(lte.getFullYear()).toBe(2025);
-    expect(lte.getMonth()).toBe(9); // October
-    expect(lte.getDate()).toBe(3);
-    expect(lte.getHours()).toBe(23);
-    expect(lte.getMinutes()).toBe(59);
-    expect(lte.getSeconds()).toBe(59);
-    expect(lte.getMilliseconds()).toBe(999);
+    expect(lte.getUTCMonth()).toBe(11);
+    expect(lte.getUTCDate()).toBe(31);
   });
 
-  it("getDateRange with both startDate and endDate returns exact boundaries", () => {
-    const { gte, lte } = getDateRange("2025-01-02", "2025-01-05");
+  it("getDateRange parses ISO endDate and falls back to current month start", () => {
+    const { gte, lte } = getDateRange(undefined, "2025-10-03T20:59:59.999Z");
 
-    expect(gte.getFullYear()).toBe(2025);
-    expect(gte.getMonth()).toBe(0);
-    expect(gte.getDate()).toBe(2);
+    expect(gte.getUTCMonth()).toBe(11);
+    expect(gte.getUTCDate()).toBe(1);
 
-    expect(lte.getFullYear()).toBe(2025);
-    expect(lte.getMonth()).toBe(0);
-    expect(lte.getDate()).toBe(5);
-    expect(lte.getHours()).toBe(23);
+    expect(lte.getUTCFullYear()).toBe(2025);
+    expect(lte.getUTCMonth()).toBe(9);
+    expect(lte.getUTCDate()).toBe(3);
+    expect(lte.getUTCHours()).toBe(20);
+    expect(lte.getUTCMinutes()).toBe(59);
+    expect(lte.getUTCSeconds()).toBe(59);
+    expect(lte.getUTCMilliseconds()).toBe(999);
   });
 
-  it("getLastMonthRange returns truncated minutes for start and end", () => {
+  it("getDateRange with both ISO startDate and endDate returns exact boundaries", () => {
+    const { gte, lte } = getDateRange(
+      "2025-01-01T21:00:00.000Z",
+      "2025-01-05T20:59:59.999Z"
+    );
+
+    expect(gte.getUTCFullYear()).toBe(2025);
+    expect(gte.getUTCMonth()).toBe(0);
+    expect(gte.getUTCDate()).toBe(1);
+    expect(gte.getUTCHours()).toBe(21);
+
+    expect(lte.getUTCFullYear()).toBe(2025);
+    expect(lte.getUTCMonth()).toBe(0);
+    expect(lte.getUTCDate()).toBe(5);
+    expect(lte.getUTCHours()).toBe(20);
+    expect(lte.getUTCMinutes()).toBe(59);
+  });
+
+  it("getLastMonthRange returns UTC boundaries when no timezone", () => {
     const { gte, lte } = getLastMonthRange();
 
-    // For frozen date 2025-12-15T12:34:56.789Z, last month is November 2025
-    expect(gte.getFullYear()).toBe(2025);
-    expect(gte.getMonth()).toBe(10); // November
-    expect(gte.getDate()).toBe(1);
-    // truncated seconds and ms
-    expect(gte.getSeconds()).toBe(0);
-    expect(gte.getMilliseconds()).toBe(0);
+    expect(gte.getUTCFullYear()).toBe(2025);
+    expect(gte.getUTCMonth()).toBe(10);
+    expect(gte.getUTCDate()).toBe(1);
+    expect(gte.getUTCHours()).toBe(0);
+    expect(gte.getUTCMinutes()).toBe(0);
+    expect(gte.getUTCSeconds()).toBe(0);
 
-    expect(lte.getFullYear()).toBe(2025);
-    expect(lte.getMonth()).toBe(10);
-    // last day of November is 30
-    expect(lte.getDate()).toBe(30);
-    expect(lte.getSeconds()).toBe(0);
-    expect(lte.getMilliseconds()).toBe(0);
+    expect(lte.getUTCFullYear()).toBe(2025);
+    expect(lte.getUTCMonth()).toBe(10);
+    expect(lte.getUTCDate()).toBe(30);
+    expect(lte.getUTCHours()).toBe(23);
+    expect(lte.getUTCMinutes()).toBe(59);
+    expect(lte.getUTCSeconds()).toBe(59);
+    expect(lte.getUTCMilliseconds()).toBe(999);
+  });
 
-    // Also ensure returned values equal calling truncateToMinute manually
-    const manualGte = truncateToMinute(new Date(2025, 10, 1));
-    const manualLte = truncateToMinute(new Date(2025, 11, 0));
-    expect(gte.getTime()).toBe(manualGte.getTime());
-    expect(lte.getTime()).toBe(manualLte.getTime());
+  it("getLastMonthRange returns timezone-adjusted boundaries for Europe/Moscow", () => {
+    // Frozen: 2025-12-15 UTC → December in Moscow too
+    // Last month in Moscow = November
+    const { gte, lte } = getLastMonthRange("Europe/Moscow");
+
+    // Nov 1 00:00 Moscow = Oct 31 21:00 UTC
+    expect(gte.toISOString()).toBe("2025-10-31T21:00:00.000Z");
+    // Nov 30 23:59:59.999 Moscow = Nov 30 20:59:59.999 UTC
+    expect(lte.toISOString()).toBe("2025-11-30T20:59:59.999Z");
   });
 
   it("buildStatisticsWhere builds where object with tutorId and startTime range", () => {
-    const where = buildStatisticsWhere("user-123", "2025-02-01", "2025-02-10");
+    const where = buildStatisticsWhere(
+      "user-123",
+      "2025-01-31T21:00:00.000Z",
+      "2025-02-09T20:59:59.999Z"
+    );
 
     expect(where).toHaveProperty("tutorId", "user-123");
     expect(where).toHaveProperty("startTime");
     expect(where.startTime).toHaveProperty("gte");
     expect(where.startTime).toHaveProperty("lte");
 
-    expect(where.startTime.gte.getFullYear()).toBe(2025);
-    expect(where.startTime.gte.getMonth()).toBe(1);
-    expect(where.startTime.gte.getDate()).toBe(1);
+    expect(where.startTime.gte.getUTCFullYear()).toBe(2025);
+    expect(where.startTime.gte.getUTCMonth()).toBe(0);
+    expect(where.startTime.gte.getUTCDate()).toBe(31);
+    expect(where.startTime.gte.getUTCHours()).toBe(21);
 
-    expect(where.startTime.lte.getFullYear()).toBe(2025);
-    expect(where.startTime.lte.getMonth()).toBe(1);
-    expect(where.startTime.lte.getDate()).toBe(10);
-    expect(where.startTime.lte.getHours()).toBe(23);
+    expect(where.startTime.lte.getUTCFullYear()).toBe(2025);
+    expect(where.startTime.lte.getUTCMonth()).toBe(1);
+    expect(where.startTime.lte.getUTCDate()).toBe(9);
+    expect(where.startTime.lte.getUTCHours()).toBe(20);
+    expect(where.startTime.lte.getUTCMinutes()).toBe(59);
+  });
+
+  it("buildStatisticsWhere passes timezone to fallback", () => {
+    const where = buildStatisticsWhere(
+      "user-123",
+      undefined,
+      undefined,
+      "Europe/Moscow"
+    );
+
+    // Fallback: Dec 2025 in Moscow
+    // Start: Dec 1 00:00 Moscow = Nov 30 21:00 UTC
+    expect(where.startTime.gte.toISOString()).toBe("2025-11-30T21:00:00.000Z");
+    // End: Dec 31 23:59:59.999 Moscow = Dec 31 20:59:59.999 UTC
+    expect(where.startTime.lte.toISOString()).toBe(
+      "2025-12-31T20:59:59.999Z"
+    );
   });
 });

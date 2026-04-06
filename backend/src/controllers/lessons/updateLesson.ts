@@ -1,13 +1,18 @@
-import { Response } from "express";
-import { UpdateLessonDto } from "../../types";
+import type { Response } from "express";
+import type { UpdateLessonDto } from "../../types";
 import type { Lesson } from "@prisma/client";
-import { AuthRequest } from "../../middleware/auth";
+import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
-import { shiftFutureRecurringLessons } from "../../services/recurringHelpers";
-import { updatePriceForFutureRecurringLessons } from "../../services/recurringHelpers";
+import {
+  shiftFutureRecurringLessons,
+  updatePriceForFutureRecurringLessons,
+  cancelRemindersForLesson,
+  scheduleRemindersForLesson,
+} from "../../services";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
+import type { ShiftResult } from "../../types";
 
 const validateUpdateData = async (
   id: string,
@@ -156,6 +161,8 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       include: { student: { select: { id: true, name: true } } },
     });
 
+    let result: ShiftResult | undefined;
+
     if (
       existingLesson.isRecurring &&
       (updateData.startTime || updateData.endTime) &&
@@ -165,7 +172,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       const newStart = truncateToMinute(new Date(start));
       const newEnd = truncateToMinute(new Date(end));
 
-      const result = await shiftFutureRecurringLessons(
+      result = await shiftFutureRecurringLessons(
         existingLesson,
         newStart,
         newEnd
@@ -174,6 +181,14 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
         throw new Error("Перенесенная серия конфликтует с другими уроками");
       } else if (result.shifted && result.shifted > 0) {
         console.log(`Shifted ${result.shifted} future recurring lessons`);
+
+        // Recalculate reminders for all shifted lessons
+        if (result.shiftedIds) {
+          for (const shiftedId of result.shiftedIds) {
+            await cancelRemindersForLesson(shiftedId);
+            await scheduleRemindersForLesson(shiftedId);
+          }
+        }
       }
     }
 
@@ -185,6 +200,20 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     ) {
       const newPrice = updateData.price ?? null;
       await updatePriceForFutureRecurringLessons(existingLesson, newPrice);
+    }
+
+    // Recalculate reminders if time or status changed (skip if already handled by shift loop)
+    const timeChanged = !!(updateData.startTime || updateData.endTime);
+    const statusChanged = !!(updateData.status && updateData.status !== existingLesson.status);
+    const alreadyRecalculated = result?.shiftedIds?.includes(id);
+
+    if ((timeChanged || statusChanged) && !alreadyRecalculated) {
+      await cancelRemindersForLesson(id);
+
+      const newStatus = lesson.status;
+      if (newStatus === "SCHEDULED" || newStatus === "RESCHEDULED") {
+        await scheduleRemindersForLesson(id);
+      }
     }
 
     res.json({
