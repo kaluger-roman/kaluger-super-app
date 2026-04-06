@@ -131,6 +131,29 @@ sample({
 
 sample({
   clock: lessonModel.updateLessonFx.doneData,
+  source: {
+    lessonsViewMode: viewModeModel.$lessonsViewMode,
+    allPagination: lessonModel.$allPagination,
+    onlyUnpaid: filtersModel.$onlyUnpaid,
+    onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
+  },
+  filter: ({ lessonsViewMode, paymentDateFrom, paymentDateTo }) =>
+    lessonsViewMode === "paged" && (paymentDateFrom !== null || paymentDateTo !== null),
+  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
+    page: allPagination.page,
+    limit: allPagination.limit,
+    onlyUnpaid,
+    onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
+  }),
+  target: lessonModel.loadAllLessonsFx,
+});
+
+sample({
+  clock: lessonModel.updateLessonFx.doneData,
   fn: () => "Урок обновлен",
   target: notificationsModel.showSuccessEvent,
 });

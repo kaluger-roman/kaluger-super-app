@@ -5,13 +5,19 @@ import { useUnit } from "effector-react";
 
 import { lessonsModel } from "@features";
 
-import { TABS } from "./LessonsTabs.constants";
 import * as Styled from "./LessonsTabs.styled";
 
 export const LessonsTabs: FC = () => {
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const currentTab = useUnit(lessonsModel.$currentTab);
+  const paymentDateFrom = useUnit(lessonsModel.$paymentDateFrom);
+  const paymentDateTo = useUnit(lessonsModel.$paymentDateTo);
+
+  const isPaymentFilterActive = paymentDateFrom !== null || paymentDateTo !== null;
+  const visibleTabs = isPaymentFilterActive
+    ? lessonsModel.TAB_LABELS
+    : lessonsModel.BASE_TAB_LABELS;
 
   return (
     <Styled.Container>
@@ -23,8 +29,8 @@ export const LessonsTabs: FC = () => {
         allowScrollButtonsMobile={isSmallMobile}
         $isSmallMobile={isSmallMobile}
       >
-        {TABS.map((tab, index) => (
-          <Tab key={index} label={tab} />
+        {visibleTabs.map((tab, index) => (
+          <Tab key={index} label={tab} value={index} />
         ))}
       </Styled.StyledTabs>
     </Styled.Container>

@@ -105,7 +105,9 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const [lessons, total] = await Promise.all([
+    const hasPaymentDateFilter = Boolean(paymentDateFrom || paymentDateTo);
+
+    const [lessons, total, paymentsAggregate] = await Promise.all([
       prisma.lesson.findMany({
         where,
         include: {
@@ -119,6 +121,13 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
           noPagination !== "true" && { skip, take: limitNum }),
       }),
       prisma.lesson.count({ where }),
+      hasPaymentDateFilter
+        ? prisma.lesson.aggregate({
+            where,
+            _sum: { price: true },
+            _count: { id: true },
+          })
+        : Promise.resolve(null),
     ]);
 
     res.json({
@@ -132,6 +141,12 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
               limit: limitNum,
               totalPages: Math.ceil(total / limitNum),
             },
+      ...(paymentsAggregate && {
+        paymentsSummary: {
+          sum: paymentsAggregate._sum.price || 0,
+          count: paymentsAggregate._count.id || 0,
+        },
+      }),
     });
   } catch (error) {
     console.error("Get lessons error:", error);

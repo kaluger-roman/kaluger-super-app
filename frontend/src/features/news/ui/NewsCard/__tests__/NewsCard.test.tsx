@@ -46,7 +46,7 @@ describe("NewsCard", () => {
     expect(strong?.textContent).toBe("bold");
   });
 
-  it("should render list items for lines starting with - ", () => {
+  it("should render list items for lines starting with -", () => {
     renderWithTheme(
       <NewsCard news={createNewsItem({ content: "- First item\n- Second item" })} />,
     );

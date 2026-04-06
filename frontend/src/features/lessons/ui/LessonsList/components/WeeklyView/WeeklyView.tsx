@@ -2,12 +2,13 @@ import type { FC, MouseEvent } from "react";
 
 import type { Lesson } from "@shared";
 
+import type { LessonListType } from "../../LessonsList.types";
 import { LessonCard } from "../LessonCard";
 import * as Styled from "./WeeklyView.styled";
 
 type WeeklyViewProps = {
   lessons: Lesson[];
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
   onCardClick?: (lesson: Lesson) => void;
   onMenuClick?: (event: MouseEvent<HTMLElement>, lesson: Lesson) => void;
 };

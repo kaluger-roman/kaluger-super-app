@@ -1,9 +1,10 @@
 import type { FC } from "react";
 
+import type { LessonListType } from "../LessonsList.types";
 import * as Styled from "./EmptyState.styled";
 
 type EmptyStateProps = {
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
 };
 
 export const EmptyState: FC<EmptyStateProps> = ({ type }) => {

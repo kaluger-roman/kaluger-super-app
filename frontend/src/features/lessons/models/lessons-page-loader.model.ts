@@ -8,6 +8,12 @@ import {
   createWeeklyLessonParams,
   createPagedLessonParams,
 } from "./lessons-page-loader.helpers";
+import {
+  ALL_TAB_INDEX,
+  CANCELLED_TAB_INDEX,
+  COMPLETED_TAB_INDEX,
+  UPCOMING_TAB_INDEX,
+} from "./lessons-tabs.constants";
 import * as lessonsTabsModel from "./lessons-tabs.model";
 import * as lessonsViewModeModel from "./lessons-view-mode.model";
 import { LessonsPageGate } from "./lessons.model";
@@ -61,7 +67,7 @@ sample({
     paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
     paymentDateTo: lessonsFiltersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === 0,
+  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -84,7 +90,7 @@ sample({
     paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
     paymentDateTo: lessonsFiltersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === 1,
+  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCompletedLessonsFx,
 });
@@ -107,7 +113,30 @@ sample({
     paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
     paymentDateTo: lessonsFiltersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === 2,
+  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCancelledLessonsFx,
+});
+
+sample({
+  clock: [
+    LessonsPageGate.open,
+    lessonsTabsModel.$currentTab,
+    lessonsViewModeModel.$lessonsViewMode,
+    lessonsFiltersModel.$onlyUnpaid,
+    lessonsFiltersModel.$onlyWithoutHomework,
+    lessonsFiltersModel.$paymentDateFrom,
+    lessonsFiltersModel.$paymentDateTo,
+  ],
+  source: {
+    currentTab: lessonsTabsModel.$currentTab,
+    lessonsViewMode: lessonsViewModeModel.$lessonsViewMode,
+    onlyUnpaid: lessonsFiltersModel.$onlyUnpaid,
+    onlyWithoutHomework: lessonsFiltersModel.$onlyWithoutHomework,
+    paymentDateFrom: lessonsFiltersModel.$paymentDateFrom,
+    paymentDateTo: lessonsFiltersModel.$paymentDateTo,
+  },
+  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === ALL_TAB_INDEX,
+  fn: createPagedLessonParams,
+  target: lessonModel.loadAllLessonsFx,
 });

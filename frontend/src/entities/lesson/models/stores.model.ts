@@ -3,15 +3,19 @@ import { sample } from "effector";
 import {
   $completedLessons,
   $cancelledLessons,
+  $allLessons,
   $upcomingLessons,
   $weeklyLessons,
   $scheduleLessons,
   $currentLesson,
   $completedPagination,
   $cancelledPagination,
+  $allPagination,
   $upcomingPagination,
+  $paymentsSummary,
   loadCompletedLessonsFx,
   loadCancelledLessonsFx,
+  loadAllLessonsFx,
   loadLessonFx,
   loadUpcomingLessonsFx,
   loadWeeklyLessonsFx,
@@ -49,6 +53,30 @@ sample({
   clock: loadCancelledLessonsFx.doneData,
   fn: ({ pagination }) => pagination,
   target: $cancelledPagination,
+});
+
+sample({
+  clock: loadAllLessonsFx.doneData,
+  fn: ({ lessons }) => lessons,
+  target: $allLessons,
+});
+
+sample({
+  clock: loadAllLessonsFx.doneData,
+  fn: ({ pagination }) => pagination,
+  target: $allPagination,
+});
+
+sample({
+  clock: [
+    loadAllLessonsFx.doneData,
+    loadUpcomingLessonsFx.doneData,
+    loadCompletedLessonsFx.doneData,
+    loadCancelledLessonsFx.doneData,
+    loadWeeklyLessonsFx.doneData,
+  ],
+  fn: ({ paymentsSummary }) => paymentsSummary ?? null,
+  target: $paymentsSummary,
 });
 
 sample({

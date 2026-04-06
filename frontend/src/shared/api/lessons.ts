@@ -1,6 +1,11 @@
 import { api } from "./base";
 import type { Lesson, CreateLessonDto, UpdateLessonDto, Statistics } from "../types";
 
+export type PaymentsSummary = {
+  sum: number;
+  count: number;
+};
+
 type LessonsResponse = {
   lessons: Lesson[];
   pagination: {
@@ -9,6 +14,7 @@ type LessonsResponse = {
     limit: number;
     totalPages: number;
   };
+  paymentsSummary?: PaymentsSummary;
 };
 
 type LessonsFilters = {
