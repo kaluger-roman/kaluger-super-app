@@ -28,4 +28,5 @@ yarn-error.log*
 
 # Landing
 /landing/.next
-/landing/out.claude/worktrees/
+/landing/out
+.claude/worktrees/
