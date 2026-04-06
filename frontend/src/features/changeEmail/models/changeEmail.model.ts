@@ -1,11 +1,22 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { createStore, createEvent, createEffect, sample, combine } from "effector";
 import { interval } from "patronum";
 
 import { userModel } from "@entities";
 import { authApi, notificationsModel } from "@shared";
 import type { AuthResponse } from "@shared";
 
+import { extractAxiosError } from "./changeEmail.helpers";
+
 const RESEND_TIMER_SECONDS = 60;
+
+// Stores
+export const $newEmail = createStore("");
+export const $password = createStore("");
+export const $code = createStore("");
+export const $error = createStore<string | null>(null);
+export const $isCodeStep = createStore(false);
+export const $canResend = createStore(true);
+export const $resendTimer = createStore(0);
 
 // Events
 export const newEmailChanged = createEvent<string>();
@@ -17,6 +28,9 @@ export const resendRequested = createEvent();
 export const formReset = createEvent();
 export const cancelRequested = createEvent();
 
+const startResendTimer = createEvent();
+const stopResendTimer = createEvent();
+
 // Effects
 export const changeEmailFx = createEffect(
   async (data: { newEmail: string; password: string }) => {
@@ -26,11 +40,7 @@ export const changeEmailFx = createEffect(
 
 export const verifyEmailChangeFx = createEffect(
   async (data: { code: string }) => {
-    const response = await authApi.verifyEmailChange(data);
-    if (response.token) {
-      localStorage.setItem("authToken", response.token);
-    }
-    return response;
+    return await authApi.verifyEmailChange(data);
   },
 );
 
@@ -38,44 +48,18 @@ export const resendEmailChangeCodeFx = createEffect(async () => {
   return await authApi.resendEmailChangeCode();
 });
 
-// Stores
-export const $newEmail = createStore("");
-export const $password = createStore("");
-export const $code = createStore("");
-export const $error = createStore<string | null>(null);
-export const $isCodeStep = createStore(false);
-export const $isLoading = createStore(false);
-export const $canResend = createStore(true);
-export const $resendTimer = createStore(0);
+export const $isLoading = combine(
+  changeEmailFx.pending,
+  verifyEmailChangeFx.pending,
+  resendEmailChangeCodeFx.pending,
+  (...pendings) => pendings.some(Boolean),
+);
 
 // Timer
-const startResendTimer = createEvent();
-const stopResendTimer = createEvent();
-
 const { tick: timerTick } = interval({
   timeout: 1000,
   start: startResendTimer,
   stop: stopResendTimer,
-});
-
-// Loading derived from multiple effects
-sample({
-  clock: [changeEmailFx, verifyEmailChangeFx, resendEmailChangeCodeFx],
-  fn: () => true,
-  target: $isLoading,
-});
-
-sample({
-  clock: [
-    changeEmailFx.done,
-    changeEmailFx.fail,
-    verifyEmailChangeFx.done,
-    verifyEmailChangeFx.fail,
-    resendEmailChangeCodeFx.done,
-    resendEmailChangeCodeFx.fail,
-  ],
-  fn: () => false,
-  target: $isLoading,
 });
 
 // Update fields
@@ -117,7 +101,7 @@ sample({
   target: verifyEmailChangeFx,
 });
 
-// On verify success — update user and reset
+// On verify success — update user, token, and reset
 sample({
   clock: verifyEmailChangeFx.doneData,
   fn: (response: AuthResponse & { token: string }) => response.user,
@@ -126,7 +110,11 @@ sample({
 
 sample({
   clock: verifyEmailChangeFx.doneData,
-  fn: (response: AuthResponse & { token: string }) => response.token,
+  filter: (response: AuthResponse & { token: string }) => !!response.token,
+  fn: (response: AuthResponse & { token: string }) => {
+    localStorage.setItem("authToken", response.token);
+    return response.token;
+  },
   target: userModel.setAuthToken,
 });
 
@@ -192,7 +180,7 @@ sample({
   target: formReset,
 });
 
-// Reset form
+// Reset form (including timer state)
 sample({
   clock: formReset,
   fn: () => "",
@@ -211,29 +199,24 @@ sample({
   target: $isCodeStep,
 });
 
+sample({
+  clock: formReset,
+  fn: () => 0,
+  target: $resendTimer,
+});
+
+sample({
+  clock: formReset,
+  fn: () => true,
+  target: $canResend,
+});
+
+sample({
+  clock: formReset,
+  target: stopResendTimer,
+});
+
 // Error handling
-const extractError = (error: unknown): string => {
-  const axiosError = error as {
-    response?: { data?: { error?: string } };
-    message: string;
-  };
-  return axiosError?.response?.data?.error || axiosError?.message || "Произошла ошибка";
-};
-
-sample({
-  clock: changeEmailFx.failData,
-  fn: extractError,
-  target: $error,
-});
-
-sample({
-  clock: verifyEmailChangeFx.failData,
-  fn: extractError,
-  target: $error,
-});
-
-sample({
-  clock: resendEmailChangeCodeFx.failData,
-  fn: extractError,
-  target: $error,
-});
+sample({ clock: changeEmailFx.failData, fn: extractAxiosError, target: $error });
+sample({ clock: verifyEmailChangeFx.failData, fn: extractAxiosError, target: $error });
+sample({ clock: resendEmailChangeCodeFx.failData, fn: extractAxiosError, target: $error });

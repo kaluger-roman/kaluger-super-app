@@ -62,3 +62,16 @@ export const InfoText = styled(Typography)(({ theme }) => ({
   textAlign: "center",
   marginBottom: theme.spacing(2),
 }));
+
+export const ErrorAlertTop = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+}));
+
+export const ErrorAlertBottom = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+}));
+
+export const CurrentEmailText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  marginBottom: theme.spacing(2),
+}));

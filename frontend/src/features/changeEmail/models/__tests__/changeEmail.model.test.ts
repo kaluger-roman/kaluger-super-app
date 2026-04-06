@@ -3,21 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authApi } from "@shared";
 
-import {
-  changeEmailFx,
-  newEmailChanged,
-  passwordChanged,
-  codeChanged,
-  initiateSubmitted,
-  verifySubmitted,
-  formReset,
-  cancelRequested,
-  $newEmail,
-  $password,
-  $code,
-  $error,
-  $isCodeStep,
-} from "../changeEmail.model";
+import * as changeEmailModel from "../changeEmail.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");
@@ -41,40 +27,54 @@ describe("features/changeEmail/models/changeEmail.model", () => {
   describe("form fields", () => {
     it("should update newEmail", async () => {
       const scope = fork();
-      await allSettled(newEmailChanged, { scope, params: "new@example.com" });
-      expect(scope.getState($newEmail)).toBe("new@example.com");
+      await allSettled(changeEmailModel.newEmailChanged, { scope, params: "new@example.com" });
+      expect(scope.getState(changeEmailModel.$newEmail)).toBe("new@example.com");
     });
 
     it("should update password", async () => {
       const scope = fork();
-      await allSettled(passwordChanged, { scope, params: "Password1" });
-      expect(scope.getState($password)).toBe("Password1");
+      await allSettled(changeEmailModel.passwordChanged, { scope, params: "Password1" });
+      expect(scope.getState(changeEmailModel.$password)).toBe("Password1");
     });
 
     it("should update code", async () => {
       const scope = fork();
-      await allSettled(codeChanged, { scope, params: "123456" });
-      expect(scope.getState($code)).toBe("123456");
+      await allSettled(changeEmailModel.codeChanged, { scope, params: "123456" });
+      expect(scope.getState(changeEmailModel.$code)).toBe("123456");
     });
 
     it("should reset all fields on formReset", async () => {
       const scope = fork({
         values: [
-          [$newEmail, "test@example.com"],
-          [$password, "pass"],
-          [$code, "123456"],
-          [$error, "error"],
-          [$isCodeStep, true],
+          [changeEmailModel.$newEmail, "test@example.com"],
+          [changeEmailModel.$password, "pass"],
+          [changeEmailModel.$code, "123456"],
+          [changeEmailModel.$error, "error"],
+          [changeEmailModel.$isCodeStep, true],
         ],
       });
 
-      await allSettled(formReset, { scope });
+      await allSettled(changeEmailModel.formReset, { scope });
 
-      expect(scope.getState($newEmail)).toBe("");
-      expect(scope.getState($password)).toBe("");
-      expect(scope.getState($code)).toBe("");
-      expect(scope.getState($error)).toBeNull();
-      expect(scope.getState($isCodeStep)).toBe(false);
+      expect(scope.getState(changeEmailModel.$newEmail)).toBe("");
+      expect(scope.getState(changeEmailModel.$password)).toBe("");
+      expect(scope.getState(changeEmailModel.$code)).toBe("");
+      expect(scope.getState(changeEmailModel.$error)).toBeNull();
+      expect(scope.getState(changeEmailModel.$isCodeStep)).toBe(false);
+    });
+
+    it("should reset timer state on formReset", async () => {
+      const scope = fork({
+        values: [
+          [changeEmailModel.$resendTimer, 30],
+          [changeEmailModel.$canResend, false],
+        ],
+      });
+
+      await allSettled(changeEmailModel.formReset, { scope });
+
+      expect(scope.getState(changeEmailModel.$resendTimer)).toBe(0);
+      expect(scope.getState(changeEmailModel.$canResend)).toBe(true);
     });
   });
 
@@ -87,12 +87,11 @@ describe("features/changeEmail/models/changeEmail.model", () => {
 
       const scope = fork();
 
-      const promise = allSettled(changeEmailFx, {
+      const promise = allSettled(changeEmailModel.changeEmailFx, {
         scope,
         params: { newEmail: "new@example.com", password: "Password1" },
       });
 
-      // Advance timers to let interval complete (60s + buffer)
       await vi.advanceTimersByTimeAsync(61000);
       await promise;
 
@@ -100,7 +99,7 @@ describe("features/changeEmail/models/changeEmail.model", () => {
         newEmail: "new@example.com",
         password: "Password1",
       });
-      expect(scope.getState($isCodeStep)).toBe(true);
+      expect(scope.getState(changeEmailModel.$isCodeStep)).toBe(true);
 
       vi.useRealTimers();
     });
@@ -114,15 +113,15 @@ describe("features/changeEmail/models/changeEmail.model", () => {
 
       const scope = fork({
         values: [
-          [$newEmail, "taken@example.com"],
-          [$password, "Password1"],
+          [changeEmailModel.$newEmail, "taken@example.com"],
+          [changeEmailModel.$password, "Password1"],
         ],
       });
 
-      await allSettled(initiateSubmitted, { scope });
+      await allSettled(changeEmailModel.initiateSubmitted, { scope });
 
-      expect(scope.getState($error)).toBe("Этот email уже используется");
-      expect(scope.getState($isCodeStep)).toBe(false);
+      expect(scope.getState(changeEmailModel.$error)).toBe("Этот email уже используется");
+      expect(scope.getState(changeEmailModel.$isCodeStep)).toBe(false);
     });
   });
 
@@ -135,10 +134,10 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       });
 
       const scope = fork({
-        values: [[$code, "123456"]],
+        values: [[changeEmailModel.$code, "123456"]],
       });
 
-      await allSettled(verifySubmitted, { scope });
+      await allSettled(changeEmailModel.verifySubmitted, { scope });
 
       expect(authApi.verifyEmailChange).toHaveBeenCalledWith({ code: "123456" });
     });
@@ -151,10 +150,10 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       });
 
       const scope = fork({
-        values: [[$code, "123456"]],
+        values: [[changeEmailModel.$code, "123456"]],
       });
 
-      await allSettled(verifySubmitted, { scope });
+      await allSettled(changeEmailModel.verifySubmitted, { scope });
 
       expect(localStorage.getItem("authToken")).toBe("new-jwt-token");
     });
@@ -167,12 +166,12 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       vi.mocked(authApi.verifyEmailChange).mockRejectedValueOnce(axiosError);
 
       const scope = fork({
-        values: [[$code, "000000"]],
+        values: [[changeEmailModel.$code, "000000"]],
       });
 
-      await allSettled(verifySubmitted, { scope });
+      await allSettled(changeEmailModel.verifySubmitted, { scope });
 
-      expect(scope.getState($error)).toBe("Неверный код верификации");
+      expect(scope.getState(changeEmailModel.$error)).toBe("Неверный код верификации");
     });
   });
 
@@ -180,25 +179,25 @@ describe("features/changeEmail/models/changeEmail.model", () => {
     it("should reset form on cancelRequested", async () => {
       const scope = fork({
         values: [
-          [$newEmail, "test@example.com"],
-          [$password, "pass"],
-          [$isCodeStep, true],
+          [changeEmailModel.$newEmail, "test@example.com"],
+          [changeEmailModel.$password, "pass"],
+          [changeEmailModel.$isCodeStep, true],
         ],
       });
 
-      await allSettled(cancelRequested, { scope });
+      await allSettled(changeEmailModel.cancelRequested, { scope });
 
-      expect(scope.getState($newEmail)).toBe("");
-      expect(scope.getState($isCodeStep)).toBe(false);
+      expect(scope.getState(changeEmailModel.$newEmail)).toBe("");
+      expect(scope.getState(changeEmailModel.$isCodeStep)).toBe(false);
     });
   });
 
   describe("error clearing", () => {
     it("should clear error on field change", async () => {
-      const scope = fork({ values: [[$error, "some error"]] });
+      const scope = fork({ values: [[changeEmailModel.$error, "some error"]] });
 
-      await allSettled(newEmailChanged, { scope, params: "x" });
-      expect(scope.getState($error)).toBeNull();
+      await allSettled(changeEmailModel.newEmailChanged, { scope, params: "x" });
+      expect(scope.getState(changeEmailModel.$error)).toBeNull();
     });
   });
 });

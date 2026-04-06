@@ -1,6 +1,6 @@
 import { Response } from "express";
 
-import { AuthRequest } from "../middleware/auth";
+import type { AuthRequest } from "../middleware/auth";
 import { changePassword as changePasswordService } from "../services";
 import type { ChangePasswordDto } from "../types";
 

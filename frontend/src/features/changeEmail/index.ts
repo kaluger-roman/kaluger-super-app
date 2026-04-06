@@ -1,2 +1,2 @@
-export { ChangeEmailForm } from "./ui/ChangeEmailForm";
+export { ChangeEmailForm } from "./ui";
 export { changeEmailModel } from "./models";

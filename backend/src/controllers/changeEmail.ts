@@ -1,10 +1,10 @@
 import { Response } from "express";
 
-import { AuthRequest } from "../middleware/auth";
+import type { AuthRequest } from "../middleware/auth";
 import {
   initiateEmailChange,
-  verifyEmailChange,
-  resendEmailChangeCode,
+  verifyEmailChange as verifyEmailChangeService,
+  resendEmailChangeCode as resendEmailChangeCodeService,
 } from "../services";
 import type { ChangeEmailDto, VerifyEmailChangeDto } from "../types";
 
@@ -34,7 +34,7 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const verifyEmailChangeController = async (req: AuthRequest, res: Response) => {
+export const verifyEmailChange = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { code } = req.body as VerifyEmailChangeDto;
@@ -43,7 +43,7 @@ export const verifyEmailChangeController = async (req: AuthRequest, res: Respons
       return res.status(400).json({ error: "Код верификации обязателен" });
     }
 
-    const result = await verifyEmailChange(userId!, code);
+    const result = await verifyEmailChangeService(userId!, code);
 
     res.json({
       message: "Email успешно изменён",
@@ -62,11 +62,11 @@ export const verifyEmailChangeController = async (req: AuthRequest, res: Respons
   }
 };
 
-export const resendEmailChangeCodeController = async (req: AuthRequest, res: Response) => {
+export const resendEmailChangeCode = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
 
-    await resendEmailChangeCode(userId!);
+    await resendEmailChangeCodeService(userId!);
 
     res.json({ message: "Код верификации повторно отправлен" });
   } catch (error) {

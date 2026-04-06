@@ -1,7 +1,7 @@
 import type { FC, KeyboardEvent, ClipboardEvent } from "react";
 import { useRef } from "react";
 
-import { TextField, Alert, Typography } from "@mui/material";
+import { TextField, Alert } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { userModel } from "@entities";
@@ -107,9 +107,9 @@ export const ChangeEmailForm: FC = () => {
         </Styled.CodeInputContainer>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+          <Styled.ErrorAlertTop>
+            <Alert severity="error">{error}</Alert>
+          </Styled.ErrorAlertTop>
         )}
 
         <Styled.ButtonBox>
@@ -143,9 +143,9 @@ export const ChangeEmailForm: FC = () => {
     <Styled.SectionPaper elevation={0}>
       <Styled.SectionTitle variant="h6">Смена email</Styled.SectionTitle>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Styled.CurrentEmailText variant="body2">
         Текущий email: <strong>{user.email}</strong>
-      </Typography>
+      </Styled.CurrentEmailText>
 
       <Styled.FieldsBox>
         <TextField
@@ -168,9 +168,9 @@ export const ChangeEmailForm: FC = () => {
       </Styled.FieldsBox>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
+        <Styled.ErrorAlertBottom>
+          <Alert severity="error">{error}</Alert>
+        </Styled.ErrorAlertBottom>
       )}
 
       <Styled.ButtonBox>

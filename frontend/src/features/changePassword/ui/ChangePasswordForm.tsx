@@ -60,9 +60,9 @@ export const ChangePasswordForm: FC = () => {
       </Styled.FieldsBox>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
+        <Styled.ErrorAlert>
+          <Alert severity="error">{error}</Alert>
+        </Styled.ErrorAlert>
       )}
 
       <Styled.ButtonBox>

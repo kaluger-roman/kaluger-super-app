@@ -1,2 +1,2 @@
-export { ChangePasswordForm } from "./ui/ChangePasswordForm";
+export { ChangePasswordForm } from "./ui";
 export { changePasswordModel } from "./models";

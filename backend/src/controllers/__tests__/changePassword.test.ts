@@ -119,8 +119,11 @@ describe("POST /api/auth/change-password", () => {
       data: { isEmailVerified: true },
     });
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    expect(user).not.toBeNull();
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ email: (await prisma.user.findUnique({ where: { id: userId } }))!.email, password: newPassword });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.token).toBeDefined();
 
     // Verify old password no longer works
     const res2 = await request(app)

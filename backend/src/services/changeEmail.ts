@@ -59,6 +59,7 @@ export const initiateEmailChange = async (
     await sendVerificationEmail(newEmail, verificationCode);
   } catch (emailError) {
     console.error("Error sending email change verification:", emailError);
+    throw Object.assign(new Error("Ошибка при отправке кода верификации"), { statusCode: 500 });
   }
 };
 

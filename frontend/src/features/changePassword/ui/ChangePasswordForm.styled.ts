@@ -25,3 +25,7 @@ export const ButtonBox = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
 });
+
+export const ErrorAlert = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+}));

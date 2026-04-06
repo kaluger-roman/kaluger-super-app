@@ -3,18 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authApi } from "@shared";
 
-import {
-  changePasswordFx,
-  currentPasswordChanged,
-  newPasswordChanged,
-  confirmPasswordChanged,
-  formSubmitted,
-  formReset,
-  $currentPassword,
-  $newPassword,
-  $confirmPassword,
-  $error,
-} from "../changePassword.model";
+import * as changePasswordModel from "../changePassword.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");
@@ -35,47 +24,47 @@ describe("features/changePassword/models/changePassword.model", () => {
   describe("form fields", () => {
     it("should update currentPassword", async () => {
       const scope = fork();
-      await allSettled(currentPasswordChanged, { scope, params: "OldPass1" });
-      expect(scope.getState($currentPassword)).toBe("OldPass1");
+      await allSettled(changePasswordModel.currentPasswordChanged, { scope, params: "OldPass1" });
+      expect(scope.getState(changePasswordModel.$currentPassword)).toBe("OldPass1");
     });
 
     it("should update newPassword", async () => {
       const scope = fork();
-      await allSettled(newPasswordChanged, { scope, params: "NewPass1" });
-      expect(scope.getState($newPassword)).toBe("NewPass1");
+      await allSettled(changePasswordModel.newPasswordChanged, { scope, params: "NewPass1" });
+      expect(scope.getState(changePasswordModel.$newPassword)).toBe("NewPass1");
     });
 
     it("should update confirmPassword", async () => {
       const scope = fork();
-      await allSettled(confirmPasswordChanged, { scope, params: "NewPass1" });
-      expect(scope.getState($confirmPassword)).toBe("NewPass1");
+      await allSettled(changePasswordModel.confirmPasswordChanged, { scope, params: "NewPass1" });
+      expect(scope.getState(changePasswordModel.$confirmPassword)).toBe("NewPass1");
     });
 
     it("should reset all fields on formReset", async () => {
       const scope = fork({
         values: [
-          [$currentPassword, "old"],
-          [$newPassword, "new"],
-          [$confirmPassword, "confirm"],
-          [$error, "some error"],
+          [changePasswordModel.$currentPassword, "old"],
+          [changePasswordModel.$newPassword, "new"],
+          [changePasswordModel.$confirmPassword, "confirm"],
+          [changePasswordModel.$error, "some error"],
         ],
       });
 
-      await allSettled(formReset, { scope });
+      await allSettled(changePasswordModel.formReset, { scope });
 
-      expect(scope.getState($currentPassword)).toBe("");
-      expect(scope.getState($newPassword)).toBe("");
-      expect(scope.getState($confirmPassword)).toBe("");
-      expect(scope.getState($error)).toBeNull();
+      expect(scope.getState(changePasswordModel.$currentPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$newPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$confirmPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$error)).toBeNull();
     });
   });
 
   describe("error handling", () => {
     it("should clear error on field change", async () => {
-      const scope = fork({ values: [[$error, "some error"]] });
+      const scope = fork({ values: [[changePasswordModel.$error, "some error"]] });
 
-      await allSettled(currentPasswordChanged, { scope, params: "x" });
-      expect(scope.getState($error)).toBeNull();
+      await allSettled(changePasswordModel.currentPasswordChanged, { scope, params: "x" });
+      expect(scope.getState(changePasswordModel.$error)).toBeNull();
     });
 
     it("should set error on changePasswordFx failure", async () => {
@@ -86,7 +75,7 @@ describe("features/changePassword/models/changePassword.model", () => {
       vi.mocked(authApi.changePassword).mockRejectedValueOnce(axiosError);
 
       const scope = fork();
-      await allSettled(changePasswordFx, {
+      await allSettled(changePasswordModel.changePasswordFx, {
         scope,
         params: {
           currentPassword: "wrong",
@@ -95,7 +84,7 @@ describe("features/changePassword/models/changePassword.model", () => {
         },
       });
 
-      expect(scope.getState($error)).toBe("Неверный текущий пароль");
+      expect(scope.getState(changePasswordModel.$error)).toBe("Неверный текущий пароль");
     });
   });
 
@@ -107,13 +96,13 @@ describe("features/changePassword/models/changePassword.model", () => {
 
       const scope = fork({
         values: [
-          [$currentPassword, "OldPass1"],
-          [$newPassword, "NewPass1"],
-          [$confirmPassword, "NewPass1"],
+          [changePasswordModel.$currentPassword, "OldPass1"],
+          [changePasswordModel.$newPassword, "NewPass1"],
+          [changePasswordModel.$confirmPassword, "NewPass1"],
         ],
       });
 
-      await allSettled(formSubmitted, { scope });
+      await allSettled(changePasswordModel.formSubmitted, { scope });
 
       expect(authApi.changePassword).toHaveBeenCalledWith({
         currentPassword: "OldPass1",
@@ -129,17 +118,17 @@ describe("features/changePassword/models/changePassword.model", () => {
 
       const scope = fork({
         values: [
-          [$currentPassword, "OldPass1"],
-          [$newPassword, "NewPass1"],
-          [$confirmPassword, "NewPass1"],
+          [changePasswordModel.$currentPassword, "OldPass1"],
+          [changePasswordModel.$newPassword, "NewPass1"],
+          [changePasswordModel.$confirmPassword, "NewPass1"],
         ],
       });
 
-      await allSettled(formSubmitted, { scope });
+      await allSettled(changePasswordModel.formSubmitted, { scope });
 
-      expect(scope.getState($currentPassword)).toBe("");
-      expect(scope.getState($newPassword)).toBe("");
-      expect(scope.getState($confirmPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$currentPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$newPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$confirmPassword)).toBe("");
     });
   });
 });

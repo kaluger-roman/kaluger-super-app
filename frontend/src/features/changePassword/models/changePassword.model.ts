@@ -2,6 +2,14 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { authApi, notificationsModel } from "@shared";
 
+import { extractAxiosError } from "./changePassword.helpers";
+
+// Stores
+export const $currentPassword = createStore("");
+export const $newPassword = createStore("");
+export const $confirmPassword = createStore("");
+export const $error = createStore<string | null>(null);
+
 // Events
 export const currentPasswordChanged = createEvent<string>();
 export const newPasswordChanged = createEvent<string>();
@@ -16,11 +24,6 @@ export const changePasswordFx = createEffect(
   },
 );
 
-// Stores
-export const $currentPassword = createStore("");
-export const $newPassword = createStore("");
-export const $confirmPassword = createStore("");
-export const $error = createStore<string | null>(null);
 export const $isLoading = changePasswordFx.pending;
 
 // Update fields
@@ -74,12 +77,6 @@ sample({
 // Error
 sample({
   clock: changePasswordFx.failData,
-  fn: (error) => {
-    const axiosError = error as unknown as {
-      response?: { data?: { error?: string } };
-      message: string;
-    };
-    return axiosError?.response?.data?.error || axiosError?.message || "Ошибка при смене пароля";
-  },
+  fn: extractAxiosError,
   target: $error,
 });
