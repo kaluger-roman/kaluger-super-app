@@ -2,6 +2,7 @@ import { TextField, Button } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { userModel } from "@entities";
+import { ChangeEmailForm, ChangePasswordForm } from "@features";
 import { formatDateTime } from "@shared";
 
 import { profileModel } from "./models";
@@ -99,6 +100,9 @@ export const ProfilePage = () => {
           )}
         </Styled.ButtonBox>
       </Styled.StyledPaper>
+
+      <ChangePasswordForm />
+      <ChangeEmailForm />
     </Styled.StyledContainer>
   );
 };
