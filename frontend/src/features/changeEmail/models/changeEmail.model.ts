@@ -1,5 +1,5 @@
-import { createStore, createEvent, createEffect, sample, combine } from "effector";
-import { interval } from "patronum";
+import { createStore, createEvent, createEffect, sample } from "effector";
+import { interval, reset } from "patronum";
 
 import { userModel } from "@entities";
 import { authApi, notificationsModel } from "@shared";
@@ -48,12 +48,9 @@ export const resendEmailChangeCodeFx = createEffect(async () => {
   return await authApi.resendEmailChangeCode();
 });
 
-export const $isLoading = combine(
-  changeEmailFx.pending,
-  verifyEmailChangeFx.pending,
-  resendEmailChangeCodeFx.pending,
-  (...pendings) => pendings.some(Boolean),
-);
+const persistTokenFx = createEffect((token: string) => {
+  localStorage.setItem("authToken", token);
+});
 
 // Timer
 const { tick: timerTick } = interval({
@@ -111,11 +108,8 @@ sample({
 sample({
   clock: verifyEmailChangeFx.doneData,
   filter: (response: AuthResponse & { token: string }) => !!response.token,
-  fn: (response: AuthResponse & { token: string }) => {
-    localStorage.setItem("authToken", response.token);
-    return response.token;
-  },
-  target: userModel.setAuthToken,
+  fn: (response: AuthResponse & { token: string }) => response.token,
+  target: [userModel.setAuthToken, persistTokenFx],
 });
 
 sample({
@@ -181,40 +175,12 @@ sample({
 });
 
 // Reset form (including timer state)
-sample({
+reset({
   clock: formReset,
-  fn: () => "",
-  target: [$newEmail, $password, $code],
+  target: [$newEmail, $password, $code, $error, $isCodeStep, $resendTimer, $canResend],
 });
 
-sample({
-  clock: formReset,
-  fn: () => null,
-  target: $error,
-});
-
-sample({
-  clock: formReset,
-  fn: () => false,
-  target: $isCodeStep,
-});
-
-sample({
-  clock: formReset,
-  fn: () => 0,
-  target: $resendTimer,
-});
-
-sample({
-  clock: formReset,
-  fn: () => true,
-  target: $canResend,
-});
-
-sample({
-  clock: formReset,
-  target: stopResendTimer,
-});
+sample({ clock: formReset, target: stopResendTimer });
 
 // Error handling
 sample({ clock: changeEmailFx.failData, fn: extractAxiosError, target: $error });

@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import type { VerifyEmailChangeResult } from "../types";
 import {
   comparePassword,
   validateEmail,
@@ -29,6 +30,10 @@ export const initiateEmailChange = async (
 
   if (!validateEmail(newEmail)) {
     throw Object.assign(new Error("Некорректный формат email"), { statusCode: 400 });
+  }
+
+  if (!user.isEmailVerified) {
+    throw Object.assign(new Error("Сначала подтвердите текущий email"), { statusCode: 400 });
   }
 
   if (newEmail === user.email) {
@@ -66,7 +71,7 @@ export const initiateEmailChange = async (
 export const verifyEmailChange = async (
   userId: string,
   code: string,
-): Promise<{ token: string; user: Record<string, unknown> }> => {
+): Promise<VerifyEmailChangeResult> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
   });
@@ -100,23 +105,32 @@ export const verifyEmailChange = async (
     throw Object.assign(new Error("Этот email уже используется"), { statusCode: 409 });
   }
 
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      email: user.pendingEmail,
-      pendingEmail: null,
-      verificationCode: null,
-      verificationCodeExpiry: null,
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      createdAt: true,
-      isEmailVerified: true,
-      taxRate: true,
-    },
-  });
+  let updatedUser;
+  try {
+    updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: user.pendingEmail,
+        pendingEmail: null,
+        verificationCode: null,
+        verificationCodeExpiry: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        isEmailVerified: true,
+        taxRate: true,
+      },
+    });
+  } catch (error) {
+    const prismaError = error as { code?: string };
+    if (prismaError.code === "P2002") {
+      throw Object.assign(new Error("Этот email уже используется"), { statusCode: 409 });
+    }
+    throw error;
+  }
 
   const token = generateToken({ userId: updatedUser.id, email: updatedUser.email });
 

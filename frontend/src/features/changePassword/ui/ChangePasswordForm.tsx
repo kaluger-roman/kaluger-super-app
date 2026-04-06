@@ -13,7 +13,6 @@ export const ChangePasswordForm: FC = () => {
   const newPassword = useUnit(changePasswordModel.$newPassword);
   const confirmPassword = useUnit(changePasswordModel.$confirmPassword);
   const error = useUnit(changePasswordModel.$error);
-  const isLoading = useUnit(changePasswordModel.$isLoading);
 
   const actions = useUnit({
     currentPasswordChanged: changePasswordModel.currentPasswordChanged,
@@ -38,7 +37,6 @@ export const ChangePasswordForm: FC = () => {
           label="Текущий пароль"
           value={currentPassword}
           onChange={(e) => actions.currentPasswordChanged(e.target.value)}
-          disabled={isLoading}
         />
         <TextField
           fullWidth
@@ -46,7 +44,6 @@ export const ChangePasswordForm: FC = () => {
           label="Новый пароль"
           value={newPassword}
           onChange={(e) => actions.newPasswordChanged(e.target.value)}
-          disabled={isLoading}
           helperText="Минимум 8 символов, заглавные и строчные буквы, цифра"
         />
         <TextField
@@ -55,7 +52,6 @@ export const ChangePasswordForm: FC = () => {
           label="Подтверждение пароля"
           value={confirmPassword}
           onChange={(e) => actions.confirmPasswordChanged(e.target.value)}
-          disabled={isLoading}
         />
       </Styled.FieldsBox>
 
@@ -69,9 +65,9 @@ export const ChangePasswordForm: FC = () => {
         <Button
           variant="contained"
           onClick={actions.formSubmitted}
-          disabled={!isFormValid || isLoading}
+          disabled={!isFormValid}
         >
-          {isLoading ? "Сохранение..." : "Сменить пароль"}
+          Сменить пароль
         </Button>
       </Styled.ButtonBox>
     </Styled.SectionPaper>

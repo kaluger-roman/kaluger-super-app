@@ -54,6 +54,24 @@ describe("changeEmail service", () => {
       ).rejects.toMatchObject({ message: "Некорректный формат email", statusCode: 400 });
     });
 
+    it("should throw 400 when email is not verified", async () => {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isEmailVerified: false },
+      });
+
+      try {
+        await expect(
+          initiateEmailChange(userId, "new@example.com", password),
+        ).rejects.toMatchObject({ message: "Сначала подтвердите текущий email", statusCode: 400 });
+      } finally {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { isEmailVerified: true },
+        });
+      }
+    });
+
     it("should throw 400 when new email equals current", async () => {
       await expect(
         initiateEmailChange(userId, userEmail, password),

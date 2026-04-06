@@ -24,8 +24,6 @@ export const changePasswordFx = createEffect(
   },
 );
 
-export const $isLoading = changePasswordFx.pending;
-
 // Update fields
 sample({ clock: currentPasswordChanged, target: $currentPassword });
 sample({ clock: newPasswordChanged, target: $newPassword });

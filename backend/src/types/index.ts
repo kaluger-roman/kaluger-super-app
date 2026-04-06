@@ -85,6 +85,18 @@ export type VerifyEmailChangeDto = {
   code: string;
 };
 
+export type VerifyEmailChangeResult = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    createdAt: Date;
+    isEmailVerified: boolean;
+    taxRate: number;
+  };
+};
+
 export type NewsItemResponse = {
   id: string;
   title: string;
