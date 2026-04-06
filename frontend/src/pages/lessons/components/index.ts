@@ -7,3 +7,4 @@ export { WeekPagination } from "./WeekPagination";
 export { LessonsFilters } from "./LessonsFilters";
 export { ScheduleView } from "./ScheduleView";
 export { LessonCell } from "./LessonCell";
+export { PaymentsSummaryBar } from "./PaymentsSummaryBar";

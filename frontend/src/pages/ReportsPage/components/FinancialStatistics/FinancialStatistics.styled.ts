@@ -118,3 +118,26 @@ export const PurpleAmount = styled(Typography)(({ theme }) => ({
   fontWeight: "bold",
   marginBottom: theme.spacing(1),
 }));
+
+export const TealCard = styled(Card)({
+  backgroundColor: "#e0f2f1",
+});
+
+export const TealCardContent = styled(CardContent)(({ theme }) => ({
+  "& .icon": {
+    color: "#00695c",
+    marginRight: theme.spacing(1),
+  },
+}));
+
+export const TealTitle = styled(Typography)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  marginBottom: theme.spacing(2),
+}));
+
+export const TealAmount = styled(Typography)(({ theme }) => ({
+  color: "#00695c",
+  fontWeight: "bold",
+  marginBottom: theme.spacing(1),
+}));

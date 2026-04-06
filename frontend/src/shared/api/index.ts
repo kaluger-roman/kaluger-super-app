@@ -9,6 +9,7 @@ export { notificationsApi } from "./notifications";
 export { api } from "./base";
 
 export type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics";
+export type { PaymentsSummary } from "./lessons";
 export type {
   VapidKeyResponse,
   PushSubscriptionInfo,

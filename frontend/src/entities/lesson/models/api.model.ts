@@ -1,6 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import type { Lesson, CreateLessonDto, UpdateLessonDto } from "@shared";
+import type { Lesson, CreateLessonDto, UpdateLessonDto, PaymentsSummary } from "@shared";
 import { lessonsApi } from "@shared";
 
 type LoadPagedFilters = {
@@ -14,6 +14,7 @@ type LoadPagedFilters = {
 
 export const loadCompletedLessons = createEvent<LoadPagedFilters>();
 export const loadCancelledLessons = createEvent<LoadPagedFilters>();
+export const loadAllLessons = createEvent<LoadPagedFilters>();
 export const loadLesson = createEvent<string>();
 export const loadUpcomingLessons = createEvent<LoadPagedFilters>();
 export const loadWeeklyLessons = createEvent<{
@@ -52,6 +53,10 @@ export const loadCancelledLessonsFx = createEffect(async (filters?: LoadPagedFil
     ...filters,
     status: "CANCELLED",
   });
+});
+
+export const loadAllLessonsFx = createEffect(async (filters?: LoadPagedFilters) => {
+  return await lessonsApi.getAll({ ...filters });
 });
 
 export const loadLessonFx = createEffect(async (id: string) => {
@@ -99,8 +104,10 @@ export const removeLessonFx = createEffect(
 
 export const $completedLessons = createStore<Lesson[]>([]);
 export const $cancelledLessons = createStore<Lesson[]>([]);
+export const $allLessons = createStore<Lesson[]>([]);
 export const $upcomingLessons = createStore<Lesson[]>([]);
 export const $weeklyLessons = createStore<Lesson[]>([]);
+export const $paymentsSummary = createStore<PaymentsSummary | null>(null);
 
 export const $scheduleLessons = createStore<Record<string, Lesson[]>>({});
 export const $currentLesson = createStore<Lesson | null>(null);
@@ -122,6 +129,12 @@ export const $upcomingPagination = createStore({
   limit: 10,
   totalPages: 0,
 });
+export const $allPagination = createStore({
+  total: 0,
+  page: 1,
+  limit: 10,
+  totalPages: 0,
+});
 export const $lessonApiIsLoading = createStore(false);
 
 sample({
@@ -132,6 +145,11 @@ sample({
 sample({
   clock: loadCancelledLessons,
   target: loadCancelledLessonsFx,
+});
+
+sample({
+  clock: loadAllLessons,
+  target: loadAllLessonsFx,
 });
 
 sample({

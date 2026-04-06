@@ -720,4 +720,132 @@ describe("getLessons controller", () => {
         expect(ids).not.toContain(paid.id);
       });
   });
+
+  describe("paymentsSummary aggregate", () => {
+    afterEach(async () => {
+      await prisma.lesson.deleteMany({ where: { tutorId: userId } });
+    });
+
+    it("returns paymentsSummary aggregated across all pages when payment date filter active", async () => {
+      const today = new Date();
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Create 12 paid lessons within range to test aggregation across pages (limit=10)
+      for (let i = 0; i < 12; i++) {
+        await prisma.lesson.create({
+          data: {
+            tutorId: userId,
+            studentId,
+            subject: "MATHEMATICS",
+            lessonType: "SCHOOL",
+            startTime: new Date(Date.now() - i * 3600000),
+            endTime: new Date(Date.now() - i * 3600000 + 3600000),
+            isRecurring: false,
+            isPaid: true,
+            price: 1000,
+            paymentDate: yesterday,
+            status: "COMPLETED",
+          },
+        });
+      }
+
+      // Lesson paid out of range — must be excluded
+      await prisma.lesson.create({
+        data: {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: new Date(),
+          endTime: new Date(Date.now() + 3600000),
+          isRecurring: false,
+          isPaid: true,
+          price: 5000,
+          paymentDate: lastWeek,
+          status: "COMPLETED",
+        },
+      });
+
+      const from = new Date(today);
+      from.setHours(0, 0, 0, 0);
+      from.setDate(from.getDate() - 1);
+      const to = new Date(today);
+      to.setHours(23, 59, 59, 999);
+
+      await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .query({
+          paymentDateFrom: from.toISOString(),
+          paymentDateTo: to.toISOString(),
+          page: "1",
+          limit: "10",
+        })
+        .expect(200)
+        .then((res) => {
+          expect(res.body.lessons).toHaveLength(10); // paginated page
+          expect(res.body.pagination.total).toBe(12);
+          expect(res.body.paymentsSummary).toEqual({ sum: 12000, count: 12 });
+        });
+    });
+
+    it("does not return paymentsSummary when payment date filter is not active", async () => {
+      await prisma.lesson.create({
+        data: {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: new Date(),
+          endTime: new Date(Date.now() + 3600000),
+          isRecurring: false,
+          isPaid: true,
+          price: 1234,
+          paymentDate: new Date(),
+          status: "COMPLETED",
+        },
+      });
+
+      await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200)
+        .then((res) => {
+          expect(res.body.paymentsSummary).toBeUndefined();
+        });
+    });
+
+    it("returns paymentsSummary with only lower bound (paymentDateFrom)", async () => {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      await prisma.lesson.create({
+        data: {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: new Date(),
+          endTime: new Date(Date.now() + 3600000),
+          isRecurring: false,
+          isPaid: true,
+          price: 700,
+          paymentDate: new Date(),
+          status: "COMPLETED",
+        },
+      });
+
+      const from = new Date(yesterday);
+      from.setHours(0, 0, 0, 0);
+
+      await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .query({ paymentDateFrom: from.toISOString() })
+        .expect(200)
+        .then((res) => {
+          expect(res.body.paymentsSummary).toEqual({ sum: 700, count: 1 });
+        });
+    });
+  });
 });

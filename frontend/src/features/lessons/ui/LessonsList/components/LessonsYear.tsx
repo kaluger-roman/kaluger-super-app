@@ -5,6 +5,7 @@ import { Collapse } from "@mui/material";
 
 import type { Lesson } from "@shared";
 
+import type { LessonListType } from "../LessonsList.types";
 import { LessonsMonth } from "./LessonsMonth";
 import * as Styled from "./LessonsYear.styled";
 import { sortMonths } from "../LessonsList.helpers";
@@ -18,7 +19,7 @@ type LessonsYearProps = {
   onToggleMonth: (month: string) => void;
   onCardClick: (lesson: Lesson) => void;
   onMenuClick: (event: MouseEvent<HTMLElement>, lesson: Lesson) => void;
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
 };
 
 export const LessonsYear: FC<LessonsYearProps> = ({
