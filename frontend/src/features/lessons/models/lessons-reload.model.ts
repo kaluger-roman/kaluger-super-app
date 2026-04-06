@@ -5,6 +5,8 @@ import { lessonModel } from "@entities";
 import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
 import * as filtersModel from "./lessons-filters.model";
 import { getScheduleDateRange } from "./lessons-reload.helpers";
+import { CANCELLED_TAB_INDEX, COMPLETED_TAB_INDEX, UPCOMING_TAB_INDEX } from "./lessons-tabs.constants";
+import * as tabsModel from "./lessons-tabs.model";
 import * as viewModeModel from "./lessons-view-mode.model";
 
 sample({
@@ -60,13 +62,15 @@ sample({
   clock: lessonModel.updateLessonFx.doneData,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
+    currentTab: tabsModel.$currentTab,
     upcomingPagination: lessonModel.$upcomingPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
     paymentDateFrom: filtersModel.$paymentDateFrom,
     paymentDateTo: filtersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
   fn: ({ upcomingPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: upcomingPagination.page,
     limit: upcomingPagination.limit,
@@ -82,13 +86,15 @@ sample({
   clock: lessonModel.updateLessonFx.doneData,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
+    currentTab: tabsModel.$currentTab,
     completedPagination: lessonModel.$completedPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
     paymentDateFrom: filtersModel.$paymentDateFrom,
     paymentDateTo: filtersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
   fn: ({ completedPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: completedPagination.page,
     limit: completedPagination.limit,
@@ -104,13 +110,15 @@ sample({
   clock: lessonModel.updateLessonFx.doneData,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
+    currentTab: tabsModel.$currentTab,
     cancelledPagination: lessonModel.$cancelledPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
     paymentDateFrom: filtersModel.$paymentDateFrom,
     paymentDateTo: filtersModel.$paymentDateTo,
   },
-  filter: ({ lessonsViewMode }) => lessonsViewMode === "paged",
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
   fn: ({ cancelledPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: cancelledPagination.page,
     limit: cancelledPagination.limit,
@@ -163,5 +171,28 @@ sample({
     ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
   }),
   target: lessonModel.loadUpcomingLessonsFx,
+});
+
+sample({
+  clock: lessonModel.removeLessonFx.doneData,
+  source: {
+    lessonsViewMode: viewModeModel.$lessonsViewMode,
+    allPagination: lessonModel.$allPagination,
+    onlyUnpaid: filtersModel.$onlyUnpaid,
+    onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
+    paymentDateFrom: filtersModel.$paymentDateFrom,
+    paymentDateTo: filtersModel.$paymentDateTo,
+  },
+  filter: ({ lessonsViewMode, paymentDateFrom, paymentDateTo }) =>
+    lessonsViewMode === "paged" && (paymentDateFrom !== null || paymentDateTo !== null),
+  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
+    page: allPagination.page,
+    limit: allPagination.limit,
+    onlyUnpaid,
+    onlyWithoutHomework,
+    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
+  }),
+  target: lessonModel.loadAllLessonsFx,
 });
 

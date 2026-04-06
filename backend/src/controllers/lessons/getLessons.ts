@@ -123,7 +123,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       prisma.lesson.count({ where }),
       hasPaymentDateFilter
         ? prisma.lesson.aggregate({
-            where: { ...where, price: { gt: 0 } },
+            where: { ...where, isPaid: true, price: { gt: 0 } },
             _sum: { price: true },
             _count: { id: true },
           })
