@@ -26,6 +26,9 @@ yarn-error.log*
 /backend/dist
 /frontend/build
 
+# Database backups
+/backend/backups
+
 # Landing
 /landing/.next
 /landing/out

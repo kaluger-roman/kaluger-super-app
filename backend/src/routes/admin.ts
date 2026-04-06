@@ -1,0 +1,17 @@
+import { Router } from "express";
+import { adminLogin, getOverview } from "../controllers/admin";
+import { getSettings, updateSettings, createBackup } from "../controllers/backup";
+import { authenticateAdmin } from "../middleware/adminAuth";
+
+const router = Router();
+
+// Public
+router.post("/login", adminLogin);
+
+// Protected
+router.get("/overview", authenticateAdmin, getOverview);
+router.get("/backup/settings", authenticateAdmin, getSettings);
+router.put("/backup/settings", authenticateAdmin, updateSettings);
+router.post("/backup/create", authenticateAdmin, createBackup);
+
+export { router as adminRouter };

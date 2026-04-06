@@ -1,3 +1,4 @@
+export { AdminPage } from "./AdminPage";
 export { DashboardPage } from "./dashboard";
 export { StudentsPage } from "./students";
 export { LessonsPage } from "./lessons";

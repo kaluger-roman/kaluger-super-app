@@ -9,7 +9,7 @@ import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
-import { processScheduledReminders } from "./services";
+import { processScheduledReminders, runBackupJob } from "./services";
 
 import authRoutes from "./routes/auth";
 import studentRoutes from "./routes/students";
@@ -18,6 +18,7 @@ import statisticsRoutes from "./routes/statistics";
 import newsRoutes from "./routes/news";
 import { pushRouter as pushRoutes } from "./routes/push";
 import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
+import { adminRouter as adminRoutes } from "./routes/admin";
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use("/api/statistics", statisticsRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/reminder-settings", reminderSettingsRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -104,10 +106,19 @@ if (process.env.NODE_ENV !== "test") {
       }
     });
 
+    cron.schedule("0 * * * *", async () => {
+      try {
+        await runBackupJob();
+      } catch (error) {
+        console.error("Error in database backup cron job:", error);
+      }
+    });
+
     console.log("Cron jobs scheduled:");
     console.log("- Recurring lessons: Daily at 2 AM");
     console.log("- Lesson status updates: Every minute");
     console.log("- Reminder processing: Every minute");
+    console.log("- Database backup: Checked every hour");
   });
 }
 
