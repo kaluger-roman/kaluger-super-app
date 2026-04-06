@@ -69,7 +69,7 @@ describe("FinancialStatistics", () => {
 
     expect(screen.getByText("Поступления за период")).toBeInTheDocument();
     expect(
-      screen.getByText(/Сумма платежей за 4 уроков по дате оплаты в выбранном периоде/),
+      screen.getByText(/Фактические поступления \(4 оплат по дате платежа\)/),
     ).toBeInTheDocument();
   });
 
@@ -85,7 +85,7 @@ describe("FinancialStatistics", () => {
     );
 
     expect(
-      screen.getByText(/Сумма платежей за 0 уроков по дате оплаты в выбранном периоде/),
+      screen.getByText(/Фактические поступления \(0 оплат по дате платежа\)/),
     ).toBeInTheDocument();
   });
 });

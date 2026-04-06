@@ -28,7 +28,7 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, 
               {formatCurrency(statistics.earnings)}
             </Styled.GreenAmount>
             <Typography variant="body2" color="textSecondary">
-              Дохoд от всех завершенных и оплаченных уроков
+              Сумма за проведённые уроки в периоде (по дате урока)
             </Typography>
           </Styled.GreenCardContent>
         </Styled.GreenCard>
@@ -62,7 +62,7 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, 
               {formatCurrency(statistics.paymentsInRangeSum || 0)}
             </Styled.TealAmount>
             <Typography variant="body2" color="textSecondary">
-              Сумма платежей за {statistics.paymentsInRangeCount || 0} уроков по дате оплаты в выбранном периоде
+              Фактические поступления ({statistics.paymentsInRangeCount || 0} оплат по дате платежа)
             </Typography>
           </Styled.TealCardContent>
         </Styled.TealCard>
