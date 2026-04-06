@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-04-07
+
+### Added
+- Change password on profile page: verify current password, validate new password, update hash (664d6b6)
+- Change email with two-step verification: enter new email + password, confirm with 6-digit code sent to new address (664d6b6)
+- New JWT token issued after email change to reflect updated email in payload (664d6b6)
+- 4 new API endpoints: `POST /api/auth/change-password`, `POST /api/auth/change-email`, `POST /api/auth/verify-email-change`, `POST /api/auth/resend-email-change-code` (664d6b6)
+- Resend verification code with 60-second cooldown timer on frontend (664d6b6)
+
+### Infrastructure
+- Prisma migration adding `pendingEmail` field to users table (664d6b6)
+- 54 new tests: 35 backend (service + controller integration) and 19 frontend (Effector model) (664d6b6)
+
 ## 2026-02-22
 
 ### Added
