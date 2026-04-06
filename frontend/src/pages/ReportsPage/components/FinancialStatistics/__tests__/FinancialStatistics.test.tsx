@@ -19,6 +19,8 @@ const createStatistics = (overrides: Partial<Statistics> = {}): Statistics => ({
   unpaidDebtCount: 2,
   unpaidDebtOver24hSum: 1000,
   unpaidDebtOver24hCount: 1,
+  paymentsInRangeSum: 25000,
+  paymentsInRangeCount: 4,
   trialLessonsCount: 1,
   taxAmount: 3000,
   ...overrides,
@@ -45,11 +47,45 @@ describe("FinancialStatistics", () => {
 
     expect(screen.getByText("Заработок")).toBeInTheDocument();
     expect(screen.getByText("Предоплата")).toBeInTheDocument();
+    expect(screen.getByText("Поступления за период")).toBeInTheDocument();
     expect(screen.getByText("Средний урок")).toBeInTheDocument();
     expect(screen.getByText("Потери от отмен")).toBeInTheDocument();
     expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
     expect(screen.getByText("Потенциальный доход за период")).toBeInTheDocument();
     expect(screen.getByText("Задолженность")).toBeInTheDocument();
     expect(screen.getByText("Пробные уроки")).toBeInTheDocument();
+  });
+
+  it("should render payments in range card with amount and lesson count", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          paymentsInRangeSum: 25000,
+          paymentsInRangeCount: 4,
+        })}
+        taxRate={6}
+      />,
+    );
+
+    expect(screen.getByText("Поступления за период")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Фактические поступления \(4 оплат по дате платежа\)/),
+    ).toBeInTheDocument();
+  });
+
+  it("should show zero payments when not provided", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          paymentsInRangeSum: undefined,
+          paymentsInRangeCount: undefined,
+        })}
+        taxRate={6}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Фактические поступления \(0 оплат по дате платежа\)/),
+    ).toBeInTheDocument();
   });
 });

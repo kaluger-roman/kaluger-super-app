@@ -63,6 +63,8 @@ describe("getStatistics controller", () => {
         expect(res.body.unpaidDebtCount).toBe(0);
         expect(res.body.unpaidDebtOver24hSum).toBe(0);
         expect(res.body.unpaidDebtOver24hCount).toBe(0);
+        expect(res.body.paymentsInRangeSum).toBe(0);
+        expect(res.body.paymentsInRangeCount).toBe(0);
         expect(res.body.taxAmount).toBe(0);
       });
   });
@@ -494,6 +496,112 @@ describe("getStatistics controller", () => {
         expect(res.body.prepaidIncome).toBeGreaterThanOrEqual(
           res.body.upcomingIncome
         );
+      });
+  });
+
+  it("aggregates payments by paymentDate within selected range", async () => {
+    const today = new Date();
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    // lesson whose startTime is far in the past but payment came today — must be counted
+    const oldStart = new Date(today.getFullYear() - 2, 0, 1, 10, 0, 0);
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: oldStart,
+        endTime: new Date(oldStart.getTime() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 2500,
+        paymentDate: new Date(today.getTime() - 60 * 60 * 1000),
+        status: "COMPLETED",
+      },
+    });
+
+    // lesson paid today (within range)
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "PHYSICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 1500,
+        paymentDate: new Date(),
+        status: "COMPLETED",
+      },
+    });
+
+    // lesson paid long ago — outside range, must be excluded
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 9999,
+        paymentDate: new Date(today.getFullYear() - 1, 0, 1),
+        status: "COMPLETED",
+      },
+    });
+
+    // paid lesson without paymentDate — excluded
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 777,
+        status: "COMPLETED",
+      },
+    });
+
+    // trial lesson (price 0) with paymentDate — excluded
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: true,
+        price: 0,
+        paymentDate: new Date(),
+        status: "COMPLETED",
+      },
+    });
+
+    await request(app)
+      .get(`/api/statistics`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .query({
+        startDate: startOfToday.toISOString(),
+        endDate: endOfToday.toISOString(),
+      })
+      .expect(200)
+      .then((res) => {
+        expect(res.body.paymentsInRangeSum).toBe(4000); // 2500 + 1500
+        expect(res.body.paymentsInRangeCount).toBe(2);
       });
   });
 

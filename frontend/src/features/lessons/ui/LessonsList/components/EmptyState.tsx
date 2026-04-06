@@ -1,9 +1,10 @@
 import type { FC } from "react";
 
+import type { LessonListType } from "../LessonsList.types";
 import * as Styled from "./EmptyState.styled";
 
 type EmptyStateProps = {
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
 };
 
 export const EmptyState: FC<EmptyStateProps> = ({ type }) => {
@@ -28,6 +29,11 @@ export const EmptyState: FC<EmptyStateProps> = ({ type }) => {
         return {
           title: "📆 Нет перенесенных уроков",
           description: "Перенесенные уроки будут отображаться здесь",
+        };
+      case "all":
+        return {
+          title: "📋 Нет уроков с оплатой в выбранный период",
+          description: "Попробуйте изменить диапазон дат в фильтре",
         };
       default:
         return {

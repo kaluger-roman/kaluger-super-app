@@ -4,14 +4,16 @@ import { Box } from "@mui/material";
 
 import type { Lesson } from "@shared";
 
+
 import { EmptyState, InfoMessage, LessonContextMenu, LessonsYear, WeeklyView } from "./components";
 import { useLessonsGrouping, useLessonMenu } from "./hooks";
 import { sortYears } from "./LessonsList.helpers";
+import type { LessonListType } from "./LessonsList.types";
 
 type LessonsListProps = {
   lessons: Lesson[];
   onCardClick: (lesson: Lesson) => void;
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
   viewMode?: "paged" | "weekly" | "schedule";
 };
 

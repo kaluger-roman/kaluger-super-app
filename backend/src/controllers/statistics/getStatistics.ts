@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
-import { buildStatisticsWhere, getLastMonthRange } from "./utils";
+import { buildStatisticsWhere, getDateRange, getLastMonthRange } from "./utils";
 import { truncateToMinute } from "../../utils/time";
 
 export const getStatistics = async (req: AuthRequest, res: Response) => {
@@ -13,6 +13,11 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
     const now = truncateToMinute(new Date());
     const where = buildStatisticsWhere(
       userId!,
+      startDate as string,
+      endDate as string,
+      timezone
+    );
+    const paymentDateRange = getDateRange(
       startDate as string,
       endDate as string,
       timezone
@@ -81,31 +86,31 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
     ]);
 
-    const lostEarnings = await prisma.lesson.aggregate({
-      where: { ...where, status: "CANCELLED" },
-      _sum: { price: true },
-    });
-
-    const unpaid = await prisma.lesson.aggregate({
-      where: { ...where, status: "COMPLETED", isPaid: false, price: { gt: 0 } },
-      _count: { id: true },
-      _sum: { price: true },
-    });
-
     const twentyFourHoursAgo = truncateToMinute(
       new Date(now.getTime() - 24 * 60 * 60 * 1000)
     );
-    const unpaidOver24h = await prisma.lesson.aggregate({
-      where: {
-        ...where,
-        status: "COMPLETED",
-        isPaid: false,
-        endTime: { lte: twentyFourHoursAgo },
-        price: { gt: 0 },
-      },
-      _count: { id: true },
-      _sum: { price: true },
-    });
+
+    const [lostEarnings, unpaid, unpaidOver24h, paymentsInRange] = await Promise.all([
+      prisma.lesson.aggregate({
+        where: { ...where, status: "CANCELLED" },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { ...where, status: "COMPLETED", isPaid: false, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { ...where, status: "COMPLETED", isPaid: false, endTime: { lte: twentyFourHoursAgo }, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+      prisma.lesson.aggregate({
+        where: { tutorId: userId, isPaid: true, paymentDate: paymentDateRange, price: { gt: 0 } },
+        _count: { id: true },
+        _sum: { price: true },
+      }),
+    ]);
 
     const earningsValue = earnings._sum.price || 0;
     const taxRate = currentUser?.taxRate ?? 6;
@@ -126,6 +131,8 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       unpaidDebtCount: unpaid._count.id || 0,
       unpaidDebtOver24hSum: unpaidOver24h._sum.price || 0,
       unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
+      paymentsInRangeSum: paymentsInRange._sum.price || 0,
+      paymentsInRangeCount: paymentsInRange._count.id || 0,
       taxAmount,
     });
   } catch (error) {

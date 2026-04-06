@@ -172,6 +172,8 @@ export type Statistics = {
   unpaidDebtCount?: number;
   unpaidDebtOver24hSum?: number;
   unpaidDebtOver24hCount?: number;
+  paymentsInRangeSum?: number;
+  paymentsInRangeCount?: number;
   trialLessonsCount?: number;
   taxAmount: number;
 };

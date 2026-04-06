@@ -6,6 +6,7 @@ import { useUnit } from "effector-react";
 import { lessonModel } from "@entities";
 import { lessonsModel, LessonsList, toLocalStartOfDay, toLocalEndOfDay } from "@features";
 
+import { PaymentsSummaryBar } from "../PaymentsSummaryBar";
 import { ScheduleView } from "../ScheduleView";
 import { WeekPagination } from "../WeekPagination";
 
@@ -15,25 +16,32 @@ type LessonsContentProps = {
 
 const TAB_CONFIG = [
   {
-    key: 0,
+    key: lessonsModel.UPCOMING_TAB_INDEX,
     listStore: lessonModel.$upcomingLessons,
     paginationStore: lessonModel.$upcomingPagination,
     loadAction: lessonModel.loadUpcomingLessons,
     type: "scheduled" as const,
   },
   {
-    key: 1,
+    key: lessonsModel.COMPLETED_TAB_INDEX,
     listStore: lessonModel.$completedLessons,
     paginationStore: lessonModel.$completedPagination,
     loadAction: lessonModel.loadCompletedLessons,
     type: "completed" as const,
   },
   {
-    key: 2,
+    key: lessonsModel.CANCELLED_TAB_INDEX,
     listStore: lessonModel.$cancelledLessons,
     paginationStore: lessonModel.$cancelledPagination,
     loadAction: lessonModel.loadCancelledLessons,
     type: "cancelled" as const,
+  },
+  {
+    key: lessonsModel.ALL_TAB_INDEX,
+    listStore: lessonModel.$allLessons,
+    paginationStore: lessonModel.$allPagination,
+    loadAction: lessonModel.loadAllLessons,
+    type: "all" as const,
   },
 ];
 
@@ -81,6 +89,8 @@ export const LessonsContent: FC<LessonsContentProps> = ({ currentTab }) => {
 
   return (
     <>
+      <PaymentsSummaryBar />
+
       <LessonsList
         lessons={lessonsSource}
         viewMode={viewMode}
