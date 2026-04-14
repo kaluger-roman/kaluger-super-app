@@ -8,7 +8,8 @@ export const getScreenToken = (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
     const token = generateScreenToken(userId);
-    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get("host")}`;
+    const proto = req.get("x-forwarded-proto") || req.protocol;
+    const baseUrl = process.env.API_URL || `${proto}://${req.get("host")}`;
 
     res.json({
       token,

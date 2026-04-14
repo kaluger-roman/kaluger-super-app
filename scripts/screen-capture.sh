@@ -13,6 +13,7 @@
 
 TOKEN="$1"
 SERVER_URL="${2:-https://tutor.kaluger.ru/api/screen/upload}"
+CURL_FLAGS="-s -L --post301"
 INTERVAL=5
 TMP_FILE="/tmp/.screen_capture.jpg"
 
@@ -31,7 +32,7 @@ echo ""
 while true; do
   screencapture -t jpg -x "$TMP_FILE" 2>/dev/null
   if [ -f "$TMP_FILE" ]; then
-    curl -s -X POST \
+    curl $CURL_FLAGS -X POST \
       -H "Content-Type: image/jpeg" \
       -H "X-Screen-Token: $TOKEN" \
       --data-binary "@$TMP_FILE" \
