@@ -5,3 +5,4 @@ export { LessonsPage } from "./lessons";
 export { ReportsPage } from "./ReportsPage/ReportsPage";
 export { ProfilePage } from "./profile";
 export { NewsPage } from "./news";
+export { ScreenPage } from "./screen";

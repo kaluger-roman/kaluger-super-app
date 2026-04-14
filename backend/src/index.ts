@@ -19,6 +19,7 @@ import newsRoutes from "./routes/news";
 import { pushRouter as pushRoutes } from "./routes/push";
 import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
 import { adminRouter as adminRoutes } from "./routes/admin";
+import { screenRouter as screenRoutes } from "./routes/screen";
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/news", newsRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/reminder-settings", reminderSettingsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/screen", screenRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
