@@ -19,11 +19,15 @@ sample({ clock: ScreenGate.close, fn: () => false, target: $isActive });
 
 sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx] });
 
-sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, target: screenApi.getLatestFx });
+// WS: картинка приходит сразу в событии
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.image, target: $screenImage });
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.updatedAt, target: $lastUpdated });
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: () => true, target: $hasImage });
 
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.token, target: $screenToken });
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.uploadUrl, target: $uploadUrl });
 
+// HTTP fallback для начальной загрузки
 sample({ clock: screenApi.getLatestFx.doneData, fn: (data) => data.image, target: $screenImage });
 sample({ clock: screenApi.getLatestFx.doneData, fn: (data) => data.updatedAt, target: $lastUpdated });
 sample({ clock: screenApi.getLatestFx.doneData, fn: (data) => data.hasImage, target: $hasImage });
