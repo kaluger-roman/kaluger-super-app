@@ -34,12 +34,7 @@ export const uploadScreen = (req: Request, res: Response) => {
 
     const wsManager = getWebSocketManager();
     if (wsManager) {
-      const base64 = imageData.toString("base64");
-      wsManager.sendToUser(userId, {
-        type: "screen_updated",
-        image: `data:image/jpeg;base64,${base64}`,
-        updatedAt: new Date().toISOString(),
-      });
+      wsManager.sendToUser(userId, { type: "screen_updated" });
     }
 
     res.json({ success: true });

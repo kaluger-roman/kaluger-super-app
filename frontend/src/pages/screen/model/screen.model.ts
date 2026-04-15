@@ -19,10 +19,8 @@ sample({ clock: ScreenGate.close, fn: () => false, target: $isActive });
 
 sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx] });
 
-// WebSocket: новый скриншот пришёл сразу с картинкой
-sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.image, target: $screenImage });
-sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.updatedAt, target: $lastUpdated });
-sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: () => true, target: $hasImage });
+// WebSocket: новый скриншот загружен → запрашиваем по HTTP
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, target: screenApi.getLatestFx });
 
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.token, target: $screenToken });
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.uploadUrl, target: $uploadUrl });
