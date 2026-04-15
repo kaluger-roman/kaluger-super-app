@@ -29,7 +29,8 @@ export const uploadScreen = (req: Request, res: Response) => {
       mkdirSync(UPLOADS_DIR, { recursive: true });
     }
 
-    const filePath = join(UPLOADS_DIR, `${userId}.jpg`);
+    const ext = (req.headers["content-type"] || "").includes("webp") ? "webp" : "jpg";
+    const filePath = join(UPLOADS_DIR, `${userId}.${ext}`);
     writeFileSync(filePath, imageData);
 
     const wsManager = getWebSocketManager();

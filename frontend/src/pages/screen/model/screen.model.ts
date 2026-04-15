@@ -19,7 +19,6 @@ sample({ clock: ScreenGate.close, fn: () => false, target: $isActive });
 
 sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx] });
 
-// WebSocket: новый скриншот загружен → запрашиваем по HTTP
 sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, target: screenApi.getLatestFx });
 
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.token, target: $screenToken });
