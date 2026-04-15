@@ -1,10 +1,10 @@
 import type { Response } from "express";
-import { readFileSync, existsSync, statSync } from "fs";
-import { join } from "path";
+import { existsSync, statSync } from "fs";
+import { join, resolve } from "path";
 
 import type { AuthRequest } from "../../middleware/auth";
 
-const UPLOADS_DIR = join(__dirname, "../../../uploads/screens");
+const UPLOADS_DIR = resolve(__dirname, "../../../uploads/screens");
 
 export const getLatestScreen = (req: AuthRequest, res: Response) => {
   try {
@@ -12,18 +12,13 @@ export const getLatestScreen = (req: AuthRequest, res: Response) => {
     const filePath = join(UPLOADS_DIR, `${userId}.jpg`);
 
     if (!existsSync(filePath)) {
-      return res.json({ hasImage: false, image: null, updatedAt: null });
+      return res.status(204).send();
     }
 
     const stats = statSync(filePath);
-    const imageBuffer = readFileSync(filePath);
-    const base64 = imageBuffer.toString("base64");
-
-    res.json({
-      hasImage: true,
-      image: `data:image/jpeg;base64,${base64}`,
-      updatedAt: stats.mtime.toISOString(),
-    });
+    res.set("X-Updated-At", stats.mtime.toISOString());
+    res.type("image/jpeg");
+    res.sendFile(filePath);
   } catch (error) {
     console.error("Ошибка получения скриншота:", error);
     res.status(500).json({ error: "Ошибка сервера" });
