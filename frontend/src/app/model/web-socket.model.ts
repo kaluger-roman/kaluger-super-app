@@ -11,6 +11,10 @@ export const handleLessonStatusUpdate = createEvent<{
   lessonId: string;
   status: string;
 }>();
+export const handleScreenUpdated = createEvent<{
+  image: string;
+  updatedAt: string;
+}>();
 
 // Effects
 export const connectWebSocketFx = createEffect(() => {
@@ -37,6 +41,13 @@ export const connectWebSocketFx = createEffect(() => {
         handleLessonStatusUpdate({
           lessonId: data.lessonId,
           status: data.status,
+        });
+      }
+
+      if (data.type === "screen_updated") {
+        handleScreenUpdated({
+          image: data.image,
+          updatedAt: data.updatedAt,
         });
       }
     } catch (error) {

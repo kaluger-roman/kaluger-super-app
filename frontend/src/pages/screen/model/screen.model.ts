@@ -1,6 +1,7 @@
-import { createStore, createEffect, sample } from "effector";
+import { createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
+import { handleScreenUpdated } from "@app/model/web-socket.model";
 import { screenApi } from "@shared";
 
 export const ScreenGate = createGate();
@@ -13,17 +14,15 @@ export const $hasImage = createStore(false);
 
 const $isActive = createStore(false);
 
-const delayFx = createEffect(
-  () => new Promise<void>((resolve) => setTimeout(resolve, 2000))
-);
-
 sample({ clock: ScreenGate.open, fn: () => true, target: $isActive });
 sample({ clock: ScreenGate.close, fn: () => false, target: $isActive });
 
 sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx] });
 
-sample({ clock: screenApi.getLatestFx.finally, source: $isActive, filter: Boolean, target: delayFx });
-sample({ clock: delayFx.done, source: $isActive, filter: Boolean, target: screenApi.getLatestFx });
+// WebSocket: новый скриншот пришёл сразу с картинкой
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.image, target: $screenImage });
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: (_, data) => data.updatedAt, target: $lastUpdated });
+sample({ clock: handleScreenUpdated, source: $isActive, filter: Boolean, fn: () => true, target: $hasImage });
 
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.token, target: $screenToken });
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.uploadUrl, target: $uploadUrl });

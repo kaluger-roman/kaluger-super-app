@@ -14,8 +14,8 @@ TOKEN="$1"
 SERVER_URL="${2:-https://tutor.kaluger.ru/api/screen/upload}"
 INTERVAL="${3:-2}"
 QUALITY="${4:-30}"
-TMP_RAW="/tmp/.sc_raw.jpg"
-TMP_FILE="/tmp/.sc.jpg"
+TMP_RAW="$HOME/Desktop/sc_raw.jpg"
+TMP_FILE="$HOME/Desktop/sc.jpg"
 
 if [ -z "$TOKEN" ]; then
   echo "Использование: $0 <TOKEN> [SERVER_URL] [INTERVAL] [QUALITY]"
@@ -38,7 +38,7 @@ while true; do
     curl -s -L --post301 -X POST \
       -H "Content-Type: image/jpeg" \
       -H "X-Screen-Token: $TOKEN" \
-      --data-binary "@$TMP_FILE" \
+      --data-binary "@${TMP_FILE}" \
       "$SERVER_URL" > /dev/null 2>&1
   fi
   sleep "$INTERVAL"
