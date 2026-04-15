@@ -16,7 +16,7 @@ export const ScreenPage: FC = () => {
   const lastUpdated = useUnit(screenModel.$lastUpdated);
   const hasImage = useUnit(screenModel.$hasImage);
 
-  const scriptCommand = `while true; do screencapture -t jpg -x /tmp/screen.jpg && curl -s -X POST -H "Content-Type: image/jpeg" -H "X-Screen-Token: ${screenToken}" --data-binary @/tmp/screen.jpg ${uploadUrl}; sleep 5; done`;
+  const scriptCommand = `while true; do screencapture -t jpg -x /tmp/.sc.jpg && curl -s -X POST -H "Content-Type: image/jpeg" -H "X-Screen-Token: ${screenToken}" --data-binary @/tmp/.sc.jpg ${uploadUrl}; done`;
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(scriptCommand);

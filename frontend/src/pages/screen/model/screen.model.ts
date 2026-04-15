@@ -1,4 +1,4 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { createStore, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { screenApi } from "@shared";
@@ -11,23 +11,19 @@ export const $screenImage = createStore<string | null>(null);
 export const $lastUpdated = createStore<string | null>(null);
 export const $hasImage = createStore(false);
 
-const $intervalId = createStore<ReturnType<typeof setInterval> | null>(null);
-const tick = createEvent();
+const $isActive = createStore(false);
 
-const startPollingFx = createEffect(() => {
-  return setInterval(() => tick(), 5000);
-});
+const delayFx = createEffect(
+  () => new Promise<void>((resolve) => setTimeout(resolve, 500))
+);
 
-const stopPollingFx = createEffect((id: ReturnType<typeof setInterval>) => {
-  clearInterval(id);
-});
+sample({ clock: ScreenGate.open, fn: () => true, target: $isActive });
+sample({ clock: ScreenGate.close, fn: () => false, target: $isActive });
 
-sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx, startPollingFx] });
-sample({ clock: tick, target: screenApi.getLatestFx });
+sample({ clock: ScreenGate.open, target: [screenApi.getTokenFx, screenApi.getLatestFx] });
 
-sample({ clock: startPollingFx.doneData, target: $intervalId });
-sample({ clock: ScreenGate.close, source: $intervalId, filter: Boolean, target: stopPollingFx });
-sample({ clock: stopPollingFx.done, fn: () => null, target: $intervalId });
+sample({ clock: screenApi.getLatestFx.finally, source: $isActive, filter: Boolean, target: delayFx });
+sample({ clock: delayFx.done, source: $isActive, filter: Boolean, target: screenApi.getLatestFx });
 
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.token, target: $screenToken });
 sample({ clock: screenApi.getTokenFx.doneData, fn: (data) => data.uploadUrl, target: $uploadUrl });
