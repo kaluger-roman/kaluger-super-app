@@ -14,7 +14,7 @@ export const $hasImage = createStore(false);
 const $isActive = createStore(false);
 
 const delayFx = createEffect(
-  () => new Promise<void>((resolve) => setTimeout(resolve, 500))
+  () => new Promise<void>((resolve) => setTimeout(resolve, 2000))
 );
 
 sample({ clock: ScreenGate.open, fn: () => true, target: $isActive });
