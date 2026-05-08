@@ -10,15 +10,13 @@ import {
   Box,
 } from "@mui/material";
 import { useUnit } from "effector-react";
-import { useNavigate } from "react-router-dom";
 
-import { Button } from "@shared";
+import { Button, navigate } from "@shared";
 
 import { FORGOT_PASSWORD_PATH } from "./ChangePasswordDialog.constants";
 import { changePasswordModel } from "../../models";
 
 export const ChangePasswordDialog: FC = () => {
-  const navigate = useNavigate();
   const isOpen = useUnit(changePasswordModel.$isDialogOpen);
   const currentPassword = useUnit(changePasswordModel.$currentPassword);
   const newPassword = useUnit(changePasswordModel.$newPassword);

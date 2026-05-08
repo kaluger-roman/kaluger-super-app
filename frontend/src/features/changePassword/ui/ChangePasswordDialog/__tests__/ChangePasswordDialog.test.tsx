@@ -5,7 +5,6 @@ import userEvent from "@testing-library/user-event";
 import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BrowserRouter } from "react-router-dom";
 
 import { theme } from "@shared";
 
@@ -14,13 +13,11 @@ import { ChangePasswordDialog } from "../ChangePasswordDialog";
 
 const navigateMock = vi.fn();
 
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+vi.mock("@shared", async () => {
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
-    useNavigate: () => navigateMock,
+    navigate: (...args: unknown[]) => navigateMock(...args),
   };
 });
 
@@ -28,9 +25,7 @@ const renderWithProviders = (scope: ReturnType<typeof fork>) =>
   render(
     <EffectorProvider value={scope}>
       <ThemeProvider theme={theme}>
-        <BrowserRouter>
-          <ChangePasswordDialog />
-        </BrowserRouter>
+        <ChangePasswordDialog />
       </ThemeProvider>
     </EffectorProvider>,
   );
