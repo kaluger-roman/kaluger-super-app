@@ -156,6 +156,28 @@ describe("changeEmail service", () => {
       expect(user!.pendingEmail).toBe(newEmail);
     });
 
+    it("should suggest requesting a new code after the code was invalidated", async () => {
+      const newEmail = faker.internet.email();
+      await initiateEmailChange(userId, newEmail, password);
+
+      // Force the locked-out state: code cleared, pendingEmail preserved
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          verificationCode: null,
+          verificationCodeExpiry: null,
+          verificationCodeSentAt: null,
+        },
+      });
+
+      await expect(
+        verifyEmailChange(userId, "000000"),
+      ).rejects.toMatchObject({
+        message: "Код подтверждения не найден. Запросите новый код",
+        statusCode: 400,
+      });
+    });
+
     it("should throw 400 when code is expired", async () => {
       const newEmail = faker.internet.email();
       await initiateEmailChange(userId, newEmail, password);

@@ -89,7 +89,10 @@ export const verifyEmailChange = async (
   }
 
   if (!user.verificationCode || !user.verificationCodeExpiry) {
-    throw Object.assign(new Error("Нет запроса на смену email"), { statusCode: 400 });
+    throw Object.assign(
+      new Error("Код подтверждения не найден. Запросите новый код"),
+      { statusCode: 400 },
+    );
   }
 
   if (isVerificationCodeExpired(user.verificationCodeExpiry)) {
