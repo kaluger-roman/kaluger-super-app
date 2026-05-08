@@ -1,4 +1,4 @@
-import type { PaymentDatePreset } from "./lessons-filters.model";
+import type { PaymentDatePreset } from "./lessons-filters.types";
 
 export const toLocalStartOfDay = (date: Date): string => {
   const d = new Date(date);

@@ -22,7 +22,7 @@ export const authenticateToken = (
   const payload = verifyToken(token);
   if (!payload) {
     return res
-      .status(403)
+      .status(401)
       .json({ error: "Недействительный или истекший токен" });
   }
 

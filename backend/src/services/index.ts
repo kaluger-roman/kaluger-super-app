@@ -1,3 +1,5 @@
+export * from "./changeEmail";
+export * from "./changePassword";
 export * from "./admin";
 export * from "./backup";
 export * from "./email";

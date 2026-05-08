@@ -1,4 +1,6 @@
 export * from "./auth";
+export * from "./changeEmail";
+export * from "./changePassword";
 export * from "./emailVerification";
 export * from "./lessons";
 export * from "./statistics";

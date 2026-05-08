@@ -6,7 +6,6 @@ export const SettingsPaper = styled(Paper)(({ theme }) => ({
   padding: "24px",
   borderRadius: "16px",
   border: `1px solid ${theme.palette.divider}`,
-  marginTop: "24px",
 }));
 
 export const SettingsTitle = styled(Typography)({
