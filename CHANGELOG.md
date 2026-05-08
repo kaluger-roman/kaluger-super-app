@@ -17,6 +17,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Prisma migration adding `pendingEmail` field to users table (664d6b6)
 - 54 new tests: 35 backend (service + controller integration) and 19 frontend (Effector model) (664d6b6)
 
+## 2026-04-06
+
+### Added
+- Reports page: new "Поступления за период" card showing total sum and count of payments received within the selected date filter (aggregated by `paymentDate`, independent of lesson `startTime`)
+- Backend `GET /api/statistics` now returns `paymentsInRangeSum` and `paymentsInRangeCount`
+- Lessons page: new "Все" tab appears when payment date filter is active, showing lessons of all statuses at once. Filter auto-switches to this tab on activation and reverts to "Запланированные" on clear
+- Lessons page: payments summary bar above the list ("Оплачено за период: {сумма}, {N} уроков") when payment date filter is active, aggregated across all pages via new `paymentsSummary` field on `GET /api/lessons`
+
 ## 2026-03-30
 
 ### Added

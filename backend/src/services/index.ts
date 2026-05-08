@@ -1,5 +1,7 @@
 export * from "./changeEmail";
 export * from "./changePassword";
+export * from "./admin";
+export * from "./backup";
 export * from "./email";
 export * from "./lessonStatusUpdater";
 export * from "./recurringHelpers";

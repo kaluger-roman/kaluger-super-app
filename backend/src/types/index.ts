@@ -1,3 +1,5 @@
+import type { Request } from "express";
+
 export type CreateUserDto = {
   email: string;
   password: string;
@@ -151,6 +153,46 @@ export type ShiftResult = {
   shifted: number;
   shiftedIds?: string[];
   conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
+};
+
+export type UpdateBackupSettingsDto = {
+  enabled?: boolean;
+  intervalHours?: number;
+  maxStorageMb?: number;
+};
+
+export type BackupSettingsResponse = {
+  enabled: boolean;
+  intervalHours: number;
+  maxStorageMb: number;
+  lastBackupAt: string | null;
+};
+
+export type BackupFileResponse = {
+  name: string;
+  sizeMb: number;
+  createdAt: string;
+};
+
+export type AdminJwtPayload = {
+  email: string;
+  isAdmin: true;
+};
+
+export type AdminRequest = Request & {
+  admin?: AdminJwtPayload;
+};
+
+export type AdminLoginDto = {
+  email: string;
+  password: string;
+};
+
+export type AdminOverviewResponse = {
+  usersCount: number;
+  studentsCount: number;
+  lessonsCount: number;
+  serverUptime: number;
 };
 
 export type PushNotificationPayload = {

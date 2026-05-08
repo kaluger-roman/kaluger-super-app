@@ -7,3 +7,4 @@ export * from "./statistics";
 export * from "./students";
 export * from "./push";
 export * from "./reminderSettings";
+export * from "./screen";

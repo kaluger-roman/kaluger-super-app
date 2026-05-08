@@ -33,19 +33,29 @@ describe("usePaymentDate", () => {
     expect(result.current.paymentDate).toBe("2026-01-10");
   });
 
-  it("should initialize with today's date if no payment date", () => {
+  it("should initialize with lesson start date if no payment date", () => {
     const lesson = createMockLesson({ isPaid: false });
 
     const { result } = renderHook(() => usePaymentDate(lesson, false));
 
-    // Should be today's date in YYYY-MM-DD format
-    const today = new Date();
-    const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(today.getDate()).padStart(2, "0")}`;
+    expect(result.current.paymentDate).toBe("2026-01-15");
+  });
 
-    expect(result.current.paymentDate).toBe(expectedDate);
+  it("should reset to lesson start date when dialog opens without payment date", () => {
+    const lesson = createMockLesson({ isPaid: false });
+
+    const { result, rerender } = renderHook(
+      ({ dialogOpen }) => usePaymentDate(lesson, dialogOpen),
+      { initialProps: { dialogOpen: false } }
+    );
+
+    act(() => {
+      result.current.setPaymentDate("2026-01-25");
+    });
+
+    rerender({ dialogOpen: true });
+
+    expect(result.current.paymentDate).toBe("2026-01-15");
   });
 
   it("should reset to lesson payment date when dialog opens", () => {

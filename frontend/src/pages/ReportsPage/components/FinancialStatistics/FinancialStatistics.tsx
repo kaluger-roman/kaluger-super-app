@@ -1,6 +1,6 @@
 import type { FC } from "react";
 
-import { AttachMoney } from "@mui/icons-material";
+import { AttachMoney, Payments } from "@mui/icons-material";
 import { Typography, CardContent, Box } from "@mui/material";
 
 import { formatCurrency } from "@shared";
@@ -28,7 +28,7 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, 
               {formatCurrency(statistics.earnings)}
             </Styled.GreenAmount>
             <Typography variant="body2" color="textSecondary">
-              Дохoд от всех завершенных и оплаченных уроков
+              Сумма за проведённые уроки в периоде (по дате урока)
             </Typography>
           </Styled.GreenCardContent>
         </Styled.GreenCard>
@@ -49,6 +49,23 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, 
             </Typography>
           </Styled.BlueCardContent>
         </Styled.BlueCard>
+      </Styled.StatBox>
+
+      <Styled.StatBox>
+        <Styled.TealCard>
+          <Styled.TealCardContent>
+            <Styled.TealTitle variant="h6">
+              <Payments className="icon" />
+              Поступления за период
+            </Styled.TealTitle>
+            <Styled.TealAmount variant="h4">
+              {formatCurrency(statistics.paymentsInRangeSum || 0)}
+            </Styled.TealAmount>
+            <Typography variant="body2" color="textSecondary">
+              Фактические поступления ({statistics.paymentsInRangeCount || 0} оплат по дате платежа)
+            </Typography>
+          </Styled.TealCardContent>
+        </Styled.TealCard>
       </Styled.StatBox>
 
       {/* Average lesson */}

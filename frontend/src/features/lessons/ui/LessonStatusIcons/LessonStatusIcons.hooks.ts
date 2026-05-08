@@ -1,19 +1,23 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 import type { Lesson } from "@shared";
 import { toDateKey } from "@shared";
 
+const getDefaultPaymentDate = (lesson: Lesson): string =>
+  lesson.paymentDate
+    ? toDateKey(lesson.paymentDate)
+    : toDateKey(lesson.startTime);
+
 export const usePaymentDate = (lesson: Lesson, paymentDialogOpen: boolean) => {
-  const today = useMemo(() => toDateKey(new Date()), []);
   const [paymentDate, setPaymentDate] = useState(() =>
-    lesson.paymentDate ? toDateKey(lesson.paymentDate) : today
+    getDefaultPaymentDate(lesson)
   );
 
   useEffect(() => {
     if (paymentDialogOpen) {
-      setPaymentDate(lesson.paymentDate ? toDateKey(lesson.paymentDate) : today);
+      setPaymentDate(getDefaultPaymentDate(lesson));
     }
-  }, [paymentDialogOpen, lesson.paymentDate, today]);
+  }, [paymentDialogOpen, lesson]);
 
   return { paymentDate, setPaymentDate } as const;
 };

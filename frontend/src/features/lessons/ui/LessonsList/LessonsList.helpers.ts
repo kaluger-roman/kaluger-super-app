@@ -1,5 +1,7 @@
 import type { Lesson } from "@shared";
 
+import type { LessonListType } from "./LessonsList.types";
+
 export type GroupedLessons = {
   [year: string]: {
     [month: string]: {
@@ -10,7 +12,7 @@ export type GroupedLessons = {
 
 export const filterLessonsByType = (
   lessons: Lesson[],
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+  type: LessonListType
 ): Lesson[] => {
   switch (type) {
     case "scheduled":
@@ -33,7 +35,7 @@ export const filterLessonsByType = (
 
 export const groupLessonsByDate = (
   lessons: Lesson[],
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+  type: LessonListType
 ): GroupedLessons => {
   const grouped: GroupedLessons = {};
 
@@ -77,7 +79,7 @@ export const groupLessonsByDate = (
 
 export const sortYears = (
   years: string[],
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+  type: LessonListType
 ): string[] => {
   return years.sort((a, b) => {
     if (type === "scheduled") {
@@ -90,7 +92,7 @@ export const sortYears = (
 
 export const sortMonths = (
   monthEntries: [string, { [day: string]: Lesson[] }][],
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled"
+  type: LessonListType
 ): [string, { [day: string]: Lesson[] }][] => {
   return monthEntries.sort(([a], [b]) => {
     const monthOrder = [

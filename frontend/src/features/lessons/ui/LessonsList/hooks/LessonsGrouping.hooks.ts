@@ -3,10 +3,11 @@ import { useState, useMemo } from "react";
 import type { Lesson } from "@shared";
 
 import { filterLessonsByType, groupLessonsByDate } from "../LessonsList.helpers";
+import type { LessonListType } from "../LessonsList.types";
 
 type UseLessonsGroupingProps = {
   lessons: Lesson[];
-  type: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  type: LessonListType;
 };
 
 export const useLessonsGrouping = ({ lessons, type }: UseLessonsGroupingProps) => {

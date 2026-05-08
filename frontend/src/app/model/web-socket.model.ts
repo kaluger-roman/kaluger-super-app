@@ -11,6 +11,7 @@ export const handleLessonStatusUpdate = createEvent<{
   lessonId: string;
   status: string;
 }>();
+export const handleScreenUpdated = createEvent();
 
 // Effects
 export const connectWebSocketFx = createEffect(() => {
@@ -38,6 +39,10 @@ export const connectWebSocketFx = createEffect(() => {
           lessonId: data.lessonId,
           status: data.status,
         });
+      }
+
+      if (data.type === "screen_updated") {
+        handleScreenUpdated();
       }
     } catch (error) {
       console.error("WebSocket message parsing error:", error);

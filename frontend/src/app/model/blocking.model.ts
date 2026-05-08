@@ -3,6 +3,7 @@ import { combine } from "effector";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
+import { adminAuthModel, adminDataModel } from "@features/admin";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
 import { profileModel } from "@pages/profile";
@@ -30,6 +31,11 @@ export const $isBlocking = combine(
     changeEmail: changeEmailModel.changeEmailFx.pending,
     verifyEmailChange: changeEmailModel.verifyEmailChangeFx.pending,
     resendEmailChangeCode: changeEmailModel.resendEmailChangeCodeFx.pending,
+    adminLogin: adminAuthModel.loginFx.pending,
+    adminOverview: adminDataModel.getOverviewFx.pending,
+    adminBackupSettings: adminDataModel.getBackupSettingsFx.pending,
+    adminUpdateBackup: adminDataModel.updateBackupSettingsFx.pending,
+    adminCreateBackup: adminDataModel.createBackupFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

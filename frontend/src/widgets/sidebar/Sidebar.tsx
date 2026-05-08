@@ -8,6 +8,7 @@ import {
   Newspaper as NewsIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
+  ScreenshotMonitor as ScreenIcon,
 } from "@mui/icons-material";
 import {
   List,
@@ -57,6 +58,11 @@ const navigationItems: NavigationItem[] = [
     label: "Новости",
     path: "/news",
     icon: <NewsIcon />,
+  },
+  {
+    label: "Экран",
+    path: "/screen",
+    icon: <ScreenIcon />,
   },
   {
     label: "Мои данные",
