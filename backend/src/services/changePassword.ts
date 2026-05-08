@@ -20,7 +20,7 @@ export const changePassword = async (
 
   const isPasswordValid = await comparePassword(currentPassword, user.password);
   if (!isPasswordValid) {
-    throw Object.assign(new Error("Неверный текущий пароль"), { statusCode: 401 });
+    throw Object.assign(new Error("Неверный текущий пароль"), { statusCode: 400 });
   }
 
   if (!validatePassword(newPassword)) {

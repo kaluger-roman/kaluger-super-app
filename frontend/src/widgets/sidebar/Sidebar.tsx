@@ -22,6 +22,7 @@ import { useUnit } from "effector-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { newsModel, userModel } from "@entities";
+import { logoutConfirmationModel } from "@features";
 
 import * as Styled from "./Sidebar.styled";
 
@@ -82,8 +83,7 @@ export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
   };
 
   const handleLogout = () => {
-    userModel.logoutUser();
-    navigate("/login");
+    logoutConfirmationModel.logoutRequested();
   };
 
   const getInitials = (name: string) => {

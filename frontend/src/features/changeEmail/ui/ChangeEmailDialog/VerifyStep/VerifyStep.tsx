@@ -1,28 +1,20 @@
 import type { FC, KeyboardEvent, ClipboardEvent } from "react";
 import { useRef } from "react";
 
-import { Alert } from "@mui/material";
+import { Typography, Box } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { Button } from "@shared";
+import { changeEmailModel } from "../../../models";
+import { CODE_LENGTH } from "../ChangeEmailDialog.constants";
+import * as Styled from "../ChangeEmailDialog.styled";
 
-import { changeEmailModel } from "../models";
-import * as Styled from "./ChangeEmailForm.styled";
-
-const CODE_LENGTH = 6;
-
-export const VerifyCodeForm: FC = () => {
+export const VerifyStep: FC = () => {
   const newEmail = useUnit(changeEmailModel.$newEmail);
   const code = useUnit(changeEmailModel.$code);
   const error = useUnit(changeEmailModel.$error);
-  const canResend = useUnit(changeEmailModel.$canResend);
-  const resendTimer = useUnit(changeEmailModel.$resendTimer);
 
   const actions = useUnit({
     codeChanged: changeEmailModel.codeChanged,
-    verifySubmitted: changeEmailModel.verifySubmitted,
-    resendRequested: changeEmailModel.resendRequested,
-    cancelRequested: changeEmailModel.cancelRequested,
   });
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -34,13 +26,11 @@ export const VerifyCodeForm: FC = () => {
 
   const handleInputChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
-
     const newCode = codeArray
       .map((char, i) => (i === index ? value.slice(-1) : char))
       .join("")
       .trim();
     actions.codeChanged(newCode);
-
     if (value && index < CODE_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -59,19 +49,15 @@ export const VerifyCodeForm: FC = () => {
       .replace(/\D/g, "")
       .slice(0, CODE_LENGTH);
     actions.codeChanged(pastedData);
-
     const nextEmptyIndex = Math.min(pastedData.length, CODE_LENGTH - 1);
     inputRefs.current[nextEmptyIndex]?.focus();
   };
 
   return (
-    <Styled.SectionPaper elevation={0}>
-      <Styled.SectionTitle variant="h6">Подтверждение смены email</Styled.SectionTitle>
-
-      <Styled.InfoText variant="body2">
+    <Box display="flex" flexDirection="column" gap={2}>
+      <Typography variant="body2" color="text.secondary" textAlign="center">
         Код верификации отправлен на <strong>{newEmail}</strong>
-      </Styled.InfoText>
-
+      </Typography>
       <Styled.CodeInputContainer>
         {codeArray.map((digit, index) => (
           <Styled.CodeInput
@@ -91,32 +77,6 @@ export const VerifyCodeForm: FC = () => {
           />
         ))}
       </Styled.CodeInputContainer>
-
-      {error && (
-        <Styled.ErrorAlertTop>
-          <Alert severity="error">{error}</Alert>
-        </Styled.ErrorAlertTop>
-      )}
-
-      <Styled.ButtonBox>
-        <Button
-          variant="text"
-          onClick={actions.resendRequested}
-          disabled={!canResend}
-        >
-          {!canResend ? `Отправить снова (${resendTimer}с)` : "Отправить код повторно"}
-        </Button>
-        <Button variant="outlined" onClick={actions.cancelRequested}>
-          Отмена
-        </Button>
-        <Button
-          variant="contained"
-          onClick={actions.verifySubmitted}
-          disabled={code.length !== CODE_LENGTH}
-        >
-          Подтвердить
-        </Button>
-      </Styled.ButtonBox>
-    </Styled.SectionPaper>
+    </Box>
   );
 };

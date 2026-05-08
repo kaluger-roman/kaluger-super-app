@@ -6,7 +6,7 @@ import { authApi } from "@shared";
 import * as changeEmailModel from "../changeEmail.model";
 
 vi.mock("@shared", async () => {
-  const actual = await vi.importActual("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     authApi: {
@@ -175,20 +175,49 @@ describe("features/changeEmail/models/changeEmail.model", () => {
     });
   });
 
-  describe("cancel", () => {
-    it("should reset form on cancelRequested", async () => {
+  describe("dialog open/close", () => {
+    it("should open dialog on dialogOpened", async () => {
+      const scope = fork();
+
+      await allSettled(changeEmailModel.dialogOpened, { scope });
+
+      expect(scope.getState(changeEmailModel.$isDialogOpen)).toBe(true);
+    });
+
+    it("should close dialog and reset form on dialogClosed", async () => {
       const scope = fork({
         values: [
+          [changeEmailModel.$isDialogOpen, true],
           [changeEmailModel.$newEmail, "test@example.com"],
           [changeEmailModel.$password, "pass"],
           [changeEmailModel.$isCodeStep, true],
         ],
       });
 
-      await allSettled(changeEmailModel.cancelRequested, { scope });
+      await allSettled(changeEmailModel.dialogClosed, { scope });
 
+      expect(scope.getState(changeEmailModel.$isDialogOpen)).toBe(false);
       expect(scope.getState(changeEmailModel.$newEmail)).toBe("");
       expect(scope.getState(changeEmailModel.$isCodeStep)).toBe(false);
+    });
+
+    it("should close dialog after successful verify", async () => {
+      vi.mocked(authApi.verifyEmailChange).mockResolvedValueOnce({
+        message: "Email успешно изменён",
+        token: "new-token",
+        user: { id: "1", email: "new@example.com", name: "Test", createdAt: "", isEmailVerified: true, taxRate: 6 },
+      });
+
+      const scope = fork({
+        values: [
+          [changeEmailModel.$isDialogOpen, true],
+          [changeEmailModel.$code, "123456"],
+        ],
+      });
+
+      await allSettled(changeEmailModel.verifySubmitted, { scope });
+
+      expect(scope.getState(changeEmailModel.$isDialogOpen)).toBe(false);
     });
   });
 

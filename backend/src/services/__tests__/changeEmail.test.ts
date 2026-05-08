@@ -8,7 +8,7 @@ import {
 } from "../changeEmail";
 
 jest.mock("../email", () => ({
-  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe("changeEmail service", () => {
@@ -42,10 +42,10 @@ describe("changeEmail service", () => {
       ).rejects.toMatchObject({ message: "Пользователь не найден", statusCode: 404 });
     });
 
-    it("should throw 401 when password is wrong", async () => {
+    it("should throw 400 when password is wrong", async () => {
       await expect(
         initiateEmailChange(userId, "new@example.com", "WrongPass1"),
-      ).rejects.toMatchObject({ message: "Неверный пароль", statusCode: 401 });
+      ).rejects.toMatchObject({ message: "Неверный пароль", statusCode: 400 });
     });
 
     it("should throw 400 when email format is invalid", async () => {

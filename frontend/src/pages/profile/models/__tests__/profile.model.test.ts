@@ -6,10 +6,12 @@ import { authApi } from "@shared";
 
 import {
   ProfilePageGate,
+  $activeTab,
   $isEditMode,
   $name,
   $taxRateInput,
   $error,
+  tabChanged,
   editRequested,
   editCancelled,
   nameChanged,
@@ -18,7 +20,7 @@ import {
 } from "../profile.model";
 
 vi.mock("@shared", async () => {
-  const actual = await vi.importActual("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     authApi: {
@@ -416,6 +418,32 @@ describe("profile.model", () => {
       expect(scope.getState($isEditMode)).toBe(false);
       expect(scope.getState($name)).toBe("Test User");
       expect(scope.getState($taxRateInput)).toBe("6");
+    });
+  });
+
+  describe("tabs", () => {
+    it("should default to personal tab", () => {
+      const scope = fork();
+      expect(scope.getState($activeTab)).toBe("personal");
+    });
+
+    it("should change active tab on tabChanged", async () => {
+      const scope = fork();
+
+      await allSettled(tabChanged, { scope, params: "security" });
+      expect(scope.getState($activeTab)).toBe("security");
+
+      await allSettled(tabChanged, { scope, params: "notifications" });
+      expect(scope.getState($activeTab)).toBe("notifications");
+    });
+
+    it("should reset to personal tab when leaving the page", async () => {
+      const scope = fork({
+        values: [[$activeTab, "security"]],
+      });
+
+      await allSettled(ProfilePageGate.close, { scope, params: undefined });
+      expect(scope.getState($activeTab)).toBe("personal");
     });
   });
 });

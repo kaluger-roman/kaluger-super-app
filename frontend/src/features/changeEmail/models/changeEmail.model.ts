@@ -5,11 +5,11 @@ import { userModel } from "@entities";
 import { authApi, notificationsModel } from "@shared";
 import type { AuthResponse } from "@shared";
 
+import { RESEND_TIMER_SECONDS } from "./changeEmail.constants";
 import { extractAxiosError } from "./changeEmail.helpers";
 
-const RESEND_TIMER_SECONDS = 60;
-
 // Stores
+export const $isDialogOpen = createStore(false);
 export const $newEmail = createStore("");
 export const $password = createStore("");
 export const $code = createStore("");
@@ -19,6 +19,8 @@ export const $canResend = createStore(true);
 export const $resendTimer = createStore(0);
 
 // Events
+export const dialogOpened = createEvent();
+export const dialogClosed = createEvent();
 export const newEmailChanged = createEvent<string>();
 export const passwordChanged = createEvent<string>();
 export const codeChanged = createEvent<string>();
@@ -26,7 +28,6 @@ export const initiateSubmitted = createEvent();
 export const verifySubmitted = createEvent();
 export const resendRequested = createEvent();
 export const formReset = createEvent();
-export const cancelRequested = createEvent();
 
 const startResendTimer = createEvent();
 const stopResendTimer = createEvent();
@@ -58,6 +59,11 @@ const { tick: timerTick } = interval({
   start: startResendTimer,
   stop: stopResendTimer,
 });
+
+// Dialog open/close
+sample({ clock: dialogOpened, fn: () => true, target: $isDialogOpen });
+sample({ clock: dialogClosed, fn: () => false, target: $isDialogOpen });
+sample({ clock: dialogClosed, target: formReset });
 
 // Update fields
 sample({ clock: newEmailChanged, target: $newEmail });
@@ -98,7 +104,7 @@ sample({
   target: verifyEmailChangeFx,
 });
 
-// On verify success — update user, token, and reset
+// On verify success — update user, token, and close dialog
 sample({
   clock: verifyEmailChangeFx.doneData,
   fn: (response: AuthResponse & { token: string }) => response.user,
@@ -120,7 +126,7 @@ sample({
 
 sample({
   clock: verifyEmailChangeFx.done,
-  target: formReset,
+  target: dialogClosed,
 });
 
 // Resend
@@ -166,12 +172,6 @@ sample({
   clock: $resendTimer,
   filter: (timer) => timer === 0,
   target: stopResendTimer,
-});
-
-// Cancel — go back to initial form
-sample({
-  clock: cancelRequested,
-  target: formReset,
 });
 
 // Reset form (including timer state)

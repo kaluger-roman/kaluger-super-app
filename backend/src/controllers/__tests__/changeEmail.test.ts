@@ -5,7 +5,7 @@ import prisma from "../../lib/prisma";
 import { generateToken, hashPassword } from "../../utils/auth";
 
 jest.mock("../../services/email", () => ({
-  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe("Change Email Endpoints", () => {
@@ -51,12 +51,12 @@ describe("Change Email Endpoints", () => {
       expect(res.body.error).toBe("Все поля обязательны для заполнения");
     });
 
-    it("should return 401 when password is wrong", async () => {
+    it("should return 400 when password is wrong", async () => {
       const res = await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
         .send({ newEmail: "new@example.com", password: "WrongPass1" });
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(400);
       expect(res.body.error).toBe("Неверный пароль");
     });
 

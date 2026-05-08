@@ -5,12 +5,15 @@ import { authApi, notificationsModel } from "@shared";
 import { extractAxiosError } from "./changePassword.helpers";
 
 // Stores
+export const $isDialogOpen = createStore(false);
 export const $currentPassword = createStore("");
 export const $newPassword = createStore("");
 export const $confirmPassword = createStore("");
 export const $error = createStore<string | null>(null);
 
 // Events
+export const dialogOpened = createEvent();
+export const dialogClosed = createEvent();
 export const currentPasswordChanged = createEvent<string>();
 export const newPasswordChanged = createEvent<string>();
 export const confirmPasswordChanged = createEvent<string>();
@@ -23,6 +26,11 @@ export const changePasswordFx = createEffect(
     return await authApi.changePassword(data);
   },
 );
+
+// Dialog open/close
+sample({ clock: dialogOpened, fn: () => true, target: $isDialogOpen });
+sample({ clock: dialogClosed, fn: () => false, target: $isDialogOpen });
+sample({ clock: dialogClosed, target: formReset });
 
 // Update fields
 sample({ clock: currentPasswordChanged, target: $currentPassword });
@@ -69,7 +77,7 @@ sample({
 
 sample({
   clock: changePasswordFx.done,
-  target: formReset,
+  target: dialogClosed,
 });
 
 // Error

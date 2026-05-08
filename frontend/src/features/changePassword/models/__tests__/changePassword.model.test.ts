@@ -6,7 +6,7 @@ import { authApi } from "@shared";
 import * as changePasswordModel from "../changePassword.model";
 
 vi.mock("@shared", async () => {
-  const actual = await vi.importActual("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     authApi: {
@@ -129,6 +129,53 @@ describe("features/changePassword/models/changePassword.model", () => {
       expect(scope.getState(changePasswordModel.$currentPassword)).toBe("");
       expect(scope.getState(changePasswordModel.$newPassword)).toBe("");
       expect(scope.getState(changePasswordModel.$confirmPassword)).toBe("");
+    });
+  });
+
+  describe("dialog open/close", () => {
+    it("should open dialog on dialogOpened", async () => {
+      const scope = fork();
+
+      await allSettled(changePasswordModel.dialogOpened, { scope });
+
+      expect(scope.getState(changePasswordModel.$isDialogOpen)).toBe(true);
+    });
+
+    it("should close dialog and reset form on dialogClosed", async () => {
+      const scope = fork({
+        values: [
+          [changePasswordModel.$isDialogOpen, true],
+          [changePasswordModel.$currentPassword, "old"],
+          [changePasswordModel.$newPassword, "new"],
+          [changePasswordModel.$confirmPassword, "confirm"],
+        ],
+      });
+
+      await allSettled(changePasswordModel.dialogClosed, { scope });
+
+      expect(scope.getState(changePasswordModel.$isDialogOpen)).toBe(false);
+      expect(scope.getState(changePasswordModel.$currentPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$newPassword)).toBe("");
+      expect(scope.getState(changePasswordModel.$confirmPassword)).toBe("");
+    });
+
+    it("should close dialog after successful change", async () => {
+      vi.mocked(authApi.changePassword).mockResolvedValueOnce({
+        message: "Пароль успешно изменён",
+      });
+
+      const scope = fork({
+        values: [
+          [changePasswordModel.$isDialogOpen, true],
+          [changePasswordModel.$currentPassword, "OldPass1"],
+          [changePasswordModel.$newPassword, "NewPass1"],
+          [changePasswordModel.$confirmPassword, "NewPass1"],
+        ],
+      });
+
+      await allSettled(changePasswordModel.formSubmitted, { scope });
+
+      expect(scope.getState(changePasswordModel.$isDialogOpen)).toBe(false);
     });
   });
 });

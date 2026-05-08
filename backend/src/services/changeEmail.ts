@@ -8,7 +8,7 @@ import {
   isVerificationCodeExpired,
   generateToken,
 } from "../utils";
-import { sendVerificationEmail } from "./email";
+import { sendEmailChangeVerification } from "./email";
 
 export const initiateEmailChange = async (
   userId: string,
@@ -25,7 +25,7 @@ export const initiateEmailChange = async (
 
   const isPasswordValid = await comparePassword(password, user.password);
   if (!isPasswordValid) {
-    throw Object.assign(new Error("Неверный пароль"), { statusCode: 401 });
+    throw Object.assign(new Error("Неверный пароль"), { statusCode: 400 });
   }
 
   if (!validateEmail(newEmail)) {
@@ -61,7 +61,7 @@ export const initiateEmailChange = async (
   });
 
   try {
-    await sendVerificationEmail(newEmail, verificationCode);
+    await sendEmailChangeVerification(newEmail, verificationCode);
   } catch (emailError) {
     console.error("Error sending email change verification:", emailError);
     throw Object.assign(new Error("Ошибка при отправке кода верификации"), { statusCode: 500 });
@@ -162,7 +162,7 @@ export const resendEmailChangeCode = async (userId: string): Promise<void> => {
   });
 
   try {
-    await sendVerificationEmail(user.pendingEmail, verificationCode);
+    await sendEmailChangeVerification(user.pendingEmail, verificationCode);
   } catch (emailError) {
     console.error("Error resending email change verification:", emailError);
     throw Object.assign(new Error("Ошибка при отправке кода"), { statusCode: 500 });

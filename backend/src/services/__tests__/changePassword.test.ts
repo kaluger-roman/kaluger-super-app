@@ -33,12 +33,12 @@ describe("changePassword service", () => {
     });
   });
 
-  it("should throw 401 when current password is wrong", async () => {
+  it("should throw 400 when current password is wrong", async () => {
     await expect(
       changePassword(userId, "WrongPassword1", "NewPassword1"),
     ).rejects.toMatchObject({
       message: "Неверный текущий пароль",
-      statusCode: 401,
+      statusCode: 400,
     });
   });
 

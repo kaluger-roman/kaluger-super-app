@@ -61,7 +61,7 @@ describe("POST /api/auth/change-password", () => {
     expect(res.body.error).toBe("Пароли не совпадают");
   });
 
-  it("should return 401 when current password is wrong", async () => {
+  it("should return 400 when current password is wrong", async () => {
     const res = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${authToken}`)
@@ -70,7 +70,7 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "NewPassword1",
         confirmPassword: "NewPassword1",
       });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
     expect(res.body.error).toBe("Неверный текущий пароль");
   });
 
@@ -134,7 +134,7 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "AnotherPassword1",
         confirmPassword: "AnotherPassword1",
       });
-    expect(res2.status).toBe(401);
+    expect(res2.status).toBe(400);
     expect(res2.body.error).toBe("Неверный текущий пароль");
   });
 
