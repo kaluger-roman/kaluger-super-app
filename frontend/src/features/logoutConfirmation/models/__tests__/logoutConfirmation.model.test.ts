@@ -3,12 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { userModel } from "@entities";
 
-import {
-  $isDialogOpen,
-  logoutCancelled,
-  logoutConfirmed,
-  logoutRequested,
-} from "../logoutConfirmation.model";
+import * as logoutConfirmationModel from "../logoutConfirmation.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");
@@ -35,36 +30,36 @@ describe("features/logoutConfirmation/logoutConfirmation.model", () => {
   it("should open dialog on logoutRequested", async () => {
     const scope = fork();
 
-    await allSettled(logoutRequested, { scope });
+    await allSettled(logoutConfirmationModel.logoutRequested, { scope });
 
-    expect(scope.getState($isDialogOpen)).toBe(true);
+    expect(scope.getState(logoutConfirmationModel.$isDialogOpen)).toBe(true);
   });
 
   it("should close dialog and NOT logout on logoutCancelled", async () => {
     const scope = fork({
       values: [
-        [$isDialogOpen, true],
+        [logoutConfirmationModel.$isDialogOpen, true],
         [userModel.$user, mockUser],
       ],
     });
 
-    await allSettled(logoutCancelled, { scope });
+    await allSettled(logoutConfirmationModel.logoutCancelled, { scope });
 
-    expect(scope.getState($isDialogOpen)).toBe(false);
+    expect(scope.getState(logoutConfirmationModel.$isDialogOpen)).toBe(false);
     expect(scope.getState(userModel.$user)).toEqual(mockUser);
   });
 
   it("should close dialog and dispatch logoutUser on logoutConfirmed", async () => {
     const scope = fork({
       values: [
-        [$isDialogOpen, true],
+        [logoutConfirmationModel.$isDialogOpen, true],
         [userModel.$user, mockUser],
       ],
     });
 
-    await allSettled(logoutConfirmed, { scope });
+    await allSettled(logoutConfirmationModel.logoutConfirmed, { scope });
 
-    expect(scope.getState($isDialogOpen)).toBe(false);
+    expect(scope.getState(logoutConfirmationModel.$isDialogOpen)).toBe(false);
     expect(scope.getState(userModel.$user)).toBeNull();
   });
 });

@@ -126,6 +126,34 @@ describe("changeEmail service", () => {
       await expect(
         verifyEmailChange(userId, "000000"),
       ).rejects.toMatchObject({ message: "Неверный код верификации", statusCode: 400 });
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user!.verificationAttempts).toBe(1);
+      expect(user!.verificationCode).not.toBeNull();
+    });
+
+    it("should invalidate code after 5 wrong attempts", async () => {
+      const newEmail = faker.internet.email();
+      await initiateEmailChange(userId, newEmail, password);
+
+      for (let i = 0; i < 4; i++) {
+        await expect(
+          verifyEmailChange(userId, "000000"),
+        ).rejects.toMatchObject({ statusCode: 400 });
+      }
+
+      await expect(
+        verifyEmailChange(userId, "000000"),
+      ).rejects.toMatchObject({
+        message: "Превышено количество попыток. Запросите новый код",
+        statusCode: 400,
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user!.verificationCode).toBeNull();
+      expect(user!.verificationCodeExpiry).toBeNull();
+      expect(user!.verificationAttempts).toBe(0);
+      expect(user!.pendingEmail).toBe(newEmail);
     });
 
     it("should throw 400 when code is expired", async () => {
@@ -178,11 +206,45 @@ describe("changeEmail service", () => {
       const userBefore = await prisma.user.findUnique({ where: { id: userId } });
       const oldCode = userBefore!.verificationCode;
 
+      // Move sentAt past cooldown window
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationCodeSentAt: new Date(Date.now() - 61_000) },
+      });
+
       await resendEmailChangeCode(userId);
 
       const userAfter = await prisma.user.findUnique({ where: { id: userId } });
       expect(userAfter!.verificationCode).not.toBe(oldCode);
       expect(userAfter!.pendingEmail).toBe(newEmail);
+    });
+
+    it("should throw 429 when called within 60s cooldown", async () => {
+      const newEmail = faker.internet.email();
+      await initiateEmailChange(userId, newEmail, password);
+
+      await expect(resendEmailChangeCode(userId)).rejects.toMatchObject({
+        message: "Подождите перед повторной отправкой кода",
+        statusCode: 429,
+      });
+    });
+
+    it("should reset verificationAttempts on resend", async () => {
+      const newEmail = faker.internet.email();
+      await initiateEmailChange(userId, newEmail, password);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          verificationAttempts: 3,
+          verificationCodeSentAt: new Date(Date.now() - 61_000),
+        },
+      });
+
+      await resendEmailChangeCode(userId);
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user!.verificationAttempts).toBe(0);
     });
   });
 });

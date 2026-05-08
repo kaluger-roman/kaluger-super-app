@@ -1,11 +1,13 @@
 import prisma from "../lib/prisma";
 import type { VerifyEmailChangeResult } from "../types";
 import {
+  MAX_VERIFICATION_ATTEMPTS,
   comparePassword,
   validateEmail,
   generateVerificationCode,
   getVerificationCodeExpiry,
   isVerificationCodeExpired,
+  isWithinResendCooldown,
   generateToken,
 } from "../utils";
 import { sendEmailChangeVerification } from "./email";
@@ -57,6 +59,8 @@ export const initiateEmailChange = async (
       pendingEmail: newEmail,
       verificationCode,
       verificationCodeExpiry,
+      verificationCodeSentAt: new Date(),
+      verificationAttempts: 0,
     },
   });
 
@@ -93,6 +97,28 @@ export const verifyEmailChange = async (
   }
 
   if (user.verificationCode !== code) {
+    const attempts = user.verificationAttempts + 1;
+
+    if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          verificationCode: null,
+          verificationCodeExpiry: null,
+          verificationCodeSentAt: null,
+          verificationAttempts: 0,
+        },
+      });
+      throw Object.assign(
+        new Error("Превышено количество попыток. Запросите новый код"),
+        { statusCode: 400 },
+      );
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationAttempts: attempts },
+    });
     throw Object.assign(new Error("Неверный код верификации"), { statusCode: 400 });
   }
 
@@ -114,6 +140,8 @@ export const verifyEmailChange = async (
         pendingEmail: null,
         verificationCode: null,
         verificationCodeExpiry: null,
+        verificationCodeSentAt: null,
+        verificationAttempts: 0,
       },
       select: {
         id: true,
@@ -150,6 +178,13 @@ export const resendEmailChangeCode = async (userId: string): Promise<void> => {
     throw Object.assign(new Error("Нет запроса на смену email"), { statusCode: 400 });
   }
 
+  if (isWithinResendCooldown(user.verificationCodeSentAt)) {
+    throw Object.assign(
+      new Error("Подождите перед повторной отправкой кода"),
+      { statusCode: 429 },
+    );
+  }
+
   const verificationCode = generateVerificationCode();
   const verificationCodeExpiry = getVerificationCodeExpiry();
 
@@ -158,6 +193,8 @@ export const resendEmailChangeCode = async (userId: string): Promise<void> => {
     data: {
       verificationCode,
       verificationCodeExpiry,
+      verificationCodeSentAt: new Date(),
+      verificationAttempts: 0,
     },
   });
 

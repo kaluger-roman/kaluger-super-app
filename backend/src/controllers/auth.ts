@@ -59,6 +59,8 @@ export const register = async (
         name,
         verificationCode,
         verificationCodeExpiry,
+        verificationCodeSentAt: new Date(),
+        verificationAttempts: 0,
         isEmailVerified: false,
       },
     });

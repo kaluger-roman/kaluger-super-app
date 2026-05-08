@@ -145,12 +145,32 @@ describe("Change Email Endpoints", () => {
       expect(res.body.error).toBe("Нет запроса на смену email");
     });
 
-    it("should resend code successfully", async () => {
+    it("should return 429 when within cooldown window", async () => {
       const newEmail = faker.internet.email();
       await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
         .send({ newEmail, password });
+
+      const res = await request(app)
+        .post("/api/auth/resend-email-change-code")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send();
+      expect(res.status).toBe(429);
+      expect(res.body.error).toBe("Подождите перед повторной отправкой кода");
+    });
+
+    it("should resend code successfully after cooldown", async () => {
+      const newEmail = faker.internet.email();
+      await request(app)
+        .post("/api/auth/change-email")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ newEmail, password });
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationCodeSentAt: new Date(Date.now() - 61_000) },
+      });
 
       const res = await request(app)
         .post("/api/auth/resend-email-change-code")
