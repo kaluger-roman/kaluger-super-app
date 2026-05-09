@@ -30,12 +30,22 @@ export const updateLessonStatuses = async () => {
       },
     });
 
-    // Обновляем статусы и отправляем WebSocket уведомления
+    // Обновляем статусы условно — пропускаем урок, если статус успели изменить
+    // (например, пользователь вручную отменил урок между findMany и update)
+    let startedCount = 0;
+    let completedCount = 0;
+
     for (const lesson of lessonsToStart) {
-      await prisma.lesson.update({
-        where: { id: lesson.id },
+      const result = await prisma.lesson.updateMany({
+        where: {
+          id: lesson.id,
+          status: { in: ["SCHEDULED", "RESCHEDULED"] },
+        },
         data: { status: "IN_PROGRESS" },
       });
+
+      if (result.count === 0) continue;
+      startedCount++;
 
       if (wsManager) {
         wsManager.broadcastLessonStatusUpdate(
@@ -47,10 +57,16 @@ export const updateLessonStatuses = async () => {
     }
 
     for (const lesson of lessonsToComplete) {
-      await prisma.lesson.update({
-        where: { id: lesson.id },
+      const result = await prisma.lesson.updateMany({
+        where: {
+          id: lesson.id,
+          status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
+        },
         data: { status: "COMPLETED" },
       });
+
+      if (result.count === 0) continue;
+      completedCount++;
 
       if (wsManager) {
         wsManager.broadcastLessonStatusUpdate(
@@ -61,12 +77,12 @@ export const updateLessonStatuses = async () => {
       }
     }
 
-    console.log(`Updated ${lessonsToStart.length} lessons to IN_PROGRESS`);
-    console.log(`Updated ${lessonsToComplete.length} lessons to COMPLETED`);
+    console.log(`Updated ${startedCount} lessons to IN_PROGRESS`);
+    console.log(`Updated ${completedCount} lessons to COMPLETED`);
 
     return {
-      startedLessons: lessonsToStart.length,
-      completedLessons: lessonsToComplete.length,
+      startedLessons: startedCount,
+      completedLessons: completedCount,
     };
   } catch (error) {
     console.error("Error updating lesson statuses:", error);

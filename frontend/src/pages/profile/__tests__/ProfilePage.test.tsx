@@ -13,7 +13,7 @@ import { ProfilePage } from "../ProfilePage";
 import { profileModel } from "../models";
 
 vi.mock("@shared", async () => {
-  const actual = await vi.importActual("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     authApi: {
@@ -43,7 +43,7 @@ describe("ProfilePage", () => {
     vi.clearAllMocks();
   });
 
-  it("should render user profile information", () => {
+  it("should render page title and tabs", () => {
     const scope = fork({
       values: [
         [userModel.$user, mockUser],
@@ -55,9 +55,25 @@ describe("ProfilePage", () => {
 
     renderWithProviders(<ProfilePage />, scope);
 
-    expect(screen.getByText("Мои данные")).toBeInTheDocument();
+    expect(screen.getByText("Настройки")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /мои данные/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /безопасность/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /уведомления/i })).toBeInTheDocument();
+  });
+
+  it("should render personal data on default tab", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, mockUser],
+        [profileModel.$name, mockUser.name],
+        [profileModel.$isEditMode, false],
+        [profileModel.$error, ""],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
     expect(screen.getByText("Test User")).toBeInTheDocument();
-    expect(screen.getByText("test@example.com")).toBeInTheDocument();
   });
 
   it("should show edit button when not in edit mode", () => {
@@ -170,7 +186,6 @@ describe("ProfilePage", () => {
 
     renderWithProviders(<ProfilePage />, scope);
 
-    // Simulate typing a new name
     const input = screen.getByDisplayValue(mockUser.name);
     await user.clear(input);
     await user.type(input, "Different Name");
@@ -194,34 +209,23 @@ describe("ProfilePage", () => {
     expect(screen.getByText("Имя не может быть пустым")).toBeInTheDocument();
   });
 
-  it("should trigger edit mode when clicking edit button", async () => {
-    const user = userEvent.setup();
+  it("should render security section content when security tab is active", () => {
     const scope = fork({
       values: [
         [userModel.$user, mockUser],
-        [profileModel.$name, mockUser.name],
-        [profileModel.$isEditMode, false],
-        [profileModel.$error, ""],
+        [profileModel.$activeTab, "security"],
       ],
     });
 
     renderWithProviders(<ProfilePage />, scope);
 
-    const editButton = screen.getByRole("button", { name: /редактировать/i });
-    await user.click(editButton);
-
-    // Event should be triggered (but we can't easily verify in this test setup)
-    expect(editButton).toBeInTheDocument();
+    expect(screen.getByText("test@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Пароль")).toBeInTheDocument();
   });
 
   it("should not render when user is null", () => {
     const scope = fork({
-      values: [
-        [userModel.$user, null],
-        [profileModel.$name, ""],
-        [profileModel.$isEditMode, false],
-        [profileModel.$error, ""],
-      ],
+      values: [[userModel.$user, null]],
     });
 
     const { container } = renderWithProviders(<ProfilePage />, scope);

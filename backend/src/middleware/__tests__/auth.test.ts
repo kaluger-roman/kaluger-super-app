@@ -35,7 +35,7 @@ describe("authenticateToken middleware", () => {
     expect(res.body).toEqual({ error: "Токен доступа обязателен" });
   });
 
-  it("should return 403 when verifyToken returns falsy", async () => {
+  it("should return 401 when verifyToken returns falsy", async () => {
     (verifyToken as jest.Mock).mockReturnValue(null);
 
     const res = await request(app)
@@ -43,7 +43,7 @@ describe("authenticateToken middleware", () => {
       .set("Authorization", "Bearer invalid-token");
 
     expect(verifyToken).toHaveBeenCalledWith("invalid-token");
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: "Недействительный или истекший токен" });
   });
 

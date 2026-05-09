@@ -5,9 +5,18 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { BrowserRouter } from "react-router-dom";
 
+import { logoutConfirmationModel } from "@features";
 import { theme } from "@shared";
 
 import { UserMenu } from "../UserMenu";
+
+vi.mock("@shared", async () => {
+  const actual = await vi.importActual("@shared");
+  return {
+    ...actual,
+    navigate: vi.fn(),
+  };
+});
 
 const renderWithProviders = (ui: React.ReactElement) =>
   render(
@@ -24,7 +33,7 @@ describe("UserMenu", () => {
     expect(container.querySelector('[role="menu"]')).not.toBeInTheDocument();
   });
 
-  it("should render menu when anchorEl is provided", () => {
+  it("should render menu with profile and logout items when anchorEl is provided", () => {
     const onClose = vi.fn();
     const anchorEl = document.createElement("div");
 
@@ -32,6 +41,7 @@ describe("UserMenu", () => {
 
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByText("Мои данные")).toBeInTheDocument();
+    expect(screen.getByText("Выйти")).toBeInTheDocument();
   });
 
   it("should navigate to profile page when clicking profile menu item", async () => {
@@ -44,6 +54,24 @@ describe("UserMenu", () => {
     await user.click(screen.getByText("Мои данные"));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("should request logout confirmation and close menu when clicking logout", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const anchorEl = document.createElement("div");
+    const logoutSpy = vi.spyOn(logoutConfirmationModel, "logoutRequested");
+
+    try {
+      renderWithProviders(<UserMenu anchorEl={anchorEl} onClose={onClose} />);
+
+      await user.click(screen.getByText("Выйти"));
+
+      expect(logoutSpy).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      logoutSpy.mockRestore();
+    }
   });
 
   it("should close menu when onClose is called", () => {

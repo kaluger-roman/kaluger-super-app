@@ -14,11 +14,21 @@ export const comparePassword = async (
   return bcrypt.compare(password, hashedPassword);
 };
 
-const getJwtSecret = (): string =>
-  process.env.JWT_SECRET || "fallback-secret-key-jdjdjjdjdjdjdiiiipq";
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not set");
+  }
+  return secret;
+};
 
-const getAdminJwtSecret = (): string =>
-  process.env.ADMIN_JWT_SECRET || "fallback-admin-secret-key-aabbccdd";
+const getAdminJwtSecret = (): string => {
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret) {
+    throw new Error("ADMIN_JWT_SECRET is not set");
+  }
+  return secret;
+};
 
 export const generateToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
@@ -57,6 +67,9 @@ export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
+
+export const normalizeEmail = (email: string): string =>
+  email.trim().toLowerCase();
 
 export const validatePassword = (password: string): boolean => {
   // At least 8 characters, one uppercase, one lowercase, one digit

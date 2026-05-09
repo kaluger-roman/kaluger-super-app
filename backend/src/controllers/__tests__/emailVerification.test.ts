@@ -52,7 +52,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when email already verified", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -72,7 +72,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when verification code not found", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -97,7 +97,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -124,7 +124,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -140,6 +140,48 @@ describe("Email Verification Controller", () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Неверный код подтверждения");
 
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+      expect(updatedUser?.verificationAttempts).toBe(1);
+      expect(updatedUser?.verificationCode).toBe("123456");
+
+      await prisma.user.delete({ where: { id: user.id } });
+    });
+
+    it("should invalidate code after 5 wrong attempts", async () => {
+      const futureDate = new Date();
+      futureDate.setMinutes(futureDate.getMinutes() + 15);
+
+      const user = await prisma.user.create({
+        data: {
+          email: faker.internet.email().toLowerCase(),
+          password: "hashed",
+          name: faker.person.fullName(),
+          isEmailVerified: false,
+          verificationCode: "123456",
+          verificationCodeExpiry: futureDate,
+          verificationAttempts: 4,
+        },
+      });
+
+      const res = await request(app)
+        .post("/api/auth/verify-email")
+        .send({ email: user.email, code: "000000" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Превышено количество попыток. Запросите новый код",
+      );
+
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+      expect(updatedUser?.verificationCode).toBeNull();
+      expect(updatedUser?.verificationCodeExpiry).toBeNull();
+      expect(updatedUser?.verificationAttempts).toBe(0);
+      expect(updatedUser?.isEmailVerified).toBe(false);
+
       await prisma.user.delete({ where: { id: user.id } });
     });
 
@@ -150,12 +192,13 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
           verificationCode,
           verificationCodeExpiry: futureDate,
+          verificationAttempts: 2,
         },
       });
 
@@ -179,6 +222,7 @@ describe("Email Verification Controller", () => {
       expect(updatedUser?.isEmailVerified).toBe(true);
       expect(updatedUser?.verificationCode).toBeNull();
       expect(updatedUser?.verificationCodeExpiry).toBeNull();
+      expect(updatedUser?.verificationAttempts).toBe(0);
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -206,7 +250,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when email already verified", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -226,10 +270,11 @@ describe("Email Verification Controller", () => {
     it("should generate new code and send email successfully", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
+          verificationAttempts: 3,
         },
       });
 
@@ -251,6 +296,8 @@ describe("Email Verification Controller", () => {
       expect(updatedUser?.verificationCode).toBeDefined();
       expect(updatedUser?.verificationCodeExpiry).toBeDefined();
       expect(updatedUser?.verificationCode).toHaveLength(6);
+      expect(updatedUser?.verificationAttempts).toBe(0);
+      expect(updatedUser?.verificationCodeSentAt).not.toBeNull();
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -258,7 +305,7 @@ describe("Email Verification Controller", () => {
     it("should return 500 when email sending fails", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,

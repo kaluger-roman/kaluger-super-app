@@ -137,28 +137,29 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       ...(computedStatus ? { status: computedStatus } : {}),
     };
 
+    let nextLessonForTransfer: Awaited<ReturnType<typeof findNextUnpaidLesson>> = null;
     if (
       updateData.status === "CANCELLED" &&
       existingLesson.isPaid &&
       existingLesson.paymentDate
     ) {
-      const nextLesson = await findNextUnpaidLesson(userId!, existingLesson);
-
-      if (nextLesson) {
-        await prisma.lesson.update({
-          where: { id: nextLesson.id },
-          data: { isPaid: true, paymentDate: existingLesson.paymentDate },
-        });
-      }
-
+      nextLessonForTransfer = await findNextUnpaidLesson(userId!, existingLesson);
       dataToUpdate.isPaid = false;
       delete dataToUpdate.paymentDate;
     }
 
-    const lesson = await prisma.lesson.update({
-      where: { id },
-      data: dataToUpdate,
-      include: { student: { select: { id: true, name: true } } },
+    const lesson = await prisma.$transaction(async (tx) => {
+      if (nextLessonForTransfer && existingLesson.paymentDate) {
+        await tx.lesson.update({
+          where: { id: nextLessonForTransfer.id },
+          data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+        });
+      }
+      return tx.lesson.update({
+        where: { id },
+        data: dataToUpdate,
+        include: { student: { select: { id: true, name: true } } },
+      });
     });
 
     let result: ShiftResult | undefined;

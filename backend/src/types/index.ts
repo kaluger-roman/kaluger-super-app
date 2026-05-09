@@ -92,6 +92,33 @@ export type ResendVerificationDto = {
   email: string;
 };
 
+export type ChangePasswordDto = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export type ChangeEmailDto = {
+  newEmail: string;
+  password: string;
+};
+
+export type VerifyEmailChangeDto = {
+  code: string;
+};
+
+export type VerifyEmailChangeResult = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    createdAt: Date;
+    isEmailVerified: boolean;
+    taxEnabled: boolean;
+  };
+};
+
 export type NewsItemResponse = {
   id: string;
   title: string;

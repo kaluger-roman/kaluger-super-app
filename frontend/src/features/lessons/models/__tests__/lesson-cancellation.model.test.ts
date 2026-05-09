@@ -1,6 +1,7 @@
 import { allSettled, fork } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 import { lessonsApi } from "@shared";
 
@@ -19,6 +20,7 @@ vi.mock("@shared", async () => {
     ...actual,
     lessonsApi: {
       getCancellationInfo: vi.fn(),
+      update: vi.fn(),
     },
     formatDateLong: vi.fn((date: string) => `Formatted ${date}`),
     formatTime: vi.fn((_date: string) => `12:00`),
@@ -209,6 +211,63 @@ describe("lesson-cancellation.model", () => {
 
       const storedInfo = scope.getState($cancellationInfo);
       expect(storedInfo).toBeNull();
+    });
+
+    it("should NOT clear $cancellingLesson when an unrelated lesson becomes CANCELLED via WebSocket (regression: ID-aware cleanup)", async () => {
+      const scope = fork();
+      const targetLesson = createMockLesson({ id: "lesson-target" });
+      const unrelatedCancelled: Lesson = createMockLesson({
+        id: "lesson-other",
+        status: "CANCELLED",
+      });
+
+      vi.mocked(lessonsApi.getCancellationInfo).mockResolvedValue(null);
+      vi.mocked(lessonsApi.update).mockResolvedValue(unrelatedCancelled);
+
+      await allSettled(lessonCancelRequested, {
+        scope,
+        params: targetLesson,
+      });
+
+      expect(scope.getState($cancellingLesson)).toEqual(targetLesson);
+
+      // Simulate updateLessonFx returning a different lesson with CANCELLED status
+      // (e.g., WebSocket-triggered status change for another lesson on the schedule)
+      await allSettled(lessonModel.updateLessonFx, {
+        scope,
+        params: {
+          id: unrelatedCancelled.id,
+          data: { status: "CANCELLED" },
+        },
+      });
+
+      // The cancellation context for the active dialog must remain intact
+      expect(scope.getState($cancellingLesson)).toEqual(targetLesson);
+    });
+
+    it("should clear $cancellingLesson only when the matching lesson becomes CANCELLED", async () => {
+      const scope = fork();
+      const targetLesson = createMockLesson({ id: "lesson-target" });
+      const updated: Lesson = { ...targetLesson, status: "CANCELLED" };
+
+      vi.mocked(lessonsApi.getCancellationInfo).mockResolvedValue(null);
+      vi.mocked(lessonsApi.update).mockResolvedValue(updated);
+
+      await allSettled(lessonCancelRequested, {
+        scope,
+        params: targetLesson,
+      });
+
+      await allSettled(lessonModel.updateLessonFx, {
+        scope,
+        params: {
+          id: targetLesson.id,
+          data: { status: "CANCELLED" },
+        },
+      });
+
+      expect(scope.getState($cancellingLesson)).toBeNull();
+      expect(scope.getState($cancellationInfo)).toBeNull();
     });
   });
 });

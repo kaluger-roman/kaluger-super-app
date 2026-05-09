@@ -1,8 +1,7 @@
 import { createStore, createEvent, sample } from "effector";
 
 import { calculatePresetDates } from "./lessons-filters.helpers";
-
-export type PaymentDatePreset = "currentMonth" | "lastMonth" | "currentWeek";
+import type { PaymentDatePreset } from "./lessons-filters.types";
 
 export const setOnlyUnpaid = createEvent<boolean>();
 export const setOnlyWithoutHomework = createEvent<boolean>();

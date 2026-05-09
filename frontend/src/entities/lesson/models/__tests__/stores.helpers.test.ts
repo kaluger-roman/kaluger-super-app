@@ -103,7 +103,7 @@ describe("addLessonToSchedule", () => {
 });
 
 describe("updateLessonInSchedule", () => {
-  it("should update lesson in schedule", () => {
+  it("should update lesson on the same day", () => {
     const state = {
       "2026-01-15": [
         createMockLesson({ id: "1", price: 1000 }),
@@ -119,27 +119,53 @@ describe("updateLessonInSchedule", () => {
     const result = updateLessonInSchedule(state, updatedLesson);
 
     expect(result["2026-01-15"]).toHaveLength(2);
-    expect(result["2026-01-15"][0].price).toBe(1500);
-    expect(result["2026-01-15"][1].price).toBe(2000);
+    expect(result["2026-01-15"].find((l) => l.id === "1")?.price).toBe(1500);
+    expect(result["2026-01-15"].find((l) => l.id === "2")?.price).toBe(2000);
   });
 
-  it("should handle lesson not found in day", () => {
+  it("should move lesson to new day when rescheduled", () => {
     const state = {
-      "2026-01-15": [createMockLesson({ id: "2" })],
+      "2026-01-15": [
+        createMockLesson({ id: "1", startTime: "2026-01-15T10:00:00.000Z" }),
+        createMockLesson({ id: "2", startTime: "2026-01-15T14:00:00.000Z" }),
+      ],
+      "2026-01-16": [createMockLesson({ id: "3", startTime: "2026-01-16T10:00:00.000Z" })],
     };
     const updatedLesson = createMockLesson({
       id: "1",
-      startTime: "2026-01-15T10:00:00.000Z",
-      price: 1500,
+      startTime: "2026-01-16T12:00:00.000Z",
+      endTime: "2026-01-16T13:00:00.000Z",
+      status: "RESCHEDULED",
     });
 
     const result = updateLessonInSchedule(state, updatedLesson);
 
     expect(result["2026-01-15"]).toHaveLength(1);
     expect(result["2026-01-15"][0].id).toBe("2");
+    expect(result["2026-01-16"]).toHaveLength(2);
+    expect(result["2026-01-16"].find((l) => l.id === "1")?.status).toBe("RESCHEDULED");
+    expect(result["2026-01-16"].find((l) => l.id === "3")).toBeDefined();
   });
 
-  it("should handle empty day", () => {
+  it("should remove old day key when last lesson is moved away", () => {
+    const state = {
+      "2026-01-15": [createMockLesson({ id: "1", startTime: "2026-01-15T10:00:00.000Z" })],
+    };
+    const updatedLesson = createMockLesson({
+      id: "1",
+      startTime: "2026-01-16T10:00:00.000Z",
+      endTime: "2026-01-16T11:00:00.000Z",
+      status: "RESCHEDULED",
+    });
+
+    const result = updateLessonInSchedule(state, updatedLesson);
+
+    expect(result["2026-01-15"]).toBeUndefined();
+    expect(result["2026-01-16"]).toHaveLength(1);
+    expect(result["2026-01-16"][0].id).toBe("1");
+  });
+
+  it("should add lesson to new day when not present in state", () => {
     const state = {
       "2026-01-16": [createMockLesson({ id: "2" })],
     };
@@ -150,7 +176,8 @@ describe("updateLessonInSchedule", () => {
 
     const result = updateLessonInSchedule(state, updatedLesson);
 
-    expect(result["2026-01-15"]).toHaveLength(0);
+    expect(result["2026-01-15"]).toHaveLength(1);
+    expect(result["2026-01-15"][0].id).toBe("1");
     expect(result["2026-01-16"]).toHaveLength(1);
   });
 });

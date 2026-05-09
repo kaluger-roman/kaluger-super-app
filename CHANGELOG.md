@@ -19,8 +19,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tax card label adapts: single applicable rate → `Налоги (X%)`; multiple rates → neutral `Налоги` + info-icon
 - Tax assignment per lesson is now driven by `paymentDate` (when the income was received) instead of `startTime`, matching how Russian tax law recognizes income on receipt
 
+### Fixed
+- Admin login compares password via bcrypt hash from `ADMIN_PASSWORD_HASH` instead of plain string equality with `ADMIN_PASSWORD` — eliminates plain-text storage and timing attack
+- WebSocket reconnect for the same user no longer drops the new connection when the old socket's stale close handler fires later (live status updates are no longer silently lost after a reconnect)
+- `JWT_SECRET` and `ADMIN_JWT_SECRET` are now mandatory — server throws at startup if either is missing, hardcoded fallback values removed from sources
+- Auth endpoints (`/login`, `/register`, `/verify-email`, `/resend-verification`, `/admin/login`) now have rate limiting via `express-rate-limit` (skipped in test env)
+- Email is normalized to lowercase on register, login, verify, resend-verification, and email-change flows — case-insensitive uniqueness, no more duplicate accounts
+- `PUT /api/lessons/:id` payment transfer when cancelling a paid lesson runs inside `prisma.$transaction` (atomic — no double-paid state on partial failure)
+- `lessonStatusUpdater` cron uses `updateMany` with status filter — manually cancelled lessons are no longer overwritten back to IN_PROGRESS/COMPLETED on the next tick
+- `GET /api/lessons?page=abc` no longer collapses pagination to "return everything" — invalid page/limit fall back to defaults and limit is clamped to 100
+- Lesson cancellation dialog cleanup checks lesson id — WebSocket-driven CANCELLED updates for unrelated lessons no longer wipe the active dialog state
+- `LessonCell`, `StudentInfo`, `StudentCard`, `StudentSelector` no longer render an orphan `0` when price/hourlyRate equals 0
+
 ### Infrastructure
 - Prisma migration `20260509024056_tax_rate_periods` creates `tax_rate_periods` table with `(userId, startDate)` unique + index, adds `users.taxEnabled`, migrates legacy data, and drops `users.taxRate` in a single atomic step
+- New script `npm run admin:hash-password -- <password>` to generate bcrypt hash for `ADMIN_PASSWORD_HASH`
+- New dependency: `express-rate-limit`
+- Test setup ensures `JWT_SECRET` / `ADMIN_JWT_SECRET` are present even without `.env.test`
+
+## 2026-04-07
+
+### Added
+- Change password on profile page: verify current password, validate new password, update hash (664d6b6)
+- Change email with two-step verification: enter new email + password, confirm with 6-digit code sent to new address (664d6b6)
+- New JWT token issued after email change to reflect updated email in payload (664d6b6)
+- 4 new API endpoints: `POST /api/auth/change-password`, `POST /api/auth/change-email`, `POST /api/auth/verify-email-change`, `POST /api/auth/resend-email-change-code` (664d6b6)
+- Resend verification code with 60-second cooldown timer on frontend (664d6b6)
+
+### Infrastructure
+- Prisma migration adding `pendingEmail` field to users table (664d6b6)
+- 54 new tests: 35 backend (service + controller integration) and 19 frontend (Effector model) (664d6b6)
 
 ## 2026-04-06
 

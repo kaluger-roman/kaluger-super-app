@@ -51,7 +51,9 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
                   {student.archived && <span>📦(Архив)</span>}
                 </Box>
                 <Styled.StudentRate>
-                  {student.hourlyRate && ` ${student.hourlyRate} ₽/занятие`}
+                  {student.hourlyRate != null && student.hourlyRate > 0
+                    ? ` ${student.hourlyRate} ₽/занятие`
+                    : ""}
                 </Styled.StudentRate>
               </Styled.StudentInfoContainer>
             </Styled.StyledMenuItem>

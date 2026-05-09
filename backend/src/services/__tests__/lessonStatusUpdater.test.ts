@@ -364,6 +364,78 @@ describe("updateLessonStatuses", () => {
     );
   });
 
+  it("should not overwrite CANCELLED status set between findMany and update (regression: TOCTOU race)", async () => {
+    const now = truncateToMinute(new Date());
+
+    const user = await prisma.user.create({
+      data: {
+        email: `test+toctou+${Date.now()}@example.com`,
+        password: "test",
+        name: "Test User",
+      },
+    });
+    createdUserIds.push(user.id);
+
+    const student = await prisma.student.create({
+      data: {
+        name: "Student TOCTOU",
+        tutorId: user.id,
+        contactMethod: "WHATSAPP",
+        phone: `+7000099${Math.floor(Math.random() * 10000)}`,
+      },
+    });
+
+    // Lesson initially SCHEDULED with start in past, end in future
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: user.id,
+        studentId: student.id,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        status: "SCHEDULED",
+        startTime: new Date(now.getTime() - 1 * 60 * 1000),
+        endTime: new Date(now.getTime() + 30 * 60 * 1000),
+      },
+    });
+
+    const broadcastMock = jest.fn();
+    mockedGetWs.mockReturnValue({
+      broadcastLessonStatusUpdate: broadcastMock,
+    } as any);
+
+    // Simulate user manually cancelling the lesson AFTER findMany but BEFORE updateMany.
+    // We hook into updateMany to flip status to CANCELLED right before the update fires.
+    const originalUpdateMany = prisma.lesson.updateMany.bind(prisma.lesson);
+    const updateManySpy = jest
+      .spyOn(prisma.lesson, "updateMany")
+      .mockImplementation(((args: any) => {
+        const exec = async () => {
+          if (args?.where?.id === lesson.id) {
+            await prisma.lesson.update({
+              where: { id: lesson.id },
+              data: { status: "CANCELLED" },
+            });
+          }
+          return originalUpdateMany(args);
+        };
+        return exec();
+      }) as never);
+
+    await updateLessonStatuses();
+
+    updateManySpy.mockRestore();
+
+    const after = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    expect(after!.status).toBe("CANCELLED");
+
+    // No broadcast should be sent when conditional update was skipped
+    expect(broadcastMock).not.toHaveBeenCalledWith(
+      lesson.id,
+      "IN_PROGRESS",
+      lesson.tutorId
+    );
+  });
+
   it("should work when WebSocket manager is not present (no broadcast)", async () => {
     const now = truncateToMinute(new Date());
 

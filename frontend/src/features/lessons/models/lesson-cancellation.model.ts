@@ -90,9 +90,13 @@ sample({
 sample({
   clock: lessonModel.updateLessonFx.doneData,
   source: $cancellingLesson,
-  filter: (cancellingLesson, lesson) => {
-    return Boolean(cancellingLesson && lesson.status === "CANCELLED");
-  },
+  filter: (cancellingLesson, lesson) =>
+    Boolean(
+      cancellingLesson &&
+        lesson &&
+        cancellingLesson.id === lesson.id &&
+        lesson.status === "CANCELLED",
+    ),
   fn: () => null,
   target: [$cancellingLesson, $cancellationInfo],
 });

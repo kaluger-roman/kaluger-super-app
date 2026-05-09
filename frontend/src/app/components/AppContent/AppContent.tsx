@@ -5,7 +5,7 @@ import { useMediaQuery, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
 import { useLocation } from "react-router-dom";
 
-import { userModel } from "@entities";
+import { LogoutConfirmationDialog, logoutConfirmationModel } from "@features";
 import type { User } from "@shared/types";
 import { Sidebar, sidebarModel } from "@widgets";
 
@@ -32,10 +32,11 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
   const isAuthPage =
     location.pathname === "/login" ||
     location.pathname === "/register" ||
-    location.pathname === "/verify-email";
+    location.pathname === "/verify-email" ||
+    location.pathname === "/forgot-password";
 
   const handleLogout = () => {
-    userModel.logoutUser();
+    logoutConfirmationModel.logoutRequested();
   };
 
   if (isAuthPage) {
@@ -61,6 +62,7 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
             onClose={sidebarModel.sidebarClosed}
           />
           <UserMenu anchorEl={userMenuAnchor} onClose={() => setUserMenuAnchor(null)} />
+          <LogoutConfirmationDialog />
         </>
       )}
 

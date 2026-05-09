@@ -156,6 +156,53 @@ describe("WebSocketManager", () => {
     expect(ws2.send).toHaveBeenCalled();
   });
 
+  it("should keep new client when stale close handler of old socket fires after reconnect (regression: stale close handler race)", async () => {
+    const decoded = { userId: "u-reconnect", email: "r@b.com" };
+    (authenticateWebSocket as jest.Mock).mockResolvedValue(decoded);
+
+    const manager = new WebSocketManager({} as Server);
+    const wssInstance = (WebSocketServer as any).instances[0];
+
+    const oldHandlers: Record<string, Function> = {};
+    const oldWs: any = {
+      send: jest.fn(),
+      close: jest.fn(),
+      readyState: (WebSocket as any).OPEN,
+      on: (event: string, fn: Function) => {
+        oldHandlers[event] = fn;
+      },
+    };
+    wssInstance.simulateConnection(oldWs, { url: "/?token=old" });
+    await new Promise((r) => setImmediate(r));
+
+    // Simulate reconnect with the same userId
+    const newHandlers: Record<string, Function> = {};
+    const newWs: any = {
+      send: jest.fn(),
+      close: jest.fn(),
+      readyState: (WebSocket as any).OPEN,
+      on: (event: string, fn: Function) => {
+        newHandlers[event] = fn;
+      },
+    };
+    wssInstance.simulateConnection(newWs, { url: "/?token=new" });
+    await new Promise((r) => setImmediate(r));
+
+    // The previous connection should have been actively closed
+    expect(oldWs.close).toHaveBeenCalled();
+
+    // After reconnect there should still be exactly one connection
+    expect(manager.getConnectedUsersCount()).toBe(1);
+
+    // Simulate the OLD socket's close handler firing late (TCP keepalive timeout, etc.)
+    oldHandlers["close"]();
+
+    // The new client must remain registered — this is the bug we are fixing
+    expect(manager.getConnectedUsersCount()).toBe(1);
+    expect(manager.sendToUser("u-reconnect", { test: 1 })).toBe(true);
+    expect(newWs.send).toHaveBeenCalledWith(JSON.stringify({ test: 1 }));
+  });
+
   it("sendToUser should send only to specified user", async () => {
     (authenticateWebSocket as jest.Mock).mockResolvedValue({
       userId: "u1",

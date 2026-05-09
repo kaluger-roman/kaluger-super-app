@@ -1,11 +1,13 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
+  MAX_VERIFICATION_ATTEMPTS,
   generateToken,
   generateVerificationCode,
   getVerificationCodeExpiry,
   isVerificationCodeExpired,
+  normalizeEmail,
 } from "../utils";
-import { VerifyEmailDto, ResendVerificationDto } from "../types";
+import type { VerifyEmailDto, ResendVerificationDto } from "../types";
 import prisma from "../lib/prisma";
 import { sendVerificationEmail } from "../services";
 
@@ -14,13 +16,15 @@ export const verifyEmail = async (
   res: Response,
 ) => {
   try {
-    const { email, code } = req.body;
+    const { email: rawEmail, code } = req.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return res
         .status(400)
         .json({ error: "Email и код подтверждения обязательны" });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -47,6 +51,27 @@ export const verifyEmail = async (
     }
 
     if (user.verificationCode !== code) {
+      const attempts = user.verificationAttempts + 1;
+
+      if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            verificationCode: null,
+            verificationCodeExpiry: null,
+            verificationCodeSentAt: null,
+            verificationAttempts: 0,
+          },
+        });
+        return res.status(400).json({
+          error: "Превышено количество попыток. Запросите новый код",
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationAttempts: attempts },
+      });
       return res.status(400).json({ error: "Неверный код подтверждения" });
     }
 
@@ -56,6 +81,8 @@ export const verifyEmail = async (
         isEmailVerified: true,
         verificationCode: null,
         verificationCodeExpiry: null,
+        verificationCodeSentAt: null,
+        verificationAttempts: 0,
       },
     });
 
@@ -83,11 +110,13 @@ export const resendVerification = async (
   res: Response,
 ) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
 
-    if (!email) {
+    if (!rawEmail) {
       return res.status(400).json({ error: "Email обязателен" });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -109,6 +138,8 @@ export const resendVerification = async (
       data: {
         verificationCode,
         verificationCodeExpiry,
+        verificationCodeSentAt: new Date(),
+        verificationAttempts: 0,
       },
     });
 

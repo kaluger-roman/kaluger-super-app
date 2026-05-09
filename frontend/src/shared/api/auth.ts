@@ -38,4 +38,33 @@ export const authApi = {
     const response = await api.put("/auth/profile", data);
     return response.data.user;
   },
+
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<{ message: string }> => {
+    const response = await api.post("/auth/change-password", data);
+    return response.data;
+  },
+
+  changeEmail: async (data: {
+    newEmail: string;
+    password: string;
+  }): Promise<{ message: string }> => {
+    const response = await api.post("/auth/change-email", data);
+    return response.data;
+  },
+
+  verifyEmailChange: async (data: {
+    code: string;
+  }): Promise<AuthResponse & { token: string }> => {
+    const response = await api.post("/auth/verify-email-change", data);
+    return response.data;
+  },
+
+  resendEmailChangeCode: async (): Promise<{ message: string }> => {
+    const response = await api.post("/auth/resend-email-change-code");
+    return response.data;
+  },
 };

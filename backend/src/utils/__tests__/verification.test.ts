@@ -1,7 +1,10 @@
 import {
+  MAX_VERIFICATION_ATTEMPTS,
+  RESEND_COOLDOWN_SECONDS,
   generateVerificationCode,
   getVerificationCodeExpiry,
   isVerificationCodeExpired,
+  isWithinResendCooldown,
 } from "../verification";
 
 describe("Verification Utils", () => {
@@ -96,6 +99,41 @@ describe("Verification Utils", () => {
       expect(isVerificationCodeExpired(now)).toBe(false);
       const justPassed = new Date(now.getTime() - 1);
       expect(isVerificationCodeExpired(justPassed)).toBe(true);
+    });
+  });
+
+  describe("isWithinResendCooldown", () => {
+    it("should return false when sentAt is null", () => {
+      expect(isWithinResendCooldown(null)).toBe(false);
+    });
+
+    it("should return true when sentAt is just now", () => {
+      expect(isWithinResendCooldown(new Date())).toBe(true);
+    });
+
+    it("should return true when sentAt is within cooldown window", () => {
+      const within = new Date(Date.now() - 30 * 1000);
+      expect(isWithinResendCooldown(within)).toBe(true);
+    });
+
+    it("should return false when sentAt is past cooldown window", () => {
+      const past = new Date(Date.now() - (RESEND_COOLDOWN_SECONDS + 1) * 1000);
+      expect(isWithinResendCooldown(past)).toBe(false);
+    });
+
+    it("should return false at exact cooldown boundary", () => {
+      const boundary = new Date(Date.now() - RESEND_COOLDOWN_SECONDS * 1000);
+      expect(isWithinResendCooldown(boundary)).toBe(false);
+    });
+  });
+
+  describe("constants", () => {
+    it("should expose MAX_VERIFICATION_ATTEMPTS", () => {
+      expect(MAX_VERIFICATION_ATTEMPTS).toBe(5);
+    });
+
+    it("should expose RESEND_COOLDOWN_SECONDS", () => {
+      expect(RESEND_COOLDOWN_SECONDS).toBe(60);
     });
   });
 });

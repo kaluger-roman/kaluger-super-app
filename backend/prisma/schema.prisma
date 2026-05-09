@@ -21,6 +21,9 @@ model User {
   isEmailVerified        Boolean   @default(false)
   verificationCode       String?
   verificationCodeExpiry DateTime?
+  verificationCodeSentAt DateTime?
+  verificationAttempts   Int       @default(0)
+  pendingEmail           String?
   taxEnabled             Boolean   @default(false)
   timezone               String?
   createdAt              DateTime  @default(now())

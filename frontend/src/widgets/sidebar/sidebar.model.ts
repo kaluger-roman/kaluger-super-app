@@ -1,5 +1,7 @@
 import { createStore, createEvent, sample } from "effector";
 
+import { userModel } from "@entities";
+
 // Events
 export const sidebarToggled = createEvent();
 export const sidebarClosed = createEvent();
@@ -19,4 +21,9 @@ sample({
   clock: sidebarClosed,
   fn: () => false,
   target: $isSidebarOpen,
+});
+
+sample({
+  clock: userModel.logoutUser,
+  target: sidebarClosed,
 });

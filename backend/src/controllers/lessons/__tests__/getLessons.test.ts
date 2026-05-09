@@ -848,4 +848,79 @@ describe("getLessons controller", () => {
         });
     });
   });
+
+  describe("pagination input safety (regression: NaN propagation)", () => {
+    let pagedUserId: string;
+    let pagedAuthToken: string;
+    let pagedStudentId: string;
+
+    beforeAll(async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: faker.internet.email(),
+          password: "hashed",
+          name: faker.person.fullName(),
+        },
+      });
+      pagedUserId = user.id;
+      pagedAuthToken = generateToken({ userId: user.id, email: user.email });
+
+      const student = await prisma.student.create({
+        data: {
+          name: faker.person.fullName(),
+          contactMethod: "WHATSAPP",
+          tutorId: pagedUserId,
+        },
+      });
+      pagedStudentId = student.id;
+
+      const baseTime = Date.now() + 365 * 24 * 3600 * 1000;
+      await Promise.all(
+        Array.from({ length: 15 }).map((_, i) =>
+          prisma.lesson.create({
+            data: {
+              tutorId: pagedUserId,
+              studentId: pagedStudentId,
+              subject: "MATHEMATICS",
+              lessonType: "SCHOOL",
+              startTime: new Date(baseTime + i * 3600 * 1000),
+              endTime: new Date(baseTime + i * 3600 * 1000 + 3600 * 1000),
+              status: "SCHEDULED",
+              isRecurring: false,
+            },
+          })
+        )
+      );
+    });
+
+    afterAll(async () => {
+      await prisma.lesson.deleteMany({ where: { tutorId: pagedUserId } });
+      await prisma.student.deleteMany({ where: { tutorId: pagedUserId } });
+      await prisma.user.delete({ where: { id: pagedUserId } });
+    });
+
+    it("falls back to default pagination when page/limit are non-numeric", async () => {
+      const res = await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${pagedAuthToken}`)
+        .query({ page: "abc", limit: "xyz" })
+        .expect(200);
+
+      expect(res.body.lessons.length).toBeLessThanOrEqual(10);
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.limit).toBe(10);
+      expect(res.body.pagination.totalPages).toBeGreaterThanOrEqual(1);
+      expect(Number.isFinite(res.body.pagination.totalPages)).toBe(true);
+    });
+
+    it("clamps limit to a safe upper bound", async () => {
+      const res = await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${pagedAuthToken}`)
+        .query({ page: "1", limit: "9999" })
+        .expect(200);
+
+      expect(res.body.pagination.limit).toBe(100);
+    });
+  });
 });

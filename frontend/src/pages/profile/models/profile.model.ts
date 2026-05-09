@@ -14,17 +14,20 @@ import {
   isTaxEnabledWithoutPeriods,
   isUserDefined,
 } from "./profile.helpers";
+import type { ProfileTab } from "./profile.types";
 
 // Gates
 export const ProfilePageGate = createGate();
 
 // Stores
+export const $activeTab = createStore<ProfileTab>("personal");
 export const $isEditMode = createStore<boolean>(false);
 export const $name = createStore<string>("");
 export const $taxEnabled = createStore<boolean>(false);
 export const $error = createStore<string>("");
 
 // Events
+export const tabChanged = createEvent<ProfileTab>();
 export const editRequested = createEvent();
 export const editCancelled = createEvent();
 export const nameChanged = createEvent<string>();
@@ -168,4 +171,17 @@ sample({
 sample({
   clock: ProfilePageGate.close,
   target: editCancelled,
+});
+
+// Change active tab
+sample({
+  clock: tabChanged,
+  target: $activeTab,
+});
+
+// Reset to personal tab when leaving the page
+sample({
+  clock: ProfilePageGate.close,
+  fn: (): ProfileTab => "personal",
+  target: $activeTab,
 });

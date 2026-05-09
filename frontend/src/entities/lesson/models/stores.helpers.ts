@@ -32,15 +32,20 @@ export const updateLessonInSchedule = (
   state: Record<string, Lesson[]>,
   updatedLesson: Lesson
 ): Record<string, Lesson[]> => {
+  const newState = { ...state };
+
+  Object.keys(newState).forEach((key) => {
+    newState[key] = newState[key].filter((lesson) => lesson.id !== updatedLesson.id);
+    if (newState[key].length === 0) {
+      delete newState[key];
+    }
+  });
+
   const dateKey = toDateKey(updatedLesson.startTime);
-  const dayLessons = state[dateKey] || [];
-  const updatedDayLessons = dayLessons.map((lesson) =>
-    lesson.id === updatedLesson.id ? updatedLesson : lesson
-  );
-  return {
-    ...state,
-    [dateKey]: updatedDayLessons,
-  };
+  const dayLessons = newState[dateKey] || [];
+  newState[dateKey] = [...dayLessons, updatedLesson];
+
+  return newState;
 };
 
 export const removeLessonFromSchedule = (

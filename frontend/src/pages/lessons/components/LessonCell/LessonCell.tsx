@@ -59,7 +59,7 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
         {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}
       </Typography>
 
-      {lesson.price && (
+      {lesson.price != null && lesson.price > 0 && (
         <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
           <Typography variant="caption" fontWeight="bold">
             {lesson.price}₽
