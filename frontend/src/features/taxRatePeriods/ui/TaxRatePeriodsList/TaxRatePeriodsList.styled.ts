@@ -7,6 +7,7 @@ export const List = styled(Box)`
   flex-direction: column;
   gap: 4px;
   margin-top: 8px;
+  margin-bottom: 12px;
 `;
 
 export const Row = styled(Typography)<{ $isFuture?: boolean }>`
