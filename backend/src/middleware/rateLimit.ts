@@ -22,3 +22,9 @@ export const adminLoginRateLimiter = rateLimit({
   max: 5,
   message: { error: "Слишком много попыток. Попробуйте позже" },
 });
+
+export const passwordResetRateLimiter = rateLimit({
+  ...baseConfig,
+  max: 5,
+  message: { error: "Слишком много попыток. Попробуйте позже" },
+});

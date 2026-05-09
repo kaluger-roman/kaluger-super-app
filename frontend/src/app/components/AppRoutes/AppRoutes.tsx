@@ -11,6 +11,7 @@ import {
   NewsPage,
   ScreenPage,
   ForgotPasswordPage,
+  ResetPasswordPage,
 } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
@@ -100,6 +101,14 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
         element={
           <AuthLayout>
             <ForgotPasswordPage />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <AuthLayout>
+            <ResetPasswordPage />
           </AuthLayout>
         }
       />

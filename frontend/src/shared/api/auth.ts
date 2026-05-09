@@ -67,4 +67,23 @@ export const authApi = {
     const response = await api.post("/auth/resend-email-change-code");
     return response.data;
   },
+
+  forgotPassword: async (data: { email: string }): Promise<{ message: string }> => {
+    const response = await api.post("/auth/forgot-password", data);
+    return response.data;
+  },
+
+  verifyResetToken: async (data: { token: string }): Promise<{ valid: true }> => {
+    const response = await api.post("/auth/reset-password/verify", data);
+    return response.data;
+  },
+
+  resetPassword: async (data: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<{ message: string }> => {
+    const response = await api.post("/auth/reset-password", data);
+    return response.data;
+  },
 };

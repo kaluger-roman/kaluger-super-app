@@ -7,6 +7,8 @@ import { taxRatePeriodModel } from "@entities/taxRatePeriod";
 import { adminAuthModel, adminDataModel } from "@features/admin";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
+import { forgotPasswordModel } from "@features/forgotPassword";
+import { resetPasswordModel } from "@features/resetPassword";
 import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
 import { financesModel, profileModel } from "@pages/profile";
 import { statisticsModel } from "@pages/ReportsPage";
@@ -33,6 +35,9 @@ export const $isBlocking = combine(
     changeEmail: changeEmailModel.changeEmailFx.pending,
     verifyEmailChange: changeEmailModel.verifyEmailChangeFx.pending,
     resendEmailChangeCode: changeEmailModel.resendEmailChangeCodeFx.pending,
+    forgotPassword: forgotPasswordModel.forgotPasswordFx.pending,
+    verifyResetToken: resetPasswordModel.verifyResetTokenFx.pending,
+    resetPassword: resetPasswordModel.resetPasswordFx.pending,
     adminLogin: adminAuthModel.loginFx.pending,
     adminOverview: adminDataModel.getOverviewFx.pending,
     adminBackupSettings: adminDataModel.getBackupSettingsFx.pending,

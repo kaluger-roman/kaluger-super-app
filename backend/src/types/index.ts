@@ -121,6 +121,20 @@ export type VerifyEmailChangeResult = {
   };
 };
 
+export type ForgotPasswordDto = {
+  email: string;
+};
+
+export type VerifyResetTokenDto = {
+  token: string;
+};
+
+export type ResetPasswordDto = {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export type NewsItemResponse = {
   id: string;
   title: string;
