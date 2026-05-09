@@ -93,6 +93,7 @@ Before writing or modifying code, you MUST read the relevant convention file:
 - **Backend code** → read `docs/conventions/backend.md`
 - **Frontend tests** → read `docs/conventions/frontend-testing.md`
 - **Backend tests** → read `docs/conventions/backend-testing.md`
+- **E2E tests** → read `docs/conventions/e2e-testing.md`
 
 Do NOT skip this step. These files contain critical project-specific patterns (Effector, FSD, Prisma, styled-components) that are not covered in this summary.
 
@@ -131,6 +132,8 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/project:test-frontend <task>` — write frontend tests
 - `/project:test-backend <task>` — write backend tests
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
+- `/e2e-check [base-ref]` — analyze diff vs base, flag user-facing changes without e2e and possibly broken tests; report in `docs/e2e-coverage/checks/`
+- `/e2e-hunt [area]` — parallel inventory of user journeys vs existing e2e; prioritized coverage gaps in `docs/e2e-coverage/`
 
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)

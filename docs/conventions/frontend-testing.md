@@ -8,7 +8,7 @@ Stack: Vitest + React Testing Library + MSW + Playwright
 - **Pure functions** — test in isolation
 - **Components** — test with RTL, wrap in theme provider
 - **Effector stores** — test in isolation with fork
-- **E2E** — screenshot comparisons only, no other assertions
+- **E2E** — see `docs/conventions/e2e-testing.md`. Two modes: functional user-journey tests (default) and visual regression (`@visual` tag).
 - **Mock**: APIs, timers, localStorage
 - **Real**: Effector stores, utils, simple components
 - **No `export default`** — only named exports/imports
