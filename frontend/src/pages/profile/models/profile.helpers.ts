@@ -15,6 +15,11 @@ export const isTaxEnabledWithoutPeriods = ({
   periods: TaxRatePeriod[];
 }): boolean => taxEnabled && periods.length === 0;
 
+export const shouldClearNoPeriodsError = (
+  error: string,
+  periods: TaxRatePeriod[],
+): boolean => error === NO_PERIODS_ERROR && periods.length > 0;
+
 export const buildUpdateProfilePayload = ({
   name,
   taxEnabled,

@@ -2,7 +2,7 @@ import { TextField, Button, Switch, FormControlLabel } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { userModel } from "@entities";
-import { taxRatePeriodsModalModel } from "@features";
+import { TaxRatePeriodsList, taxRatePeriodsModalModel } from "@features";
 import { formatDateTime } from "@shared";
 
 import * as Styled from "./PersonalDataSection.styled";
@@ -40,8 +40,6 @@ export const PersonalDataSection = () => {
             fullWidth
             value={name}
             onChange={(e) => actions.nameChanged(e.target.value)}
-            error={!!error}
-            helperText={error}
           />
         ) : (
           <Styled.InfoValue variant="body1">{user.name}</Styled.InfoValue>
@@ -66,13 +64,21 @@ export const PersonalDataSection = () => {
           </Styled.InfoValue>
         )}
         {user.taxEnabled || taxEnabled ? (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => actions.openModal()}
-          >
-            Настроить ставки
-          </Button>
+          <>
+            <TaxRatePeriodsList />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => actions.openModal()}
+            >
+              Настроить ставки
+            </Button>
+          </>
+        ) : null}
+        {error ? (
+          <Styled.FieldError variant="body2" role="alert">
+            {error}
+          </Styled.FieldError>
         ) : null}
       </Styled.InfoSection>
 

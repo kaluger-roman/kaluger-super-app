@@ -26,6 +26,12 @@ export const InfoValue = styled(Typography)(({ theme }) => ({
   fontSize: "1.125rem",
 }));
 
+export const FieldError = styled(Typography)(({ theme }) => ({
+  color: theme.palette.error.main,
+  marginTop: "8px",
+  fontSize: "0.875rem",
+}));
+
 export const ButtonBox = styled(Box)({
   marginTop: "32px",
   display: "flex",

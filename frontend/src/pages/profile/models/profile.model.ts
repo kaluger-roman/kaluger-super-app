@@ -13,6 +13,7 @@ import {
   getUserTaxEnabled,
   isTaxEnabledWithoutPeriods,
   isUserDefined,
+  shouldClearNoPeriodsError,
 } from "./profile.helpers";
 import type { ProfileTab } from "./profile.types";
 
@@ -118,6 +119,15 @@ sample({
 
 sample({
   clock: taxEnabledToggled,
+  fn: () => "",
+  target: $error,
+});
+
+// Clear NO_PERIODS_ERROR after user adds periods through the modal
+sample({
+  clock: taxRatePeriodModel.$periods,
+  source: $error,
+  filter: shouldClearNoPeriodsError,
   fn: () => "",
   target: $error,
 });
