@@ -1,8 +1,11 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
+import { createGate } from "effector-react";
 
 import { authApi } from "@shared";
 
 import { extractAxiosError } from "./forgotPassword.helpers";
+
+export const ForgotPasswordFormGate = createGate();
 
 export const $email = createStore("");
 export const $isSent = createStore(false);
@@ -47,3 +50,5 @@ sample({
 sample({ clock: formReset, fn: () => "", target: $email });
 sample({ clock: formReset, fn: () => false, target: $isSent });
 sample({ clock: formReset, fn: () => null, target: [$error, $successMessage] });
+
+sample({ clock: ForgotPasswordFormGate.close, target: formReset });

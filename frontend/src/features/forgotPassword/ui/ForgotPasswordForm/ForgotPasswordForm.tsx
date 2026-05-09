@@ -1,7 +1,7 @@
 import type { FC } from "react";
 
 import { Alert, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { useUnit } from "effector-react";
+import { useGate, useUnit } from "effector-react";
 
 import { TextField, Button } from "@shared";
 
@@ -9,8 +9,9 @@ import * as Styled from "./ForgotPasswordForm.styled";
 import { forgotPasswordModel } from "../../models";
 
 export const ForgotPasswordForm: FC = () => {
+  useGate(forgotPasswordModel.ForgotPasswordFormGate);
+
   const email = useUnit(forgotPasswordModel.$email);
-  const isLoading = useUnit(forgotPasswordModel.$isLoading);
   const isSent = useUnit(forgotPasswordModel.$isSent);
   const successMessage = useUnit(forgotPasswordModel.$successMessage);
   const error = useUnit(forgotPasswordModel.$error);
@@ -22,7 +23,7 @@ export const ForgotPasswordForm: FC = () => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isSubmitDisabled = isLoading || email.trim().length === 0;
+  const isSubmitDisabled = email.trim().length === 0;
 
   return (
     <Styled.FormPaper elevation={3} $isMobile={isMobile}>
@@ -74,7 +75,7 @@ export const ForgotPasswordForm: FC = () => {
               disabled={isSubmitDisabled}
               onClick={() => actions.formSubmitted()}
             >
-              {isLoading ? "Отправка..." : "Отправить"}
+              Отправить
             </Button>
             <Styled.RouterLink to="/login">
               <Button fullWidth variant="text" size={isMobile ? "medium" : "large"}>

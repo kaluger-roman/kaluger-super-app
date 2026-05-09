@@ -102,7 +102,7 @@ describe("ForgotPasswordForm", () => {
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
   });
 
-  it("should disable submit while api request is pending", async () => {
+  it("should expose forgotPasswordFx.pending so the global blocking overlay can react", async () => {
     let resolvePromise!: (value: { message: string }) => void;
     vi.mocked(authApi.forgotPassword).mockImplementationOnce(
       () =>
@@ -111,19 +111,22 @@ describe("ForgotPasswordForm", () => {
         }),
     );
 
+    const scope = fork();
     const user = userEvent.setup();
-    renderForm(fork());
+    renderForm(scope);
+
+    expect(scope.getState(forgotPasswordModel.$isLoading)).toBe(false);
 
     await user.type(screen.getByLabelText(/email/i), "user@example.com");
     await user.click(screen.getByRole("button", { name: "Отправить" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Отправка..." })).toBeDisabled();
+      expect(scope.getState(forgotPasswordModel.$isLoading)).toBe(true);
     });
 
     resolvePromise({ message: "ok" });
     await waitFor(() => {
-      expect(forgotPasswordModel.$isLoading).toBeDefined();
+      expect(scope.getState(forgotPasswordModel.$isLoading)).toBe(false);
     });
   });
 });

@@ -1,7 +1,7 @@
-import { useEffect, type FC } from "react";
+import type { FC } from "react";
 
-import { Alert, CircularProgress, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { useUnit } from "effector-react";
+import { Alert, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { useGate, useUnit } from "effector-react";
 
 import { TextField, Button } from "@shared";
 
@@ -13,38 +13,29 @@ type ResetPasswordFormProps = {
 };
 
 export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
+  useGate(resetPasswordModel.ResetPasswordFormGate, { token });
+
   const tokenStatus = useUnit(resetPasswordModel.$tokenStatus);
   const tokenError = useUnit(resetPasswordModel.$tokenError);
   const newPassword = useUnit(resetPasswordModel.$newPassword);
   const confirmPassword = useUnit(resetPasswordModel.$confirmPassword);
   const error = useUnit(resetPasswordModel.$error);
-  const isSubmitting = useUnit(resetPasswordModel.$isSubmitting);
   const isSuccess = useUnit(resetPasswordModel.$isSuccess);
 
   const actions = useUnit({
-    tokenSet: resetPasswordModel.tokenSet,
     newPasswordChanged: resetPasswordModel.newPasswordChanged,
     confirmPasswordChanged: resetPasswordModel.confirmPasswordChanged,
     formSubmitted: resetPasswordModel.formSubmitted,
-    formReset: resetPasswordModel.formReset,
   });
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  useEffect(() => {
-    actions.tokenSet(token);
-    return () => {
-      actions.formReset();
-    };
-  }, [actions, token]);
 
   const isPasswordsMatch =
     confirmPassword.length === 0 || newPassword === confirmPassword;
   const mismatchMessage = !isPasswordsMatch ? "Пароли не совпадают" : null;
 
   const isSubmitDisabled =
-    isSubmitting ||
     newPassword.length === 0 ||
     confirmPassword.length === 0 ||
     !isPasswordsMatch;
@@ -59,7 +50,6 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
 
       {(tokenStatus === "idle" || tokenStatus === "checking") && (
         <Styled.StatusBox>
-          <CircularProgress size={32} />
           <Typography variant="body2" color="text.secondary">
             Проверяем ссылку...
           </Typography>
@@ -123,7 +113,7 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
               disabled={isSubmitDisabled}
               onClick={() => actions.formSubmitted()}
             >
-              {isSubmitting ? "Сохранение..." : "Сохранить"}
+              Сохранить
             </Button>
           </Styled.ActionsBox>
         </>

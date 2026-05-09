@@ -1,9 +1,12 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
+import { createGate } from "effector-react";
 
 import { authApi } from "@shared";
 
 import { extractAxiosError, mapVerifyTokenError } from "./resetPassword.helpers";
 import type { TokenStatus } from "./resetPassword.types";
+
+export const ResetPasswordFormGate = createGate<{ token: string }>();
 
 export const $token = createStore("");
 export const $tokenStatus = createStore<TokenStatus>("idle");
@@ -102,3 +105,12 @@ sample({ clock: formReset, fn: () => "", target: [$token, $newPassword, $confirm
 sample({ clock: formReset, fn: () => "idle" as TokenStatus, target: $tokenStatus });
 sample({ clock: formReset, fn: () => null, target: [$tokenError, $error] });
 sample({ clock: formReset, fn: () => false, target: $isSuccess });
+
+sample({
+  clock: ResetPasswordFormGate.open,
+  source: ResetPasswordFormGate.state,
+  fn: ({ token }) => token,
+  target: tokenSet,
+});
+
+sample({ clock: ResetPasswordFormGate.close, target: formReset });
