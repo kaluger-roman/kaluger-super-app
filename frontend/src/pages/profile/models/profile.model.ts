@@ -1,9 +1,19 @@
-import type { AxiosError } from "axios";
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
-import { userModel } from "@entities";
+import { taxRatePeriodModel, userModel } from "@entities";
 import { authApi, notificationsModel } from "@shared";
+
+import {
+  NO_PERIODS_ERROR,
+  PROFILE_SAVED_MESSAGE,
+  buildUpdateProfilePayload,
+  extractProfileErrorMessage,
+  getUserName,
+  getUserTaxEnabled,
+  isTaxEnabledWithoutPeriods,
+  isUserDefined,
+} from "./profile.helpers";
 
 // Gates
 export const ProfilePageGate = createGate();
@@ -11,151 +21,150 @@ export const ProfilePageGate = createGate();
 // Stores
 export const $isEditMode = createStore<boolean>(false);
 export const $name = createStore<string>("");
-export const $taxRateInput = createStore<string>("6");
+export const $taxEnabled = createStore<boolean>(false);
 export const $error = createStore<string>("");
 
 // Events
 export const editRequested = createEvent();
 export const editCancelled = createEvent();
 export const nameChanged = createEvent<string>();
-export const taxRateInputChanged = createEvent<string>();
+export const taxEnabledToggled = createEvent<boolean>();
 export const saveRequested = createEvent();
 
 // Effects
 export const updateProfileFx = createEffect(
-  async ({ name, taxRate }: { name: string; taxRate: number }) => {
-    return await authApi.updateProfile({ name, taxRate });
-  }
+  async ({ name, taxEnabled }: { name: string; taxEnabled: boolean }) =>
+    authApi.updateProfile({ name, taxEnabled }),
 );
 
-// Samples
+// Samples — load periods on gate open
+sample({
+  clock: ProfilePageGate.open,
+  target: taxRatePeriodModel.periodsRequested,
+});
 
-// Initialize name from current user
+// Samples — initialize editable fields from current user
 sample({
   clock: [ProfilePageGate.open, userModel.$user],
   source: userModel.$user,
-  filter: (user): user is NonNullable<typeof user> => user !== null,
-  fn: (user) => user?.name || "",
+  filter: isUserDefined,
+  fn: getUserName,
   target: $name,
 });
 
-// Initialize taxRateInput from current user
 sample({
   clock: [ProfilePageGate.open, userModel.$user],
   source: userModel.$user,
-  filter: (user): user is NonNullable<typeof user> => user !== null,
-  fn: (user) => String(user?.taxRate ?? 6),
-  target: $taxRateInput,
+  filter: isUserDefined,
+  fn: getUserTaxEnabled,
+  target: $taxEnabled,
 });
 
-// Enter edit mode
+// Samples — edit mode toggle
 sample({
   clock: editRequested,
   fn: () => true,
   target: $isEditMode,
 });
 
-// Cancel editing
 sample({
   clock: editCancelled,
   fn: () => false,
   target: $isEditMode,
 });
 
-// Reset name to original on cancel
+// Samples — reset fields on cancel
 sample({
   clock: editCancelled,
   source: userModel.$user,
-  filter: (user): user is NonNullable<typeof user> => user !== null,
-  fn: (user) => user?.name || "",
+  filter: isUserDefined,
+  fn: getUserName,
   target: $name,
 });
 
-// Reset taxRateInput to original on cancel
 sample({
   clock: editCancelled,
   source: userModel.$user,
-  filter: (user): user is NonNullable<typeof user> => user !== null,
-  fn: (user) => String(user?.taxRate ?? 6),
-  target: $taxRateInput,
+  filter: isUserDefined,
+  fn: getUserTaxEnabled,
+  target: $taxEnabled,
 });
 
-// Reset error on cancel
 sample({
   clock: editCancelled,
   fn: () => "",
   target: $error,
 });
 
-// Update name
+// Samples — field updates
 sample({
   clock: nameChanged,
   target: $name,
 });
 
-// Update taxRateInput
 sample({
-  clock: taxRateInputChanged,
-  target: $taxRateInput,
+  clock: taxEnabledToggled,
+  target: $taxEnabled,
 });
 
-// Reset error on name change
 sample({
   clock: nameChanged,
   fn: () => "",
   target: $error,
 });
 
-// Reset error on taxRate change
 sample({
-  clock: taxRateInputChanged,
+  clock: taxEnabledToggled,
   fn: () => "",
   target: $error,
 });
 
-// Save profile — parse taxRateInput to number before sending
+// Samples — save flow with guard for tax-without-periods
 sample({
   clock: saveRequested,
-  source: { name: $name, taxRateInput: $taxRateInput },
-  fn: ({ name, taxRateInput }) => ({
-    name,
-    taxRate: parseFloat(taxRateInput) || 0,
-  }),
+  source: { taxEnabled: $taxEnabled, periods: taxRatePeriodModel.$periods },
+  filter: isTaxEnabledWithoutPeriods,
+  fn: () => NO_PERIODS_ERROR,
+  target: [$error, notificationsModel.showErrorEvent],
+});
+
+sample({
+  clock: saveRequested,
+  source: {
+    name: $name,
+    taxEnabled: $taxEnabled,
+    periods: taxRatePeriodModel.$periods,
+  },
+  filter: (payload) => !isTaxEnabledWithoutPeriods(payload),
+  fn: buildUpdateProfilePayload,
   target: updateProfileFx,
 });
 
-// Handle success
+// Samples — handle save success / error
 sample({
   clock: updateProfileFx.doneData,
-  fn: (user) => user,
   target: userModel.updateUser,
 });
 
-// Exit edit mode on success
 sample({
   clock: updateProfileFx.doneData,
   fn: () => false,
   target: $isEditMode,
 });
 
-// Show success notification
 sample({
   clock: updateProfileFx.doneData,
-  fn: () => "Профиль успешно обновлён",
+  fn: () => PROFILE_SAVED_MESSAGE,
   target: notificationsModel.showSuccessEvent,
 });
 
-// Handle errors — extract server message from axios response
 sample({
   clock: updateProfileFx.failData,
-  fn: (error) => {
-    const axiosError = error as AxiosError<{ error: string }>;
-    return axiosError.response?.data?.error || error.message || "Не удалось обновить профиль";
-  },
+  fn: extractProfileErrorMessage,
   target: notificationsModel.showErrorEvent,
 });
 
-// Reset edit mode and state when leaving the page
+// Samples — leave page = cancel edit
 sample({
   clock: ProfilePageGate.close,
   target: editCancelled,

@@ -21,7 +21,7 @@ model User {
   isEmailVerified        Boolean   @default(false)
   verificationCode       String?
   verificationCodeExpiry DateTime?
-  taxRate                Float     @default(6.0)
+  taxEnabled             Boolean   @default(false)
   timezone               String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
@@ -32,8 +32,24 @@ model User {
   pushSubscriptions  PushSubscription[]
   reminderSettings   ReminderSettings?
   scheduledReminders ScheduledReminder[]
+  taxRatePeriods     TaxRatePeriod[]
 
   @@map("users")
+}
+
+model TaxRatePeriod {
+  id        String   @id @default(cuid())
+  userId    String
+  startDate DateTime
+  rate      Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, startDate])
+  @@index([userId, startDate])
+  @@map("tax_rate_periods")
 }
 
 model Student {

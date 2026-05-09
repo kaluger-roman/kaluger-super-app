@@ -4,7 +4,27 @@ export type User = {
   name: string;
   createdAt: string;
   isEmailVerified: boolean;
-  taxRate: number;
+  taxEnabled: boolean;
+};
+
+export type TaxRatePeriod = {
+  id: string;
+  startDate: string;
+  rate: number;
+};
+
+export type CreateTaxRatePeriodDto = {
+  startDate: string;
+  rate: number;
+};
+
+export type UpdateTaxRatePeriodDto = Partial<CreateTaxRatePeriodDto>;
+
+export type TaxBreakdownEntry = {
+  rate: number;
+  earnings: number;
+  tax: number;
+  isOutsidePeriods?: boolean;
 };
 
 export type Student = {
@@ -175,5 +195,6 @@ export type Statistics = {
   paymentsInRangeSum?: number;
   paymentsInRangeCount?: number;
   trialLessonsCount?: number;
-  taxAmount: number;
+  taxAmount: number | null;
+  taxBreakdown: TaxBreakdownEntry[] | null;
 };

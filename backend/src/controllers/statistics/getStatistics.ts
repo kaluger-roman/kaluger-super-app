@@ -3,6 +3,8 @@ import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
 import { buildStatisticsWhere, getDateRange, getLastMonthRange } from "./utils";
 import { truncateToMinute } from "../../utils/time";
+import { buildTaxBreakdown } from "../../services/taxRate";
+import type { TaxRatePeriodDto } from "../../types";
 
 export const getStatistics = async (req: AuthRequest, res: Response) => {
   try {
@@ -82,7 +84,13 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { taxRate: true },
+        select: {
+          taxEnabled: true,
+          taxRatePeriods: {
+            orderBy: { startDate: "asc" },
+            select: { id: true, startDate: true, rate: true },
+          },
+        },
       }),
     ]);
 
@@ -113,8 +121,33 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
     ]);
 
     const earningsValue = earnings._sum.price || 0;
-    const taxRate = currentUser?.taxRate ?? 6;
-    const taxAmount = Math.round(earningsValue * taxRate / 100);
+
+    let taxAmount: number | null = null;
+    let taxBreakdown: Awaited<
+      ReturnType<typeof buildTaxBreakdown>
+    >["taxBreakdown"] | null = null;
+
+    if (currentUser?.taxEnabled) {
+      const paidLessons = await prisma.lesson.findMany({
+        where: {
+          tutorId: userId,
+          isPaid: true,
+          paymentDate: paymentDateRange,
+          price: { gt: 0 },
+        },
+        select: { price: true, paymentDate: true },
+      });
+      const periods: TaxRatePeriodDto[] = currentUser.taxRatePeriods.map(
+        (period) => ({
+          id: period.id,
+          startDate: period.startDate.toISOString(),
+          rate: period.rate,
+        }),
+      );
+      const result = buildTaxBreakdown(paidLessons, periods);
+      taxAmount = result.taxAmount;
+      taxBreakdown = result.taxBreakdown;
+    }
 
     res.json({
       completedLessons,
@@ -134,6 +167,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       paymentsInRangeSum: paymentsInRange._sum.price || 0,
       paymentsInRangeCount: paymentsInRange._count.id || 0,
       taxAmount,
+      taxBreakdown,
     });
   } catch (error) {
     console.error("Get statistics error:", error);

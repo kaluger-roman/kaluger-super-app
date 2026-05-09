@@ -55,7 +55,27 @@ export type UpdateLessonDto = Partial<CreateLessonDto> & {
 
 export type UpdateProfileDto = {
   name?: string;
-  taxRate?: number;
+  taxEnabled?: boolean;
+};
+
+export type TaxRatePeriodDto = {
+  id: string;
+  startDate: string;
+  rate: number;
+};
+
+export type CreateTaxRatePeriodDto = {
+  startDate: string;
+  rate: number;
+};
+
+export type UpdateTaxRatePeriodDto = Partial<CreateTaxRatePeriodDto>;
+
+export type TaxBreakdownEntry = {
+  rate: number;
+  earnings: number;
+  tax: number;
+  isOutsidePeriods?: boolean;
 };
 
 export type JwtPayload = {

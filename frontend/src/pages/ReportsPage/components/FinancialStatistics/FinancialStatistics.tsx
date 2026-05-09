@@ -3,6 +3,7 @@ import type { FC } from "react";
 import { AttachMoney, Payments } from "@mui/icons-material";
 import { Typography, CardContent, Box } from "@mui/material";
 
+import { TaxRateInfoTooltip } from "@features";
 import { formatCurrency } from "@shared";
 import type { Statistics } from "@shared";
 
@@ -11,10 +12,15 @@ import { calculateAveragePrice } from "../../ReportsPage.helpers";
 
 type FinancialStatisticsProps = {
   statistics: Statistics;
-  taxRate: number;
 };
 
-export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, taxRate }) => {
+export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }) => {
+  const showTaxCard =
+    statistics.taxAmount !== null && statistics.taxBreakdown !== null;
+  const breakdown = statistics.taxBreakdown ?? [];
+  const taxLabel =
+    breakdown.length === 1 ? `Налоги (${breakdown[0].rate}%)` : "Налоги";
+  const showInfoIcon = breakdown.length > 1;
   return (
     <Styled.StatsContainer>
       <Styled.StatBox>
@@ -104,22 +110,27 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics, 
         </Styled.RedCard>
       </Styled.StatBox>
 
-      {/* Tax amount */}
-      <Styled.StatBox flex="1" minWidth={220}>
-        <Styled.OrangeCard>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Налоги ({taxRate}%)
-            </Typography>
-            <Styled.OrangeAmount variant="h4">
-              {formatCurrency(statistics.taxAmount)}
-            </Styled.OrangeAmount>
-            <Typography variant="body2" color="textSecondary">
-              Сумма налога от заработка за период
-            </Typography>
-          </CardContent>
-        </Styled.OrangeCard>
-      </Styled.StatBox>
+      {/* Tax amount — скрыта целиком когда taxEnabled=false */}
+      {showTaxCard ? (
+        <Styled.StatBox flex="1" minWidth={220}>
+          <Styled.OrangeCard>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                {taxLabel}
+                {showInfoIcon ? (
+                  <TaxRateInfoTooltip breakdown={breakdown} />
+                ) : null}
+              </Typography>
+              <Styled.OrangeAmount variant="h4">
+                {formatCurrency(statistics.taxAmount ?? 0)}
+              </Styled.OrangeAmount>
+              <Typography variant="body2" color="textSecondary">
+                Сумма налога по оплатам за период
+              </Typography>
+            </CardContent>
+          </Styled.OrangeCard>
+        </Styled.StatBox>
+      ) : null}
 
       {/* Potential income */}
       <Styled.StatBox flex="1" minWidth={220}>

@@ -272,73 +272,74 @@ describe("Auth Controller", () => {
       prisma.user.update = originalUpdate;
     });
 
-    it("should update taxRate successfully", async () => {
-      const res = await request(app)
-        .put("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: 13 });
-
-      expect(res.status).toBe(200);
-      expect(res.body.user.taxRate).toBe(13);
-    });
-
-    it("should return default taxRate of 6 for new users", async () => {
+    it("returns taxEnabled=false by default for new user", async () => {
       const res = await request(app)
         .get("/api/auth/profile")
         .set("Authorization", `Bearer ${authToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.user.taxRate).toBeDefined();
+      expect(res.body.user.taxEnabled).toBe(false);
     });
 
-    it("should accept taxRate 0", async () => {
+    it("rejects enabling taxEnabled when user has no periods", async () => {
       const res = await request(app)
         .put("/api/auth/profile")
         .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: 0 });
-
-      expect(res.status).toBe(200);
-      expect(res.body.user.taxRate).toBe(0);
-    });
-
-    it("should accept taxRate 100", async () => {
-      const res = await request(app)
-        .put("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: 100 });
-
-      expect(res.status).toBe(200);
-      expect(res.body.user.taxRate).toBe(100);
-    });
-
-    it("should reject taxRate greater than 100", async () => {
-      const res = await request(app)
-        .put("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: 101 });
+        .send({ taxEnabled: true });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe("Ставка налога должна быть от 0 до 100");
+      expect(res.body.error).toBe(
+        "Чтобы включить учёт налога, добавьте хотя бы один период",
+      );
     });
 
-    it("should reject negative taxRate", async () => {
+    it("enables taxEnabled when user has at least one period", async () => {
+      await prisma.taxRatePeriod.create({
+        data: {
+          userId,
+          startDate: new Date("2024-01-01"),
+          rate: 6,
+        },
+      });
+
       const res = await request(app)
         .put("/api/auth/profile")
         .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: -1 });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe("Ставка налога должна быть от 0 до 100");
-    });
-
-    it("should round taxRate to one decimal place", async () => {
-      const res = await request(app)
-        .put("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test", taxRate: 6.55 });
+        .send({ taxEnabled: true });
 
       expect(res.status).toBe(200);
-      expect(res.body.user.taxRate).toBe(6.6);
+      expect(res.body.user.taxEnabled).toBe(true);
+
+      await prisma.taxRatePeriod.deleteMany({ where: { userId } });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { taxEnabled: false },
+      });
+    });
+
+    it("disables taxEnabled regardless of periods", async () => {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { taxEnabled: true },
+      });
+
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ taxEnabled: false });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.taxEnabled).toBe(false);
+    });
+
+    it("rejects non-boolean taxEnabled", async () => {
+      const res = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ taxEnabled: "yes" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Поле taxEnabled должно быть булевым");
     });
   });
 

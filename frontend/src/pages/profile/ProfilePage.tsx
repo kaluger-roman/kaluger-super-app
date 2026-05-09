@@ -1,8 +1,12 @@
-import { TextField, Button } from "@mui/material";
+import { TextField, Button, Switch, FormControlLabel } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { userModel } from "@entities";
-import { ReminderSettings } from "@features";
+import {
+  ReminderSettings,
+  TaxRatePeriodsModal,
+  taxRatePeriodsModalModel,
+} from "@features";
 import { formatDateTime } from "@shared";
 
 import { profileModel } from "./models";
@@ -13,7 +17,7 @@ export const ProfilePage = () => {
 
   const user = useUnit(userModel.$user);
   const name = useUnit(profileModel.$name);
-  const taxRateInput = useUnit(profileModel.$taxRateInput);
+  const taxEnabled = useUnit(profileModel.$taxEnabled);
   const isEditMode = useUnit(profileModel.$isEditMode);
   const error = useUnit(profileModel.$error);
 
@@ -21,16 +25,17 @@ export const ProfilePage = () => {
     editRequested: profileModel.editRequested,
     editCancelled: profileModel.editCancelled,
     nameChanged: profileModel.nameChanged,
-    taxRateInputChanged: profileModel.taxRateInputChanged,
+    taxEnabledToggled: profileModel.taxEnabledToggled,
     saveRequested: profileModel.saveRequested,
+    openModal: taxRatePeriodsModalModel.modalOpened,
   });
 
   if (!user) return null;
 
   const hasNameChanged = name.trim() !== user.name;
-  const hasTaxRateChanged = taxRateInput !== String(user.taxRate);
+  const hasTaxEnabledChanged = taxEnabled !== user.taxEnabled;
   const hasChanges =
-    (hasNameChanged || hasTaxRateChanged) && name.trim().length > 0;
+    (hasNameChanged || hasTaxEnabledChanged) && name.trim().length > 0;
 
   return (
     <Styled.StyledContainer maxWidth="md">
@@ -55,18 +60,31 @@ export const ProfilePage = () => {
         </Styled.InfoSection>
 
         <Styled.InfoSection>
-          <Styled.InfoLabel variant="body2">Ставка налога (%)</Styled.InfoLabel>
+          <Styled.InfoLabel variant="body2">Учитывать налог</Styled.InfoLabel>
           {isEditMode ? (
-            <TextField
-              fullWidth
-              type="number"
-              value={taxRateInput}
-              onChange={(e) => actions.taxRateInputChanged(e.target.value)}
-              inputProps={{ min: 0, max: 100, step: 0.1 }}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={taxEnabled}
+                  onChange={(e) => actions.taxEnabledToggled(e.target.checked)}
+                />
+              }
+              label={taxEnabled ? "включено" : "выключено"}
             />
           ) : (
-            <Styled.InfoValue variant="body1">{user.taxRate}%</Styled.InfoValue>
+            <Styled.InfoValue variant="body1">
+              {user.taxEnabled ? "включено" : "выключено"}
+            </Styled.InfoValue>
           )}
+          {user.taxEnabled || taxEnabled ? (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => actions.openModal()}
+            >
+              Настроить ставки
+            </Button>
+          ) : null}
         </Styled.InfoSection>
 
         <Styled.InfoSection>
@@ -102,6 +120,7 @@ export const ProfilePage = () => {
       </Styled.StyledPaper>
 
       <ReminderSettings />
+      <TaxRatePeriodsModal />
     </Styled.StyledContainer>
   );
 };

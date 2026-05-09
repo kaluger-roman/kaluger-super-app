@@ -36,7 +36,7 @@ describe("ProfilePage", () => {
     name: "Test User",
     createdAt: "2024-01-01T00:00:00Z",
     isEmailVerified: true,
-    taxRate: 6,
+    taxEnabled: false,
   };
 
   beforeEach(() => {
@@ -111,7 +111,7 @@ describe("ProfilePage", () => {
       values: [
         [userModel.$user, mockUser],
         [profileModel.$name, "Test User"],
-        [profileModel.$taxRateInput, "6"],
+        [profileModel.$taxEnabled, false],
         [profileModel.$isEditMode, true],
         [profileModel.$error, ""],
       ],
@@ -121,6 +121,40 @@ describe("ProfilePage", () => {
 
     const saveButton = screen.getByRole("button", { name: /сохранить/i });
     expect(saveButton).toBeDisabled();
+  });
+
+  it("shows 'Настроить ставки' button only when taxEnabled is true", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, { ...mockUser, taxEnabled: true }],
+        [profileModel.$name, mockUser.name],
+        [profileModel.$taxEnabled, true],
+        [profileModel.$isEditMode, false],
+        [profileModel.$error, ""],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
+    expect(
+      screen.getByRole("button", { name: /настроить ставки/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides 'Настроить ставки' button when tax disabled", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, mockUser],
+        [profileModel.$name, mockUser.name],
+        [profileModel.$taxEnabled, false],
+        [profileModel.$isEditMode, false],
+        [profileModel.$error, ""],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
+    expect(screen.queryByRole("button", { name: /настроить ставки/i })).toBeNull();
   });
 
   it("should enable save button when name is different from user name", async () => {

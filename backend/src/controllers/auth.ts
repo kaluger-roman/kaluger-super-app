@@ -79,7 +79,7 @@ export const register = async (
         email: user.email,
         name: user.name,
         isEmailVerified: user.isEmailVerified,
-        taxRate: user.taxRate,
+        taxEnabled: user.taxEnabled,
       },
     });
   } catch (error) {
@@ -132,7 +132,7 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        taxRate: user.taxRate,
+        taxEnabled: user.taxEnabled,
       },
     });
   } catch (error) {
@@ -153,7 +153,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         name: true,
         createdAt: true,
         isEmailVerified: true,
-        taxRate: true,
+        taxEnabled: true,
       },
     });
 
@@ -171,24 +171,32 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { name, taxRate } = req.body;
+    const { name, taxEnabled } = req.body;
 
     if (name !== undefined && (!name || name.trim().length === 0)) {
       return res.status(400).json({ error: "Имя не может быть пустым" });
     }
 
-    if (taxRate !== undefined) {
-      if (typeof taxRate !== "number" || taxRate < 0 || taxRate > 100) {
-        return res
-          .status(400)
-          .json({ error: "Ставка налога должна быть от 0 до 100" });
+    if (taxEnabled !== undefined && typeof taxEnabled !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: "Поле taxEnabled должно быть булевым" });
+    }
+
+    if (taxEnabled === true) {
+      const periodsCount = await prisma.taxRatePeriod.count({
+        where: { userId },
+      });
+      if (periodsCount === 0) {
+        return res.status(400).json({
+          error: "Чтобы включить учёт налога, добавьте хотя бы один период",
+        });
       }
     }
 
-    const data: { name?: string; taxRate?: number } = {};
+    const data: { name?: string; taxEnabled?: boolean } = {};
     if (name !== undefined) data.name = name.trim();
-    if (taxRate !== undefined)
-      data.taxRate = Math.round(taxRate * 10) / 10;
+    if (taxEnabled !== undefined) data.taxEnabled = taxEnabled;
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -199,7 +207,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         name: true,
         createdAt: true,
         isEmailVerified: true,
-        taxRate: true,
+        taxEnabled: true,
       },
     });
 
