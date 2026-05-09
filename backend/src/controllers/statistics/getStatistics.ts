@@ -121,8 +121,20 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         _count: { id: true },
         _sum: { price: true },
       }),
+      // Lessons that contributed money in the filter window. Primary signal
+      // is `paymentDate`, but legacy/imported lessons may be marked as paid
+      // without one — for those we fall back to `startTime` so the income
+      // still surfaces in the period it was earned.
       prisma.lesson.aggregate({
-        where: { tutorId: userId, isPaid: true, paymentDate: paymentDateRange, price: { gt: 0 } },
+        where: {
+          tutorId: userId,
+          isPaid: true,
+          price: { gt: 0 },
+          OR: [
+            { paymentDate: paymentDateRange },
+            { paymentDate: null, startTime: paymentDateRange },
+          ],
+        },
         _count: { id: true },
         _sum: { price: true },
       }),
@@ -131,10 +143,15 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
             where: {
               tutorId: userId,
               isPaid: true,
-              paymentDate: paymentDateRange,
               price: { gt: 0 },
+              OR: [
+                { paymentDate: paymentDateRange },
+                { paymentDate: null, startTime: paymentDateRange },
+              ],
             },
-            select: { price: true, paymentDate: true },
+            // Tax is normally assigned by paymentDate; if it's missing we use
+            // startTime as the effective date (legacy lessons fallback).
+            select: { price: true, paymentDate: true, startTime: true },
           })
         : Promise.resolve(null),
     ]);
@@ -154,7 +171,16 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
           rate: period.rate,
         }),
       );
-      const result = buildTaxBreakdown(paidLessonsForTax, periods);
+      // Pass the effective date (paymentDate ?? startTime) so legacy paid
+      // lessons without a paymentDate still get a rate assigned.
+      const lessonsForTax = paidLessonsForTax.map((lesson) => ({
+        price: lesson.price,
+        paymentDate: lesson.paymentDate ?? lesson.startTime,
+      }));
+      const result = buildTaxBreakdown(lessonsForTax, periods, {
+        start: paymentDateRange.gte,
+        end: paymentDateRange.lte,
+      });
       taxAmount = result.taxAmount;
       taxBreakdown = result.taxBreakdown;
     }
