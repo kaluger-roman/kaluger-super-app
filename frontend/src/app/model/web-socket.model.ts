@@ -121,8 +121,10 @@ sample({
   target: lessonModel.updateLesson,
 });
 
-// Reconnect after 5 seconds if WebSocket is enabled
-const reconnectTimeoutFx = createEffect(() => {
+// Reconnect after 5 seconds if WebSocket is enabled.
+// Exported so tests can override its handler via `fork({ handlers: ... })`
+// without dealing with the global setTimeout / WebSocket mock plumbing.
+export const reconnectTimeoutFx = createEffect(() => {
   return new Promise<void>((resolve) => {
     setTimeout(() => resolve(), 5000);
   });
@@ -130,12 +132,16 @@ const reconnectTimeoutFx = createEffect(() => {
 
 sample({
   clock: webSocketClosed,
-  source: $isWebSocketEnabled,
-  filter: (isEnabled) => isEnabled,
+  source: { isEnabled: $isWebSocketEnabled, pending: reconnectTimeoutFx.pending },
+  filter: ({ isEnabled, pending }) => isEnabled && !pending,
+  fn: () => undefined,
   target: reconnectTimeoutFx,
 });
 
 sample({
   clock: reconnectTimeoutFx.doneData,
+  source: $isWebSocketEnabled,
+  filter: (isEnabled) => isEnabled,
+  fn: () => undefined,
   target: connectWebSocket,
 });

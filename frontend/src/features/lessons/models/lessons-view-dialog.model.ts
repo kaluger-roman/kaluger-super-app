@@ -221,14 +221,6 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
-  source: $viewingLesson,
-  filter: (viewing, updated): viewing is Lesson => Boolean(viewing && viewing.id === updated.id),
-  fn: () => false,
-  target: $isViewDialogOpen,
-});
-
-sample({
   clock: lessonModel.removeLessonFx.doneData,
   fn: () => false,
   target: $isViewDialogOpen,

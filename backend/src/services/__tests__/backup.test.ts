@@ -61,6 +61,7 @@ describe("backup service", () => {
     it("should return existing settings", async () => {
       await prisma.backupSettings.create({
         data: {
+          id: "backup-settings-singleton",
           enabled: false,
           intervalHours: 12,
           maxStorageMb: 500,
@@ -72,6 +73,20 @@ describe("backup service", () => {
       expect(settings.enabled).toBe(false);
       expect(settings.intervalHours).toBe(12);
       expect(settings.maxStorageMb).toBe(500);
+    });
+
+    it("should not create duplicate rows on concurrent first-time access (regression: findFirst+create race)", async () => {
+      // Regression for bug-hunt 2026-05-09-3 #8: parallel callers used to both
+      // see findFirst -> null and both call create, ending with two rows.
+      // upsert with a fixed singleton id is race-safe.
+      await Promise.all([
+        getBackupSettings(),
+        getBackupSettings(),
+        getBackupSettings(),
+      ]);
+
+      const count = await prisma.backupSettings.count();
+      expect(count).toBe(1);
     });
   });
 
@@ -114,7 +129,12 @@ describe("backup service", () => {
   describe("runBackupJob", () => {
     it("should skip backup when disabled", async () => {
       await prisma.backupSettings.create({
-        data: { enabled: false, intervalHours: 6, maxStorageMb: 300 },
+        data: {
+          id: "backup-settings-singleton",
+          enabled: false,
+          intervalHours: 6,
+          maxStorageMb: 300,
+        },
       });
 
       mockExec.mockClear();
@@ -127,6 +147,7 @@ describe("backup service", () => {
     it("should skip backup when interval not yet elapsed", async () => {
       await prisma.backupSettings.create({
         data: {
+          id: "backup-settings-singleton",
           enabled: true,
           intervalHours: 6,
           maxStorageMb: 300,
@@ -145,6 +166,7 @@ describe("backup service", () => {
       const sixHoursAgo = new Date(Date.now() - 7 * 60 * 60 * 1000);
       await prisma.backupSettings.create({
         data: {
+          id: "backup-settings-singleton",
           enabled: true,
           intervalHours: 6,
           maxStorageMb: 300,
@@ -170,6 +192,49 @@ describe("backup service", () => {
       expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(
         sixHoursAgo.getTime()
       );
+    });
+
+    it("should not start a parallel pg_dump while another is running (regression: cron overlap)", async () => {
+      const sixHoursAgo = new Date(Date.now() - 7 * 60 * 60 * 1000);
+      await prisma.backupSettings.create({
+        data: {
+          id: "backup-settings-singleton",
+          enabled: true,
+          intervalHours: 6,
+          maxStorageMb: 300,
+          lastBackupAt: sixHoursAgo,
+        },
+      });
+
+      let resolveFirstExec: () => void = () => undefined;
+      const firstExecStarted = new Promise<void>((resolve) => {
+        resolveFirstExec = resolve;
+      });
+      let resolveFirstExecBody: () => void = () => undefined;
+      const firstExecBody = new Promise<void>((resolve) => {
+        resolveFirstExecBody = resolve;
+      });
+
+      mockExec.mockClear();
+      mockExec.mockImplementation(
+        (cmd: string, _opts: unknown, cb: (err: unknown, result: unknown) => void) => {
+          resolveFirstExec();
+          firstExecBody.then(() => {
+            const match = cmd.match(/> "(.+)"/);
+            if (match) fs.writeFileSync(match[1], Buffer.alloc(1024));
+            cb(null, { stdout: "", stderr: "" });
+          });
+        }
+      );
+
+      const first = runBackupJob();
+      await firstExecStarted;
+      // Second tick lands while first is mid-flight — must be a no-op.
+      const second = runBackupJob();
+      resolveFirstExecBody();
+      await Promise.all([first, second]);
+
+      expect(mockExec).toHaveBeenCalledTimes(1);
     });
   });
 });

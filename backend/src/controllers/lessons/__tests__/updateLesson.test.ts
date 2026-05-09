@@ -165,44 +165,50 @@ describe("updateLesson controller", () => {
       });
   });
 
-  it("shifts recurring lessons and handles conflicts", async () => {
-    // prepare mocks
-    const shiftSpy = jest.spyOn(
+  it("returns 409 BEFORE updating the base lesson when recurring shift would conflict (regression: partial-state on shift conflict)", async () => {
+    // Regression for bug-hunt 2026-05-09-3 #3: previously the base lesson
+    // committed first and shift conflicts threw → 500 with the base already
+    // updated. The fix pre-checks conflicts and returns 409 without DB writes.
+    const previewSpy = jest.spyOn(
       recurringHelpers,
-      "shiftFutureRecurringLessons"
+      "previewShiftFutureRecurringLessons"
     );
-    (shiftSpy as jest.Mock).mockImplementation(async () => ({
-      shifted: 0,
+    (previewSpy as jest.Mock).mockImplementation(async () => ({
+      planned: [],
       conflicts: [{ lessonId: "x", conflictingLessonId: "y" }],
     }));
 
+    const baseStart = new Date(Date.now() + 24 * 3600 * 1000);
+    const baseEnd = new Date(Date.now() + 24 * 3600 * 1000 + 3600000);
     const base = await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
         subject: "MATHEMATICS",
         lessonType: "SCHOOL",
-        startTime: new Date(Date.now() + 24 * 3600 * 1000),
-        endTime: new Date(Date.now() + 24 * 3600 * 1000 + 3600000),
+        startTime: baseStart,
+        endTime: baseEnd,
         isRecurring: true,
         status: "SCHEDULED",
       },
     });
 
-    // attempt to change time which will trigger shift and cause conflict -> should return 500
+    const newStart = new Date(Date.now() + 2 * 24 * 3600 * 1000);
+    const newEnd = new Date(Date.now() + 2 * 24 * 3600 * 1000 + 3600000);
+
     await request(app)
       .put(`/api/lessons/${base.id}`)
       .set("Authorization", `Bearer ${authToken}`)
-      .send({
-        startTime: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),
-        endTime: new Date(
-          Date.now() + 2 * 24 * 3600 * 1000 + 3600000
-        ).toISOString(),
-      })
-      .expect(500)
-      .then((res) => expect(res.body.error).toBeDefined());
+      .send({ startTime: newStart.toISOString(), endTime: newEnd.toISOString() })
+      .expect(409)
+      .then((res) => expect(res.body.error).toMatch(/конфликт/));
 
-    shiftSpy.mockRestore();
+    // Critical: base lesson must not have been updated despite the conflict
+    const after = await prisma.lesson.findUnique({ where: { id: base.id } });
+    expect(after!.startTime.getTime()).toBe(baseStart.getTime());
+    expect(after!.endTime.getTime()).toBe(baseEnd.getTime());
+
+    previewSpy.mockRestore();
   });
 
   it("updates price for future recurring lessons and broadcasts websocket on status change", async () => {
@@ -309,8 +315,8 @@ describe("updateLesson controller", () => {
 
   it("does not call shift or price updater when status is RESCHEDULED", async () => {
     const shiftSpy = jest
-      .spyOn(recurringHelpers, "shiftFutureRecurringLessons")
-      .mockResolvedValue({ shifted: 0 });
+      .spyOn(recurringHelpers, "previewShiftFutureRecurringLessons")
+      .mockResolvedValue({ planned: [], conflicts: [] });
     const priceSpy = jest
       .spyOn(recurringHelpers, "updatePriceForFutureRecurringLessons")
       .mockResolvedValue({ updated: 0 });
@@ -377,12 +383,12 @@ describe("updateLesson controller", () => {
     priceSpy.mockRestore();
   });
 
-  it("calls shiftFutureRecurringLessons on successful shift and proceeds", async () => {
-    const shiftSpy = jest.spyOn(
+  it("calls previewShiftFutureRecurringLessons on successful shift and proceeds", async () => {
+    const previewSpy = jest.spyOn(
       recurringHelpers,
-      "shiftFutureRecurringLessons"
+      "previewShiftFutureRecurringLessons"
     );
-    (shiftSpy as jest.Mock).mockResolvedValue({ shifted: 2 });
+    (previewSpy as jest.Mock).mockResolvedValue({ planned: [], conflicts: [] });
 
     const r = await prisma.lesson.create({
       data: {
@@ -411,8 +417,8 @@ describe("updateLesson controller", () => {
         expect(res.body.message).toMatch(/Урок успешно обновлен/);
       });
 
-    expect(shiftSpy).toHaveBeenCalled();
-    shiftSpy.mockRestore();
+    expect(previewSpy).toHaveBeenCalled();
+    previewSpy.mockRestore();
   });
 
   it("returns 400 when only startTime is provided and becomes >= existing endTime", async () => {
@@ -509,6 +515,9 @@ describe("updateLesson controller", () => {
 
     expect(paidAfter?.status).toBe("CANCELLED");
     expect(paidAfter?.isPaid).toBe(false);
+    // Regression for bug-hunt 2026-05-09-3 #2: paymentDate must be cleared
+    // (Prisma treats `undefined` as no-op, so a plain `delete` left it stale).
+    expect(paidAfter?.paymentDate).toBeNull();
     expect(nextAfter?.isPaid).toBe(true);
     expect(nextAfter?.paymentDate?.getTime()).toBe(paymentDate.getTime());
 

@@ -40,16 +40,18 @@ describe("Email Verification Controller", () => {
       expect(res.body.error).toBe("Email и код подтверждения обязательны");
     });
 
-    it("should return 404 when user not found", async () => {
+    it("should return generic 400 (not 404) for unknown email (regression: email enumeration)", async () => {
+      // Regression for bug-hunt 2026-05-09-3 #10: a 404 here let unauthenticated
+      // callers enumerate registered users.
       const res = await request(app)
         .post("/api/auth/verify-email")
         .send({ email: "nonexistent@example.com", code: "123456" });
 
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe("Пользователь не найден");
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Неверный код подтверждения");
     });
 
-    it("should return 400 when email already verified", async () => {
+    it("should return generic 400 for already-verified email (regression: email enumeration)", async () => {
       const user = await prisma.user.create({
         data: {
           email: faker.internet.email().toLowerCase(),
@@ -64,12 +66,12 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "123456" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe("Email уже подтвержден");
+      expect(res.body.error).toBe("Неверный код подтверждения");
 
       await prisma.user.delete({ where: { id: user.id } });
     });
 
-    it("should return 400 when verification code not found", async () => {
+    it("should return generic 400 when verification code not yet requested", async () => {
       const user = await prisma.user.create({
         data: {
           email: faker.internet.email().toLowerCase(),
@@ -84,9 +86,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "123456" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Код подтверждения не найден. Запросите новый код",
-      );
+      expect(res.body.error).toBe("Неверный код подтверждения");
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -238,16 +238,17 @@ describe("Email Verification Controller", () => {
       expect(res.body.error).toBe("Email обязателен");
     });
 
-    it("should return 404 when user not found", async () => {
+    it("should return neutral 200 (not 404) for unknown email (regression: email enumeration)", async () => {
       const res = await request(app)
         .post("/api/auth/resend-verification")
         .send({ email: "nonexistent@example.com" });
 
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe("Пользователь не найден");
+      expect(res.status).toBe(200);
+      expect(res.body.message).toMatch(/Если такой email/);
+      expect(mockSendVerificationEmail).not.toHaveBeenCalled();
     });
 
-    it("should return 400 when email already verified", async () => {
+    it("should return neutral 200 for already-verified email (regression: email enumeration)", async () => {
       const user = await prisma.user.create({
         data: {
           email: faker.internet.email().toLowerCase(),
@@ -261,13 +262,14 @@ describe("Email Verification Controller", () => {
         .post("/api/auth/resend-verification")
         .send({ email: user.email });
 
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe("Email уже подтвержден");
+      expect(res.status).toBe(200);
+      expect(res.body.message).toMatch(/Если такой email/);
+      expect(mockSendVerificationEmail).not.toHaveBeenCalled();
 
       await prisma.user.delete({ where: { id: user.id } });
     });
 
-    it("should generate new code and send email successfully", async () => {
+    it("should generate new code and send email successfully (still using neutral 200)", async () => {
       const user = await prisma.user.create({
         data: {
           email: faker.internet.email().toLowerCase(),
@@ -283,7 +285,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email });
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Код подтверждения отправлен на email");
+      expect(res.body.message).toMatch(/Если такой email/);
 
       expect(mockSendVerificationEmail).toHaveBeenCalledWith(
         user.email,
