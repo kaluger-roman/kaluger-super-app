@@ -13,7 +13,7 @@ describe("POST /api/auth/change-password", () => {
     const hashedPassword = await hashPassword(currentPassword);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: faker.internet.email().toLowerCase(),
         password: hashedPassword,
         name: faker.person.fullName(),
         isEmailVerified: true,

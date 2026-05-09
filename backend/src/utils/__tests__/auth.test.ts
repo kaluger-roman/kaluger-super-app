@@ -51,4 +51,16 @@ describe("auth utils", () => {
     expect(validatePassword("Abcdefgh")).toBe(false); // missing digit
     expect(validatePassword("A1b2C3d")).toBe(false); // too short
   });
+
+  it("generateToken should throw when JWT_SECRET is not set (regression: hardcoded fallback removed)", () => {
+    const original = process.env.JWT_SECRET;
+    delete process.env.JWT_SECRET;
+    try {
+      expect(() =>
+        generateToken({ userId: "u1", email: "a@b.c" })
+      ).toThrow(/JWT_SECRET/);
+    } finally {
+      process.env.JWT_SECRET = original;
+    }
+  });
 });

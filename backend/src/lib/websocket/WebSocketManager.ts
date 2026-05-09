@@ -25,6 +25,18 @@ export class WebSocketManager {
     ws.userId = decoded.userId;
     ws.email = decoded.email;
 
+    // If a previous connection exists for this user, close it before replacing.
+    // The old socket's close-handler will fire later but won't affect the new one
+    // because of the identity check below.
+    const previous = this.clients.get(decoded.userId);
+    if (previous && previous !== ws) {
+      try {
+        previous.close(4000, "Replaced by newer connection");
+      } catch (error) {
+        console.error("Error closing previous WebSocket:", error);
+      }
+    }
+
     // Store client connection
     this.clients.set(decoded.userId, ws);
 
@@ -33,18 +45,22 @@ export class WebSocketManager {
     // Send welcome message
     sendWelcomeMessage(ws, decoded.userId);
 
-    // Handle disconnection
+    // Handle disconnection — only remove if this socket is still the registered one
     ws.on("close", () => {
       console.log(
         `WebSocket disconnected: ${decoded.email} (${decoded.userId})`
       );
-      this.clients.delete(decoded.userId);
+      if (this.clients.get(decoded.userId) === ws) {
+        this.clients.delete(decoded.userId);
+      }
     });
 
-    // Handle errors
+    // Handle errors — same identity check as close
     ws.on("error", (error) => {
       console.error(`WebSocket error for user ${decoded.userId}:`, error);
-      this.clients.delete(decoded.userId);
+      if (this.clients.get(decoded.userId) === ws) {
+        this.clients.delete(decoded.userId);
+      }
     });
 
     // Handle incoming messages

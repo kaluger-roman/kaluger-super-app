@@ -7,6 +7,7 @@ import {
   validatePassword,
   generateVerificationCode,
   getVerificationCodeExpiry,
+  normalizeEmail,
 } from "../utils";
 import { CreateUserDto, LoginDto } from "../types";
 import prisma from "../lib/prisma";
@@ -18,16 +19,16 @@ export const register = async (
   res: Response,
 ) => {
   try {
-    const { email, password, name } = req.body;
+    const { email: rawEmail, password, name } = req.body;
 
     // Validation
-    if (!email || !password || !name) {
+    if (!rawEmail || !password || !name) {
       return res
         .status(400)
         .json({ error: "Email, пароль и имя обязательны для заполнения" });
     }
 
-    if (!validateEmail(email)) {
+    if (!validateEmail(rawEmail)) {
       return res.status(400).json({ error: "Неверный формат email" });
     }
 
@@ -37,6 +38,8 @@ export const register = async (
           "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, а также цифры",
       });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -92,14 +95,16 @@ export const register = async (
 
 export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
 
     // Validation
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return res
         .status(400)
         .json({ error: "Email и пароль обязательны для заполнения" });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     // Find user
     const user = await prisma.user.findUnique({

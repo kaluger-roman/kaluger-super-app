@@ -48,6 +48,12 @@ describe("StudentInfo", () => {
     expect(screen.queryByText(/₽\/урок/)).not.toBeInTheDocument();
   });
 
+  it("should not render hourly rate row when value is 0 (regression: truthiness check)", () => {
+    const freeStudent = { ...mockStudent, hourlyRate: 0 };
+    renderWithTheme(<StudentInfo student={freeStudent} />);
+    expect(screen.queryByText(/₽\/урок/)).not.toBeInTheDocument();
+  });
+
   it("should render all fields when all provided", () => {
     renderWithTheme(<StudentInfo student={mockStudent} />);
     expect(screen.getByText("👤 Иван Иванов")).toBeInTheDocument();

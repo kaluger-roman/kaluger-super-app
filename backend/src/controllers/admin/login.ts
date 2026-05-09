@@ -13,23 +13,24 @@ export const adminLogin = async (req: Request, res: Response) => {
     }
 
     const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
 
-    if (!adminEmail || !adminPassword) {
+    if (!adminEmail || !adminPasswordHash) {
       return res.status(500).json({ error: "Админ не настроен" });
     }
 
-    if (email !== adminEmail) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail !== adminEmail.trim().toLowerCase()) {
       return res.status(401).json({ error: "Неверный email или пароль" });
     }
 
-    const isPasswordValid = password === adminPassword;
+    const isPasswordValid = await comparePassword(password, adminPasswordHash);
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Неверный email или пароль" });
     }
 
-    const token = generateAdminToken({ email, isAdmin: true });
+    const token = generateAdminToken({ email: normalizedEmail, isAdmin: true });
 
     res.json({ token });
   } catch (error) {

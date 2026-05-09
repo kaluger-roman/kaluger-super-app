@@ -2,7 +2,11 @@ import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import prisma from "../../../lib/prisma";
-import { generateAdminToken, generateToken } from "../../../utils/auth";
+import {
+  generateAdminToken,
+  generateToken,
+  hashPassword,
+} from "../../../utils/auth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -11,15 +15,15 @@ describe("admin integration tests", () => {
   const adminPassword = "TestAdmin123";
   let adminToken: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.ADMIN_EMAIL = adminEmail;
-    process.env.ADMIN_PASSWORD = adminPassword;
+    process.env.ADMIN_PASSWORD_HASH = await hashPassword(adminPassword);
     adminToken = generateAdminToken({ email: adminEmail, isAdmin: true });
   });
 
   afterAll(() => {
     delete process.env.ADMIN_EMAIL;
-    delete process.env.ADMIN_PASSWORD;
+    delete process.env.ADMIN_PASSWORD_HASH;
   });
 
   describe("POST /api/admin/login", () => {
@@ -40,6 +44,27 @@ describe("admin integration tests", () => {
         .expect(401);
 
       expect(res.body.error).toBe("Неверный email или пароль");
+    });
+
+    it("should return 401 when password equals stored hash literally (regression: plain compare removed)", async () => {
+      const res = await request(app)
+        .post("/api/admin/login")
+        .send({
+          email: adminEmail,
+          password: process.env.ADMIN_PASSWORD_HASH,
+        })
+        .expect(401);
+
+      expect(res.body.error).toBe("Неверный email или пароль");
+    });
+
+    it("should accept email with different letter case (regression: email normalization)", async () => {
+      const res = await request(app)
+        .post("/api/admin/login")
+        .send({ email: adminEmail.toUpperCase(), password: adminPassword })
+        .expect(200);
+
+      expect(res.body.token).toBeDefined();
     });
 
     it("should return 401 with wrong email", async () => {

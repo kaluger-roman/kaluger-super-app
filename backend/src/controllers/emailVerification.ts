@@ -5,6 +5,7 @@ import {
   generateVerificationCode,
   getVerificationCodeExpiry,
   isVerificationCodeExpired,
+  normalizeEmail,
 } from "../utils";
 import type { VerifyEmailDto, ResendVerificationDto } from "../types";
 import prisma from "../lib/prisma";
@@ -15,13 +16,15 @@ export const verifyEmail = async (
   res: Response,
 ) => {
   try {
-    const { email, code } = req.body;
+    const { email: rawEmail, code } = req.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return res
         .status(400)
         .json({ error: "Email и код подтверждения обязательны" });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -107,11 +110,13 @@ export const resendVerification = async (
   res: Response,
 ) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
 
-    if (!email) {
+    if (!rawEmail) {
       return res.status(400).json({ error: "Email обязателен" });
     }
+
+    const email = normalizeEmail(rawEmail);
 
     const user = await prisma.user.findUnique({
       where: { email },

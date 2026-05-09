@@ -25,8 +25,11 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       paymentDateTo,
     } = req.query;
 
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(
+      100,
+      Math.max(1, parseInt(limit as string, 10) || 10)
+    );
     const skip = (pageNum - 1) * limitNum;
     const where: Prisma.LessonWhereInput = { tutorId: userId };
 

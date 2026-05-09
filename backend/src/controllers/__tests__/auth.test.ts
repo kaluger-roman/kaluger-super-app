@@ -11,7 +11,7 @@ describe("Auth Controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: faker.internet.email().toLowerCase(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -74,7 +74,7 @@ describe("Auth Controller", () => {
       expect(res.status).toBe(201);
       expect(res.body.token).toBeUndefined();
       expect(res.body.user).toMatchObject({
-        email,
+        email: email.toLowerCase(),
         name: "User",
         isEmailVerified: false,
       });
@@ -82,6 +82,24 @@ describe("Auth Controller", () => {
 
       // Clean up created user
       await prisma.user.delete({ where: { id: res.body.user.id } });
+    });
+
+    it("normalizes email to lowercase and rejects mixed-case duplicates (regression: case-insensitive uniqueness)", async () => {
+      const lowerEmail = `case-${faker.string.alphanumeric(6).toLowerCase()}@example.com`;
+      const upperEmail = lowerEmail.toUpperCase();
+
+      const first = await request(app)
+        .post("/api/auth/register")
+        .send({ email: upperEmail, password: "Password1A", name: "First" });
+      expect(first.status).toBe(201);
+      expect(first.body.user.email).toBe(lowerEmail);
+
+      const second = await request(app)
+        .post("/api/auth/register")
+        .send({ email: lowerEmail, password: "Password1A", name: "Dup" });
+      expect(second.status).toBe(409);
+
+      await prisma.user.delete({ where: { id: first.body.user.id } });
     });
   });
 
@@ -127,7 +145,10 @@ describe("Auth Controller", () => {
         .expect(201);
 
       // Verify email manually (emails aren't sent in tests)
-      const user = await prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = email.toLowerCase();
+      const user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
       await prisma.user.update({
         where: { id: user!.id },
         data: { isEmailVerified: true },
@@ -138,10 +159,41 @@ describe("Auth Controller", () => {
         .send({ email, password });
       expect(res.status).toBe(200);
       expect(res.body.token).toBeDefined();
-      expect(res.body.user.email).toBe(email);
+      expect(res.body.user.email).toBe(normalizedEmail);
 
       // cleanup
-      await prisma.user.delete({ where: { email } }).catch(() => undefined);
+      await prisma.user
+        .delete({ where: { email: normalizedEmail } })
+        .catch(() => undefined);
+    });
+
+    it("login should accept email with different letter case (regression: case-insensitive login)", async () => {
+      const password = "Password1A";
+      const email = `Mixed-${faker.string.alphanumeric(5)}@Example.COM`;
+
+      await request(app)
+        .post("/api/auth/register")
+        .send({ email, password, name: "L" })
+        .expect(201);
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { isEmailVerified: true },
+      });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: email.toUpperCase(), password });
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe(normalizedEmail);
+
+      await prisma.user
+        .delete({ where: { email: normalizedEmail } })
+        .catch(() => undefined);
     });
 
     it("returns 403 when email not verified", async () => {
@@ -161,7 +213,9 @@ describe("Auth Controller", () => {
       expect(res.body.error).toMatch(/Email не подтвержден/);
 
       // cleanup
-      await prisma.user.delete({ where: { email } }).catch(() => undefined);
+      await prisma.user
+        .delete({ where: { email: email.toLowerCase() } })
+        .catch(() => undefined);
     });
   });
 

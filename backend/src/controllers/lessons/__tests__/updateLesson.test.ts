@@ -460,4 +460,58 @@ describe("updateLesson controller", () => {
       .expect(400)
       .then((res) => expect(res.body.error).toMatch(/Время окончания/));
   });
+
+  it("transfers payment to next unpaid lesson via $transaction when cancelling paid lesson (regression: atomic payment transfer)", async () => {
+    const paymentDate = new Date(Date.now() - 5 * 3600 * 1000);
+    const paid = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+        endTime: new Date(Date.now() + 30 * 24 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        price: 1500,
+        isPaid: true,
+        paymentDate,
+      },
+    });
+    const next = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 31 * 24 * 3600 * 1000),
+        endTime: new Date(Date.now() + 31 * 24 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        price: 1500,
+        isPaid: false,
+      },
+    });
+
+    const txSpy = jest.spyOn(prisma, "$transaction");
+
+    await request(app)
+      .put(`/api/lessons/${paid.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ status: "CANCELLED" })
+      .expect(200);
+
+    // Both updates must run inside the same $transaction call — atomicity guarantee
+    expect(txSpy).toHaveBeenCalled();
+
+    const paidAfter = await prisma.lesson.findUnique({ where: { id: paid.id } });
+    const nextAfter = await prisma.lesson.findUnique({ where: { id: next.id } });
+
+    expect(paidAfter?.status).toBe("CANCELLED");
+    expect(paidAfter?.isPaid).toBe(false);
+    expect(nextAfter?.isPaid).toBe(true);
+    expect(nextAfter?.paymentDate?.getTime()).toBe(paymentDate.getTime());
+
+    txSpy.mockRestore();
+  });
 });

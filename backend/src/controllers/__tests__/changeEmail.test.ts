@@ -16,7 +16,7 @@ describe("Change Email Endpoints", () => {
 
   beforeAll(async () => {
     const hashedPassword = await hashPassword(password);
-    userEmail = faker.internet.email();
+    userEmail = faker.internet.email().toLowerCase();
     const user = await prisma.user.create({
       data: {
         email: userEmail,
@@ -70,7 +70,7 @@ describe("Change Email Endpoints", () => {
     });
 
     it("should initiate email change successfully", async () => {
-      const newEmail = faker.internet.email();
+      const newEmail = faker.internet.email().toLowerCase();
       const res = await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
@@ -95,7 +95,7 @@ describe("Change Email Endpoints", () => {
 
     it("should return 400 when code is wrong", async () => {
       // Ensure there's a pending email change
-      const newEmail = faker.internet.email();
+      const newEmail = faker.internet.email().toLowerCase();
       await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
@@ -110,7 +110,7 @@ describe("Change Email Endpoints", () => {
     });
 
     it("should verify and change email successfully", async () => {
-      const newEmail = faker.internet.email();
+      const newEmail = faker.internet.email().toLowerCase();
       await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
@@ -146,7 +146,7 @@ describe("Change Email Endpoints", () => {
     });
 
     it("should return 429 when within cooldown window", async () => {
-      const newEmail = faker.internet.email();
+      const newEmail = faker.internet.email().toLowerCase();
       await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)
@@ -161,7 +161,7 @@ describe("Change Email Endpoints", () => {
     });
 
     it("should resend code successfully after cooldown", async () => {
-      const newEmail = faker.internet.email();
+      const newEmail = faker.internet.email().toLowerCase();
       await request(app)
         .post("/api/auth/change-email")
         .set("Authorization", `Bearer ${authToken}`)

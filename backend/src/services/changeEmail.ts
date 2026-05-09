@@ -9,12 +9,13 @@ import {
   isVerificationCodeExpired,
   isWithinResendCooldown,
   generateToken,
+  normalizeEmail,
 } from "../utils";
 import { sendEmailChangeVerification } from "./email";
 
 export const initiateEmailChange = async (
   userId: string,
-  newEmail: string,
+  rawNewEmail: string,
   password: string,
 ): Promise<void> => {
   const user = await prisma.user.findUnique({
@@ -30,9 +31,11 @@ export const initiateEmailChange = async (
     throw Object.assign(new Error("Неверный пароль"), { statusCode: 400 });
   }
 
-  if (!validateEmail(newEmail)) {
+  if (!validateEmail(rawNewEmail)) {
     throw Object.assign(new Error("Некорректный формат email"), { statusCode: 400 });
   }
+
+  const newEmail = normalizeEmail(rawNewEmail);
 
   if (!user.isEmailVerified) {
     throw Object.assign(new Error("Сначала подтвердите текущий email"), { statusCode: 400 });

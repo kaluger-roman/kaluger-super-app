@@ -18,7 +18,7 @@ export const StudentInfo: FC<StudentInfoProps> = ({ student }) => (
         🎓 {student.grade} класс
       </Typography>
     )}
-    {student.hourlyRate && (
+    {student.hourlyRate != null && student.hourlyRate > 0 && (
       <Typography variant="body1" gutterBottom>
         💰 {student.hourlyRate} ₽/урок
       </Typography>
