@@ -1,1 +1,1 @@
-export type ProfileTab = "personal" | "security" | "notifications";
+export type ProfileTab = "personal" | "security" | "finances" | "notifications";

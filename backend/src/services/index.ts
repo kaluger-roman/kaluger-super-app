@@ -9,3 +9,4 @@ export * from "./recurringLessons";
 export * from "./pushNotification";
 export * from "./reminderScheduler";
 export * from "./reminderProcessor";
+export * from "./taxRate";

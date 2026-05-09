@@ -155,7 +155,7 @@ export const verifyEmailChange = async (
         name: true,
         createdAt: true,
         isEmailVerified: true,
-        taxRate: true,
+        taxEnabled: true,
       },
     });
   } catch (error) {

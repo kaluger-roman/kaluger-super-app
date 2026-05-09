@@ -3,6 +3,8 @@ import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
 import { buildStatisticsWhere, getDateRange, getLastMonthRange } from "./utils";
 import { truncateToMinute } from "../../utils/time";
+import { buildTaxBreakdown } from "../../services/taxRate";
+import type { TaxRatePeriodDto } from "../../types";
 
 export const getStatistics = async (req: AuthRequest, res: Response) => {
   try {
@@ -82,7 +84,13 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { taxRate: true },
+        select: {
+          taxEnabled: true,
+          taxRatePeriods: {
+            orderBy: { startDate: "asc" },
+            select: { id: true, startDate: true, rate: true },
+          },
+        },
       }),
     ]);
 
@@ -90,7 +98,15 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       new Date(now.getTime() - 24 * 60 * 60 * 1000)
     );
 
-    const [lostEarnings, unpaid, unpaidOver24h, paymentsInRange] = await Promise.all([
+    const taxEnabled = currentUser?.taxEnabled ?? false;
+
+    const [
+      lostEarnings,
+      unpaid,
+      unpaidOver24h,
+      paymentsInRange,
+      paidLessonsForTax,
+    ] = await Promise.all([
       prisma.lesson.aggregate({
         where: { ...where, status: "CANCELLED" },
         _sum: { price: true },
@@ -110,11 +126,38 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         _count: { id: true },
         _sum: { price: true },
       }),
+      taxEnabled
+        ? prisma.lesson.findMany({
+            where: {
+              tutorId: userId,
+              isPaid: true,
+              paymentDate: paymentDateRange,
+              price: { gt: 0 },
+            },
+            select: { price: true, paymentDate: true },
+          })
+        : Promise.resolve(null),
     ]);
 
     const earningsValue = earnings._sum.price || 0;
-    const taxRate = currentUser?.taxRate ?? 6;
-    const taxAmount = Math.round(earningsValue * taxRate / 100);
+
+    let taxAmount: number | null = null;
+    let taxBreakdown: Awaited<
+      ReturnType<typeof buildTaxBreakdown>
+    >["taxBreakdown"] | null = null;
+
+    if (taxEnabled && paidLessonsForTax && currentUser) {
+      const periods: TaxRatePeriodDto[] = currentUser.taxRatePeriods.map(
+        (period) => ({
+          id: period.id,
+          startDate: period.startDate.toISOString(),
+          rate: period.rate,
+        }),
+      );
+      const result = buildTaxBreakdown(paidLessonsForTax, periods);
+      taxAmount = result.taxAmount;
+      taxBreakdown = result.taxBreakdown;
+    }
 
     res.json({
       completedLessons,
@@ -134,6 +177,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       paymentsInRangeSum: paymentsInRange._sum.price || 0,
       paymentsInRangeCount: paymentsInRange._count.id || 0,
       taxAmount,
+      taxBreakdown,
     });
   } catch (error) {
     console.error("Get statistics error:", error);

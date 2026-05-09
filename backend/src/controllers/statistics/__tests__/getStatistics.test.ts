@@ -41,9 +41,14 @@ describe("getStatistics controller", () => {
 
   afterEach(async () => {
     await prisma.lesson.deleteMany({ where: { tutorId: userId } });
+    await prisma.taxRatePeriod.deleteMany({ where: { userId } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { taxEnabled: false },
+    });
   });
 
-  it("returns zeros for empty data set", async () => {
+  it("returns zeros and null tax for empty data set with tax disabled", async () => {
     await request(app)
       .get(`/api/statistics`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -65,11 +70,12 @@ describe("getStatistics controller", () => {
         expect(res.body.unpaidDebtOver24hCount).toBe(0);
         expect(res.body.paymentsInRangeSum).toBe(0);
         expect(res.body.paymentsInRangeCount).toBe(0);
-        expect(res.body.taxAmount).toBe(0);
+        expect(res.body.taxAmount).toBeNull();
+        expect(res.body.taxBreakdown).toBeNull();
       });
   });
 
-  it("should return taxAmount with default rate (6%) when no custom rate set", async () => {
+  it("returns null tax fields when taxEnabled is false even with paid lessons", async () => {
     await prisma.lesson.create({
       data: {
         tutorId: userId,
@@ -80,6 +86,7 @@ describe("getStatistics controller", () => {
         endTime: new Date(Date.now() + 3600000),
         isRecurring: false,
         isPaid: true,
+        paymentDate: new Date(),
         price: 10000,
         status: "COMPLETED",
       },
@@ -90,15 +97,21 @@ describe("getStatistics controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200);
 
-    expect(res.body.earnings).toBe(10000);
-    expect(res.body.taxAmount).toBe(600); // 10000 * 6 / 100
+    expect(res.body.taxAmount).toBeNull();
+    expect(res.body.taxBreakdown).toBeNull();
   });
 
-  it("should return taxAmount with custom tax rate", async () => {
-    // Set custom tax rate
+  it("calculates tax with single period when taxEnabled and one rate covers payments", async () => {
     await prisma.user.update({
       where: { id: userId },
-      data: { taxRate: 13 },
+      data: { taxEnabled: true },
+    });
+    await prisma.taxRatePeriod.create({
+      data: {
+        userId,
+        startDate: new Date("2024-01-01"),
+        rate: 13,
+      },
     });
 
     await prisma.lesson.create({
@@ -107,10 +120,11 @@ describe("getStatistics controller", () => {
         studentId,
         subject: "MATHEMATICS",
         lessonType: "EGE",
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 3600000),
+        startTime: new Date("2025-06-01"),
+        endTime: new Date("2025-06-01T01:00:00.000Z"),
         isRecurring: false,
         isPaid: true,
+        paymentDate: new Date("2025-06-01"),
         price: 50000,
         status: "COMPLETED",
       },
@@ -119,51 +133,83 @@ describe("getStatistics controller", () => {
     const res = await request(app)
       .get("/api/statistics")
       .set("Authorization", `Bearer ${authToken}`)
+      .query({ startDate: "2025-05-01", endDate: "2025-07-01" })
       .expect(200);
 
-    expect(res.body.earnings).toBe(50000);
-    expect(res.body.taxAmount).toBe(6500); // 50000 * 13 / 100
-
-    // Reset tax rate
-    await prisma.user.update({
-      where: { id: userId },
-      data: { taxRate: 6 },
-    });
+    expect(res.body.taxAmount).toBe(6500);
+    expect(res.body.taxBreakdown).toEqual([
+      { rate: 13, earnings: 50000, tax: 6500 },
+    ]);
   });
 
-  it("should return taxAmount 0 when tax rate is 0", async () => {
+  it("splits tax across multiple periods by paymentDate, with isOutsidePeriods bucket for early payments", async () => {
     await prisma.user.update({
       where: { id: userId },
-      data: { taxRate: 0 },
+      data: { taxEnabled: true },
+    });
+    await prisma.taxRatePeriod.createMany({
+      data: [
+        { userId, startDate: new Date("2024-01-01"), rate: 6 },
+        { userId, startDate: new Date("2025-06-01"), rate: 4 },
+      ],
     });
 
-    await prisma.lesson.create({
-      data: {
-        tutorId: userId,
-        studentId,
-        subject: "MATHEMATICS",
-        lessonType: "EGE",
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 3600000),
-        isRecurring: false,
-        isPaid: true,
-        price: 5000,
-        status: "COMPLETED",
-      },
+    await prisma.lesson.createMany({
+      data: [
+        {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: new Date("2023-09-01"),
+          endTime: new Date("2023-09-01T01:00:00.000Z"),
+          isRecurring: false,
+          isPaid: true,
+          paymentDate: new Date("2023-09-01"),
+          price: 5000,
+          status: "COMPLETED",
+        },
+        {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: new Date("2025-05-15"),
+          endTime: new Date("2025-05-15T01:00:00.000Z"),
+          isRecurring: false,
+          isPaid: true,
+          paymentDate: new Date("2025-05-15"),
+          price: 10000,
+          status: "COMPLETED",
+        },
+        {
+          tutorId: userId,
+          studentId,
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: new Date("2025-07-15"),
+          endTime: new Date("2025-07-15T01:00:00.000Z"),
+          isRecurring: false,
+          isPaid: true,
+          paymentDate: new Date("2025-07-15"),
+          price: 15000,
+          status: "COMPLETED",
+        },
+      ],
     });
 
     const res = await request(app)
       .get("/api/statistics")
       .set("Authorization", `Bearer ${authToken}`)
+      .query({ startDate: "2023-01-01", endDate: "2025-12-31" })
       .expect(200);
 
-    expect(res.body.taxAmount).toBe(0);
-
-    // Reset tax rate
-    await prisma.user.update({
-      where: { id: userId },
-      data: { taxRate: 6 },
-    });
+    expect(res.body.taxAmount).toBe(0 + 600 + 600);
+    expect(res.body.taxBreakdown).toEqual([
+      { rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true },
+      { rate: 4, earnings: 15000, tax: 600 },
+      { rate: 6, earnings: 10000, tax: 600 },
+    ]);
   });
 
   it("calculates completed, cancelled, total and earnings correctly", async () => {

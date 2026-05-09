@@ -19,7 +19,7 @@ const mockUser = {
   name: "Test User",
   createdAt: "2024-01-01T00:00:00Z",
   isEmailVerified: true,
-  taxRate: 6,
+  taxEnabled: false,
 };
 
 describe("features/logoutConfirmation/logoutConfirmation.model", () => {

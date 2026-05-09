@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-05-09
 
+### Added
+- Tax rate now lives as a chronological chain of periods (`TaxRatePeriod`) with start date + percent; tax amount on the reports page is computed per-payment using the rate active on each lesson's `paymentDate`
+- New profile toggle "Учитывать налог" — disabled by default for all users; when off, no tax UI/calculation anywhere in the app
+- Modal dialog "Налоговые ставки" for managing the period list (add/edit/delete) — atomic save/cancel, blocks deleting the last period while toggle is on
+- Tax card on reports page now shows an info-icon with hover/click tooltip listing applicable rates and amounts (`X% × Y ₽ = Z ₽`), including a "вне настроенных периодов" row for payments before the earliest period (rate 0%)
+- Backend REST endpoints `GET/POST/PATCH/DELETE /api/tax-periods` for CRUD over periods (validation: rate 0–100, unique `startDate` per user, Russian error messages)
+- Backend `GET /api/statistics` now returns `taxAmount: number | null` and `taxBreakdown: TaxBreakdownEntry[] | null` (both null when toggle is off)
+
+### Changed
+- `User.taxRate` removed from schema and replaced by `User.taxEnabled` + relation to `TaxRatePeriod[]`; existing users with non-default tax rate (`!= 6.0`) get migrated to a single seed period spanning their full history with the toggle pre-enabled, others reset to off
+- Tax card label adapts: single applicable rate → `Налоги (X%)`; multiple rates → neutral `Налоги` + info-icon
+- Tax assignment per lesson is now driven by `paymentDate` (when the income was received) instead of `startTime`, matching how Russian tax law recognizes income on receipt
+
 ### Fixed
 - Admin login compares password via bcrypt hash from `ADMIN_PASSWORD_HASH` instead of plain string equality with `ADMIN_PASSWORD` — eliminates plain-text storage and timing attack
 - WebSocket reconnect for the same user no longer drops the new connection when the old socket's stale close handler fires later (live status updates are no longer silently lost after a reconnect)
@@ -29,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Reminder processor caps each tick at 100 pending reminders (oldest first) — recovering after server downtime no longer claims the entire backlog inside one transaction or floods the push provider in a single minute
 
 ### Infrastructure
+- Prisma migration `20260509024056_tax_rate_periods` creates `tax_rate_periods` table with `(userId, startDate)` unique + index, adds `users.taxEnabled`, migrates legacy data, and drops `users.taxRate` in a single atomic step
 - New script `npm run admin:hash-password -- <password>` to generate bcrypt hash for `ADMIN_PASSWORD_HASH`
 - New dependency: `express-rate-limit`
 - Test setup ensures `JWT_SECRET` / `ADMIN_JWT_SECRET` are present even without `.env.test`
