@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Button } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -21,18 +21,18 @@ export const InfoLabel = styled(Typography)(({ theme }) => ({
   fontWeight: 500,
 }));
 
-export const InfoValue = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.primary,
-  fontSize: "1.125rem",
+export const ToggleRow = styled(Box)`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+export const Description = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  marginTop: "8px",
+  fontSize: "0.875rem",
 }));
 
-export const ButtonBox = styled(Box)({
-  marginTop: "32px",
-  display: "flex",
-  justifyContent: "flex-end",
-  gap: "16px",
-});
-
-export const SaveButton = styled(Button)({
-  minWidth: "120px",
-});
+export const ButtonRow = styled(Box)`
+  margin-top: 12px;
+`;

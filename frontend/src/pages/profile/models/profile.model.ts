@@ -5,15 +5,10 @@ import { taxRatePeriodModel, userModel } from "@entities";
 import { authApi, notificationsModel } from "@shared";
 
 import {
-  NO_PERIODS_ERROR,
   PROFILE_SAVED_MESSAGE,
-  buildUpdateProfilePayload,
   extractProfileErrorMessage,
   getUserName,
-  getUserTaxEnabled,
-  isTaxEnabledWithoutPeriods,
   isUserDefined,
-  shouldClearNoPeriodsError,
 } from "./profile.helpers";
 import type { ProfileTab } from "./profile.types";
 
@@ -24,44 +19,32 @@ export const ProfilePageGate = createGate();
 export const $activeTab = createStore<ProfileTab>("personal");
 export const $isEditMode = createStore<boolean>(false);
 export const $name = createStore<string>("");
-export const $taxEnabled = createStore<boolean>(false);
-export const $error = createStore<string>("");
 
 // Events
 export const tabChanged = createEvent<ProfileTab>();
 export const editRequested = createEvent();
 export const editCancelled = createEvent();
 export const nameChanged = createEvent<string>();
-export const taxEnabledToggled = createEvent<boolean>();
 export const saveRequested = createEvent();
 
 // Effects
-export const updateProfileFx = createEffect(
-  async ({ name, taxEnabled }: { name: string; taxEnabled: boolean }) =>
-    authApi.updateProfile({ name, taxEnabled }),
+export const updateProfileFx = createEffect(async ({ name }: { name: string }) =>
+  authApi.updateProfile({ name }),
 );
 
-// Samples — load periods on gate open
+// Samples — load periods on gate open (Finances tab needs them)
 sample({
   clock: ProfilePageGate.open,
   target: taxRatePeriodModel.periodsRequested,
 });
 
-// Samples — initialize editable fields from current user
+// Samples — initialize $name from current user
 sample({
   clock: [ProfilePageGate.open, userModel.$user],
   source: userModel.$user,
   filter: isUserDefined,
   fn: getUserName,
   target: $name,
-});
-
-sample({
-  clock: [ProfilePageGate.open, userModel.$user],
-  source: userModel.$user,
-  filter: isUserDefined,
-  fn: getUserTaxEnabled,
-  target: $taxEnabled,
 });
 
 // Samples — edit mode toggle
@@ -77,7 +60,7 @@ sample({
   target: $isEditMode,
 });
 
-// Samples — reset fields on cancel
+// Samples — reset name on cancel
 sample({
   clock: editCancelled,
   source: userModel.$user,
@@ -86,70 +69,17 @@ sample({
   target: $name,
 });
 
-sample({
-  clock: editCancelled,
-  source: userModel.$user,
-  filter: isUserDefined,
-  fn: getUserTaxEnabled,
-  target: $taxEnabled,
-});
-
-sample({
-  clock: editCancelled,
-  fn: () => "",
-  target: $error,
-});
-
 // Samples — field updates
 sample({
   clock: nameChanged,
   target: $name,
 });
 
-sample({
-  clock: taxEnabledToggled,
-  target: $taxEnabled,
-});
-
-sample({
-  clock: nameChanged,
-  fn: () => "",
-  target: $error,
-});
-
-sample({
-  clock: taxEnabledToggled,
-  fn: () => "",
-  target: $error,
-});
-
-// Clear NO_PERIODS_ERROR after user adds periods through the modal
-sample({
-  clock: taxRatePeriodModel.$periods,
-  source: $error,
-  filter: shouldClearNoPeriodsError,
-  fn: () => "",
-  target: $error,
-});
-
-// Samples — save flow with guard for tax-without-periods
+// Samples — save flow
 sample({
   clock: saveRequested,
-  source: { taxEnabled: $taxEnabled, periods: taxRatePeriodModel.$periods },
-  filter: isTaxEnabledWithoutPeriods,
-  fn: () => NO_PERIODS_ERROR,
-  target: [$error, notificationsModel.showErrorEvent],
-});
-
-sample({
-  clock: saveRequested,
-  source: {
-    name: $name,
-    taxEnabled: $taxEnabled,
-    periods: taxRatePeriodModel.$periods,
-  },
-  filter: (payload) => !isTaxEnabledWithoutPeriods(payload),
-  fn: buildUpdateProfilePayload,
+  source: $name,
+  fn: (name) => ({ name }),
   target: updateProfileFx,
 });
 
@@ -177,19 +107,17 @@ sample({
   target: notificationsModel.showErrorEvent,
 });
 
-// Samples — leave page = cancel edit
+// Samples — leave page = cancel edit, reset to personal tab
 sample({
   clock: ProfilePageGate.close,
   target: editCancelled,
 });
 
-// Change active tab
 sample({
   clock: tabChanged,
   target: $activeTab,
 });
 
-// Reset to personal tab when leaving the page
 sample({
   clock: ProfilePageGate.close,
   fn: (): ProfileTab => "personal",
