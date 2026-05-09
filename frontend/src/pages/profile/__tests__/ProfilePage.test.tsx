@@ -139,7 +139,25 @@ describe("ProfilePage", () => {
     expect(saveButton).toBeDisabled();
   });
 
-  it("shows 'Настроить ставки' button only when taxEnabled is true", () => {
+  it("shows 'Настроить ставки' button only in edit mode with taxEnabled on", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, { ...mockUser, taxEnabled: true }],
+        [profileModel.$name, mockUser.name],
+        [profileModel.$taxEnabled, true],
+        [profileModel.$isEditMode, true],
+        [profileModel.$error, ""],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
+    expect(
+      screen.getByRole("button", { name: /настроить ставки/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides 'Настроить ставки' button when not in edit mode even with taxEnabled on", () => {
     const scope = fork({
       values: [
         [userModel.$user, { ...mockUser, taxEnabled: true }],
@@ -152,18 +170,16 @@ describe("ProfilePage", () => {
 
     renderWithProviders(<ProfilePage />, scope);
 
-    expect(
-      screen.getByRole("button", { name: /настроить ставки/i }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /настроить ставки/i })).toBeNull();
   });
 
-  it("hides 'Настроить ставки' button when tax disabled", () => {
+  it("hides 'Настроить ставки' button when tax disabled even in edit mode", () => {
     const scope = fork({
       values: [
         [userModel.$user, mockUser],
         [profileModel.$name, mockUser.name],
         [profileModel.$taxEnabled, false],
-        [profileModel.$isEditMode, false],
+        [profileModel.$isEditMode, true],
         [profileModel.$error, ""],
       ],
     });

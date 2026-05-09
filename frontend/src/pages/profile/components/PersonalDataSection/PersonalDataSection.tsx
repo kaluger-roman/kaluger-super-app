@@ -63,17 +63,15 @@ export const PersonalDataSection = () => {
             {user.taxEnabled ? "включено" : "выключено"}
           </Styled.InfoValue>
         )}
-        {user.taxEnabled || taxEnabled ? (
-          <>
-            <TaxRatePeriodsList />
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => actions.openModal()}
-            >
-              Настроить ставки
-            </Button>
-          </>
+        {user.taxEnabled || taxEnabled ? <TaxRatePeriodsList /> : null}
+        {isEditMode && taxEnabled ? (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => actions.openModal()}
+          >
+            Настроить ставки
+          </Button>
         ) : null}
         {error ? (
           <Styled.FieldError variant="body2" role="alert">
