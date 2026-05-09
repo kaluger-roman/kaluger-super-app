@@ -4,7 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 2026-05-09
+## 2026-05-10
+
+### Added
+- `/e2e-check` slash command — analyzes diff vs base ref, classifies user-facing changes as uncovered / possibly-affected / dead vs existing Playwright tests, optionally writes `*.draft.spec.ts` skeletons and a per-branch report under `docs/e2e-coverage/checks/` (4a045aa)
+- `/e2e-hunt` slash command — runs parallel `feature-dev:code-explorer` subagents per app area (auth, students, lessons, profile, reports, admin, dashboard/news, pwa) to inventory user journeys, dedupes against existing tests, and produces a prioritized coverage gap report under `docs/e2e-coverage/` (4a045aa)
+- `docs/conventions/e2e-testing.md` — full e2e conventions: when e2e is justified, two modes (functional vs `@visual`), required tag scheme (`@critical`/`@regression`/`@visual`/`@draft` + area tags), selector priority, page-object policy and tests-as-source-of-truth model for coverage tracking (4a045aa)
+- `frontend/e2e/README.md` — quick-reference cheatsheet for the e2e folder (folder layout per area, run commands with `--grep` filters, selector rules, two-mode example) (4a045aa)
+
+### Changed
+- `docs/conventions/frontend-testing.md` — replaced the legacy "E2E — screenshot comparisons only, no other assertions" rule with a pointer to the new `e2e-testing.md` covering both functional user-journey and visual modes (4a045aa)
+- `CLAUDE.md` — added `e2e-testing.md` to the mandatory pre-coding reading list and registered `/e2e-check` and `/e2e-hunt` in the Slash Commands section (4a045aa)
+
+
 
 ### Added
 - Tax rate now lives as a chronological chain of periods (`TaxRatePeriod`) with start date + percent; tax amount on the reports page is computed per-payment using the rate active on each lesson's `paymentDate`
