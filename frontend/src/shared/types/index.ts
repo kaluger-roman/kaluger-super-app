@@ -18,8 +18,6 @@ export type CreateTaxRatePeriodDto = {
   rate: number;
 };
 
-export type UpdateTaxRatePeriodDto = Partial<CreateTaxRatePeriodDto>;
-
 export type TaxBreakdownEntry = {
   rate: number;
   earnings: number;

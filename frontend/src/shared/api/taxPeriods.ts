@@ -1,9 +1,5 @@
 import { api } from "./base";
-import type {
-  TaxRatePeriod,
-  CreateTaxRatePeriodDto,
-  UpdateTaxRatePeriodDto,
-} from "../types";
+import type { CreateTaxRatePeriodDto, TaxRatePeriod } from "../types";
 
 export const taxPeriodsApi = {
   list: async (): Promise<TaxRatePeriod[]> => {
@@ -11,20 +7,10 @@ export const taxPeriodsApi = {
     return response.data;
   },
 
-  create: async (data: CreateTaxRatePeriodDto): Promise<TaxRatePeriod> => {
-    const response = await api.post("/tax-periods", data);
+  replaceAll: async (
+    periods: CreateTaxRatePeriodDto[],
+  ): Promise<TaxRatePeriod[]> => {
+    const response = await api.put("/tax-periods", { periods });
     return response.data;
-  },
-
-  update: async (
-    id: string,
-    data: UpdateTaxRatePeriodDto,
-  ): Promise<TaxRatePeriod> => {
-    const response = await api.patch(`/tax-periods/${id}`, data);
-    return response.data;
-  },
-
-  remove: async (id: string): Promise<void> => {
-    await api.delete(`/tax-periods/${id}`);
   },
 };

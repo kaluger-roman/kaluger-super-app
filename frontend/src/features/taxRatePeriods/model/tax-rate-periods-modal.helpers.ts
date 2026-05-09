@@ -1,6 +1,6 @@
-import type { TaxRatePeriod } from "@shared";
+import type { CreateTaxRatePeriodDto, TaxRatePeriod } from "@shared";
 
-import type { DraftPeriod, SaveDiff, SavePayload } from "./tax-rate-periods-modal.types";
+import type { DraftPeriod } from "./tax-rate-periods-modal.types";
 
 export const generateTempId = (): string =>
   `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -13,42 +13,14 @@ export const sortDraftByDate = (a: DraftPeriod, b: DraftPeriod): number =>
 export const periodsToDraft = (periods: TaxRatePeriod[]): DraftPeriod[] =>
   periods.map((p) => ({
     tempId: generateTempId(),
-    originalId: p.id,
     startDate: p.startDate.slice(0, 10),
     rate: p.rate,
   }));
 
-export const computeDiff = ({ initial, draft }: SavePayload): SaveDiff => {
-  const toCreate: DraftPeriod[] = [];
-  const toUpdate: SaveDiff["toUpdate"] = [];
-  const toDelete: string[] = [];
-  const draftOriginalIds = new Set(
-    draft.map((d) => d.originalId).filter((id): id is string => Boolean(id)),
-  );
-
-  for (const d of draft) {
-    if (!d.originalId) {
-      toCreate.push(d);
-      continue;
-    }
-    const original = initial.find((p) => p.id === d.originalId);
-    if (!original) continue;
-    const changes: { startDate?: string; rate?: number } = {};
-    if (original.startDate !== d.startDate) changes.startDate = d.startDate;
-    if (original.rate !== d.rate) changes.rate = d.rate;
-    if (Object.keys(changes).length > 0) {
-      toUpdate.push({ id: d.originalId, data: changes });
-    }
-  }
-
-  for (const original of initial) {
-    if (!draftOriginalIds.has(original.id)) {
-      toDelete.push(original.id);
-    }
-  }
-
-  return { toCreate, toUpdate, toDelete };
-};
+export const draftToCreatePayload = (
+  draft: DraftPeriod[],
+): CreateTaxRatePeriodDto[] =>
+  draft.map((d) => ({ startDate: d.startDate, rate: d.rate }));
 
 export const addDraftPeriod = (draft: DraftPeriod[]): DraftPeriod[] =>
   [

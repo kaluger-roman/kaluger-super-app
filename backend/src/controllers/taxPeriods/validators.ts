@@ -1,7 +1,4 @@
-import type {
-  CreateTaxRatePeriodDto,
-  UpdateTaxRatePeriodDto,
-} from "../../types";
+import type { CreateTaxRatePeriodDto } from "../../types";
 
 const validateRate = (rate: unknown): string | null => {
   if (typeof rate !== "number" || Number.isNaN(rate)) {
@@ -24,35 +21,19 @@ const validateStartDate = (startDate: unknown): string | null => {
   return null;
 };
 
-export const validateCreateTaxPeriod = (
+export const validateTaxPeriodInput = (
   data: CreateTaxRatePeriodDto,
-): string[] => {
-  const errors: string[] = [];
+): string | null => {
   const rateError = validateRate(data.rate);
-  if (rateError) errors.push(rateError);
+  if (rateError) return rateError;
   const dateError = validateStartDate(data.startDate);
-  if (dateError) errors.push(dateError);
-  return errors;
+  if (dateError) return dateError;
+  return null;
 };
 
-export const validateUpdateTaxPeriod = (
-  data: UpdateTaxRatePeriodDto,
-): string[] => {
-  const errors: string[] = [];
-  if (!("rate" in data) && !("startDate" in data)) {
-    errors.push("Передайте хотя бы одно поле для обновления");
-    return errors;
-  }
-  if ("rate" in data && data.rate !== undefined) {
-    const rateError = validateRate(data.rate);
-    if (rateError) errors.push(rateError);
-  }
-  if ("startDate" in data && data.startDate !== undefined) {
-    const dateError = validateStartDate(data.startDate);
-    if (dateError) errors.push(dateError);
-  }
-  return errors;
-};
+export const hasDuplicateStartDates = (
+  periods: { startDate: string }[],
+): boolean => new Set(periods.map((p) => p.startDate)).size !== periods.length;
 
 export const normalizeRate = (rate: number): number =>
   Math.round(rate * 10) / 10;

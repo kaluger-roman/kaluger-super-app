@@ -1,4 +1,4 @@
-import { combine, createEffect, createEvent, createStore, sample } from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 
 import { taxRatePeriodModel } from "@entities";
 import type { TaxRatePeriod } from "@shared";
@@ -6,14 +6,14 @@ import { notificationsModel, taxPeriodsApi } from "@shared";
 
 import {
   addDraftPeriod,
-  computeDiff,
+  draftToCreatePayload,
   extractErrorMessage,
   periodsToDraft,
   removeDraftPeriod,
   updateDraftRate,
   updateDraftStartDate,
 } from "./tax-rate-periods-modal.helpers";
-import type { DraftPeriod, SavePayload } from "./tax-rate-periods-modal.types";
+import type { DraftPeriod } from "./tax-rate-periods-modal.types";
 
 // Stores
 export const $isModalOpen = createStore(false);
@@ -33,17 +33,8 @@ export const saveRequested = createEvent();
 
 // Effects
 export const savePeriodsFx = createEffect(
-  async (payload: SavePayload): Promise<TaxRatePeriod[]> => {
-    const diff = computeDiff(payload);
-    await Promise.all([
-      ...diff.toCreate.map((p) =>
-        taxPeriodsApi.create({ startDate: p.startDate, rate: p.rate }),
-      ),
-      ...diff.toUpdate.map(({ id, data }) => taxPeriodsApi.update(id, data)),
-      ...diff.toDelete.map((id) => taxPeriodsApi.remove(id)),
-    ]);
-    return await taxPeriodsApi.list();
-  },
+  async (draft: DraftPeriod[]): Promise<TaxRatePeriod[]> =>
+    taxPeriodsApi.replaceAll(draftToCreatePayload(draft)),
 );
 
 export const $isSaving = savePeriodsFx.pending;
@@ -110,10 +101,7 @@ sample({
 
 sample({
   clock: saveRequested,
-  source: combine({
-    initial: taxRatePeriodModel.$periods,
-    draft: $draftPeriods,
-  }),
+  source: $draftPeriods,
   target: savePeriodsFx,
 });
 
