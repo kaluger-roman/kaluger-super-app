@@ -9,6 +9,8 @@ import { scheduleRemindersForLesson } from "../../services";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
 
+class SchedulingConflictError extends Error {}
+
 const createSingleLesson = async (
   userId: string,
   data: CreateLessonDto,
@@ -41,30 +43,41 @@ const createSingleLesson = async (
     computedStatus = "IN_PROGRESS";
   }
 
-  const conflicts = await checkSchedulingConflicts(userId, start, end, prisma);
-  if (conflicts.length > 0) {
-    return res
-      .status(400)
-      .json({ error: "Временной слот конфликтует с существующим уроком" });
-  }
+  const lessonPrice = price ?? student.hourlyRate;
 
-  const lesson = await prisma.lesson.create({
-    data: {
-      subject,
-      lessonType,
-      description,
-      startTime: start,
-      endTime: end,
-      price: price || student.hourlyRate,
-      homework,
-      notes,
-      ...(computedStatus ? { status: computedStatus } : {}),
-      isRecurring: false,
-      tutorId: userId,
-      studentId,
-    },
-    include: { student: true },
-  });
+  let lesson;
+  try {
+    lesson = await prisma.$transaction(async (tx) => {
+      const conflicts = await checkSchedulingConflicts(userId, start, end, tx);
+      if (conflicts.length > 0) {
+        throw new SchedulingConflictError(
+          "Временной слот конфликтует с существующим уроком"
+        );
+      }
+      return tx.lesson.create({
+        data: {
+          subject,
+          lessonType,
+          description,
+          startTime: start,
+          endTime: end,
+          price: lessonPrice,
+          homework,
+          notes,
+          ...(computedStatus ? { status: computedStatus } : {}),
+          isRecurring: false,
+          tutorId: userId,
+          studentId,
+        },
+        include: { student: true },
+      });
+    });
+  } catch (err) {
+    if (err instanceof SchedulingConflictError) {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
 
   res.status(201).json({ lesson });
 
@@ -102,7 +115,8 @@ const createRecurringLessons = async (
   const start = truncateToMinute(new Date(startTime));
   const end = truncateToMinute(new Date(endTime));
 
-  const lessons: Prisma.LessonCreateManyInput[] = [];
+  const lessonPrice = price ?? student.hourlyRate;
+  const candidateSlots: Array<{ start: Date; end: Date; isFirst: boolean }> = [];
   const threeMonthsLater = truncateToMinute(new Date(start));
   threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
@@ -110,31 +124,11 @@ const createRecurringLessons = async (
   let currentEnd = truncateToMinute(new Date(end));
 
   while (currentStart <= threeMonthsLater) {
-    const conflicts = await checkSchedulingConflicts(
-      userId,
-      currentStart,
-      currentEnd,
-      prisma
-    );
-    if (conflicts.length === 0) {
-      const lessonData: Prisma.LessonCreateManyInput = {
-        subject,
-        lessonType,
-        description:
-          currentStart.getTime() === start.getTime() ? description : undefined,
-        startTime: truncateToMinute(currentStart),
-        endTime: truncateToMinute(currentEnd),
-        price: price || student.hourlyRate,
-        homework:
-          currentStart.getTime() === start.getTime() ? homework : undefined,
-        notes: currentStart.getTime() === start.getTime() ? notes : undefined,
-        isRecurring: true,
-        tutorId: userId,
-        studentId,
-      };
-      lessons.push(lessonData);
-    }
-
+    candidateSlots.push({
+      start: truncateToMinute(currentStart),
+      end: truncateToMinute(currentEnd),
+      isFirst: currentStart.getTime() === start.getTime(),
+    });
     currentStart = truncateToMinute(
       new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
     );
@@ -143,19 +137,56 @@ const createRecurringLessons = async (
     );
   }
 
-  if (lessons.length === 0) {
-    return res.status(400).json({
-      error:
-        "Невозможно создать регулярные уроки из-за конфликтов в расписании",
+  let createdLessons: Awaited<ReturnType<typeof prisma.lesson.createManyAndReturn>>;
+  let firstLesson: Awaited<ReturnType<typeof prisma.lesson.findFirst>>;
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const slotsToCreate: Prisma.LessonCreateManyInput[] = [];
+      for (const slot of candidateSlots) {
+        const conflicts = await checkSchedulingConflicts(
+          userId,
+          slot.start,
+          slot.end,
+          tx
+        );
+        if (conflicts.length === 0) {
+          slotsToCreate.push({
+            subject,
+            lessonType,
+            description: slot.isFirst ? description : undefined,
+            startTime: slot.start,
+            endTime: slot.end,
+            price: lessonPrice,
+            homework: slot.isFirst ? homework : undefined,
+            notes: slot.isFirst ? notes : undefined,
+            isRecurring: true,
+            tutorId: userId,
+            studentId,
+          });
+        }
+      }
+
+      if (slotsToCreate.length === 0) {
+        throw new SchedulingConflictError(
+          "Невозможно создать регулярные уроки из-за конфликтов в расписании"
+        );
+      }
+
+      const created = await tx.lesson.createManyAndReturn({ data: slotsToCreate });
+      const first = await tx.lesson.findFirst({
+        where: { id: created[0]?.id },
+        include: { student: true },
+      });
+      return { created, first };
     });
+    createdLessons = result.created;
+    firstLesson = result.first;
+  } catch (err) {
+    if (err instanceof SchedulingConflictError) {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
   }
-
-  const createdLessons = await prisma.lesson.createManyAndReturn({ data: lessons });
-
-  const firstLesson = await prisma.lesson.findFirst({
-    where: { id: createdLessons[0]?.id },
-    include: { student: true },
-  });
 
   res.status(201).json({
     lesson: firstLesson,

@@ -6,21 +6,17 @@ export const getReminderSettings = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
 
-    let settings = await prisma.reminderSettings.findUnique({
+    // Lazy creation via upsert — race-safe across parallel first requests
+    const settings = await prisma.reminderSettings.upsert({
       where: { userId: userId! },
+      update: {},
+      create: {
+        userId: userId!,
+        enabled: false,
+        intervals: [],
+        muteWhenInLesson: false,
+      },
     });
-
-    // Lazy creation — create default settings if none exist
-    if (!settings) {
-      settings = await prisma.reminderSettings.create({
-        data: {
-          userId: userId!,
-          enabled: false,
-          intervals: [],
-          muteWhenInLesson: false,
-        },
-      });
-    }
 
     res.json({
       enabled: settings.enabled,

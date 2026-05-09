@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { notificationsApi, showNotification } from "@shared";
 
+// Side-effect import: wires up the unsubscribe → settingsUpdated samples.
+import "../notifications-toggle.model";
 import * as notificationsModel from "../notifications.model";
 
 vi.mock("@shared", async () => {
@@ -207,6 +209,78 @@ describe("notifications.model", () => {
 
       expect(messages).toContainEqual({
         message: "Не удалось подписаться на уведомления",
+        type: "error",
+      });
+    });
+
+    it("should not push enabled=true on later subscribePushFx.done after unsubscribePushFx.fail (regression: $isManualToggle stale)", async () => {
+      // Regression for bug-hunt 2026-05-09 round-2: $isManualToggle was reset
+      // on subscribePushFx.fail and updateSettingsFx.finally, but not on
+      // unsubscribePushFx.fail. After a failed unsubscribe, a subsequent
+      // subscribePushFx.done (e.g. auto-subscribe on settings reload) would see
+      // stale $isManualToggle=true and incorrectly push enabled=true to server.
+      const scope = fork({
+        values: [
+          [
+            notificationsModel.$reminderSettings,
+            { enabled: true, intervals: [], muteWhenInLesson: false },
+          ],
+          [notificationsModel.$isPushSubscribed, true],
+          [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
+          [notificationsModel.$isPushSupported, true],
+          [notificationsModel.$vapidKey, "k"],
+        ],
+        handlers: [
+          [notificationsModel.unsubscribePushFx, () => {
+            throw new Error("sw gone");
+          }],
+          [notificationsModel.subscribePushFx, () => ({
+            subscription: {} as PushSubscription,
+            serverResponse: {} as never,
+          })],
+        ],
+      });
+
+      // Manual disable toggle → unsubscribePushFx → fails.
+      await allSettled(notificationsModel.remindersToggled, { scope });
+
+      // A later subscribePushFx.done (e.g. auto-subscribe) should not flip the
+      // server back to enabled=true once $isManualToggle has been reset.
+      await allSettled(notificationsModel.subscribePushFx, {
+        scope,
+        params: { vapidKey: "k", registration: {} as ServiceWorkerRegistration },
+      });
+
+      expect(vi.mocked(notificationsApi.updateSettings)).not.toHaveBeenCalled();
+    });
+
+    it("should not disable settings on server when unsubscribePushFx fails (regression: .finally → .done)", async () => {
+      // Regression for bug-hunt 2026-05-09 #7: subscribing settingsUpdated to
+      // unsubscribePushFx.finally pushed enabled=false to the server even when
+      // the browser-side unsubscribe failed, leaving the device subscribed
+      // while the server thought reminders were off.
+      // Note: do NOT override updateSettingsFx in fork handlers — that would
+      // bypass the real handler (which is what calls notificationsApi.updateSettings)
+      // and the assertion below would pass even if the bug were reintroduced.
+      const messages: Array<{ message: string; type: string }> = [];
+      const unwatch = showNotification.watch((payload) => messages.push(payload));
+
+      const scope = fork({
+        handlers: [
+          [notificationsModel.unsubscribePushFx, () => { throw new Error("sw gone"); }],
+        ],
+      });
+
+      await allSettled(notificationsModel.unsubscribePushFx, {
+        scope,
+        params: {} as ServiceWorkerRegistration,
+      });
+
+      unwatch();
+
+      expect(vi.mocked(notificationsApi.updateSettings)).not.toHaveBeenCalled();
+      expect(messages).toContainEqual({
+        message: "Не удалось отписаться от уведомлений",
         type: "error",
       });
     });

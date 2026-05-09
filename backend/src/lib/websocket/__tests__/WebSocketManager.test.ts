@@ -203,6 +203,41 @@ describe("WebSocketManager", () => {
     expect(newWs.send).toHaveBeenCalledWith(JSON.stringify({ test: 1 }));
   });
 
+  it("does not leak the client entry when sendWelcomeMessage throws synchronously (regression: handler order)", async () => {
+    // Regression for bug-hunt 2026-05-09 #5: sendWelcomeMessage was invoked
+    // before close/error handlers were registered. If ws.send threw (socket
+    // already closing), the entry in `clients` was never cleaned up.
+    const decoded = { userId: "u-welcome-throws", email: "x@b.com" };
+    (authenticateWebSocket as jest.Mock).mockResolvedValue(decoded);
+    (sendWelcomeMessage as jest.Mock).mockImplementation(() => {
+      throw new Error("socket closed");
+    });
+
+    const manager = new WebSocketManager({} as Server);
+    const wssInstance = (WebSocketServer as any).instances[0];
+
+    const handlers: Record<string, Function> = {};
+    const ws: any = {
+      send: jest.fn(),
+      close: jest.fn(),
+      readyState: (WebSocket as any).OPEN,
+      on: (event: string, fn: Function) => {
+        handlers[event] = fn;
+      },
+    };
+
+    wssInstance.simulateConnection(ws, { url: "/?token=ok" });
+    await new Promise((r) => setImmediate(r));
+
+    // Close handler must be registered even though sendWelcomeMessage threw.
+    expect(handlers["close"]).toBeDefined();
+    expect(handlers["error"]).toBeDefined();
+
+    // Triggering close should clean up the entry.
+    handlers["close"]();
+    expect(manager.getConnectedUsersCount()).toBe(0);
+  });
+
   it("sendToUser should send only to specified user", async () => {
     (authenticateWebSocket as jest.Mock).mockResolvedValue({
       userId: "u1",

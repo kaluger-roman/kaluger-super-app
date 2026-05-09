@@ -161,5 +161,52 @@ describe("WeeklyView", () => {
       const cards = screen.getAllByText(/иван иванов/i);
       expect(cards.length).toBe(2);
     });
+
+    it("should not merge lessons from different years sharing same day/month (regression: dayKey without year)", () => {
+      // Regression for bug-hunt 2026-05-09 #8: groupLessonsByDay built dayKey
+      // without year, so e.g. 5 May 2025 and 5 May 2026 collapsed into one
+      // group with a single header.
+      const lessonY1: Lesson = {
+        ...mockLesson,
+        id: "y1",
+        startTime: "2025-05-05T10:00:00.000Z",
+        endTime: "2025-05-05T11:00:00.000Z",
+        student: {
+          ...mockLesson.student!,
+          id: "s-y1",
+          name: "Студент 2025",
+        },
+      };
+      const lessonY2: Lesson = {
+        ...mockLesson,
+        id: "y2",
+        startTime: "2026-05-05T10:00:00.000Z",
+        endTime: "2026-05-05T11:00:00.000Z",
+        student: {
+          ...mockLesson.student!,
+          id: "s-y2",
+          name: "Студент 2026",
+        },
+      };
+
+      renderWithTheme(
+        <WeeklyView
+          lessons={[lessonY1, lessonY2]}
+          type="scheduled"
+          onCardClick={mockOnCardClick}
+          onMenuClick={mockOnMenuClick}
+        />
+      );
+
+      // Two separate day headers, not one — the year now disambiguates.
+      // Each header is rendered as a Typography variant="h6"; assert by text
+      // since LessonCard uses additional h6 elements for student names.
+      const headersFor2025 = screen.getAllByText(/2025\s*г\.?/);
+      const headersFor2026 = screen.getAllByText(/2026\s*г\.?/);
+      expect(headersFor2025.length).toBeGreaterThan(0);
+      expect(headersFor2026.length).toBeGreaterThan(0);
+      expect(screen.getByText("Студент 2025")).toBeInTheDocument();
+      expect(screen.getByText("Студент 2026")).toBeInTheDocument();
+    });
   });
 });

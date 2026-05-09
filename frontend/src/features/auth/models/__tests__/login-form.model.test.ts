@@ -219,7 +219,7 @@ describe("features/auth/models/login-form.model", () => {
   });
 
   describe("navigation", () => {
-    it("should navigate to home on successful auth", async () => {
+    it("should navigate to home on successful auth of verified user", async () => {
       const mockResponse = {
         user: {
           id: "1",
@@ -239,9 +239,35 @@ describe("features/auth/models/login-form.model", () => {
         params: { email: "test@example.com", password: "password" },
       });
 
-      // Navigation happens in the model via userModel.$isAuthenticated
-      // We just verify the user state was updated
       expect(scope.getState(userModel.$user)).toEqual(mockResponse.user);
+      expect(navigate).toHaveBeenCalledWith("/", { replace: true });
+    });
+
+    it("should not navigate to home for unverified user (regression: $isAuthenticated as clock)", async () => {
+      // Regression for bug-hunt 2026-05-09 #9: subscribing navigateToHomeFx
+      // to userModel.$isAuthenticated also fired on email verification and
+      // any $user update, redirecting outside the login flow. The fix
+      // narrows the trigger to a verified loginFx response.
+      const mockResponse = {
+        user: {
+          id: "1",
+          email: "test@example.com",
+          name: "Test",
+          createdAt: "2024-01-01T00:00:00Z",
+          isEmailVerified: false,
+          taxEnabled: false,
+        },
+        token: "token",
+      };
+      vi.mocked(authApi.login).mockResolvedValue(mockResponse);
+
+      const scope = fork();
+      await allSettled(loginFx, {
+        scope,
+        params: { email: "test@example.com", password: "password" },
+      });
+
+      expect(navigate).not.toHaveBeenCalledWith("/", { replace: true });
     });
 
     it("should navigate to verification on 403 error", async () => {

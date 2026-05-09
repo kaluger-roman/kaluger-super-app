@@ -87,8 +87,11 @@ sample({
   target: navigateToVerificationFx,
 });
 
+// Navigate to home only when registration response itself reports a
+// pre-verified user. Listening on userModel.$isAuthenticated would also
+// fire on email verification or login from a different flow.
 sample({
-  clock: userModel.$isAuthenticated,
-  filter: (isAuth) => isAuth,
+  clock: registerFx.doneData,
+  filter: (payload) => payload?.user?.isEmailVerified === true,
   target: navigateToHomeFx,
 });

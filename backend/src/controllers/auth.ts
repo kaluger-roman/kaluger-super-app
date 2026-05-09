@@ -139,6 +139,7 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        isEmailVerified: user.isEmailVerified,
         taxEnabled: user.taxEnabled,
       },
     });

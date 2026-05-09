@@ -81,6 +81,37 @@ describe("reminder settings integration tests", () => {
     it("should return 401 without auth token", async () => {
       await request(app).get("/api/reminder-settings").expect(401);
     });
+
+    it("should not 500 when two parallel first-requests race for lazy-create", async () => {
+      // Regression for bug-hunt 2026-05-09 #3: findUnique+create raced on
+      // P2002 unique constraint and surfaced as 500 to one of the requests.
+      // The fix uses upsert, which is race-safe.
+      const responses = await Promise.all([
+        request(app)
+          .get("/api/reminder-settings")
+          .set("Authorization", `Bearer ${authToken}`),
+        request(app)
+          .get("/api/reminder-settings")
+          .set("Authorization", `Bearer ${authToken}`),
+        request(app)
+          .get("/api/reminder-settings")
+          .set("Authorization", `Bearer ${authToken}`),
+      ]);
+
+      for (const res of responses) {
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+          enabled: false,
+          intervals: [],
+          muteWhenInLesson: false,
+        });
+      }
+
+      const rows = await prisma.reminderSettings.findMany({
+        where: { userId },
+      });
+      expect(rows).toHaveLength(1);
+    });
   });
 
   describe("PUT /api/reminder-settings", () => {

@@ -42,10 +42,9 @@ export class WebSocketManager {
 
     console.log(`WebSocket connected: ${decoded.email} (${decoded.userId})`);
 
-    // Send welcome message
-    sendWelcomeMessage(ws, decoded.userId);
-
-    // Handle disconnection — only remove if this socket is still the registered one
+    // Register handlers BEFORE sending welcome message — if send throws
+    // synchronously (socket already closing), the close/error handlers must
+    // be in place to clean up the entry in `clients`.
     ws.on("close", () => {
       console.log(
         `WebSocket disconnected: ${decoded.email} (${decoded.userId})`
@@ -55,7 +54,6 @@ export class WebSocketManager {
       }
     });
 
-    // Handle errors — same identity check as close
     ws.on("error", (error) => {
       console.error(`WebSocket error for user ${decoded.userId}:`, error);
       if (this.clients.get(decoded.userId) === ws) {
@@ -63,7 +61,6 @@ export class WebSocketManager {
       }
     });
 
-    // Handle incoming messages
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message.toString());
@@ -72,6 +69,16 @@ export class WebSocketManager {
         console.error("Error parsing WebSocket message:", error);
       }
     });
+
+    // Send welcome message only if socket is still open; guard against
+    // synchronous throw from ws.send when socket closed during handshake.
+    if (ws.readyState === WebSocket.OPEN) {
+      try {
+        sendWelcomeMessage(ws, decoded.userId);
+      } catch (error) {
+        console.error("Failed to send welcome message:", error);
+      }
+    }
   }
 
   // Method to broadcast lesson status changes to all connected clients

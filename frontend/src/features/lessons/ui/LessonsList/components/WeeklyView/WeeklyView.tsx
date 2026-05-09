@@ -22,6 +22,7 @@ const groupLessonsByDay = (lessons: Lesson[]) => {
       weekday: "long",
       day: "numeric",
       month: "long",
+      year: "numeric",
     });
 
     if (!groups[dayKey]) {

@@ -187,14 +187,14 @@ describe("createLesson integration tests", () => {
       });
   });
 
-  it("treats price 0 as falsy and falls back to student.hourlyRate", async () => {
-    // ensure student has hourlyRate
+  it("preserves explicit price 0 (free trial lesson) instead of falling back to hourlyRate", async () => {
+    // Regression for bug-hunt 2026-05-09 #4: `price || hourlyRate` treated 0 as falsy
+    // and silently substituted hourlyRate, billing free trial lessons at full rate.
     await prisma.student.update({
       where: { id: studentId },
       data: { hourlyRate: 500 },
     });
 
-    // choose a time far enough to avoid conflicts with other tests
     const body = {
       studentId,
       subject: "MATHEMATICS",
@@ -216,7 +216,38 @@ describe("createLesson integration tests", () => {
         const created = await prisma.lesson.findUnique({
           where: { id: res.body.lesson.id },
         });
-        expect(created?.price).toBe(500);
+        expect(created?.price).toBe(0);
+      });
+  });
+
+  it("falls back to student.hourlyRate when price is omitted", async () => {
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { hourlyRate: 750 },
+    });
+
+    const body = {
+      studentId,
+      subject: "MATHEMATICS",
+      lessonType: "SCHOOL",
+      startTime: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString(),
+      endTime: new Date(
+        Date.now() + 12 * 24 * 3600 * 1000 + 3600000
+      ).toISOString(),
+      isRecurring: false,
+      // price omitted
+    };
+
+    await request(app)
+      .post(`/api/lessons`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send(body)
+      .expect(201)
+      .then(async (res) => {
+        const created = await prisma.lesson.findUnique({
+          where: { id: res.body.lesson.id },
+        });
+        expect(created?.price).toBe(750);
       });
   });
 
