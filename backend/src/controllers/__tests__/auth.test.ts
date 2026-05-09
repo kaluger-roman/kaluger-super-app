@@ -160,6 +160,10 @@ describe("Auth Controller", () => {
       expect(res.status).toBe(200);
       expect(res.body.token).toBeDefined();
       expect(res.body.user.email).toBe(normalizedEmail);
+      // Regression for bug-hunt 2026-05-09 round-2: frontend navigation
+      // gates on response.user.isEmailVerified === true; if backend omits
+      // the field, verified users get stuck on the login page.
+      expect(res.body.user.isEmailVerified).toBe(true);
 
       // cleanup
       await prisma.user
