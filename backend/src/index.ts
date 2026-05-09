@@ -20,7 +20,7 @@ import { pushRouter as pushRoutes } from "./routes/push";
 import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
 import { adminRouter as adminRoutes } from "./routes/admin";
 import { screenRouter as screenRoutes } from "./routes/screen";
-import taxPeriodsRoutes from "./routes/taxPeriods";
+import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
 
 const app = express();
 

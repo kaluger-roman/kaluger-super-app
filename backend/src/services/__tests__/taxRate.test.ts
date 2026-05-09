@@ -34,6 +34,17 @@ describe("resolveRate", () => {
     expect(resolveRate(new Date("2025-12-31"), periods)).toBe(4);
     expect(resolveRate(new Date("2026-06-01"), periods)).toBe(13);
   });
+
+  it("should return correct rate when periods are passed in unsorted order", () => {
+    const unsorted = [
+      makePeriod("2026-01-01", 13),
+      makePeriod("2024-01-01", 6),
+      makePeriod("2025-06-01", 4),
+    ];
+    expect(resolveRate(new Date("2025-05-31"), unsorted)).toBe(6);
+    expect(resolveRate(new Date("2025-06-01"), unsorted)).toBe(4);
+    expect(resolveRate(new Date("2026-06-01"), unsorted)).toBe(13);
+  });
 });
 
 describe("calcLessonTax", () => {

@@ -12,8 +12,6 @@ export const loadPeriodsFx = createEffect(async () => {
   return await taxPeriodsApi.list();
 });
 
-export const $periodsLoading = loadPeriodsFx.pending;
-
 sample({
   clock: periodsRequested,
   target: loadPeriodsFx,

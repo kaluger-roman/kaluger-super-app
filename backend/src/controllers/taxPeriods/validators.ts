@@ -33,7 +33,10 @@ export const validateTaxPeriodInput = (
 
 export const hasDuplicateStartDates = (
   periods: { startDate: string }[],
-): boolean => new Set(periods.map((p) => p.startDate)).size !== periods.length;
+): boolean => {
+  const normalized = periods.map((p) => new Date(p.startDate).getTime());
+  return new Set(normalized).size !== normalized.length;
+};
 
 export const normalizeRate = (rate: number): number =>
   Math.round(rate * 10) / 10;

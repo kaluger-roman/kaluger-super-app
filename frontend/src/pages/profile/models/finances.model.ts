@@ -15,8 +15,6 @@ export const setTaxEnabledFx = createEffect(async (target: boolean) =>
   authApi.updateProfile({ taxEnabled: target }),
 );
 
-export const $isTaxEnabledSaving = setTaxEnabledFx.pending;
-
 // Guard: enabling without any period — show notification, do not call API
 sample({
   clock: taxEnabledRequested,

@@ -144,6 +144,22 @@ describe("tax-periods endpoints", () => {
       );
     });
 
+    it("returns 400 when duplicate startDates differ only by ISO format", async () => {
+      const res = await request(app)
+        .put("/api/tax-periods")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          periods: [
+            { startDate: "2024-01-01", rate: 6 },
+            { startDate: "2024-01-01T00:00:00.000Z", rate: 7 },
+          ],
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Период с такой датой начала уже существует",
+      );
+    });
+
     it("returns 400 when rate is below 0", async () => {
       const res = await request(app)
         .put("/api/tax-periods")

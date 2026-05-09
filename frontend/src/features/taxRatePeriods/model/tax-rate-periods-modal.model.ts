@@ -37,8 +37,6 @@ export const savePeriodsFx = createEffect(
     taxPeriodsApi.replaceAll(draftToCreatePayload(draft)),
 );
 
-export const $isSaving = savePeriodsFx.pending;
-
 // Samples
 sample({
   clock: modalOpened,

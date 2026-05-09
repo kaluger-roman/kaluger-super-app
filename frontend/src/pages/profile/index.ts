@@ -1,2 +1,2 @@
 export { ProfilePage } from "./ProfilePage";
-export { profileModel } from "./models";
+export { profileModel, financesModel } from "./models";

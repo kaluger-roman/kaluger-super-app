@@ -7,6 +7,7 @@ import { TaxRateInfoTooltip } from "@features";
 import { formatCurrency } from "@shared";
 import type { Statistics } from "@shared";
 
+import { getTaxLabel, shouldShowTaxInfoIcon } from "./FinancialStatistics.helpers";
 import * as Styled from "./FinancialStatistics.styled";
 import { calculateAveragePrice } from "../../ReportsPage.helpers";
 
@@ -18,9 +19,8 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
   const showTaxCard =
     statistics.taxAmount !== null && statistics.taxBreakdown !== null;
   const breakdown = statistics.taxBreakdown ?? [];
-  const taxLabel =
-    breakdown.length === 1 ? `Налоги (${breakdown[0].rate}%)` : "Налоги";
-  const showInfoIcon = breakdown.length > 1;
+  const taxLabel = getTaxLabel(breakdown);
+  const showInfoIcon = shouldShowTaxInfoIcon(breakdown);
   return (
     <Styled.StatsContainer>
       <Styled.StatBox>

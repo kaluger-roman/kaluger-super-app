@@ -32,18 +32,16 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
         .json({ error: "Период с такой датой начала уже существует" });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { taxEnabled: true },
-    });
-
-    if (user?.taxEnabled && periods.length === 0) {
-      return res.status(400).json({
-        error: "Нельзя удалить последний период при включённом учёте налога",
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { taxEnabled: true },
       });
-    }
 
-    const stored = await prisma.$transaction(async (tx) => {
+      if (user?.taxEnabled && periods.length === 0) {
+        return { error: "Нельзя удалить последний период при включённом учёте налога" };
+      }
+
       await tx.taxRatePeriod.deleteMany({ where: { userId } });
       if (periods.length > 0) {
         await tx.taxRatePeriod.createMany({
@@ -54,15 +52,20 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
           })),
         });
       }
-      return tx.taxRatePeriod.findMany({
+      const stored = await tx.taxRatePeriod.findMany({
         where: { userId },
         orderBy: { startDate: "asc" },
         select: { id: true, startDate: true, rate: true },
       });
+      return { stored };
     });
 
+    if ("error" in result) {
+      return res.status(400).json({ error: result.error });
+    }
+
     res.json(
-      stored.map((p) => ({
+      result.stored.map((p) => ({
         id: p.id,
         startDate: p.startDate.toISOString(),
         rate: p.rate,

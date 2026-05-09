@@ -9,7 +9,6 @@ import { financesModel } from "../../models";
 
 export const FinancesSection = () => {
   const user = useUnit(userModel.$user);
-  const isSaving = useUnit(financesModel.$isTaxEnabledSaving);
 
   const actions = useUnit({
     toggle: financesModel.taxEnabledRequested,
@@ -28,7 +27,6 @@ export const FinancesSection = () => {
               <Switch
                 checked={user.taxEnabled}
                 onChange={(e) => actions.toggle(e.target.checked)}
-                disabled={isSaving}
               />
             }
             label={user.taxEnabled ? "включено" : "выключено"}

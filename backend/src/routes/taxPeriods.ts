@@ -3,11 +3,9 @@ import { listTaxPeriods, replaceAllTaxPeriods } from "../controllers";
 
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const taxPeriodsRouter = Router();
 
-router.use(authenticateToken);
+taxPeriodsRouter.use(authenticateToken);
 
-router.get("/", listTaxPeriods);
-router.put("/", replaceAllTaxPeriods);
-
-export default router;
+taxPeriodsRouter.get("/", listTaxPeriods);
+taxPeriodsRouter.put("/", replaceAllTaxPeriods);

@@ -310,20 +310,22 @@ describe("Auth Controller", () => {
     });
 
     it("returns 500 on database error", async () => {
-      const originalUpdate = prisma.user.update;
-      prisma.user.update = jest
+      const originalTransaction = prisma.$transaction;
+      prisma.$transaction = jest
         .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+        .mockRejectedValueOnce(new Error("DB error")) as typeof prisma.$transaction;
 
-      const res = await request(app)
-        .put("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test" });
+      try {
+        const res = await request(app)
+          .put("/api/auth/profile")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ name: "Test" });
 
-      expect(res.status).toBe(500);
-      expect(res.body.error).toBe("Внутренняя ошибка сервера");
-
-      prisma.user.update = originalUpdate;
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe("Внутренняя ошибка сервера");
+      } finally {
+        prisma.$transaction = originalTransaction;
+      }
     });
 
     it("returns taxEnabled=false by default for new user", async () => {

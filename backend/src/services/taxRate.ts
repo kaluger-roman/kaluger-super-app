@@ -2,13 +2,22 @@ import type { TaxBreakdownEntry, TaxRatePeriodDto } from "../types";
 
 type LessonForTax = { price: number | null; paymentDate: Date | null };
 
+const sortPeriodsByStartAsc = (
+  periods: TaxRatePeriodDto[],
+): TaxRatePeriodDto[] =>
+  [...periods].sort(
+    (a, b) =>
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+  );
+
 export const resolveRate = (
   paymentDate: Date,
   periods: TaxRatePeriodDto[],
 ): number => {
   if (periods.length === 0) return 0;
+  const sorted = sortPeriodsByStartAsc(periods);
   let applicable: TaxRatePeriodDto | null = null;
-  for (const period of periods) {
+  for (const period of sorted) {
     const periodStart = new Date(period.startDate).getTime();
     if (periodStart <= paymentDate.getTime()) {
       applicable = period;
@@ -21,14 +30,6 @@ export const resolveRate = (
 
 export const calcLessonTax = (price: number, rate: number): number =>
   Math.round((price * rate) / 100);
-
-const sortPeriodsByStartAsc = (
-  periods: TaxRatePeriodDto[],
-): TaxRatePeriodDto[] =>
-  [...periods].sort(
-    (a, b) =>
-      new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-  );
 
 export const buildTaxBreakdown = (
   lessons: LessonForTax[],

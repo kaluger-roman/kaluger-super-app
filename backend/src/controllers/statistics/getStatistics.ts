@@ -98,7 +98,15 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       new Date(now.getTime() - 24 * 60 * 60 * 1000)
     );
 
-    const [lostEarnings, unpaid, unpaidOver24h, paymentsInRange] = await Promise.all([
+    const taxEnabled = currentUser?.taxEnabled ?? false;
+
+    const [
+      lostEarnings,
+      unpaid,
+      unpaidOver24h,
+      paymentsInRange,
+      paidLessonsForTax,
+    ] = await Promise.all([
       prisma.lesson.aggregate({
         where: { ...where, status: "CANCELLED" },
         _sum: { price: true },
@@ -118,6 +126,17 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         _count: { id: true },
         _sum: { price: true },
       }),
+      taxEnabled
+        ? prisma.lesson.findMany({
+            where: {
+              tutorId: userId,
+              isPaid: true,
+              paymentDate: paymentDateRange,
+              price: { gt: 0 },
+            },
+            select: { price: true, paymentDate: true },
+          })
+        : Promise.resolve(null),
     ]);
 
     const earningsValue = earnings._sum.price || 0;
@@ -127,16 +146,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       ReturnType<typeof buildTaxBreakdown>
     >["taxBreakdown"] | null = null;
 
-    if (currentUser?.taxEnabled) {
-      const paidLessons = await prisma.lesson.findMany({
-        where: {
-          tutorId: userId,
-          isPaid: true,
-          paymentDate: paymentDateRange,
-          price: { gt: 0 },
-        },
-        select: { price: true, paymentDate: true },
-      });
+    if (taxEnabled && paidLessonsForTax && currentUser) {
       const periods: TaxRatePeriodDto[] = currentUser.taxRatePeriods.map(
         (period) => ({
           id: period.id,
@@ -144,7 +154,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
           rate: period.rate,
         }),
       );
-      const result = buildTaxBreakdown(paidLessons, periods);
+      const result = buildTaxBreakdown(paidLessonsForTax, periods);
       taxAmount = result.taxAmount;
       taxBreakdown = result.taxBreakdown;
     }

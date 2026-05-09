@@ -69,6 +69,25 @@ describe("FinancialStatistics", () => {
     expect(screen.queryByText(/налоги/i)).toBeNull();
   });
 
+  it("shows neutral label and info icon when only outside-periods entry is present", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: 0,
+          taxBreakdown: [
+            { rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Налоги")).toBeInTheDocument();
+    expect(screen.queryByText("Налоги (0%)")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /подробности расчёта налога/i }),
+    ).toBeInTheDocument();
+  });
+
   it("renders other financial cards regardless of tax state", () => {
     render(<FinancialStatistics statistics={createStatistics()} />);
     expect(screen.getByText("Заработок")).toBeInTheDocument();

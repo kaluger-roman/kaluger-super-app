@@ -10,8 +10,7 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { taxRatePeriodsModalModel } from "../../model";
-import { todayIso } from "../../model/tax-rate-periods-modal.helpers";
+import { taxRatePeriodsModalModel, todayIso } from "../../model";
 import { TaxRatePeriodRow } from "../TaxRatePeriodRow";
 import { computePeriodFlags } from "./TaxRatePeriodsModal.helpers";
 import * as Styled from "./TaxRatePeriodsModal.styled";
@@ -19,7 +18,6 @@ import * as Styled from "./TaxRatePeriodsModal.styled";
 export const TaxRatePeriodsModal = () => {
   const isOpen = useUnit(taxRatePeriodsModalModel.$isModalOpen);
   const draft = useUnit(taxRatePeriodsModalModel.$draftPeriods);
-  const isSaving = useUnit(taxRatePeriodsModalModel.$isSaving);
   const error = useUnit(taxRatePeriodsModalModel.$error);
 
   const actions = useUnit({
@@ -93,14 +91,12 @@ export const TaxRatePeriodsModal = () => {
         </Styled.RowsContainer>
       </DialogContent>
       <DialogActions>
-        <Button onClick={actions.closed} disabled={isSaving}>
-          Отмена
-        </Button>
+        <Button onClick={actions.closed}>Отмена</Button>
         <Button
           variant="contained"
           color="primary"
           onClick={actions.save}
-          disabled={!canSave || isSaving}
+          disabled={!canSave}
         >
           Сохранить
         </Button>

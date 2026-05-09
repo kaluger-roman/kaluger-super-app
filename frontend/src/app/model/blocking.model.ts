@@ -3,10 +3,12 @@ import { combine } from "effector";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
+import { taxRatePeriodModel } from "@entities/taxRatePeriod";
 import { adminAuthModel, adminDataModel } from "@features/admin";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
-import { profileModel } from "@pages/profile";
+import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
+import { financesModel, profileModel } from "@pages/profile";
 import { statisticsModel } from "@pages/ReportsPage";
 
 export const $isBlocking = combine(
@@ -36,6 +38,9 @@ export const $isBlocking = combine(
     adminBackupSettings: adminDataModel.getBackupSettingsFx.pending,
     adminUpdateBackup: adminDataModel.updateBackupSettingsFx.pending,
     adminCreateBackup: adminDataModel.createBackupFx.pending,
+    loadTaxRatePeriods: taxRatePeriodModel.loadPeriodsFx.pending,
+    saveTaxRatePeriods: taxRatePeriodsModalModel.savePeriodsFx.pending,
+    setTaxEnabled: financesModel.setTaxEnabledFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );
