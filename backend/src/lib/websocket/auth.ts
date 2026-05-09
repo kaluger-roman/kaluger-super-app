@@ -1,5 +1,5 @@
-import jwt from "jsonwebtoken";
 import { parse } from "url";
+import { verifyToken } from "../../utils/auth";
 import { AuthenticatedWebSocket } from "./types";
 
 export const authenticateWebSocket = async (
@@ -17,16 +17,13 @@ export const authenticateWebSocket = async (
       return null;
     }
 
-    // Verify JWT token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "fallback-secret"
-    ) as {
-      userId: string;
-      email: string;
-    };
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      ws.close(1008, "Authentication failed");
+      return null;
+    }
 
-    return decoded;
+    return { userId: decoded.userId, email: decoded.email };
   } catch (error) {
     console.error("WebSocket authentication error:", error);
     ws.close(1008, "Authentication failed");

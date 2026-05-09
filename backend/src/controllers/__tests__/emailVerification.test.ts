@@ -52,7 +52,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when email already verified", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -72,7 +72,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when verification code not found", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -97,7 +97,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -124,7 +124,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -155,7 +155,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -192,7 +192,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -250,7 +250,7 @@ describe("Email Verification Controller", () => {
     it("should return 400 when email already verified", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -270,7 +270,7 @@ describe("Email Verification Controller", () => {
     it("should generate new code and send email successfully", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -305,7 +305,7 @@ describe("Email Verification Controller", () => {
     it("should return 500 when email sending fails", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: faker.internet.email().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,

@@ -43,7 +43,7 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
                 </Typography>
               )}
 
-              {student.hourlyRate && (
+              {student.hourlyRate != null && student.hourlyRate > 0 && (
                 <Typography variant="body2" color="text.secondary">
                   💰 {student.hourlyRate} ₽/урок
                 </Typography>

@@ -20,7 +20,8 @@
     "test:integration": "jest --testPathPattern=integration",
     "test:e2e": "jest --testPathPattern=e2e",
     "news:generate": "npx tsx src/scripts/generateNews.ts",
-    "news:sync": "npx tsx src/scripts/syncNews.ts"
+    "news:sync": "npx tsx src/scripts/syncNews.ts",
+    "admin:hash-password": "npx tsx src/scripts/hashAdminPassword.ts"
   },
   "keywords": [
     "tutor",
@@ -37,6 +38,7 @@
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.5.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
