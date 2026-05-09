@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: Tax Rate Periods API
+  description: CRUD по налоговым периодам пользователя (фича 027).
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Базовый префикс REST API
+
+tags:
+  - name: tax-periods
+    description: Управление списком налоговых периодов пользователя
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TaxRatePeriod:
+      type: object
+      required: [id, startDate, rate]
+      properties:
+        id:
+          type: string
+          example: "clxabc123"
+        startDate:
+          type: string
+          format: date
+          description: Дата начала действия периода (ISO date, день-точность, UTC).
+          example: "2025-06-01"
+        rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          multipleOf: 0.1
+          description: Ставка налога в процентах (0..100, до одного знака после запятой).
+          example: 4
+
+    TaxRatePeriodCreate:
+      type: object
+      required: [startDate, rate]
+      properties:
+        startDate:
+          type: string
+          format: date
+        rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          multipleOf: 0.1
+
+    TaxRatePeriodUpdate:
+      type: object
+      description: Любое из двух полей опционально; должно быть передано хотя бы одно.
+      properties:
+        startDate:
+          type: string
+          format: date
+        rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          multipleOf: 0.1
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Сообщение об ошибке на русском.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /tax-periods:
+    get:
+      tags: [tax-periods]
+      summary: Получить список налоговых периодов текущего пользователя
+      description: Возвращает все периоды текущего авторизованного пользователя в хронологическом порядке (по startDate ASC).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaxRatePeriod"
+        "401":
+          $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [tax-periods]
+      summary: Создать новый налоговый период
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaxRatePeriodCreate"
+      responses:
+        "201":
+          description: Период создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRatePeriod"
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                duplicateDate:
+                  value:
+                    error: "Период с такой датой начала уже существует"
+                rateOutOfRange:
+                  value:
+                    error: "Ставка налога должна быть от 0 до 100"
+        "401":
+          description: Не авторизован
+
+  /tax-periods/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [tax-periods]
+      summary: Изменить период (дата начала и/или ставка)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaxRatePeriodUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRatePeriod"
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Период не найден или принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [tax-periods]
+      summary: Удалить период
+      description: |
+        Если у пользователя `taxEnabled = true` и это последний оставшийся
+        период — операция отклоняется (400).
+      responses:
+        "204":
+          description: Удалено
+        "400":
+          description: Нельзя удалить последний период
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                lastPeriod:
+                  value:
+                    error: "Нельзя удалить последний период при включённом учёте налога"
+        "404":
+          description: Период не найден
+
+  /auth/profile:
+    put:
+      tags: [profile]
+      summary: Обновить профиль (расширение существующего эндпоинта)
+      description: |
+        В существующий PUT /api/auth/profile добавляется поле `taxEnabled`.
+        Если `taxEnabled=true`, у пользователя должен быть ≥1 период в БД,
+        иначе 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                taxEnabled:
+                  type: boolean
+                  description: ➕ NEW. Включить/выключить учёт налога.
+      responses:
+        "200":
+          description: OK; в ответе профиль пользователя с полями name, taxEnabled, …
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                noPeriods:
+                  value:
+                    error: "Чтобы включить учёт налога, добавьте хотя бы один период"

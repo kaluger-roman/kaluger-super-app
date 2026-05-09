@@ -133,6 +133,7 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
 
 ## Active Technologies
+- TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

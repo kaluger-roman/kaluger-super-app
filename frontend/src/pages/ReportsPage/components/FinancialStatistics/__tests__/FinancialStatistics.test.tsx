@@ -5,7 +5,9 @@ import type { Statistics } from "@shared";
 
 import { FinancialStatistics } from "../FinancialStatistics";
 
-const createStatistics = (overrides: Partial<Statistics> = {}): Statistics => ({
+const createStatistics = (
+  overrides: Partial<Statistics> = {},
+): Statistics => ({
   completedLessons: 10,
   cancelledLessons: 1,
   upcomingLessons: 3,
@@ -23,69 +25,78 @@ const createStatistics = (overrides: Partial<Statistics> = {}): Statistics => ({
   paymentsInRangeCount: 4,
   trialLessonsCount: 1,
   taxAmount: 3000,
+  taxBreakdown: [{ rate: 6, earnings: 50000, tax: 3000 }],
   ...overrides,
 });
 
 describe("FinancialStatistics", () => {
-  it("should render tax card with tax rate in title", () => {
-    render(<FinancialStatistics statistics={createStatistics()} taxRate={6} />);
-
+  it("renders tax card with single rate label", () => {
+    render(<FinancialStatistics statistics={createStatistics()} />);
     expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
-    expect(screen.getByText("Сумма налога от заработка за период")).toBeInTheDocument();
+    expect(
+      screen.getByText("Сумма налога по оплатам за период"),
+    ).toBeInTheDocument();
   });
 
-  it("should display custom tax rate in title", () => {
+  it("renders neutral tax label and info button when multiple rates apply", () => {
     render(
-      <FinancialStatistics statistics={createStatistics()} taxRate={13} />,
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: 1200,
+          taxBreakdown: [
+            { rate: 4, earnings: 15000, tax: 600 },
+            { rate: 6, earnings: 10000, tax: 600 },
+          ],
+        })}
+      />,
     );
 
-    expect(screen.getByText("Налоги (13%)")).toBeInTheDocument();
+    expect(screen.getByText("Налоги")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /подробности расчёта налога/i }),
+    ).toBeInTheDocument();
   });
 
-  it("should render all financial cards including tax", () => {
-    render(<FinancialStatistics statistics={createStatistics()} taxRate={6} />);
+  it("hides tax card entirely when taxAmount is null", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: null,
+          taxBreakdown: null,
+        })}
+      />,
+    );
+    expect(screen.queryByText(/налоги/i)).toBeNull();
+  });
 
+  it("shows neutral label and info icon when only outside-periods entry is present", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: 0,
+          taxBreakdown: [
+            { rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Налоги")).toBeInTheDocument();
+    expect(screen.queryByText("Налоги (0%)")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /подробности расчёта налога/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders other financial cards regardless of tax state", () => {
+    render(<FinancialStatistics statistics={createStatistics()} />);
     expect(screen.getByText("Заработок")).toBeInTheDocument();
     expect(screen.getByText("Предоплата")).toBeInTheDocument();
     expect(screen.getByText("Поступления за период")).toBeInTheDocument();
     expect(screen.getByText("Средний урок")).toBeInTheDocument();
     expect(screen.getByText("Потери от отмен")).toBeInTheDocument();
-    expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
     expect(screen.getByText("Потенциальный доход за период")).toBeInTheDocument();
     expect(screen.getByText("Задолженность")).toBeInTheDocument();
     expect(screen.getByText("Пробные уроки")).toBeInTheDocument();
-  });
-
-  it("should render payments in range card with amount and lesson count", () => {
-    render(
-      <FinancialStatistics
-        statistics={createStatistics({
-          paymentsInRangeSum: 25000,
-          paymentsInRangeCount: 4,
-        })}
-        taxRate={6}
-      />,
-    );
-
-    expect(screen.getByText("Поступления за период")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Фактические поступления \(4 оплат по дате платежа\)/),
-    ).toBeInTheDocument();
-  });
-
-  it("should show zero payments when not provided", () => {
-    render(
-      <FinancialStatistics
-        statistics={createStatistics({
-          paymentsInRangeSum: undefined,
-          paymentsInRangeCount: undefined,
-        })}
-        taxRate={6}
-      />,
-    );
-
-    expect(
-      screen.getByText(/Фактические поступления \(0 оплат по дате платежа\)/),
-    ).toBeInTheDocument();
   });
 });

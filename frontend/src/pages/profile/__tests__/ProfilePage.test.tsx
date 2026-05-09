@@ -36,7 +36,7 @@ describe("ProfilePage", () => {
     name: "Test User",
     createdAt: "2024-01-01T00:00:00Z",
     isEmailVerified: true,
-    taxRate: 6,
+    taxEnabled: false,
   };
 
   beforeEach(() => {
@@ -49,7 +49,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, mockUser.name],
         [profileModel.$isEditMode, false],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -58,6 +57,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("Настройки")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /мои данные/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /безопасность/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /финансы/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /уведомления/i })).toBeInTheDocument();
   });
 
@@ -67,7 +67,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, mockUser.name],
         [profileModel.$isEditMode, false],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -82,7 +81,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, mockUser.name],
         [profileModel.$isEditMode, false],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -97,7 +95,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, "Test User"],
         [profileModel.$isEditMode, true],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -112,7 +109,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, "Test User"],
         [profileModel.$isEditMode, true],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -127,9 +123,7 @@ describe("ProfilePage", () => {
       values: [
         [userModel.$user, mockUser],
         [profileModel.$name, "Test User"],
-        [profileModel.$taxRateInput, "6"],
         [profileModel.$isEditMode, true],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -146,7 +140,6 @@ describe("ProfilePage", () => {
         [userModel.$user, mockUser],
         [profileModel.$name, mockUser.name],
         [profileModel.$isEditMode, true],
-        [profileModel.$error, ""],
       ],
     });
 
@@ -158,21 +151,6 @@ describe("ProfilePage", () => {
 
     const saveButton = screen.getByRole("button", { name: /сохранить/i });
     expect(saveButton).not.toBeDisabled();
-  });
-
-  it("should show error message when error exists", () => {
-    const scope = fork({
-      values: [
-        [userModel.$user, mockUser],
-        [profileModel.$name, ""],
-        [profileModel.$isEditMode, true],
-        [profileModel.$error, "Имя не может быть пустым"],
-      ],
-    });
-
-    renderWithProviders(<ProfilePage />, scope);
-
-    expect(screen.getByText("Имя не может быть пустым")).toBeInTheDocument();
   });
 
   it("should render security section content when security tab is active", () => {
@@ -187,6 +165,22 @@ describe("ProfilePage", () => {
 
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
     expect(screen.getByText("Пароль")).toBeInTheDocument();
+  });
+
+  it("should render finances section content when finances tab is active", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, { ...mockUser, taxEnabled: true }],
+        [profileModel.$activeTab, "finances"],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
+    expect(
+      screen.getByRole("button", { name: /настроить ставки/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/учитывать налог/i)).toBeInTheDocument();
   });
 
   it("should not render when user is null", () => {

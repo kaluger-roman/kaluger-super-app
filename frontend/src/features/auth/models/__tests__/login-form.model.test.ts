@@ -81,7 +81,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test User",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "test-token",
       };
@@ -172,7 +172,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "token",
       };
@@ -204,7 +204,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "token",
       });
@@ -227,7 +227,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "token",
       };
@@ -314,7 +314,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "token",
       });
@@ -364,7 +364,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "test-token",
       };
@@ -387,7 +387,7 @@ describe("features/auth/models/login-form.model", () => {
           name: "Test",
           createdAt: "2024-01-01T00:00:00Z",
           isEmailVerified: true,
-          taxRate: 6,
+          taxEnabled: false,
         },
         token: "test-token",
       };

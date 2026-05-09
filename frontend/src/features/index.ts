@@ -5,3 +5,4 @@ export * from "./lessons";
 export * from "./logoutConfirmation";
 export * from "./students";
 export * from "./notificationSettings";
+export * from "./taxRatePeriods";
