@@ -78,6 +78,12 @@ export const LoginForm: FC = () => {
           size={isMobile ? "small" : "medium"}
         />
 
+        <Styled.ForgotPasswordRow>
+          <Styled.ForgotPasswordLink to="/forgot-password">
+            Забыли пароль?
+          </Styled.ForgotPasswordLink>
+        </Styled.ForgotPasswordRow>
+
         {authError && <Alert severity="error">{authError}</Alert>}
 
         <Button

@@ -45,3 +45,29 @@ export const sendEmailChangeVerification = async (
     `,
   });
 };
+
+export const sendPasswordResetEmail = async (
+  email: string,
+  resetUrl: string,
+): Promise<void> => {
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM || "",
+    to: email,
+    subject: "Восстановление пароля",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Восстановление пароля</h2>
+        <p>Вы запросили восстановление пароля. Чтобы установить новый пароль, нажмите на кнопку ниже:</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${resetUrl}" style="background-color: #1976d2; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: 600;">
+            Сбросить пароль
+          </a>
+        </p>
+        <p>Если кнопка не работает, скопируйте ссылку и откройте её в браузере:</p>
+        <p style="word-break: break-all; color: #555555;">${resetUrl}</p>
+        <p>Ссылка действительна в течение 15 минут и может быть использована только один раз.</p>
+        <p>Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо — ваш пароль останется прежним.</p>
+      </div>
+    `,
+  });
+};

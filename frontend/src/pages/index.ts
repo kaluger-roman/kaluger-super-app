@@ -7,3 +7,4 @@ export { ProfilePage } from "./profile";
 export { NewsPage } from "./news";
 export { ScreenPage } from "./screen";
 export { ForgotPasswordPage } from "./forgotPassword";
+export { ResetPasswordPage } from "./resetPassword";

@@ -9,7 +9,12 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
     jest.resetModules();
   });
 
-  const buildApp = (limiterName: "authRateLimiter" | "adminLoginRateLimiter") => {
+  const buildApp = (
+    limiterName:
+      | "authRateLimiter"
+      | "adminLoginRateLimiter"
+      | "passwordResetRateLimiter",
+  ) => {
     process.env.NODE_ENV = "production";
     jest.resetModules();
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -41,6 +46,17 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
     }
     const blocked = await request(app).post("/test");
     expect(blocked.status).toBe(429);
+  });
+
+  it("passwordResetRateLimiter should block requests after the 5th in a 15-min window", async () => {
+    const app = buildApp("passwordResetRateLimiter");
+
+    for (let i = 0; i < 5; i++) {
+      await request(app).post("/test").expect(200);
+    }
+    const blocked = await request(app).post("/test");
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error).toBe("Слишком много попыток. Попробуйте позже");
   });
 
   it("limiters should skip rate limiting in test environment", async () => {

@@ -3,6 +3,7 @@ export * from "./changeEmail";
 export * from "./changePassword";
 export * from "./emailVerification";
 export * from "./lessons";
+export * from "./passwordReset";
 export * from "./statistics";
 export * from "./students";
 export * from "./push";

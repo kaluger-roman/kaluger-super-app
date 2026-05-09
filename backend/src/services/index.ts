@@ -4,6 +4,7 @@ export * from "./admin";
 export * from "./backup";
 export * from "./email";
 export * from "./lessonStatusUpdater";
+export * from "./passwordReset";
 export * from "./recurringHelpers";
 export * from "./recurringLessons";
 export * from "./pushNotification";
