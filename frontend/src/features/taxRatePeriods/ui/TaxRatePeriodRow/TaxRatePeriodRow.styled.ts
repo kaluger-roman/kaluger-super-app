@@ -1,12 +1,17 @@
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
-export const Row = styled(Box)`
+export const RowWrapper = styled(Box)`
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+`;
+
+export const InputsLine = styled(Box)`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
 `;
 
 export const DateField = styled(Box)`
@@ -16,4 +21,10 @@ export const DateField = styled(Box)`
 
 export const RateField = styled(Box)`
   width: 120px;
+`;
+
+export const Caption = styled(Typography)`
+  margin-top: 4px;
+  margin-left: 12px;
+  min-height: 18px;
 `;
