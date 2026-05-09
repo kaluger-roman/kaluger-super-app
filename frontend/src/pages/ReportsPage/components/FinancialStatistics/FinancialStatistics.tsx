@@ -115,12 +115,12 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
         <Styled.StatBox flex="1" minWidth={220}>
           <Styled.OrangeCard>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Styled.TaxTitle variant="h6" gutterBottom>
                 {taxLabel}
                 {showInfoIcon ? (
                   <TaxRateInfoTooltip breakdown={breakdown} />
                 ) : null}
-              </Typography>
+              </Styled.TaxTitle>
               <Styled.OrangeAmount variant="h4">
                 {formatCurrency(statistics.taxAmount ?? 0)}
               </Styled.OrangeAmount>
