@@ -604,7 +604,8 @@ describe("getStatistics controller", () => {
       },
     });
 
-    // paid lesson without paymentDate — excluded
+    // paid lesson without paymentDate but with startTime in range —
+    // included via legacy fallback (paymentDate ?? startTime)
     await prisma.lesson.create({
       data: {
         tutorId: userId,
@@ -616,6 +617,23 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 777,
+        status: "COMPLETED",
+      },
+    });
+
+    // paid lesson without paymentDate AND startTime far in the past —
+    // excluded (fallback uses startTime, which is out of range)
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(today.getFullYear() - 2, 5, 1),
+        endTime: new Date(today.getFullYear() - 2, 5, 1, 1),
+        isRecurring: false,
+        isPaid: true,
+        price: 11111,
         status: "COMPLETED",
       },
     });
@@ -646,8 +664,10 @@ describe("getStatistics controller", () => {
       })
       .expect(200)
       .then((res) => {
-        expect(res.body.paymentsInRangeSum).toBe(4000); // 2500 + 1500
-        expect(res.body.paymentsInRangeCount).toBe(2);
+        // 2500 (old lesson, paid today) + 1500 (today's lesson) +
+        //   777 (no paymentDate, startTime today via fallback)
+        expect(res.body.paymentsInRangeSum).toBe(4777);
+        expect(res.body.paymentsInRangeCount).toBe(3);
       });
   });
 
