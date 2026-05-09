@@ -5,7 +5,6 @@ import { styled } from "@shared";
 export const Container = styled(Box)`
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
   cursor: pointer;
 `;
 

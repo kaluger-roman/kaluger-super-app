@@ -31,6 +31,12 @@ export const GreenTitle = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
+export const TaxTitle = styled(Typography)({
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+});
+
 export const GreenAmount = styled(Typography)(({ theme }) => ({
   color: "#2E7D47",
   fontWeight: "bold",
