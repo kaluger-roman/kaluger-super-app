@@ -31,14 +31,11 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const isPasswordsMatch =
-    confirmPassword.length === 0 || newPassword === confirmPassword;
+  const isPasswordsMatch = confirmPassword.length === 0 || newPassword === confirmPassword;
   const mismatchMessage = !isPasswordsMatch ? "Пароли не совпадают" : null;
 
   const isSubmitDisabled =
-    newPassword.length === 0 ||
-    confirmPassword.length === 0 ||
-    !isPasswordsMatch;
+    newPassword.length === 0 || confirmPassword.length === 0 || !isPasswordsMatch;
 
   return (
     <Styled.FormPaper elevation={3} $isMobile={isMobile}>
@@ -60,9 +57,7 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
         tokenStatus === "invalid_expired" ||
         tokenStatus === "invalid_used") && (
         <Styled.StatusBox>
-          <Alert severity="error">
-            {tokenError ?? "Ссылка для сброса пароля недействительна"}
-          </Alert>
+          <Alert severity="error">{tokenError ?? "Ссылка для сброса пароля недействительна"}</Alert>
           <Styled.RouterLink to="/forgot-password">
             <Button fullWidth variant="contained" size={isMobile ? "medium" : "large"}>
               Запросить новую ссылку
@@ -70,7 +65,7 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ token }) => {
           </Styled.RouterLink>
           <Styled.RouterLink to="/login">
             <Button fullWidth variant="text" size={isMobile ? "medium" : "large"}>
-              Вернуться ко входу
+              Отмена
             </Button>
           </Styled.RouterLink>
         </Styled.StatusBox>
