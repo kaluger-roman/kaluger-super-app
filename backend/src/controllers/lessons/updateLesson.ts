@@ -5,7 +5,8 @@ import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import {
-  shiftFutureRecurringLessons,
+  previewShiftFutureRecurringLessons,
+  applyShiftFutureRecurringLessons,
   updatePriceForFutureRecurringLessons,
   cancelRemindersForLesson,
   scheduleRemindersForLesson,
@@ -145,50 +146,68 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     ) {
       nextLessonForTransfer = await findNextUnpaidLesson(userId!, existingLesson);
       dataToUpdate.isPaid = false;
-      delete dataToUpdate.paymentDate;
+      // Prisma treats `undefined` as "do not update this field". Use explicit
+      // `null` so paymentDate is actually cleared on the cancelled lesson —
+      // otherwise the row ends up with isPaid=false but a stale paymentDate.
+      dataToUpdate.paymentDate = null;
     }
 
-    const lesson = await prisma.$transaction(async (tx) => {
+    // Pre-check recurring shifts BEFORE the main transaction so a conflict
+    // does not leave the base lesson updated with the shifts aborted.
+    const shouldShiftRecurring =
+      existingLesson.isRecurring &&
+      (updateData.startTime || updateData.endTime) &&
+      existingLesson.status === "SCHEDULED" &&
+      updateData.status !== "RESCHEDULED";
+
+    let plannedShift:
+      | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
+      | undefined;
+
+    if (shouldShiftRecurring) {
+      const newStart = truncateToMinute(new Date(start));
+      const newEnd = truncateToMinute(new Date(end));
+      plannedShift = await previewShiftFutureRecurringLessons(
+        existingLesson,
+        newStart,
+        newEnd
+      );
+
+      if (plannedShift.conflicts.length > 0) {
+        return res
+          .status(409)
+          .json({ error: "Перенесенная серия конфликтует с другими уроками" });
+      }
+    }
+
+    const { lesson, result } = await prisma.$transaction(async (tx) => {
       if (nextLessonForTransfer && existingLesson.paymentDate) {
         await tx.lesson.update({
           where: { id: nextLessonForTransfer.id },
           data: { isPaid: true, paymentDate: existingLesson.paymentDate },
         });
       }
-      return tx.lesson.update({
+      const updated = await tx.lesson.update({
         where: { id },
         data: dataToUpdate,
         include: { student: { select: { id: true, name: true } } },
       });
+
+      const shiftResult: ShiftResult | undefined = plannedShift
+        ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
+        : undefined;
+
+      return { lesson: updated, result: shiftResult };
     });
 
-    let result: ShiftResult | undefined;
+    if (result?.shifted && result.shifted > 0) {
+      console.log(`Shifted ${result.shifted} future recurring lessons`);
 
-    if (
-      existingLesson.isRecurring &&
-      (updateData.startTime || updateData.endTime) &&
-      existingLesson.status === "SCHEDULED" &&
-      updateData.status !== "RESCHEDULED"
-    ) {
-      const newStart = truncateToMinute(new Date(start));
-      const newEnd = truncateToMinute(new Date(end));
-
-      result = await shiftFutureRecurringLessons(
-        existingLesson,
-        newStart,
-        newEnd
-      );
-      if (result.conflicts && result.conflicts.length > 0) {
-        throw new Error("Перенесенная серия конфликтует с другими уроками");
-      } else if (result.shifted && result.shifted > 0) {
-        console.log(`Shifted ${result.shifted} future recurring lessons`);
-
-        // Recalculate reminders for all shifted lessons
-        if (result.shiftedIds) {
-          for (const shiftedId of result.shiftedIds) {
-            await cancelRemindersForLesson(shiftedId);
-            await scheduleRemindersForLesson(shiftedId);
-          }
+      // Recalculate reminders for all shifted lessons
+      if (result.shiftedIds) {
+        for (const shiftedId of result.shiftedIds) {
+          await cancelRemindersForLesson(shiftedId);
+          await scheduleRemindersForLesson(shiftedId);
         }
       }
     }

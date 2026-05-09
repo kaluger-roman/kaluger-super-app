@@ -17,12 +17,17 @@ const getBackupDir = (): string => {
   return dir;
 };
 
-export const getBackupSettings = async () => {
-  const settings = await prisma.backupSettings.findFirst();
-  if (settings) return settings;
+// Singleton id used for the one-and-only BackupSettings row. The
+// 20260509100000_backup_settings_singleton migration consolidates any pre-
+// existing rows onto this id so concurrent first-time access is race-free.
+const BACKUP_SETTINGS_ID = "backup-settings-singleton";
 
-  return prisma.backupSettings.create({
-    data: {
+export const getBackupSettings = async () => {
+  return prisma.backupSettings.upsert({
+    where: { id: BACKUP_SETTINGS_ID },
+    update: {},
+    create: {
+      id: BACKUP_SETTINGS_ID,
       enabled: true,
       intervalHours: 6,
       maxStorageMb: 300,
@@ -180,40 +185,57 @@ export const createManualBackup = async (): Promise<{
   };
 };
 
-export const runBackupJob = async (): Promise<void> => {
-  const settings = await getBackupSettings();
+// Module-level overlap guard: pg_dump on a large DB can outrun the cron tick
+// or hit the execAsync timeout, leaving lastBackupAt unchanged. Without this
+// flag the next tick would start a parallel pg_dump and double the load.
+let backupRunning = false;
 
-  if (!settings.enabled) {
+export const runBackupJob = async (): Promise<void> => {
+  if (backupRunning) {
+    console.warn(
+      "runBackupJob: previous backup still running, skipping this tick"
+    );
     return;
   }
 
-  // Check if enough time has passed since last backup
-  if (settings.lastBackupAt) {
-    const hoursSinceLastBackup =
-      (Date.now() - settings.lastBackupAt.getTime()) / (1000 * 60 * 60);
+  backupRunning = true;
+  try {
+    const settings = await getBackupSettings();
 
-    if (hoursSinceLastBackup < settings.intervalHours) {
+    if (!settings.enabled) {
       return;
     }
-  }
 
-  console.log("Starting database backup...");
+    // Check if enough time has passed since last backup
+    if (settings.lastBackupAt) {
+      const hoursSinceLastBackup =
+        (Date.now() - settings.lastBackupAt.getTime()) / (1000 * 60 * 60);
 
-  const filePath = await performBackup();
-  const stats = fs.statSync(filePath);
-  const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+      if (hoursSinceLastBackup < settings.intervalHours) {
+        return;
+      }
+    }
 
-  console.log(`Backup created: ${path.basename(filePath)} (${sizeMb} MB)`);
+    console.log("Starting database backup...");
 
-  // Update last backup timestamp
-  await prisma.backupSettings.update({
-    where: { id: settings.id },
-    data: { lastBackupAt: new Date() },
-  });
+    const filePath = await performBackup();
+    const stats = fs.statSync(filePath);
+    const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
 
-  // Clean up old backups
-  const deletedCount = cleanupOldBackups(settings.maxStorageMb);
-  if (deletedCount > 0) {
-    console.log(`Deleted ${deletedCount} old backup(s)`);
+    console.log(`Backup created: ${path.basename(filePath)} (${sizeMb} MB)`);
+
+    // Update last backup timestamp
+    await prisma.backupSettings.update({
+      where: { id: settings.id },
+      data: { lastBackupAt: new Date() },
+    });
+
+    // Clean up old backups
+    const deletedCount = cleanupOldBackups(settings.maxStorageMb);
+    if (deletedCount > 0) {
+      console.log(`Deleted ${deletedCount} old backup(s)`);
+    }
+  } finally {
+    backupRunning = false;
   }
 };

@@ -4,6 +4,7 @@ import {
   endOfMonthInTimezone,
   getCurrentMonthRange,
   getLastMonthBounds,
+  isValidTimezone,
 } from "../time";
 
 describe("truncateToMinute", () => {
@@ -91,6 +92,22 @@ describe("getCurrentMonthRange", () => {
     expect(gte instanceof Date).toBe(true);
     expect(lte instanceof Date).toBe(true);
     expect(lte.getTime()).toBeGreaterThan(gte.getTime());
+  });
+});
+
+describe("isValidTimezone", () => {
+  it("should accept valid IANA timezones", () => {
+    expect(isValidTimezone("Europe/Moscow")).toBe(true);
+    expect(isValidTimezone("America/New_York")).toBe(true);
+    expect(isValidTimezone("UTC")).toBe(true);
+    expect(isValidTimezone("Asia/Tokyo")).toBe(true);
+  });
+
+  it("should reject invalid timezones without throwing", () => {
+    expect(isValidTimezone("INVALID/TZ")).toBe(false);
+    expect(isValidTimezone("Not/A/Timezone")).toBe(false);
+    expect(isValidTimezone("nonsense")).toBe(false);
+    expect(isValidTimezone("")).toBe(false);
   });
 });
 
