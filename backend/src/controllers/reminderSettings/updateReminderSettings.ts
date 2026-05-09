@@ -40,21 +40,17 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
       return res.status(400).json({ error: validation.error });
     }
 
-    // Get or create existing settings
-    let existing = await prisma.reminderSettings.findUnique({
+    // Lazy creation via upsert — race-safe across parallel first requests
+    const existing = await prisma.reminderSettings.upsert({
       where: { userId: userId! },
+      update: {},
+      create: {
+        userId: userId!,
+        enabled: false,
+        intervals: [],
+        muteWhenInLesson: false,
+      },
     });
-
-    if (!existing) {
-      existing = await prisma.reminderSettings.create({
-        data: {
-          userId: userId!,
-          enabled: false,
-          intervals: [],
-          muteWhenInLesson: false,
-        },
-      });
-    }
 
     // Build update data
     const updateData: {

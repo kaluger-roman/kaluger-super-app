@@ -128,8 +128,11 @@ sample({
   target: navigateToVerificationFx,
 });
 
+// Navigate to home only after a successful login of an already-verified user.
+// Subscribing to userModel.$isAuthenticated would also fire on email verification
+// or profile refresh, redirecting outside this flow.
 sample({
-  clock: userModel.$isAuthenticated,
-  filter: (isAuth) => isAuth,
+  clock: loginFx.doneData,
+  filter: (payload) => payload?.response?.user?.isEmailVerified === true,
   target: navigateToHomeFx,
 });

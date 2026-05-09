@@ -10,6 +10,7 @@ if (fs.existsSync(envPath)) dotenv.config({ path: envPath });
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret";
 process.env.ADMIN_JWT_SECRET =
   process.env.ADMIN_JWT_SECRET || "test-admin-jwt-secret";
+process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_dummy";
 
 // Basic Jest setup for backend tests
 jest.setTimeout(10000);

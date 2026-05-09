@@ -302,4 +302,66 @@ describe("reminderProcessor service", () => {
     });
     expect(reminder!.status).toBe("PENDING");
   });
+
+  it("should claim at most REMINDER_BATCH_SIZE pending reminders per tick (regression: no take limit)", async () => {
+    // Regression for bug-hunt 2026-05-09 #10: a backlog after server downtime
+    // could be claimed atomically in a single transaction (and fully marked SENT
+    // before push delivery), holding a long DB lock and overwhelming the push
+    // provider. The fix caps each tick at 100.
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    await prisma.reminderSettings.create({
+      data: {
+        userId,
+        enabled: true,
+        intervals: [30],
+        muteWhenInLesson: false,
+      },
+    });
+
+    const futureTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const lesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: futureTime,
+        endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+        status: "SCHEDULED",
+        tutorId: userId,
+        studentId,
+      },
+    });
+
+    const backlogSize = 105;
+    const past = Date.now() - 60 * 60 * 1000;
+    await prisma.scheduledReminder.createMany({
+      data: Array.from({ length: backlogSize }, (_, i) => ({
+        scheduledAt: new Date(past - i * 1000),
+        intervalMinutes: 30,
+        lessonId: lesson.id,
+        userId,
+        status: "PENDING" as const,
+      })),
+    });
+
+    await processScheduledReminders();
+
+    const stillPending = await prisma.scheduledReminder.count({
+      where: { lessonId: lesson.id, status: "PENDING" },
+    });
+    const claimed = await prisma.scheduledReminder.count({
+      where: { lessonId: lesson.id, status: { in: ["SENT", "FAILED"] } },
+    });
+
+    expect(claimed).toBeLessThanOrEqual(100);
+    expect(claimed).toBeGreaterThan(0);
+    expect(stillPending).toBe(backlogSize - claimed);
+  });
 });

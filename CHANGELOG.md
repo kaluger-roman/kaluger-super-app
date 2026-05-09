@@ -17,11 +17,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `GET /api/lessons?page=abc` no longer collapses pagination to "return everything" — invalid page/limit fall back to defaults and limit is clamped to 100
 - Lesson cancellation dialog cleanup checks lesson id — WebSocket-driven CANCELLED updates for unrelated lessons no longer wipe the active dialog state
 - `LessonCell`, `StudentInfo`, `StudentCard`, `StudentSelector` no longer render an orphan `0` when price/hourlyRate equals 0
+- Recurring lesson creation: scheduling-conflict check and `createMany` now run inside `prisma.$transaction` — double-clicks and HTTP retries no longer create duplicate lesson series
+- Single-lesson creation: scheduling-conflict check and `create` also wrapped in `$transaction` for the same reason
+- `GET/PUT /api/reminder-settings`: replaced `findUnique + create` with `upsert` — parallel first requests (multiple tabs on first sign-in) no longer surface a 500 from a P2002 unique-constraint race
+- Lesson `price: 0` (free trial) is now preserved instead of being silently overwritten with `student.hourlyRate` (the `||` fallback treated 0 as falsy and inflated free lessons to full rate)
+- WebSocketManager registers `close`/`error`/`message` handlers before sending the welcome message — if `ws.send` throws synchronously (socket closed during handshake) the entry no longer leaks in the connected-clients map
+- All cron jobs (recurring lessons, lesson status updates, reminder processing, daily backup) now run with explicit `timezone: "Europe/Moscow"` instead of relying on the server's system clock — "daily at 2 AM" actually fires at 02:00 MSK
+- Push reminders desync: server-side `enabled=false` is now written only on a successful browser unsubscribe (`unsubscribePushFx.done` instead of `.finally`); failures show a Russian error toast and leave the server state unchanged
+- Weekly lessons view: day-grouping key now includes the year — lessons from different years that share the same day/month no longer collapse into one section
+- Login/register navigation: redirect to `/` is now triggered only by a successful `loginFx`/`registerFx` for an already-verified user, not by every change to `userModel.$isAuthenticated` — email verification on `/verify-email` no longer side-effects a redirect through the login form model, and the home navigation no longer fires twice from two independent samples
+- Reminder processor caps each tick at 100 pending reminders (oldest first) — recovering after server downtime no longer claims the entire backlog inside one transaction or floods the push provider in a single minute
 
 ### Infrastructure
 - New script `npm run admin:hash-password -- <password>` to generate bcrypt hash for `ADMIN_PASSWORD_HASH`
 - New dependency: `express-rate-limit`
 - Test setup ensures `JWT_SECRET` / `ADMIN_JWT_SECRET` are present even without `.env.test`
+- Test setup also defaults `RESEND_API_KEY` so suites that import the email service can run without a real key
 
 ## 2026-04-07
 

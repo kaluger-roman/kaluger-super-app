@@ -83,41 +83,59 @@ if (process.env.NODE_ENV !== "test") {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
 
-    cron.schedule("0 2 * * *", async () => {
-      console.log("Running recurring lessons processing job...");
-      try {
-        await processRecurringLessons();
-      } catch (error) {
-        console.error("Error in recurring lessons cron job:", error);
-      }
-    });
+    const CRON_TIMEZONE = "Europe/Moscow";
 
-    cron.schedule("* * * * *", async () => {
-      try {
-        await updateLessonStatuses();
-      } catch (error) {
-        console.error("Error in lesson status update cron job:", error);
-      }
-    });
+    cron.schedule(
+      "0 2 * * *",
+      async () => {
+        console.log("Running recurring lessons processing job...");
+        try {
+          await processRecurringLessons();
+        } catch (error) {
+          console.error("Error in recurring lessons cron job:", error);
+        }
+      },
+      { timezone: CRON_TIMEZONE }
+    );
 
-    cron.schedule("* * * * *", async () => {
-      try {
-        await processScheduledReminders();
-      } catch (error) {
-        console.error("Error in reminder processing cron job:", error);
-      }
-    });
+    cron.schedule(
+      "* * * * *",
+      async () => {
+        try {
+          await updateLessonStatuses();
+        } catch (error) {
+          console.error("Error in lesson status update cron job:", error);
+        }
+      },
+      { timezone: CRON_TIMEZONE }
+    );
 
-    cron.schedule("0 * * * *", async () => {
-      try {
-        await runBackupJob();
-      } catch (error) {
-        console.error("Error in database backup cron job:", error);
-      }
-    });
+    cron.schedule(
+      "* * * * *",
+      async () => {
+        try {
+          await processScheduledReminders();
+        } catch (error) {
+          console.error("Error in reminder processing cron job:", error);
+        }
+      },
+      { timezone: CRON_TIMEZONE }
+    );
 
-    console.log("Cron jobs scheduled:");
-    console.log("- Recurring lessons: Daily at 2 AM");
+    cron.schedule(
+      "0 * * * *",
+      async () => {
+        try {
+          await runBackupJob();
+        } catch (error) {
+          console.error("Error in database backup cron job:", error);
+        }
+      },
+      { timezone: CRON_TIMEZONE }
+    );
+
+    console.log(`Cron jobs scheduled (timezone: ${CRON_TIMEZONE}):`);
+    console.log("- Recurring lessons: Daily at 2 AM MSK");
     console.log("- Lesson status updates: Every minute");
     console.log("- Reminder processing: Every minute");
     console.log("- Database backup: Checked every hour");

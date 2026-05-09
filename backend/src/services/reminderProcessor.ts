@@ -2,6 +2,10 @@ import prisma from "../lib/prisma";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
 import type { PushNotificationPayload } from "../types";
 
+// Limits per-tick batch size so a backlog after server downtime doesn't
+// hold a long DB transaction or overwhelm the push provider in one minute.
+const REMINDER_BATCH_SIZE = 100;
+
 export const processScheduledReminders = async () => {
   const now = new Date();
 
@@ -13,6 +17,8 @@ export const processScheduledReminders = async () => {
         scheduledAt: { lte: now },
       },
       select: { id: true },
+      orderBy: { scheduledAt: "asc" },
+      take: REMINDER_BATCH_SIZE,
     });
 
     if (pending.length === 0) return [];

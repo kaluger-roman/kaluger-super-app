@@ -1,5 +1,7 @@
 import { createStore, sample, combine } from "effector";
 
+import { showNotification } from "@shared";
+
 import { toggleInterval } from "./notifications.helpers";
 import {
   $reminderSettings,
@@ -99,11 +101,25 @@ sample({
   target: unsubscribePushFx,
 });
 
-// Unsubscribe finished (success or fail) → disable
+// Unsubscribe succeeded → disable on server (only when browser actually
+// unsubscribed; otherwise sever and client would desync — server thinks
+// disabled, browser keeps active subscription).
 sample({
-  clock: unsubscribePushFx.finally,
+  clock: unsubscribePushFx.done,
   fn: () => ({ enabled: false } as Partial<ReminderSettings>),
   target: settingsUpdated,
+});
+
+// Unsubscribe failed → notify user; keep server state unchanged so the
+// next attempt can complete the disable cleanly.
+sample({
+  clock: unsubscribePushFx.fail,
+  fn: () =>
+    ({
+      message: "Не удалось отписаться от уведомлений",
+      type: "error" as const,
+    }),
+  target: showNotification,
 });
 
 // Disabling + not subscribed → disable directly

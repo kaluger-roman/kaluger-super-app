@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { notificationsApi, showNotification } from "@shared";
 
+// Side-effect import: wires up the unsubscribe → settingsUpdated samples.
+import "../notifications-toggle.model";
 import * as notificationsModel from "../notifications.model";
 
 vi.mock("@shared", async () => {
@@ -207,6 +209,35 @@ describe("notifications.model", () => {
 
       expect(messages).toContainEqual({
         message: "Не удалось подписаться на уведомления",
+        type: "error",
+      });
+    });
+
+    it("should not disable settings on server when unsubscribePushFx fails (regression: .finally → .done)", async () => {
+      // Regression for bug-hunt 2026-05-09 #7: subscribing settingsUpdated to
+      // unsubscribePushFx.finally pushed enabled=false to the server even when
+      // the browser-side unsubscribe failed, leaving the device subscribed
+      // while the server thought reminders were off.
+      const messages: Array<{ message: string; type: string }> = [];
+      const unwatch = showNotification.watch((payload) => messages.push(payload));
+
+      const scope = fork({
+        handlers: [
+          [notificationsModel.unsubscribePushFx, () => { throw new Error("sw gone"); }],
+          [notificationsModel.updateSettingsFx, vi.fn()],
+        ],
+      });
+
+      await allSettled(notificationsModel.unsubscribePushFx, {
+        scope,
+        params: {} as ServiceWorkerRegistration,
+      });
+
+      unwatch();
+
+      expect(vi.mocked(notificationsApi.updateSettings)).not.toHaveBeenCalled();
+      expect(messages).toContainEqual({
+        message: "Не удалось отписаться от уведомлений",
         type: "error",
       });
     });
