@@ -7,6 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## 2026-05-09
 
 ### Added
+- Password recovery via email link: public `/forgot-password` page collects an email and dispatches a one-time SHA-256-hashed token (15-min TTL, single-use, cascade-on-user-delete); `/reset-password?token=...` validates the token on mount and lets the user set a new password (a7d3d54)
+- Three new public auth endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password/verify`, `POST /api/auth/reset-password` (a7d3d54)
+- "Забыли пароль?" link added to the login form (in addition to the existing entry point inside the change-password dialog) (a7d3d54)
+- Anti-abuse hardening: per-IP rate limiter (5 req / 15 min) on `/forgot-password`, 60-second per-email cooldown, automatic invalidation of older unused tokens on each new request, uniform anti-enumeration success response, automatic `isEmailVerified = true` on successful reset (a7d3d54)
+- `sendPasswordResetEmail` template using the existing Resend infrastructure (a7d3d54)
+
+### Changed
+- `ResetPasswordForm` cancel button on the invalid-token state shortened from "Вернуться ко входу" to "Отмена" (743403a)
+
+### Fixed
+- New password-recovery effects (`forgotPasswordFx`, `verifyResetTokenFx`, `resetPasswordFx`) registered with the global `$isBlocking` overlay; per-component spinners removed to match the project's loading-UX convention (df5c2ca)
+- `ResetPasswordForm` no longer re-fires `verifyResetTokenFx` on every keystroke: replaced `useEffect` with an Effector Gate that accepts the token as a prop. `ForgotPasswordFormGate.close → formReset` also clears stale success/error state on navigation (df5c2ca)
+
+### Infrastructure
+- Prisma migration `20260509190733_add_password_reset_tokens` adds the `password_reset_tokens` table with hashed-token unique index and `ON DELETE CASCADE` FK (a7d3d54)
+- New env variable `FRONTEND_URL` documented in `backend/.env.example` — used to build the reset URL placed into outgoing email (a7d3d54)
+- New `passwordResetRateLimiter` (5 req / 15 min, skipped in test env) wired in `middleware/rateLimit.ts` (a7d3d54)
+
+## 2026-05-09
+
+### Added
 - Tax rate now lives as a chronological chain of periods (`TaxRatePeriod`) with start date + percent; tax amount on the reports page is computed per-payment using the rate active on each lesson's `paymentDate`
 - New profile toggle "Учитывать налог" — disabled by default for all users; when off, no tax UI/calculation anywhere in the app
 - Modal dialog "Налоговые ставки" for managing the period list (add/edit/delete) — atomic save/cancel, blocks deleting the last period while toggle is on
