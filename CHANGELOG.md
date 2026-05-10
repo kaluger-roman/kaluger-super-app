@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-05-10
 
+### Performance
+- **Backend tests 38s → 14–18s (-53..-62%)**: switched `ts-jest` preset to `@swc/jest` with `@swc-contrib/mut-cjs-exports@14.x` WASM plugin for `jest.spyOn` compatibility on CommonJS named exports; older `swc_mut_cjs_exports@10.7` is incompatible with `@swc/core@1.15`
+- **Frontend setup time -31% (42s → 29s)**: removed unused MSW from `frontend/src/__tests__/setup.ts` (no test calls `server.use`; all API tests already use `vi.mock("@shared/api/base")`); added `deps.optimizer.web.include` for MUI / router / effector / date-fns to pre-bundle heavy modules (~-25% wall locally)
+- **CI**: backend now matrix-sharded `[1,2]`, type-check moved to its own job, vitest blob reporter + merge-reports job, cache for `node_modules/.vite` and `@prisma/client`, `--maxWorkers=2` for 2-vCPU runners
+
+### Fixed
+- `backend/jest.config.js` typo `setupFilesAfterEach` → `setupFilesAfterEnv` — `setup.ts` was previously silently ignored by jest
+
+### Added
+- `docs/research/2026-05-10-test-speedup.md` — research report covering Phase 1+2 optimizations (this PR) and Phase 3 backlog (`@quramy/jest-prisma` transactions, vitest `--no-isolate` for Effector stores)
+
 ### Added
 - `/e2e-check` slash command — analyzes diff vs base ref, classifies user-facing changes as uncovered / possibly-affected / dead vs existing Playwright tests, optionally writes `*.draft.spec.ts` skeletons and a per-branch report under `docs/e2e-coverage/checks/` (4a045aa)
 - `/e2e-hunt` slash command — runs parallel `feature-dev:code-explorer` subagents per app area (auth, students, lessons, profile, reports, admin, dashboard/news, pwa) to inventory user journeys, dedupes against existing tests, and produces a prioritized coverage gap report under `docs/e2e-coverage/` (4a045aa)
