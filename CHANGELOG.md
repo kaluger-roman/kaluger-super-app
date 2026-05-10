@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-05-10
+
+### Added
+- `/e2e-check` slash command — analyzes diff vs base ref, classifies user-facing changes as uncovered / possibly-affected / dead vs existing Playwright tests, optionally writes `*.draft.spec.ts` skeletons and a per-branch report under `docs/e2e-coverage/checks/` (4a045aa)
+- `/e2e-hunt` slash command — runs parallel `feature-dev:code-explorer` subagents per app area (auth, students, lessons, profile, reports, admin, dashboard/news, pwa) to inventory user journeys, dedupes against existing tests, and produces a prioritized coverage gap report under `docs/e2e-coverage/` (4a045aa)
+- `docs/conventions/e2e-testing.md` — full e2e conventions: when e2e is justified, two modes (functional vs `@visual`), required tag scheme (`@critical`/`@regression`/`@visual`/`@draft` + area tags), selector priority, page-object policy and tests-as-source-of-truth model for coverage tracking (4a045aa)
+- `frontend/e2e/README.md` — quick-reference cheatsheet for the e2e folder (folder layout per area, run commands with `--grep` filters, selector rules, two-mode example) (4a045aa)
+
+### Changed
+- `docs/conventions/frontend-testing.md` — replaced the legacy "E2E — screenshot comparisons only, no other assertions" rule with a pointer to the new `e2e-testing.md` covering both functional user-journey and visual modes (4a045aa)
+- `CLAUDE.md` — added `e2e-testing.md` to the mandatory pre-coding reading list and registered `/e2e-check` and `/e2e-hunt` in the Slash Commands section (4a045aa)
+
+
+
+### Added
+- Password recovery via email link: public `/forgot-password` page collects an email and dispatches a one-time SHA-256-hashed token (15-min TTL, single-use, cascade-on-user-delete); `/reset-password?token=...` validates the token on mount and lets the user set a new password (a7d3d54)
+- Three new public auth endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password/verify`, `POST /api/auth/reset-password` (a7d3d54)
+- "Забыли пароль?" link added to the login form (in addition to the existing entry point inside the change-password dialog) (a7d3d54)
+- Anti-abuse hardening: per-IP rate limiter (5 req / 15 min) on `/forgot-password`, 60-second per-email cooldown, automatic invalidation of older unused tokens on each new request, uniform anti-enumeration success response, automatic `isEmailVerified = true` on successful reset (a7d3d54)
+- `sendPasswordResetEmail` template using the existing Resend infrastructure (a7d3d54)
+
+### Changed
+- `ResetPasswordForm` cancel button on the invalid-token state shortened from "Вернуться ко входу" to "Отмена" (743403a)
+
+### Fixed
+- New password-recovery effects (`forgotPasswordFx`, `verifyResetTokenFx`, `resetPasswordFx`) registered with the global `$isBlocking` overlay; per-component spinners removed to match the project's loading-UX convention (df5c2ca)
+- `ResetPasswordForm` no longer re-fires `verifyResetTokenFx` on every keystroke: replaced `useEffect` with an Effector Gate that accepts the token as a prop. `ForgotPasswordFormGate.close → formReset` also clears stale success/error state on navigation (df5c2ca)
+
+### Infrastructure
+- Prisma migration `20260509190733_add_password_reset_tokens` adds the `password_reset_tokens` table with hashed-token unique index and `ON DELETE CASCADE` FK (a7d3d54)
+- New env variable `FRONTEND_URL` documented in `backend/.env.example` — used to build the reset URL placed into outgoing email (a7d3d54)
+- New `passwordResetRateLimiter` (5 req / 15 min, skipped in test env) wired in `middleware/rateLimit.ts` (a7d3d54)
+
 ## 2026-05-09
 
 ### Added

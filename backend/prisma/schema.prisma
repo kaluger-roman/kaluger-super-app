@@ -29,15 +29,31 @@ model User {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  students           Student[]
-  lessons            Lesson[]
-  newsReadStatus     NewsReadStatus?
-  pushSubscriptions  PushSubscription[]
-  reminderSettings   ReminderSettings?
-  scheduledReminders ScheduledReminder[]
-  taxRatePeriods     TaxRatePeriod[]
+  students            Student[]
+  lessons             Lesson[]
+  newsReadStatus      NewsReadStatus?
+  pushSubscriptions   PushSubscription[]
+  reminderSettings    ReminderSettings?
+  scheduledReminders  ScheduledReminder[]
+  taxRatePeriods      TaxRatePeriod[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model TaxRatePeriod {

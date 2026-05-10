@@ -11,6 +11,10 @@ import type { VerifyEmailDto, ResendVerificationDto } from "../types";
 import prisma from "../lib/prisma";
 import { sendVerificationEmail } from "../services";
 
+// Generic error returned for verification failures that, if differentiated,
+// would let an unauthenticated caller enumerate registered emails.
+const INVALID_CODE_ERROR = "Неверный код подтверждения";
+
 export const verifyEmail = async (
   req: Request<{}, {}, VerifyEmailDto>,
   res: Response,
@@ -30,18 +34,15 @@ export const verifyEmail = async (
       where: { email },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: "Пользователь не найден" });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({ error: "Email уже подтвержден" });
+    // Collapse "user not found", "already verified", "code missing" and
+    // "code expired" into the same generic 400 — distinct responses leaked
+    // whether the email was registered.
+    if (!user || user.isEmailVerified) {
+      return res.status(400).json({ error: INVALID_CODE_ERROR });
     }
 
     if (!user.verificationCode || !user.verificationCodeExpiry) {
-      return res
-        .status(400)
-        .json({ error: "Код подтверждения не найден. Запросите новый код" });
+      return res.status(400).json({ error: INVALID_CODE_ERROR });
     }
 
     if (isVerificationCodeExpired(user.verificationCodeExpiry)) {
@@ -72,7 +73,7 @@ export const verifyEmail = async (
         where: { id: user.id },
         data: { verificationAttempts: attempts },
       });
-      return res.status(400).json({ error: "Неверный код подтверждения" });
+      return res.status(400).json({ error: INVALID_CODE_ERROR });
     }
 
     await prisma.user.update({
@@ -105,6 +106,13 @@ export const verifyEmail = async (
   }
 };
 
+// Always returned to the unauthenticated /resend-verification caller so the
+// existence (and verification state) of an email cannot be enumerated.
+const RESEND_NEUTRAL_RESPONSE = {
+  message:
+    "Если такой email зарегистрирован и не подтверждён, код отправлен повторно",
+};
+
 export const resendVerification = async (
   req: Request<{}, {}, ResendVerificationDto>,
   res: Response,
@@ -122,12 +130,10 @@ export const resendVerification = async (
       where: { email },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: "Пользователь не найден" });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({ error: "Email уже подтвержден" });
+    if (!user || user.isEmailVerified) {
+      // Same response shape as the success path. No DB write, no email sent —
+      // we don't want to confirm to the caller whether the address exists.
+      return res.json(RESEND_NEUTRAL_RESPONSE);
     }
 
     const verificationCode = generateVerificationCode();
@@ -152,9 +158,7 @@ export const resendVerification = async (
         .json({ error: "Ошибка отправки письма. Попробуйте позже" });
     }
 
-    res.json({
-      message: "Код подтверждения отправлен на email",
-    });
+    res.json(RESEND_NEUTRAL_RESPONSE);
   } catch (error) {
     console.error("Resend verification error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

@@ -21,6 +21,7 @@ import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/remin
 import { adminRouter as adminRoutes } from "./routes/admin";
 import { screenRouter as screenRoutes } from "./routes/screen";
 import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
+import testRoutes from "./routes/__test__";
 
 const app = express();
 
@@ -47,6 +48,10 @@ app.use("/api/reminder-settings", reminderSettingsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/screen", screenRoutes);
 app.use("/api/tax-periods", taxPeriodsRoutes);
+
+if (process.env.NODE_ENV === "test") {
+  app.use("/api/__test__", testRoutes);
+}
 
 // Health check — verifies DB connectivity so monitoring can detect outages
 app.get("/health", async (req, res) => {
@@ -83,8 +88,11 @@ app.use("*", (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 // Create HTTP server and WebSocket manager
+const isTestEnv = process.env.NODE_ENV === "test";
+const shouldStartServer = !isTestEnv || process.env.E2E === "1";
+const shouldRunCrons = !isTestEnv;
 let server: ReturnType<typeof createServer> | null = null;
-if (process.env.NODE_ENV !== "test") {
+if (shouldStartServer) {
   server = createServer(app);
   const wsManager = new WebSocketManager(server);
 
@@ -93,6 +101,11 @@ if (process.env.NODE_ENV !== "test") {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+
+    if (!shouldRunCrons) {
+      console.log("Cron jobs disabled (test mode)");
+      return;
+    }
 
     const CRON_TIMEZONE = "Europe/Moscow";
 

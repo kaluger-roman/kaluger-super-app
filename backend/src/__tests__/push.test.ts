@@ -144,6 +144,41 @@ describe("push subscription integration tests", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     });
 
+    it("should not return 500 on parallel registrations of the same endpoint (regression: findUnique+create race)", async () => {
+      // Regression for bug-hunt 2026-05-09-3 #6: two concurrent POSTs with the
+      // same endpoint used to both pass the `findUnique` check and race in
+      // `create`, yielding a P2002 → 500 on the loser. With `upsert` both
+      // succeed (one inserts, the other updates).
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+      const body = {
+        subscription: {
+          endpoint,
+          keys: {
+            p256dh: faker.string.alphanumeric(50),
+            auth: faker.string.alphanumeric(20),
+          },
+        },
+      };
+
+      const responses = await Promise.all([
+        request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send(body),
+        request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send(body),
+      ]);
+
+      for (const r of responses) {
+        expect([200, 201]).toContain(r.status);
+      }
+
+      const count = await prisma.pushSubscription.count({ where: { endpoint } });
+      expect(count).toBe(1);
+    });
+
     it("should return 400 when subscription data is invalid", async () => {
       const res = await request(app)
         .post("/api/push/subscribe")

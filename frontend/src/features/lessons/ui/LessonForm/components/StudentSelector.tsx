@@ -35,8 +35,9 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
 
   return (
     <FormControl fullWidth error={!!errors.studentId} size={isMobile ? "small" : "medium"}>
-      <InputLabel>Ученик *</InputLabel>
+      <InputLabel id="lesson-form-student-label">Ученик *</InputLabel>
       <Select
+        labelId="lesson-form-student-label"
         value={formData.studentId}
         onChange={onChange("studentId")}
         label="Ученик *"

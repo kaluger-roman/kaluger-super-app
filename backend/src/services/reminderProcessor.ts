@@ -108,7 +108,9 @@ export const processScheduledReminders = async () => {
 
       const user = userById.get(reminder.userId);
       const safeTimezone =
-        user?.timezone && isValidTimezone(user.timezone) ? user.timezone : undefined;
+        user?.timezone && isValidTimezone(user.timezone)
+          ? user.timezone
+          : undefined;
 
       // Build notification payload
       const payload: PushNotificationPayload = {

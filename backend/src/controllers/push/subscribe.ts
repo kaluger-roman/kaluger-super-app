@@ -39,6 +39,12 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
       where: { endpoint: data.subscription.endpoint },
     });
 
+    if (existing && existing.userId !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Подписка принадлежит другому пользователю" });
+    }
+
     const subscriptionData = {
       endpoint: data.subscription.endpoint,
       p256dh: data.subscription.keys.p256dh,
@@ -47,29 +53,15 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
       userId: userId!,
     };
 
-    if (existing) {
-      if (existing.userId !== userId) {
-        return res.status(403).json({ error: "Подписка принадлежит другому пользователю" });
-      }
-
-      const updated = await prisma.pushSubscription.update({
-        where: { endpoint: data.subscription.endpoint },
-        data: subscriptionData,
-      });
-
-      return res.status(200).json({
-        id: updated.id,
-        endpoint: updated.endpoint,
-        deviceName: updated.deviceName,
-        createdAt: updated.createdAt.toISOString(),
-      });
-    }
-
-    const subscription = await prisma.pushSubscription.create({
-      data: subscriptionData,
+    // Upsert is race-safe: parallel registrations of the same endpoint (which
+    // is `@unique`) used to crash on P2002 with `findUnique + create`.
+    const subscription = await prisma.pushSubscription.upsert({
+      where: { endpoint: data.subscription.endpoint },
+      update: subscriptionData,
+      create: subscriptionData,
     });
 
-    res.status(201).json({
+    res.status(existing ? 200 : 201).json({
       id: subscription.id,
       endpoint: subscription.endpoint,
       deviceName: subscription.deviceName,

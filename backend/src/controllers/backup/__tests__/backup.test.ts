@@ -59,6 +59,7 @@ describe("backup admin integration tests", () => {
     it("should return existing settings", async () => {
       await prisma.backupSettings.create({
         data: {
+          id: "backup-settings-singleton",
           enabled: false,
           intervalHours: 12,
           maxStorageMb: 500,
@@ -112,6 +113,7 @@ describe("backup admin integration tests", () => {
     it("should partially update settings", async () => {
       await prisma.backupSettings.create({
         data: {
+          id: "backup-settings-singleton",
           enabled: true,
           intervalHours: 6,
           maxStorageMb: 300,

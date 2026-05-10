@@ -16,11 +16,34 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Ученик не найден" });
     }
 
+    const now = new Date();
+
     const result = await prisma.$transaction(async (tx) => {
+      // Cancel pending reminders for the future lessons we're about to delete.
+      // Without this, the cron processor can still fire push for an already
+      // deleted lesson if it claimed the reminder seconds before this delete.
+      // Limit to the same status set we delete below to keep history of
+      // CANCELLED/COMPLETED future entries.
+      await tx.scheduledReminder.updateMany({
+        where: {
+          lesson: {
+            studentId: id,
+            startTime: { gte: now },
+            status: { notIn: ["COMPLETED", "CANCELLED"] },
+          },
+          status: "PENDING",
+        },
+        data: { status: "CANCELLED" },
+      });
+
+      // Only delete still-active future lessons. CANCELLED/COMPLETED future
+      // entries are kept so the historical record (including cancellation
+      // reasons and any payments tied to them) survives archival.
       await tx.lesson.deleteMany({
         where: {
           studentId: id,
-          startTime: { gte: new Date() },
+          startTime: { gte: now },
+          status: { notIn: ["COMPLETED", "CANCELLED"] },
         },
       });
 

@@ -42,7 +42,10 @@ export type CreateLessonDto = {
 
 export type UpdateLessonDto = Partial<CreateLessonDto> & {
   isPaid?: boolean;
-  paymentDate?: Date;
+  // Allow explicit `null` so we can clear paymentDate on cancellation. Prisma
+  // treats `undefined` as "no change", so without `null` paymentDate would
+  // silently stay set when isPaid flips to false.
+  paymentDate?: Date | null;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?:
@@ -119,6 +122,20 @@ export type VerifyEmailChangeResult = {
     isEmailVerified: boolean;
     taxEnabled: boolean;
   };
+};
+
+export type ForgotPasswordDto = {
+  email: string;
+};
+
+export type VerifyResetTokenDto = {
+  token: string;
+};
+
+export type ResetPasswordDto = {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 };
 
 export type NewsItemResponse = {

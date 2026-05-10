@@ -28,6 +28,7 @@ yarn-error.log*
 
 # Database backups
 /backend/backups
+/backend/backups-test
 
 # Landing
 /landing/.next

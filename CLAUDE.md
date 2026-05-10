@@ -93,6 +93,7 @@ Before writing or modifying code, you MUST read the relevant convention file:
 - **Backend code** → read `docs/conventions/backend.md`
 - **Frontend tests** → read `docs/conventions/frontend-testing.md`
 - **Backend tests** → read `docs/conventions/backend-testing.md`
+- **E2E tests** → read `docs/conventions/e2e-testing.md`
 
 Do NOT skip this step. These files contain critical project-specific patterns (Effector, FSD, Prisma, styled-components) that are not covered in this summary.
 
@@ -131,9 +132,13 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - `/project:test-frontend <task>` — write frontend tests
 - `/project:test-backend <task>` — write backend tests
 - `/changelog [version]` — generate/update CHANGELOG.md from git history
+- `/e2e-check [base-ref]` — analyze diff vs base, flag user-facing changes without e2e and possibly broken tests; report in `docs/e2e-coverage/checks/`
+- `/e2e-hunt [area]` — parallel inventory of user journeys vs existing e2e; prioritized coverage gaps in `docs/e2e-coverage/`
 
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, Material UI styled-components (frontend); Express, Prisma, bcryptjs, express-rate-limit, Resend (backend) — все уже в проекте (028-forgot-password)
+- PostgreSQL via Prisma ORM (новая таблица `password_reset_tokens`) (028-forgot-password)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)
