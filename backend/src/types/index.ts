@@ -227,3 +227,8 @@ export type PushNotificationPayload = {
     url: string;
   };
 };
+
+export type LessonSlot = {
+  startTime: Date;
+  endTime: Date;
+};

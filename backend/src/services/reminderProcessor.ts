@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import { isValidTimezone } from "../utils/time";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
 import type { PushNotificationPayload } from "../types";
 
@@ -64,33 +65,15 @@ export const processScheduledReminders = async () => {
   let failedCount = 0;
 
   for (const reminder of reminders) {
-    const { lesson } = reminder;
+    // Outer try/catch isolates a single reminder so an unexpected throw
+    // (e.g. RangeError from invalid stored timezone, or a transient DB error
+    // on the per-reminder DB calls below) cannot abort the batch and leave
+    // subsequent reminders permanently in SENT without delivery.
+    try {
+      const { lesson } = reminder;
 
-    // Cancel if lesson is not in a schedulable status
-    if (lesson.status !== "SCHEDULED" && lesson.status !== "RESCHEDULED") {
-      await prisma.scheduledReminder.update({
-        where: { id: reminder.id },
-        data: { status: "CANCELLED", sentAt: null },
-      });
-      cancelledCount++;
-      continue;
-    }
-
-    const settings = settingsByUser.get(reminder.userId);
-
-    if (settings?.muteWhenInLesson) {
-      // FR-028: detect active lesson by scheduled time, not actual status
-      const activeLesson = await prisma.lesson.findFirst({
-        where: {
-          tutorId: reminder.userId,
-          status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
-          startTime: { lte: now },
-          endTime: { gt: now },
-        },
-      });
-
-      if (activeLesson) {
-        // Muted — mark as cancelled since we won't retry
+      // Cancel if lesson is not in a schedulable status
+      if (lesson.status !== "SCHEDULED" && lesson.status !== "RESCHEDULED") {
         await prisma.scheduledReminder.update({
           where: { id: reminder.id },
           data: { status: "CANCELLED", sentAt: null },
@@ -98,31 +81,55 @@ export const processScheduledReminders = async () => {
         cancelledCount++;
         continue;
       }
-    }
 
-    const user = userById.get(reminder.userId);
+      const settings = settingsByUser.get(reminder.userId);
 
-    // Build notification payload
-    const payload: PushNotificationPayload = {
-      title: formatReminderTitle(reminder.intervalMinutes),
-      body: formatReminderBody(
-        lesson.subject,
-        lesson.lessonType,
-        lesson.student.name,
-        lesson.startTime,
-        lesson.endTime,
-        user?.timezone
-      ),
-      tag: `lesson-reminder-${lesson.id}-${reminder.intervalMinutes}`,
-      data: {
-        type: "lesson_reminder",
-        lessonId: lesson.id,
-        url: "/lessons",
-      },
-    };
+      if (settings?.muteWhenInLesson) {
+        // FR-028: detect active lesson by scheduled time, not actual status
+        const activeLesson = await prisma.lesson.findFirst({
+          where: {
+            tutorId: reminder.userId,
+            status: { in: ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] },
+            startTime: { lte: now },
+            endTime: { gt: now },
+          },
+        });
 
-    // Send push notification
-    try {
+        if (activeLesson) {
+          // Muted — mark as cancelled since we won't retry
+          await prisma.scheduledReminder.update({
+            where: { id: reminder.id },
+            data: { status: "CANCELLED", sentAt: null },
+          });
+          cancelledCount++;
+          continue;
+        }
+      }
+
+      const user = userById.get(reminder.userId);
+      const safeTimezone =
+        user?.timezone && isValidTimezone(user.timezone) ? user.timezone : undefined;
+
+      // Build notification payload
+      const payload: PushNotificationPayload = {
+        title: formatReminderTitle(reminder.intervalMinutes),
+        body: formatReminderBody(
+          lesson.subject,
+          lesson.lessonType,
+          lesson.student.name,
+          lesson.startTime,
+          lesson.endTime,
+          safeTimezone
+        ),
+        tag: `lesson-reminder-${lesson.id}-${reminder.intervalMinutes}`,
+        data: {
+          type: "lesson_reminder",
+          lessonId: lesson.id,
+          url: "/lessons",
+        },
+      };
+
+      // Send push notification
       const result = await sendPushToUser(reminder.userId, payload);
 
       if (result.sent === 0) {
@@ -138,10 +145,17 @@ export const processScheduledReminders = async () => {
       }
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}:`, error);
-      await prisma.scheduledReminder.update({
-        where: { id: reminder.id },
-        data: { status: "FAILED", sentAt: null },
-      });
+      await prisma.scheduledReminder
+        .update({
+          where: { id: reminder.id },
+          data: { status: "FAILED", sentAt: null },
+        })
+        .catch((updateError) => {
+          console.error(
+            `Failed to mark reminder ${reminder.id} as FAILED:`,
+            updateError
+          );
+        });
       failedCount++;
     }
   }

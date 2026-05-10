@@ -1,6 +1,4 @@
-export type AxiosLikeError = {
-  response?: { data?: { error?: string } };
-};
+import type { AxiosLikeError } from "./axios-error.types";
 
 // Returns the server-provided Russian error from axios `response.data.error`
 // or the caller-supplied Russian fallback. Skips `error.message` deliberately —

@@ -4,6 +4,15 @@ export const truncateToMinute = (date: Date) => {
   return d;
 };
 
+export const isValidTimezone = (timezone: string): boolean => {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Get UTC offset (in ms) for a given IANA timezone at a specific moment.
 // Positive offset means timezone is ahead of UTC (e.g. +3h for Moscow).
 const getTimezoneOffsetMs = (date: Date, timezone: string): number => {

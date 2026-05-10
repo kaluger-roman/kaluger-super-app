@@ -303,6 +303,75 @@ describe("reminderProcessor service", () => {
     expect(reminder!.status).toBe("PENDING");
   });
 
+  it("should not abort the batch when one user has an invalid stored timezone (regression: x-timezone DoS)", async () => {
+    // Regression for bug-hunt 2026-05-09-3 #1: an unvalidated `x-timezone`
+    // value persisted to `users.timezone` could make `Date.toLocaleTimeString`
+    // throw RangeError outside the try/catch, killing the cron tick and
+    // leaving subsequent reminders permanently in SENT without delivery.
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    await prisma.reminderSettings.create({
+      data: {
+        userId,
+        enabled: true,
+        intervals: [30],
+        muteWhenInLesson: false,
+      },
+    });
+
+    // Simulate a corrupted timezone written to the DB (e.g. via the previous
+    // unvalidated middleware path).
+    await prisma.user.update({
+      where: { id: userId },
+      data: { timezone: "INVALID/TZ" },
+    });
+
+    const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const lesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: futureTime,
+        endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+        status: "SCHEDULED",
+        tutorId: userId,
+        studentId,
+      },
+    });
+
+    await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: lesson.id,
+        userId,
+        status: "PENDING",
+      },
+    });
+
+    await expect(processScheduledReminders()).resolves.not.toThrow();
+
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+
+    const reminder = await prisma.scheduledReminder.findFirst({
+      where: { lessonId: lesson.id },
+    });
+    expect(reminder!.status).toBe("SENT");
+
+    // restore for subsequent tests
+    await prisma.user.update({
+      where: { id: userId },
+      data: { timezone: null },
+    });
+  });
+
   it("should claim at most REMINDER_BATCH_SIZE pending reminders per tick (regression: no take limit)", async () => {
     // Regression for bug-hunt 2026-05-09 #10: a backlog after server downtime
     // could be claimed atomically in a single transaction (and fully marked SENT

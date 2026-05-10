@@ -28,4 +28,4 @@ export { useDisableNumberScroll } from "./disable-number-scroll.hooks";
 export { styled } from "./styled.helpers";
 export { isIos, isInStandaloneMode } from "./platform.helpers";
 export { extractAxiosErrorMessage } from "./axios-error.helpers";
-export type { AxiosLikeError } from "./axios-error.helpers";
+export type { AxiosLikeError } from "./axios-error.types";

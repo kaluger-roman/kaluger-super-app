@@ -1,10 +1,9 @@
 import prisma from "../lib/prisma";
 import { groupRecurringLessonsByPattern } from "./recurringHelpers";
+import type { LessonSlot } from "../types";
 import { truncateToMinute } from "../utils/time";
 
-type Slot = { startTime: Date; endTime: Date };
-
-const overlaps = (slots: Slot[], start: Date, end: Date): boolean =>
+const overlaps = (slots: LessonSlot[], start: Date, end: Date): boolean =>
   slots.some((s) => s.startTime < end && s.endTime > start);
 
 export const processRecurringLessons = async () => {
@@ -44,7 +43,7 @@ export const processRecurringLessons = async () => {
       },
       select: { tutorId: true, startTime: true, endTime: true },
     });
-    const slotsByTutor = new Map<string, Slot[]>();
+    const slotsByTutor = new Map<string, LessonSlot[]>();
     for (const id of tutorIds) slotsByTutor.set(id, []);
     for (const e of existingLessons) {
       slotsByTutor
