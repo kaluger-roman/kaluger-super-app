@@ -11,7 +11,7 @@ import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 import { processScheduledReminders, runBackupJob } from "./services";
 
-import authRoutes from "./routes/auth";
+import { authRouter } from "./routes/auth";
 import studentRoutes from "./routes/students";
 import lessonRoutes from "./routes/lessons";
 import statisticsRoutes from "./routes/statistics";
@@ -38,7 +38,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRouter);
 app.use("/api/students", studentRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/statistics", statisticsRoutes);

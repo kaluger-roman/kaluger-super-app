@@ -71,6 +71,26 @@ export const processScheduledReminders = async () => {
   let cancelledCount = 0;
   let failedCount = 0;
 
+  // Все финализации статуса (SENT/FAILED/CANCELLED) делаются через
+  // updateMany c предикатом status='PROCESSING'. Если параллельный
+  // cancelRemindersForLesson / recalculateRemindersForUser уже перевёл
+  // запись в CANCELLED, наш update не тронет её (count=0) и не перепишет
+  // CANCELLED обратно. Это плюс — пользователь, отменивший урок прямо в
+  // момент доставки, получит свой CANCELLED, и watchdog не столкнётся с
+  // лишним PROCESSING-снапшотом.
+  const finalize = async (
+    reminderId: string,
+    data: {
+      status: "SENT" | "FAILED" | "CANCELLED";
+      sentAt: Date | null;
+    },
+  ) => {
+    await prisma.scheduledReminder.updateMany({
+      where: { id: reminderId, status: "PROCESSING" },
+      data: { ...data, claimedAt: null },
+    });
+  };
+
   for (const reminder of reminders) {
     // Outer try/catch isolates a single reminder so an unexpected throw
     // (e.g. RangeError from invalid stored timezone) cannot abort the batch
@@ -81,10 +101,7 @@ export const processScheduledReminders = async () => {
 
       // Cancel if lesson is not in a schedulable status
       if (lesson.status !== "SCHEDULED" && lesson.status !== "RESCHEDULED") {
-        await prisma.scheduledReminder.update({
-          where: { id: reminder.id },
-          data: { status: "CANCELLED", sentAt: null, claimedAt: null },
-        });
+        await finalize(reminder.id, { status: "CANCELLED", sentAt: null });
         cancelledCount++;
         continue;
       }
@@ -107,10 +124,7 @@ export const processScheduledReminders = async () => {
 
         if (activeLesson) {
           // Muted — mark as cancelled since we won't retry
-          await prisma.scheduledReminder.update({
-            where: { id: reminder.id },
-            data: { status: "CANCELLED", sentAt: null, claimedAt: null },
-          });
+          await finalize(reminder.id, { status: "CANCELLED", sentAt: null });
           cancelledCount++;
           continue;
         }
@@ -151,34 +165,25 @@ export const processScheduledReminders = async () => {
 
       if (result.sent === 0) {
         // All deliveries failed or no subscriptions — mark as FAILED
-        await prisma.scheduledReminder.update({
-          where: { id: reminder.id },
-          data: { status: "FAILED", sentAt: null, claimedAt: null },
-        });
+        await finalize(reminder.id, { status: "FAILED", sentAt: null });
         failedCount++;
       } else {
         // Финализируем как SENT только после фактической доставки. Если
         // процесс упадёт между этим update'ом и web-push ответом —
         // запись остаётся в PROCESSING и watchdog вернёт её в PENDING.
-        await prisma.scheduledReminder.update({
-          where: { id: reminder.id },
-          data: { status: "SENT", sentAt: new Date(), claimedAt: null },
-        });
+        await finalize(reminder.id, { status: "SENT", sentAt: new Date() });
         sentCount++;
       }
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}:`, error);
-      await prisma.scheduledReminder
-        .update({
-          where: { id: reminder.id },
-          data: { status: "FAILED", sentAt: null, claimedAt: null },
-        })
-        .catch((updateError) => {
+      await finalize(reminder.id, { status: "FAILED", sentAt: null }).catch(
+        (updateError) => {
           console.error(
             `Failed to mark reminder ${reminder.id} as FAILED:`,
-            updateError
+            updateError,
           );
-        });
+        },
+      );
       failedCount++;
     }
   }

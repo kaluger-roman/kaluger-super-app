@@ -1,5 +1,7 @@
 import express from "express";
 import request from "supertest";
+import { authRouter } from "../../routes/auth";
+import { passwordResetRateLimiter } from "../rateLimit";
 
 describe("rate limit middleware (regression: brute-force protection)", () => {
   const originalEnv = process.env.NODE_ENV;
@@ -81,19 +83,14 @@ describe("auth router (regression: rate-limit on /reset-password*)", () => {
     route?: { path: string; stack: Array<{ handle: unknown }> };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const authRoutes = require("../../routes/auth").default as {
-    stack: RouteLayer[];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { passwordResetRateLimiter } = require("../rateLimit");
+  const stack = (authRouter as unknown as { stack: RouteLayer[] }).stack;
 
   it.each([
     ["/forgot-password"],
     ["/reset-password/verify"],
     ["/reset-password"],
   ])("should apply passwordResetRateLimiter to %s", (path) => {
-    const layer = authRoutes.stack.find((l) => l.route?.path === path);
+    const layer = stack.find((l) => l.route?.path === path);
     expect(layer?.route).toBeDefined();
     const handlers = layer!.route!.stack.map((s) => s.handle);
     expect(handlers).toContain(passwordResetRateLimiter);

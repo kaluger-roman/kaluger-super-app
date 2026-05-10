@@ -51,14 +51,23 @@ export const scheduleRemindersForLesson = async (lessonId: string) => {
   }
 };
 
+// Любые ручки, которые "снимают" будущие напоминания, должны учитывать
+// и `PENDING`, и `PROCESSING`. Если PROCESSING-запись (claim в процессе
+// доставки) пропустить, watchdog в `processScheduledReminders` через
+// 10 минут вернёт её в PENDING — а к этому моменту recalculate уже мог
+// создать дубликат с тем же (lessonId, intervalMinutes), и watchdog
+// упадёт с P2002 на partial unique index, парализуя cron.
+const ACTIVE_REMINDER_STATUSES = ["PENDING", "PROCESSING"] as const;
+
 export const cancelRemindersForLesson = async (lessonId: string) => {
   await prisma.scheduledReminder.updateMany({
     where: {
       lessonId,
-      status: "PENDING",
+      status: { in: [...ACTIVE_REMINDER_STATUSES] },
     },
     data: {
       status: "CANCELLED",
+      claimedAt: null,
     },
   });
 };
@@ -68,14 +77,18 @@ export const recalculateRemindersForUser = async (userId: string) => {
 
   // Cancel + recreate atomically to avoid race conditions
   await prisma.$transaction(async (tx) => {
-    // Cancel all pending reminders
+    // Отменяем и PENDING, и PROCESSING — иначе claim, который сейчас
+    // доставляется в `processScheduledReminders`, останется в БД и
+    // столкнётся с новой PENDING-записью при попытке watchdog'а вернуть
+    // его в PENDING.
     await tx.scheduledReminder.updateMany({
       where: {
         userId,
-        status: "PENDING",
+        status: { in: [...ACTIVE_REMINDER_STATUSES] },
       },
       data: {
         status: "CANCELLED",
+        claimedAt: null,
       },
     });
 
@@ -125,10 +138,11 @@ export const cancelAllPendingReminders = async (userId: string) => {
   await prisma.scheduledReminder.updateMany({
     where: {
       userId,
-      status: "PENDING",
+      status: { in: [...ACTIVE_REMINDER_STATUSES] },
     },
     data: {
       status: "CANCELLED",
+      claimedAt: null,
     },
   });
 };
