@@ -9,6 +9,7 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: [path.resolve(__dirname, "./src/__tests__/setup.ts")],
     css: true,
+    exclude: ["node_modules/**", "e2e/**", "playwright-report/**", "test-results/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
