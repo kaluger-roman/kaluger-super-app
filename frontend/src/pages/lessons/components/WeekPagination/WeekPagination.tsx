@@ -13,13 +13,21 @@ export const WeekPagination: FC = () => {
 
   return (
     <Styled.Container>
-      <IconButton onClick={() => lessonsModel.goToPrevWeek()} size="small">
+      <IconButton
+        aria-label="Предыдущая неделя"
+        onClick={() => lessonsModel.goToPrevWeek()}
+        size="small"
+      >
         <ChevronLeft />
       </IconButton>
 
       <Styled.WeekText variant="body1">{formatWeekRange(currentWeek)}</Styled.WeekText>
 
-      <IconButton onClick={() => lessonsModel.goToNextWeek()} size="small">
+      <IconButton
+        aria-label="Следующая неделя"
+        onClick={() => lessonsModel.goToNextWeek()}
+        size="small"
+      >
         <ChevronRight />
       </IconButton>
     </Styled.Container>

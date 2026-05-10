@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma";
-import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
 import { isValidTimezone } from "../utils/time";
+import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
 import type { PushNotificationPayload } from "../types";
 
 // Limits per-tick batch size so a backlog after server downtime doesn't
@@ -47,14 +47,28 @@ export const processScheduledReminders = async () => {
 
   if (reminders.length === 0) return;
 
+  // Batch-load settings and user timezones once per unique userId to avoid N+1
+  // queries inside the per-reminder loop (was up to 200 queries per cron tick).
+  const userIds = [...new Set(reminders.map((r) => r.userId))];
+  const [settingsRows, userRows] = await Promise.all([
+    prisma.reminderSettings.findMany({ where: { userId: { in: userIds } } }),
+    prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, timezone: true },
+    }),
+  ]);
+  const settingsByUser = new Map(settingsRows.map((s) => [s.userId, s]));
+  const userById = new Map(userRows.map((u) => [u.id, u]));
+
   let sentCount = 0;
   let cancelledCount = 0;
   let failedCount = 0;
 
   for (const reminder of reminders) {
     // Outer try/catch isolates a single reminder so an unexpected throw
-    // (e.g. RangeError from invalid stored timezone) cannot abort the batch
-    // and leave subsequent reminders permanently in SENT without delivery.
+    // (e.g. RangeError from invalid stored timezone, or a transient DB error
+    // on the per-reminder DB calls below) cannot abort the batch and leave
+    // subsequent reminders permanently in SENT without delivery.
     try {
       const { lesson } = reminder;
 
@@ -68,10 +82,7 @@ export const processScheduledReminders = async () => {
         continue;
       }
 
-      // Check muteWhenInLesson
-      const settings = await prisma.reminderSettings.findUnique({
-        where: { userId: reminder.userId },
-      });
+      const settings = settingsByUser.get(reminder.userId);
 
       if (settings?.muteWhenInLesson) {
         // FR-028: detect active lesson by scheduled time, not actual status
@@ -95,12 +106,7 @@ export const processScheduledReminders = async () => {
         }
       }
 
-      // Get user timezone for correct time formatting
-      const user = await prisma.user.findUnique({
-        where: { id: reminder.userId },
-        select: { timezone: true },
-      });
-
+      const user = userById.get(reminder.userId);
       const safeTimezone =
         user?.timezone && isValidTimezone(user.timezone)
           ? user.timezone

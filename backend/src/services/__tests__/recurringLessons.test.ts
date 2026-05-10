@@ -156,4 +156,75 @@ describe("processRecurringLessons", () => {
     // Only the explicitly created conflict should exist (not an additional one)
     expect(lessons.length).toBe(1);
   });
+
+  it("should not cross-pollute existing-lesson conflict checks across tutors (regression: improve-hunt 2026-05-09 #10)", async () => {
+    // Regression: existing lessons are now batch-loaded across tutors and
+    // grouped by tutorId. This verifies that an existing lesson belonging to
+    // tutor A does not cause a recurring slot for tutor B to be skipped.
+    const a = await createTutorAndStudentTracked();
+    const b = await createTutorAndStudentTracked();
+
+    const lastStart = truncateToMinute(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const lastEnd = truncateToMinute(new Date(lastStart.getTime() + 60 * 60 * 1000));
+
+    // Both tutors have a recurring lesson at the same wall-clock time
+    await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: lastStart,
+        endTime: lastEnd,
+        price: 1000,
+        isRecurring: true,
+        tutorId: a.tutor.id,
+        studentId: a.student.id,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: lastStart,
+        endTime: lastEnd,
+        price: 1000,
+        isRecurring: true,
+        tutorId: b.tutor.id,
+        studentId: b.student.id,
+        status: "SCHEDULED",
+      },
+    });
+
+    // Tutor A also has an explicit conflict next week; tutor B does NOT
+    const conflictStart = truncateToMinute(new Date(lastStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+    const conflictEnd = truncateToMinute(new Date(conflictStart.getTime() + 60 * 60 * 1000));
+    await prisma.lesson.create({
+      data: {
+        subject: "PHYSICS",
+        lessonType: "SCHOOL",
+        startTime: conflictStart,
+        endTime: conflictEnd,
+        price: 500,
+        isRecurring: false,
+        tutorId: a.tutor.id,
+        studentId: a.student.id,
+        status: "SCHEDULED",
+      },
+    });
+
+    await processRecurringLessons();
+
+    // Tutor A: conflict slot must remain unique (no duplicate from recurring)
+    const aSlot = await prisma.lesson.findMany({
+      where: { tutorId: a.tutor.id, startTime: conflictStart },
+    });
+    expect(aSlot.length).toBe(1);
+
+    // Tutor B: must have a recurring lesson at the same week despite tutor A's conflict
+    const bSlot = await prisma.lesson.findMany({
+      where: { tutorId: b.tutor.id, startTime: conflictStart },
+    });
+    expect(bSlot.length).toBe(1);
+    expect(bSlot[0].isRecurring).toBe(true);
+  });
 });

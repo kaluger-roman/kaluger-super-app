@@ -300,24 +300,6 @@ describe("studentsFeedback.model", () => {
       });
     });
 
-    it("should log error to console", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error");
-      const errorResponse = { response: { data: { error: "Test error" } } };
-      const scope = fork({
-        handlers: [[studentModel.addStudentFx, vi.fn(() => Promise.reject(errorResponse))]],
-      });
-
-      await allSettled(studentModel.addStudentFx, {
-        scope,
-        params: {
-          name: "Иван Иванов",
-          phone: "+79991234567",
-          contactMethod: "WHATSAPP",
-        },
-      });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Add student error:", errorResponse);
-    });
   });
 
   describe("updateStudentFx error", () => {
@@ -452,23 +434,6 @@ describe("studentsFeedback.model", () => {
       });
     });
 
-    it("should log error to console", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error");
-      const errorResponse = { response: { data: { error: "Test error" } } };
-      const scope = fork({
-        handlers: [[studentModel.updateStudentFx, vi.fn(() => Promise.reject(errorResponse))]],
-      });
-
-      await allSettled(studentModel.updateStudentFx, {
-        scope,
-        params: {
-          id: "student-1",
-          data: { name: "Иван Петров" },
-        },
-      });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Update student error:", errorResponse);
-    });
   });
 
   describe("removeStudentFx error", () => {
@@ -585,19 +550,5 @@ describe("studentsFeedback.model", () => {
       });
     });
 
-    it("should log error to console", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error");
-      const errorResponse = { response: { data: { error: "Test error" } } };
-      const scope = fork({
-        handlers: [[studentModel.removeStudentFx, vi.fn(() => Promise.reject(errorResponse))]],
-      });
-
-      await allSettled(studentModel.removeStudentFx, {
-        scope,
-        params: "student-1",
-      });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Remove student error:", errorResponse);
-    });
   });
 });

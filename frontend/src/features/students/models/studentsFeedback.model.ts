@@ -2,6 +2,7 @@ import { sample } from "effector";
 
 import { studentModel, lessonModel } from "@entities";
 import { lessonsModel } from "@features/lessons";
+import { extractAxiosErrorMessage } from "@shared";
 import { notificationsModel } from "@shared/model";
 
 sample({
@@ -52,36 +53,18 @@ sample({
 
 sample({
   clock: studentModel.addStudentFx.failData,
-  fn: (error: unknown) => {
-    console.error("Add student error:", error);
-    return (
-      (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-      "Ошибка при добавлении студента"
-    );
-  },
+  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при добавлении студента"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: studentModel.updateStudentFx.failData,
-  fn: (error: unknown) => {
-    console.error("Update student error:", error);
-    return (
-      (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-      "Ошибка при обновлении студента"
-    );
-  },
+  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при обновлении студента"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: studentModel.removeStudentFx.failData,
-  fn: (error: unknown) => {
-    console.error("Remove student error:", error);
-    return (
-      (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-      "Ошибка при удалении студента"
-    );
-  },
+  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при удалении студента"),
   target: notificationsModel.showErrorEvent,
 });

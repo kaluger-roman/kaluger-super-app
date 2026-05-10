@@ -50,6 +50,11 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
           <Tooltip title={lesson.isPaid ? "Оплачено" : "Не оплачено"}>
             <IconButton
               size="small"
+              aria-label={
+                lesson.isPaid
+                  ? "Оплачено — нажмите чтобы изменить"
+                  : "Не оплачено — нажмите чтобы отметить"
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 lessonStatusIconsModel.paymentDialogOpened(lesson.id);
@@ -100,6 +105,11 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
           <Tooltip title={lesson.isHomeworkSentByTeacher ? "ДЗ отправлено" : "ДЗ не отправлено"}>
             <IconButton
               size="small"
+              aria-label={
+                lesson.isHomeworkSentByTeacher
+                  ? "ДЗ отправлено — нажмите чтобы изменить"
+                  : "ДЗ не отправлено — нажмите чтобы отметить"
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 lessonStatusIconsModel.homeworkDialogOpened(lesson.id);
