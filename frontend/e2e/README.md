@@ -7,11 +7,8 @@ Playwright + Chromium. Папка является `testDir` в `frontend/playwr
 ## Запуск
 
 ```bash
-# Все функциональные тесты (без drafts и visual)
+# Все функциональные тесты (без drafts и visual) — ночной прогон
 npm run test:e2e -- --grep-invert "@draft|@visual"
-
-# Только критичные smoke
-npm run test:e2e -- --grep "@critical"
 
 # Конкретная область
 npm run test:e2e -- --grep "@auth"
@@ -22,6 +19,8 @@ npm run test:e2e -- --grep "@visual"
 # UI-режим
 npm run test:e2e:ui
 ```
+
+E2e **не блокируют PR**. Полный сьют гоняется ночным CI; регрессии правятся отдельным PR.
 
 ## Структура папки
 
@@ -46,12 +45,11 @@ frontend/e2e/
 
 ## Тэг-схема
 
-Каждый `test.describe` обязан иметь **минимум один area-тег** (`@auth`, `@students`, …) и **минимум один level-тег** (`@critical`, `@regression`, `@visual` или `@draft`).
+Каждый `test.describe` обязан иметь **минимум один area-тег** (`@auth`, `@students`, …) и **минимум один level-тег** (`@regression`, `@visual` или `@draft`).
 
 | Тег | Когда применять |
 |---|---|
-| `@critical` | Если сценарий сломается — учитель не сможет работать или потеряет деньги. Прогон в каждом PR. |
-| `@regression` | Покрывает важный, но не критичный flow. Прогон в полном CI или ночью. |
+| `@regression` | Функциональный e2e на user journey. Прогон полным сьютом ночью. |
 | `@visual` | Скриншот-регрессии. Только сравнение экранов, без функциональных assertions. |
 | `@draft` | Черновик от `/e2e-check` — исключается из обычных прогонов. После доработки тег убирается. |
 | `@auth` / `@students` / `@lessons` / `@profile` / `@reports` / `@admin` / `@dashboard` / `@news` / `@pwa` | Область приложения. |
@@ -61,7 +59,7 @@ frontend/e2e/
 ```ts
 import { test, expect } from "@playwright/test";
 
-test.describe("Создание ученика", { tag: ["@critical", "@students"] }, () => {
+test.describe("Создание ученика", { tag: ["@regression", "@students"] }, () => {
   test("учитель создаёт ученика и видит его в списке", async ({ page }) => {
     // ...
   });
