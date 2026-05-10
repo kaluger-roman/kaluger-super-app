@@ -30,45 +30,63 @@ export const updateLessonStatuses = async () => {
       },
     });
 
-    // Обновляем статусы условно — пропускаем урок, если статус успели изменить
-    // (например, пользователь вручную отменил урок между findMany и update)
-    let startedCount = 0;
-    let completedCount = 0;
+    // Обновляем статусы батчами через updateMany c фильтром по статусу,
+    // чтобы пропустить уроки, которые успели изменить параллельно
+    // (например, пользователь вручную отменил урок между findMany и update).
+    const idsToStart = lessonsToStart.map((l) => l.id);
+    const idsToComplete = lessonsToComplete.map((l) => l.id);
 
-    for (const lesson of lessonsToStart) {
-      const result = await prisma.lesson.updateMany({
-        where: {
-          id: lesson.id,
-          status: { in: ["SCHEDULED", "RESCHEDULED"] },
-        },
-        data: { status: "IN_PROGRESS" },
-      });
+    await Promise.all([
+      idsToStart.length > 0
+        ? prisma.lesson.updateMany({
+            where: {
+              id: { in: idsToStart },
+              status: { in: ["SCHEDULED", "RESCHEDULED"] },
+            },
+            data: { status: "IN_PROGRESS" },
+          })
+        : Promise.resolve({ count: 0 }),
+      idsToComplete.length > 0
+        ? prisma.lesson.updateMany({
+            where: {
+              id: { in: idsToComplete },
+              status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
+            },
+            data: { status: "COMPLETED" },
+          })
+        : Promise.resolve({ count: 0 }),
+    ]);
 
-      if (result.count === 0) continue;
-      startedCount++;
+    // Re-query фактически перешедшие уроки. Это защищает от broadcast про
+    // IN_PROGRESS для уроков, которые параллельно ушли в CANCELLED между
+    // findMany и updateMany — наш updateMany их пропустил по фильтру status.
+    const [startedLessons, completedLessons] = await Promise.all([
+      idsToStart.length > 0
+        ? prisma.lesson.findMany({
+            where: { id: { in: idsToStart }, status: "IN_PROGRESS" },
+            select: { id: true, tutorId: true },
+          })
+        : Promise.resolve([]),
+      idsToComplete.length > 0
+        ? prisma.lesson.findMany({
+            where: { id: { in: idsToComplete }, status: "COMPLETED" },
+            select: { id: true, tutorId: true },
+          })
+        : Promise.resolve([]),
+    ]);
 
-      if (wsManager) {
+    const startedCount = startedLessons.length;
+    const completedCount = completedLessons.length;
+
+    if (wsManager) {
+      for (const lesson of startedLessons) {
         wsManager.broadcastLessonStatusUpdate(
           lesson.id,
           "IN_PROGRESS",
           lesson.tutorId
         );
       }
-    }
-
-    for (const lesson of lessonsToComplete) {
-      const result = await prisma.lesson.updateMany({
-        where: {
-          id: lesson.id,
-          status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
-        },
-        data: { status: "COMPLETED" },
-      });
-
-      if (result.count === 0) continue;
-      completedCount++;
-
-      if (wsManager) {
+      for (const lesson of completedLessons) {
         wsManager.broadcastLessonStatusUpdate(
           lesson.id,
           "COMPLETED",
@@ -77,8 +95,11 @@ export const updateLessonStatuses = async () => {
       }
     }
 
-    console.log(`Updated ${startedCount} lessons to IN_PROGRESS`);
-    console.log(`Updated ${completedCount} lessons to COMPLETED`);
+    if (startedCount > 0 || completedCount > 0) {
+      console.log(
+        `Updated ${startedCount} lessons to IN_PROGRESS, ${completedCount} to COMPLETED`
+      );
+    }
 
     return {
       startedLessons: startedCount,

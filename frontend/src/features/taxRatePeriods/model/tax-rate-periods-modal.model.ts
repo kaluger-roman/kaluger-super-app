@@ -2,12 +2,11 @@ import { createEffect, createEvent, createStore, sample } from "effector";
 
 import { taxRatePeriodModel } from "@entities";
 import type { TaxRatePeriod } from "@shared";
-import { notificationsModel, taxPeriodsApi } from "@shared";
+import { extractAxiosErrorMessage, notificationsModel, taxPeriodsApi } from "@shared";
 
 import {
   addDraftPeriod,
   draftToCreatePayload,
-  extractErrorMessage,
   periodsToDraft,
   removeDraftPeriod,
   updateDraftRate,
@@ -122,6 +121,6 @@ sample({
 
 sample({
   clock: savePeriodsFx.failData,
-  fn: extractErrorMessage,
+  fn: (error) => extractAxiosErrorMessage(error, "Не удалось сохранить периоды"),
   target: [$error, notificationsModel.showErrorEvent],
 });

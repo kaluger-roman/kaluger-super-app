@@ -410,7 +410,11 @@ describe("updateLessonStatuses", () => {
       .spyOn(prisma.lesson, "updateMany")
       .mockImplementation(((args: any) => {
         const exec = async () => {
-          if (args?.where?.id === lesson.id) {
+          const idArg = args?.where?.id;
+          const targetsLesson =
+            idArg === lesson.id ||
+            (idArg && Array.isArray(idArg.in) && idArg.in.includes(lesson.id));
+          if (targetsLesson) {
             await prisma.lesson.update({
               where: { id: lesson.id },
               data: { status: "CANCELLED" },

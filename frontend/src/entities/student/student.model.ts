@@ -78,7 +78,10 @@ export const $isUnarchiveStudent = unarchiveStudentFx.pending;
 export const $isStudentsLoading = combine(
   archiveStudentFx.pending,
   unarchiveStudentFx.pending,
-  (isArchiving, isUnarchiving) => isArchiving || isUnarchiving
+  loadActiveStudentsFx.pending,
+  loadArchivedStudentsFx.pending,
+  (isArchiving, isUnarchiving, isLoadingActive, isLoadingArchived) =>
+    isArchiving || isUnarchiving || isLoadingActive || isLoadingArchived
 );
 
 sample({

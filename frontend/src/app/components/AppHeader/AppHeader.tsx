@@ -10,7 +10,12 @@ export const AppHeader: FC<AppHeaderProps> = ({ user, onMenuClick, onAvatarClick
   return (
     <Styled.StyledAppBar position="fixed">
       <Styled.StyledToolbar>
-        <Styled.MenuButton color="inherit" edge="start" onClick={onMenuClick}>
+        <Styled.MenuButton
+          color="inherit"
+          edge="start"
+          aria-label="Открыть меню"
+          onClick={onMenuClick}
+        >
           <MenuIcon />
         </Styled.MenuButton>
 

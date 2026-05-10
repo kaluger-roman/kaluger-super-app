@@ -46,7 +46,7 @@ export const InstallPrompt = () => {
           Установить
         </Styled.InstallButton>
       )}
-      <IconButton size="small" onClick={handleDismiss}>
+      <IconButton size="small" aria-label="Закрыть баннер установки" onClick={handleDismiss}>
         <CloseIcon fontSize="small" />
       </IconButton>
     </Styled.Banner>

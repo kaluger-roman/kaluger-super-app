@@ -37,8 +37,12 @@ export const changePassword = async (
 
   const hashedPassword = await hashPassword(newPassword);
 
+  // Increment tokenVersion to revoke all previously issued JWTs.
   await prisma.user.update({
     where: { id: userId },
-    data: { password: hashedPassword },
+    data: {
+      password: hashedPassword,
+      tokenVersion: { increment: 1 },
+    },
   });
 };

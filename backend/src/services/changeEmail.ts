@@ -148,6 +148,7 @@ export const verifyEmailChange = async (
         verificationCodeExpiry: null,
         verificationCodeSentAt: null,
         verificationAttempts: 0,
+        tokenVersion: { increment: 1 },
       },
       select: {
         id: true,
@@ -156,6 +157,7 @@ export const verifyEmailChange = async (
         createdAt: true,
         isEmailVerified: true,
         taxEnabled: true,
+        tokenVersion: true,
       },
     });
   } catch (error) {
@@ -166,9 +168,23 @@ export const verifyEmailChange = async (
     throw error;
   }
 
-  const token = generateToken({ userId: updatedUser.id, email: updatedUser.email });
+  const token = generateToken({
+    userId: updatedUser.id,
+    email: updatedUser.email,
+    tokenVersion: updatedUser.tokenVersion,
+  });
 
-  return { token, user: updatedUser };
+  return {
+    token,
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      createdAt: updatedUser.createdAt,
+      isEmailVerified: updatedUser.isEmailVerified,
+      taxEnabled: updatedUser.taxEnabled,
+    },
+  };
 };
 
 export const resendEmailChangeCode = async (userId: string): Promise<void> => {

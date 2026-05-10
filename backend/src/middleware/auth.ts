@@ -8,7 +8,7 @@ export type AuthRequest = Request & {
   user?: JwtPayload;
 };
 
-export const authenticateToken = (
+export const authenticateToken = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -25,6 +25,22 @@ export const authenticateToken = (
     return res
       .status(401)
       .json({ error: "Недействительный или истекший токен" });
+  }
+
+  // Verify tokenVersion against DB so password/email changes immediately
+  // revoke previously issued tokens.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { tokenVersion: true },
+  });
+
+  if (!dbUser) {
+    return res.status(401).json({ error: "Токен отозван" });
+  }
+
+  const tokenVersion = payload.tokenVersion ?? 0;
+  if (tokenVersion !== dbUser.tokenVersion) {
+    return res.status(401).json({ error: "Токен отозван" });
   }
 
   req.user = payload;

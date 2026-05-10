@@ -86,6 +86,7 @@ export type TaxBreakdownEntry = {
 export type JwtPayload = {
   userId: string;
   email: string;
+  tokenVersion?: number;
 };
 
 export type VerifyEmailDto = {
@@ -243,4 +244,9 @@ export type PushNotificationPayload = {
     lessonId: string;
     url: string;
   };
+};
+
+export type LessonSlot = {
+  startTime: Date;
+  endTime: Date;
 };

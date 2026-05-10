@@ -12,16 +12,16 @@ import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 import { processScheduledReminders, runBackupJob } from "./services";
 
 import { authRouter } from "./routes/auth";
-import studentRoutes from "./routes/students";
-import lessonRoutes from "./routes/lessons";
-import statisticsRoutes from "./routes/statistics";
-import newsRoutes from "./routes/news";
-import { pushRouter as pushRoutes } from "./routes/push";
-import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
-import { adminRouter as adminRoutes } from "./routes/admin";
-import { screenRouter as screenRoutes } from "./routes/screen";
-import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
-import testRoutes from "./routes/__test__";
+import { studentsRouter } from "./routes/students";
+import { lessonsRouter } from "./routes/lessons";
+import { statisticsRouter } from "./routes/statistics";
+import { newsRouter } from "./routes/news";
+import { pushRouter } from "./routes/push";
+import { reminderSettingsRouter } from "./routes/reminderSettings";
+import { adminRouter } from "./routes/admin";
+import { screenRouter } from "./routes/screen";
+import { taxPeriodsRouter } from "./routes/taxPeriods";
+import { testRouter } from "./routes/__test__";
 
 const app = express();
 
@@ -39,23 +39,32 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRouter);
-app.use("/api/students", studentRoutes);
-app.use("/api/lessons", lessonRoutes);
-app.use("/api/statistics", statisticsRoutes);
-app.use("/api/news", newsRoutes);
-app.use("/api/push", pushRoutes);
-app.use("/api/reminder-settings", reminderSettingsRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/screen", screenRoutes);
-app.use("/api/tax-periods", taxPeriodsRoutes);
+app.use("/api/students", studentsRouter);
+app.use("/api/lessons", lessonsRouter);
+app.use("/api/statistics", statisticsRouter);
+app.use("/api/news", newsRouter);
+app.use("/api/push", pushRouter);
+app.use("/api/reminder-settings", reminderSettingsRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/screen", screenRouter);
+app.use("/api/tax-periods", taxPeriodsRouter);
 
 if (process.env.NODE_ENV === "test") {
-  app.use("/api/__test__", testRoutes);
+  app.use("/api/__test__", testRouter);
 }
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date().toISOString() });
+// Health check — verifies DB connectivity so monitoring can detect outages
+app.get("/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "OK", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({
+      status: "ERROR",
+      reason: "database_unavailable",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Error handling

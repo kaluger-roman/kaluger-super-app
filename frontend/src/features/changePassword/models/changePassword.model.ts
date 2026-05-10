@@ -1,8 +1,6 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { authApi, notificationsModel } from "@shared";
-
-import { extractAxiosError } from "./changePassword.helpers";
+import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
 
 // Stores
 export const $isDialogOpen = createStore(false);
@@ -83,6 +81,6 @@ sample({
 // Error
 sample({
   clock: changePasswordFx.failData,
-  fn: extractAxiosError,
+  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при смене пароля"),
   target: $error,
 });

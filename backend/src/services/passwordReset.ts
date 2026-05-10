@@ -115,8 +115,13 @@ export const applyPasswordReset = async (
   }
 
   const hashedPassword = await hashPassword(newPassword);
-  const userUpdate: { password: string; isEmailVerified?: boolean } = {
+  const userUpdate: {
+    password: string;
+    isEmailVerified?: boolean;
+    tokenVersion: { increment: number };
+  } = {
     password: hashedPassword,
+    tokenVersion: { increment: 1 },
   };
   if (!user!.isEmailVerified) {
     userUpdate.isEmailVerified = true;

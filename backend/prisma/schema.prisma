@@ -26,6 +26,7 @@ model User {
   pendingEmail           String?
   taxEnabled             Boolean   @default(false)
   timezone               String?
+  tokenVersion           Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -97,6 +98,7 @@ model Student {
   lessons Lesson[]
 
   @@unique([phone, tutorId])
+  @@index([tutorId, archived])
   @@map("students")
 }
 
@@ -127,6 +129,9 @@ model Lesson {
 
   scheduledReminders ScheduledReminder[]
 
+  @@index([tutorId, startTime])
+  @@index([tutorId, status])
+  @@index([tutorId, isPaid, status])
   @@map("lessons")
 }
 
