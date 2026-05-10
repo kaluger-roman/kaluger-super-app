@@ -63,7 +63,11 @@ export const StudentsPage: FC = () => {
         )}
       </Styled.StyledPaper>
 
-      <Styled.StyledFab color="primary" onClick={() => studentsModel.dialogOpened(undefined)}>
+      <Styled.StyledFab
+        color="primary"
+        aria-label="Добавить ученика"
+        onClick={() => studentsModel.dialogOpened(undefined)}
+      >
         <AddIcon />
       </Styled.StyledFab>
 

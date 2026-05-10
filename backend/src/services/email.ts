@@ -1,12 +1,28 @@
 import { Resend } from "resend";
+import { recordTestMail } from "../lib/testMailbox";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const isTestEnv = process.env.NODE_ENV === "test";
+
+const resend = isTestEnv ? null : new Resend(process.env.RESEND_API_KEY);
+
+const extractResetToken = (resetUrl: string): string | undefined => {
+  const match = resetUrl.match(/[?&]token=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+};
 
 export const sendVerificationEmail = async (
   email: string,
   code: string,
 ): Promise<void> => {
-  await resend.emails.send({
+  if (isTestEnv) {
+    recordTestMail({
+      to: email,
+      subject: "Подтверждение email",
+      verificationCode: code,
+    });
+    return;
+  }
+  await resend!.emails.send({
     from: process.env.EMAIL_FROM || "",
     to: email,
     subject: "Подтверждение email",
@@ -28,7 +44,15 @@ export const sendEmailChangeVerification = async (
   email: string,
   code: string,
 ): Promise<void> => {
-  await resend.emails.send({
+  if (isTestEnv) {
+    recordTestMail({
+      to: email,
+      subject: "Подтверждение смены email",
+      verificationCode: code,
+    });
+    return;
+  }
+  await resend!.emails.send({
     from: process.env.EMAIL_FROM || "",
     to: email,
     subject: "Подтверждение смены email",
@@ -50,7 +74,16 @@ export const sendPasswordResetEmail = async (
   email: string,
   resetUrl: string,
 ): Promise<void> => {
-  await resend.emails.send({
+  if (isTestEnv) {
+    recordTestMail({
+      to: email,
+      subject: "Восстановление пароля",
+      resetUrl,
+      resetToken: extractResetToken(resetUrl),
+    });
+    return;
+  }
+  await resend!.emails.send({
     from: process.env.EMAIL_FROM || "",
     to: email,
     subject: "Восстановление пароля",

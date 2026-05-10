@@ -10,7 +10,7 @@ type AddLessonFabProps = {
 
 export const AddLessonFab: FC<AddLessonFabProps> = ({ onClick }) => {
   return (
-    <Styled.StyledFab color="primary" aria-label="add lesson" onClick={onClick}>
+    <Styled.StyledFab color="primary" aria-label="Создать урок" onClick={onClick}>
       <AddIcon />
     </Styled.StyledFab>
   );
