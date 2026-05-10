@@ -65,7 +65,7 @@ const navigationItems: NavigationItem[] = [
     icon: <ScreenIcon />,
   },
   {
-    label: "Мои данные",
+    label: "Настройки",
     path: "/profile",
     icon: <PersonIcon />,
   },

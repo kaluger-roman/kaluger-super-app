@@ -48,9 +48,18 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/screen", screenRoutes);
 app.use("/api/tax-periods", taxPeriodsRoutes);
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date().toISOString() });
+// Health check — verifies DB connectivity so monitoring can detect outages
+app.get("/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "OK", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({
+      status: "ERROR",
+      reason: "database_unavailable",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Error handling

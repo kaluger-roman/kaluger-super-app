@@ -10,10 +10,3 @@ export const getScheduleDateRange = () => {
     noPagination: "true" as const,
   };
 };
-
-export const extractErrorMessage = (error: unknown, defaultMessage: string): string => {
-  console.error(defaultMessage, error);
-  return (
-    (error as { response?: { data?: { error?: string } } })?.response?.data?.error || defaultMessage
-  );
-};

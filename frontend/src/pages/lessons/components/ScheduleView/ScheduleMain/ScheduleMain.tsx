@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { FC, Ref, UIEvent } from "react";
 
 import { Typography } from "@mui/material";
@@ -35,6 +36,11 @@ export const ScheduleMain: FC<ScheduleMainProps> = ({
   compactMode = false,
   isLoading = false,
 }) => {
+  // Today's dateKey changes only when the day rolls over, not every minute.
+  // Memoizing it ensures non-today DayColumnView instances receive stable
+  // props and skip re-renders when `now` ticks.
+  const todayKey = useMemo(() => toDateKey(now), [now]);
+
   return (
     <Styled.MainScrollArea ref={mainScrollRef} onScroll={handleMainScroll} $isLoading={isLoading}>
       <Styled.TimeGrid>
@@ -50,6 +56,7 @@ export const ScheduleMain: FC<ScheduleMainProps> = ({
       <Styled.ContentGrid>
         {dateRange.map((date) => {
           const dateKey = toDateKey(date);
+          const isToday = dateKey === todayKey;
           return (
             <DayColumnView
               key={dateKey}
@@ -60,7 +67,8 @@ export const ScheduleMain: FC<ScheduleMainProps> = ({
               activeCellHeight={activeCellHeight}
               onLessonClick={onLessonClick}
               compactMode={compactMode}
-              now={now}
+              isToday={isToday}
+              nowForLine={isToday ? now : undefined}
             />
           );
         })}

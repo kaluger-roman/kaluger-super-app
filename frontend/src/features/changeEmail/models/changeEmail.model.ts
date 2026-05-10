@@ -2,11 +2,10 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 import { interval, reset } from "patronum";
 
 import { userModel } from "@entities";
-import { authApi, notificationsModel } from "@shared";
+import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
 import type { AuthResponse } from "@shared";
 
 import { RESEND_TIMER_SECONDS } from "./changeEmail.constants";
-import { extractAxiosError } from "./changeEmail.helpers";
 
 // Stores
 export const $isDialogOpen = createStore(false);
@@ -183,6 +182,18 @@ reset({
 sample({ clock: formReset, target: stopResendTimer });
 
 // Error handling
-sample({ clock: changeEmailFx.failData, fn: extractAxiosError, target: $error });
-sample({ clock: verifyEmailChangeFx.failData, fn: extractAxiosError, target: $error });
-sample({ clock: resendEmailChangeCodeFx.failData, fn: extractAxiosError, target: $error });
+sample({
+  clock: changeEmailFx.failData,
+  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  target: $error,
+});
+sample({
+  clock: verifyEmailChangeFx.failData,
+  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  target: $error,
+});
+sample({
+  clock: resendEmailChangeCodeFx.failData,
+  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  target: $error,
+});

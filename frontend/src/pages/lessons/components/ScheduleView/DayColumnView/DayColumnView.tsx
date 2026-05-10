@@ -1,10 +1,10 @@
-import type { FC } from "react";
+import { memo, useMemo } from "react";
 
 import type { Lesson } from "@shared";
 
+import { sortByStartTime } from "./DayColumnView.helpers";
 import { LessonBlock } from "../LessonBlock";
 import { NowLine } from "../NowLine";
-import { getDateKey } from "../ScheduleView.helpers";
 import * as Styled from "../ScheduleView.styled";
 
 type DayColumnViewProps = {
@@ -14,31 +14,31 @@ type DayColumnViewProps = {
   startHour: number;
   activeCellHeight: number;
   onLessonClick: (lesson: Lesson) => void;
-  now: Date;
+  isToday: boolean;
+  nowForLine?: Date;
   compactMode?: boolean;
 };
 
-export const DayColumnView: FC<DayColumnViewProps> = ({
-  dateKey,
-  timeSlots,
-  lessons,
-  startHour,
-  activeCellHeight,
-  onLessonClick,
-  now,
-  compactMode = false,
-}) => {
-  const isToday = dateKey === getDateKey(now);
+export const DayColumnView = memo<DayColumnViewProps>(
+  ({
+    dateKey,
+    timeSlots,
+    lessons,
+    startHour,
+    activeCellHeight,
+    onLessonClick,
+    isToday,
+    nowForLine,
+    compactMode = false,
+  }) => {
+    const sortedLessons = useMemo(() => sortByStartTime(lessons || []), [lessons]);
 
-  return (
-    <Styled.DayColumn key={dateKey} $isToday={isToday}>
-      {timeSlots.map((time) => (
-        <Styled.LessonSlot key={`${dateKey}-${time}`} $height={activeCellHeight} />
-      ))}
-      {(lessons || [])
-        .slice()
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-        .map((lesson, lessonIndex) => (
+    return (
+      <Styled.DayColumn key={dateKey} $isToday={isToday}>
+        {timeSlots.map((time) => (
+          <Styled.LessonSlot key={`${dateKey}-${time}`} $height={activeCellHeight} />
+        ))}
+        {sortedLessons.map((lesson, lessonIndex) => (
           <LessonBlock
             key={lesson.id}
             lesson={lesson}
@@ -50,13 +50,17 @@ export const DayColumnView: FC<DayColumnViewProps> = ({
           />
         ))}
 
-      <NowLine
-        now={now}
-        startHour={startHour}
-        activeCellHeight={activeCellHeight}
-        timeSlotsCount={timeSlots.length}
-        dateKey={dateKey}
-      />
-    </Styled.DayColumn>
-  );
-};
+        {nowForLine ? (
+          <NowLine
+            now={nowForLine}
+            startHour={startHour}
+            activeCellHeight={activeCellHeight}
+            timeSlotsCount={timeSlots.length}
+            dateKey={dateKey}
+          />
+        ) : null}
+      </Styled.DayColumn>
+    );
+  },
+);
+DayColumnView.displayName = "DayColumnView";

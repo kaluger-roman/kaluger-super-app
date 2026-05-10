@@ -134,9 +134,13 @@ jobs:
       - name: Install deps, migrate & restart
         run: |
           ssh vps << 'EOF'
+            set -e
             cd /home/roman-kaluger/kaluger-super-app/backend
             npm ci --omit=dev
             npx prisma migrate deploy
             node dist/scripts/syncNews.js
             pm2 restart backend || pm2 start dist/index.js --name backend --max-memory-restart 300M
+            sleep 5
+            curl --fail --silent --show-error --max-time 10 http://localhost:3001/health \
+              || (echo "Health check failed:"; pm2 logs backend --lines 50 --nostream; exit 1)
           EOF
