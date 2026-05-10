@@ -75,3 +75,27 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
     }
   });
 });
+
+describe("auth router (regression: rate-limit on /reset-password*)", () => {
+  type RouteLayer = {
+    route?: { path: string; stack: Array<{ handle: unknown }> };
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const authRoutes = require("../../routes/auth").default as {
+    stack: RouteLayer[];
+  };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { passwordResetRateLimiter } = require("../rateLimit");
+
+  it.each([
+    ["/forgot-password"],
+    ["/reset-password/verify"],
+    ["/reset-password"],
+  ])("should apply passwordResetRateLimiter to %s", (path) => {
+    const layer = authRoutes.stack.find((l) => l.route?.path === path);
+    expect(layer?.route).toBeDefined();
+    const handlers = layer!.route!.stack.map((s) => s.handle);
+    expect(handlers).toContain(passwordResetRateLimiter);
+  });
+});

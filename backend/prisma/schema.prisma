@@ -60,7 +60,7 @@ model TaxRatePeriod {
   id        String   @id @default(cuid())
   userId    String
   startDate DateTime
-  rate      Float
+  rate      Decimal  @db.Decimal(5, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -82,7 +82,7 @@ model Student {
   parentTelegramNick  String?
   phone               String?
   notes               String?
-  hourlyRate          Float?
+  hourlyRate          Decimal?       @db.Decimal(10, 2)
   grade               Int?
   archived            Boolean        @default(false)
   archivedAt          DateTime?
@@ -107,7 +107,7 @@ model Lesson {
   description             String?
   startTime               DateTime
   endTime                 DateTime
-  price                   Float?
+  price                   Decimal?     @db.Decimal(10, 2)
   isPaid                  Boolean      @default(false)
   paymentDate             DateTime? // Дата оплаты урока
   isHomeworkSentByTeacher Boolean      @default(false)
@@ -165,6 +165,7 @@ enum ArchiveReason {
 
 enum ReminderStatus {
   PENDING
+  PROCESSING
   SENT
   CANCELLED
   FAILED
@@ -205,6 +206,7 @@ model ScheduledReminder {
   intervalMinutes Int
   status          ReminderStatus @default(PENDING)
   sentAt          DateTime?
+  claimedAt       DateTime?
   createdAt       DateTime       @default(now())
 
   lessonId String

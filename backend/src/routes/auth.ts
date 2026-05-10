@@ -31,7 +31,7 @@ router.post("/change-email", authenticateToken, changeEmail);
 router.post("/verify-email-change", authenticateToken, verifyEmailChange);
 router.post("/resend-email-change-code", authenticateToken, resendEmailChangeCode);
 router.post("/forgot-password", passwordResetRateLimiter, forgotPassword);
-router.post("/reset-password/verify", verifyResetToken);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password/verify", passwordResetRateLimiter, verifyResetToken);
+router.post("/reset-password", passwordResetRateLimiter, resetPassword);
 
 export default router;

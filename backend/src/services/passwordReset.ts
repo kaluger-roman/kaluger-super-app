@@ -122,14 +122,21 @@ export const applyPasswordReset = async (
     userUpdate.isEmailVerified = true;
   }
 
-  await prisma.$transaction([
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
+  // Атомарная проверка-и-применение: updateMany по (id, usedAt=null)
+  // гарантирует, что параллельный запрос с тем же токеном не сможет
+  // дважды применить смену пароля. Если токен уже помечен — count=0 и
+  // транзакция откатывается без изменения пользователя.
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.passwordResetToken.updateMany({
+      where: { id: record.id, usedAt: null },
       data: { usedAt: new Date() },
-    }),
-    prisma.user.update({
+    });
+    if (result.count === 0) {
+      throwHttp("Эта ссылка уже была использована. Запросите новую", 400);
+    }
+    await tx.user.update({
       where: { id: user!.id },
       data: userUpdate,
-    }),
-  ]);
+    });
+  });
 };

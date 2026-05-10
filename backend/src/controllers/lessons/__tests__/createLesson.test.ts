@@ -98,7 +98,7 @@ describe("createLesson integration tests", () => {
         const created = await prisma.lesson.findUnique({
           where: { id: res.body.lesson.id },
         });
-        expect(created?.price).toBe(1200);
+        expect(created?.price?.toNumber()).toBe(1200);
       });
   });
 
@@ -216,7 +216,7 @@ describe("createLesson integration tests", () => {
         const created = await prisma.lesson.findUnique({
           where: { id: res.body.lesson.id },
         });
-        expect(created?.price).toBe(0);
+        expect(created?.price?.toNumber()).toBe(0);
       });
   });
 
@@ -247,7 +247,7 @@ describe("createLesson integration tests", () => {
         const created = await prisma.lesson.findUnique({
           where: { id: res.body.lesson.id },
         });
-        expect(created?.price).toBe(750);
+        expect(created?.price?.toNumber()).toBe(750);
       });
   });
 

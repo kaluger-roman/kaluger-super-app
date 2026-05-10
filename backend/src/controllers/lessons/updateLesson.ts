@@ -11,13 +11,15 @@ import {
   cancelRemindersForLesson,
   scheduleRemindersForLesson,
 } from "../../services";
+import {
+  SchedulingConflictError,
+  RecurringShiftConflictError,
+} from "../../utils";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
 import type { ShiftResult } from "../../types";
 
-const validateUpdateData = async (
-  id: string,
-  userId: string,
+const validateUpdateData = (
   updateData: UpdateLessonDto,
   existingLesson: Lesson
 ) => {
@@ -41,28 +43,6 @@ const validateUpdateData = async (
       return {
         isValid: false,
         error: "Время окончания должно быть позже времени начала",
-      };
-    }
-
-    const conflictingLesson = await prisma.lesson.findFirst({
-      where: {
-        id: { not: id },
-        tutorId: userId,
-        status: { not: "CANCELLED" },
-        OR: [
-          {
-            startTime: { lt: end },
-            endTime: { gt: start },
-          },
-        ],
-      },
-    });
-
-    if (conflictingLesson) {
-      return {
-        isValid: false,
-        error: "Временной слот конфликтует с существующим уроком",
-        statusCode: 409,
       };
     }
   }
@@ -95,12 +75,7 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    const validation = await validateUpdateData(
-      id,
-      userId!,
-      updateData,
-      existingLesson
-    );
+    const validation = validateUpdateData(updateData, existingLesson);
     if (!validation.isValid) {
       const statusCode = validation.statusCode || 400;
       return res.status(statusCode).json({ error: validation.error });
@@ -152,53 +127,91 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       dataToUpdate.paymentDate = null;
     }
 
-    // Pre-check recurring shifts BEFORE the main transaction so a conflict
-    // does not leave the base lesson updated with the shifts aborted.
     const shouldShiftRecurring =
       existingLesson.isRecurring &&
       (updateData.startTime || updateData.endTime) &&
       existingLesson.status === "SCHEDULED" &&
       updateData.status !== "RESCHEDULED";
 
-    let plannedShift:
-      | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
-      | undefined;
+    const timeChanging = !!(updateData.startTime || updateData.endTime);
 
-    if (shouldShiftRecurring) {
-      const newStart = truncateToMinute(new Date(start));
-      const newEnd = truncateToMinute(new Date(end));
-      plannedShift = await previewShiftFutureRecurringLessons(
-        existingLesson,
-        newStart,
-        newEnd
-      );
+    let lesson: Awaited<ReturnType<typeof prisma.lesson.update>>;
+    let result: ShiftResult | undefined;
+    try {
+      const txResult = await prisma.$transaction(async (tx) => {
+        // Conflict check inside transaction prevents TOCTOU between read
+        // and write — concurrent updates can no longer slip through after
+        // both pass the precheck.
+        if (timeChanging) {
+          const conflictingLesson = await tx.lesson.findFirst({
+            where: {
+              id: { not: id },
+              tutorId: userId,
+              status: { not: "CANCELLED" },
+              OR: [
+                {
+                  startTime: { lt: end },
+                  endTime: { gt: start },
+                },
+              ],
+            },
+          });
+          if (conflictingLesson) {
+            throw new SchedulingConflictError(
+              "Временной слот конфликтует с существующим уроком"
+            );
+          }
+        }
 
-      if (plannedShift.conflicts.length > 0) {
-        return res
-          .status(409)
-          .json({ error: "Перенесенная серия конфликтует с другими уроками" });
-      }
-    }
+        let plannedShift:
+          | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
+          | undefined;
+        if (shouldShiftRecurring) {
+          const newStart = truncateToMinute(new Date(start));
+          const newEnd = truncateToMinute(new Date(end));
+          plannedShift = await previewShiftFutureRecurringLessons(
+            existingLesson,
+            newStart,
+            newEnd,
+            tx
+          );
 
-    const { lesson, result } = await prisma.$transaction(async (tx) => {
-      if (nextLessonForTransfer && existingLesson.paymentDate) {
-        await tx.lesson.update({
-          where: { id: nextLessonForTransfer.id },
-          data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+          if (plannedShift.conflicts.length > 0) {
+            throw new RecurringShiftConflictError(
+              "Перенесенная серия конфликтует с другими уроками"
+            );
+          }
+        }
+
+        if (nextLessonForTransfer && existingLesson.paymentDate) {
+          await tx.lesson.update({
+            where: { id: nextLessonForTransfer.id },
+            data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+          });
+        }
+        const updated = await tx.lesson.update({
+          where: { id },
+          data: dataToUpdate,
+          include: { student: { select: { id: true, name: true } } },
         });
-      }
-      const updated = await tx.lesson.update({
-        where: { id },
-        data: dataToUpdate,
-        include: { student: { select: { id: true, name: true } } },
+
+        const shiftResult: ShiftResult | undefined = plannedShift
+          ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
+          : undefined;
+
+        return { lesson: updated, result: shiftResult };
       });
-
-      const shiftResult: ShiftResult | undefined = plannedShift
-        ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
-        : undefined;
-
-      return { lesson: updated, result: shiftResult };
-    });
+      lesson = txResult.lesson;
+      result = txResult.result;
+    } catch (err) {
+      if (err instanceof SchedulingConflictError) {
+        return res.status(409).json({ error: err.message });
+      }
+      if (err instanceof RecurringShiftConflictError) {
+        return res.status(409).json({ error: err.message });
+      }
+      throw err;
+    }
 
     if (result?.shifted && result.shifted > 0) {
       console.log(`Shifted ${result.shifted} future recurring lessons`);

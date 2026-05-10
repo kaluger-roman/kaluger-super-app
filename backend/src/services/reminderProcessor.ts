@@ -7,8 +7,27 @@ import type { PushNotificationPayload } from "../types";
 // hold a long DB transaction or overwhelm the push provider in one minute.
 const REMINDER_BATCH_SIZE = 100;
 
+// Если PROCESSING висит дольше — считаем claim "застрявшим" (процесс упал
+// между claim'ом и доставкой) и возвращаем в PENDING. 10 минут — это с
+// большим запасом дольше, чем cron-тик (1 минута), но достаточно мало,
+// чтобы пользователь увидел напоминание не сильно позже расписанного времени.
+const REMINDER_PROCESSING_TIMEOUT_MS = 10 * 60 * 1000;
+
 export const processScheduledReminders = async () => {
   const now = new Date();
+
+  // Watchdog: возвращаем в PENDING все PROCESSING-записи, claim'нутые более
+  // REMINDER_PROCESSING_TIMEOUT_MS назад. Это покрывает случай, когда процесс
+  // упал между claim'ом (PENDING -> PROCESSING) и финализацией доставки;
+  // без этого записи навсегда застревали бы в SENT/PROCESSING без push.
+  const watchdogCutoff = new Date(now.getTime() - REMINDER_PROCESSING_TIMEOUT_MS);
+  await prisma.scheduledReminder.updateMany({
+    where: {
+      status: "PROCESSING",
+      claimedAt: { lt: watchdogCutoff },
+    },
+    data: { status: "PENDING", claimedAt: null },
+  });
 
   // Atomically claim PENDING reminders inside a transaction to prevent duplicate processing on cron overlap
   const reminders = await prisma.$transaction(async (tx) => {
@@ -26,15 +45,16 @@ export const processScheduledReminders = async () => {
 
     const ids = pending.map((r) => r.id);
 
-    // Mark all as SENT upfront; will revert to FAILED/CANCELLED as needed
+    // Claim in PROCESSING (не сразу SENT) — финализация в SENT происходит
+    // после фактической доставки push в цикле ниже. Это лечит silent loss
+    // при падении процесса между транзакцией и циклом.
     await tx.scheduledReminder.updateMany({
       where: { id: { in: ids }, status: "PENDING" },
-      data: { status: "SENT", sentAt: now },
+      data: { status: "PROCESSING", claimedAt: now },
     });
 
-    // Re-fetch claimed reminders with full data (only those actually transitioned)
     return tx.scheduledReminder.findMany({
-      where: { id: { in: ids }, status: "SENT" },
+      where: { id: { in: ids }, status: "PROCESSING" },
       include: {
         lesson: {
           include: {
@@ -54,7 +74,8 @@ export const processScheduledReminders = async () => {
   for (const reminder of reminders) {
     // Outer try/catch isolates a single reminder so an unexpected throw
     // (e.g. RangeError from invalid stored timezone) cannot abort the batch
-    // and leave subsequent reminders permanently in SENT without delivery.
+    // and leave subsequent reminders permanently in PROCESSING. Watchdog
+    // still recovers stuck rows on the next tick.
     try {
       const { lesson } = reminder;
 
@@ -62,7 +83,7 @@ export const processScheduledReminders = async () => {
       if (lesson.status !== "SCHEDULED" && lesson.status !== "RESCHEDULED") {
         await prisma.scheduledReminder.update({
           where: { id: reminder.id },
-          data: { status: "CANCELLED", sentAt: null },
+          data: { status: "CANCELLED", sentAt: null, claimedAt: null },
         });
         cancelledCount++;
         continue;
@@ -88,7 +109,7 @@ export const processScheduledReminders = async () => {
           // Muted — mark as cancelled since we won't retry
           await prisma.scheduledReminder.update({
             where: { id: reminder.id },
-            data: { status: "CANCELLED", sentAt: null },
+            data: { status: "CANCELLED", sentAt: null, claimedAt: null },
           });
           cancelledCount++;
           continue;
@@ -132,11 +153,17 @@ export const processScheduledReminders = async () => {
         // All deliveries failed or no subscriptions — mark as FAILED
         await prisma.scheduledReminder.update({
           where: { id: reminder.id },
-          data: { status: "FAILED", sentAt: null },
+          data: { status: "FAILED", sentAt: null, claimedAt: null },
         });
         failedCount++;
       } else {
-        // Already marked as SENT above
+        // Финализируем как SENT только после фактической доставки. Если
+        // процесс упадёт между этим update'ом и web-push ответом —
+        // запись остаётся в PROCESSING и watchdog вернёт её в PENDING.
+        await prisma.scheduledReminder.update({
+          where: { id: reminder.id },
+          data: { status: "SENT", sentAt: new Date(), claimedAt: null },
+        });
         sentCount++;
       }
     } catch (error) {
@@ -144,7 +171,7 @@ export const processScheduledReminders = async () => {
       await prisma.scheduledReminder
         .update({
           where: { id: reminder.id },
-          data: { status: "FAILED", sentAt: null },
+          data: { status: "FAILED", sentAt: null, claimedAt: null },
         })
         .catch((updateError) => {
           console.error(

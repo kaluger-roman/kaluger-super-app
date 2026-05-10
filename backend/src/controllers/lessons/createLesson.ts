@@ -4,12 +4,11 @@ import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
+import { SchedulingConflictError } from "../../utils";
 import { truncateToMinute } from "../../utils/time";
 import { scheduleRemindersForLesson } from "../../services";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
-
-class SchedulingConflictError extends Error {}
 
 const createSingleLesson = async (
   userId: string,

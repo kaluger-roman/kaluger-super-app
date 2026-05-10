@@ -149,6 +149,49 @@ describe("reminderScheduler service", () => {
       expect(reminders).toHaveLength(0);
     });
 
+    it("should not create duplicate PENDING reminders when called concurrently (regression: TOCTOU on idempotency guard)", async () => {
+      // Regression for bug-hunt 2026-05-10 #9: previously findMany +
+      // createMany were not atomic, so two parallel calls (e.g. cron +
+      // manual update) could each see an empty Set and both insert,
+      // delivering duplicate push notifications. The partial unique
+      // index on (lessonId, intervalMinutes) WHERE status='PENDING'
+      // makes the second insert fail with P2002 — caught and skipped.
+      await prisma.reminderSettings.create({
+        data: {
+          userId,
+          enabled: true,
+          intervals: [10, 60],
+          muteWhenInLesson: false,
+        },
+      });
+
+      const futureTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const lesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: futureTime,
+          endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+          status: "SCHEDULED",
+          tutorId: userId,
+          studentId,
+        },
+      });
+
+      await Promise.all([
+        scheduleRemindersForLesson(lesson.id),
+        scheduleRemindersForLesson(lesson.id),
+      ]);
+
+      const pending = await prisma.scheduledReminder.findMany({
+        where: { lessonId: lesson.id, status: "PENDING" },
+        orderBy: { intervalMinutes: "asc" },
+      });
+
+      expect(pending.length).toBe(2);
+      expect(pending.map((p) => p.intervalMinutes)).toEqual([10, 60]);
+    });
+
     it("should not create reminders for cancelled lessons", async () => {
       await prisma.reminderSettings.create({
         data: {

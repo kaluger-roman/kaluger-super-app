@@ -40,15 +40,24 @@ sample({
   target: getCancellationInfoFx,
 });
 
+// Защита от гонки: при двойном клике на «Отменить» (быстро урок A, потом B)
+// ответ медленного запроса A может прийти позже B, и без фильтра по params
+// диалог откроется для B с финансовыми данными A. Сравниваем `params`
+// (lesson id запроса) с текущим `$cancellingLesson` и отбрасываем устаревшие
+// ответы.
 sample({
-  clock: getCancellationInfoFx.doneData,
+  clock: getCancellationInfoFx.done,
+  source: $cancellingLesson,
+  filter: (cancellingLesson, { params }) => cancellingLesson?.id === params,
+  fn: (_, { result }) => result,
   target: $cancellationInfo,
 });
 
 sample({
   clock: getCancellationInfoFx.done,
-  source: $cancellationInfo,
-  fn: (cancellationInfo) => {
+  source: $cancellingLesson,
+  filter: (cancellingLesson, { params }) => cancellingLesson?.id === params,
+  fn: (_, { result: cancellationInfo }) => {
     let message = "Вы уверены, что хотите отменить этот урок?";
 
     if (cancellationInfo) {

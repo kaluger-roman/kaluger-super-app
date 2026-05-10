@@ -1,4 +1,8 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma";
+
+const isUniqueViolation = (err: unknown): boolean =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 
 export const scheduleRemindersForLesson = async (lessonId: string) => {
   const lesson = await prisma.lesson.findUnique({
@@ -33,23 +37,16 @@ export const scheduleRemindersForLesson = async (lessonId: string) => {
     });
   }
 
-  if (reminders.length > 0) {
-    // Skip reminders that already exist (idempotency guard)
-    const existing = await prisma.scheduledReminder.findMany({
-      where: {
-        lessonId: lesson.id,
-        status: "PENDING",
-      },
-      select: { intervalMinutes: true },
-    });
-
-    const existingIntervals = new Set(existing.map((r) => r.intervalMinutes));
-    const newReminders = reminders.filter((r) => !existingIntervals.has(r.intervalMinutes));
-
-    if (newReminders.length > 0) {
-      await prisma.scheduledReminder.createMany({
-        data: newReminders,
-      });
+  // Идемпотентная вставка: вместо read-then-write (TOCTOU) полагаемся на
+  // partial unique index `(lessonId, intervalMinutes) WHERE status='PENDING'`
+  // в БД. При параллельном вызове второй INSERT падает с P2002 и тихо
+  // пропускается — гарантия атомарна на уровне PostgreSQL.
+  for (const reminder of reminders) {
+    try {
+      await prisma.scheduledReminder.create({ data: reminder });
+    } catch (err) {
+      if (isUniqueViolation(err)) continue;
+      throw err;
     }
   }
 };
