@@ -2,7 +2,19 @@ import prisma from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
 
+// Module-level guard prevents two overlapping cron ticks (e.g. tick N still
+// running due to DB latency when tick N+1 fires) from both broadcasting the
+// same lesson status change. Same pattern as `recurringRunning` in
+// services/recurringLessons.ts and `backupRunning` in services/backup.ts.
+let statusUpdaterRunning = false;
+
 export const updateLessonStatuses = async () => {
+  if (statusUpdaterRunning) {
+    console.log("Skipping lesson status update: previous tick still active");
+    return { startedLessons: 0, completedLessons: 0 };
+  }
+  statusUpdaterRunning = true;
+
   const now = truncateToMinute(new Date());
   const wsManager = getWebSocketManager();
 
@@ -108,5 +120,7 @@ export const updateLessonStatuses = async () => {
   } catch (error) {
     console.error("Error updating lesson statuses:", error);
     throw error;
+  } finally {
+    statusUpdaterRunning = false;
   }
 };

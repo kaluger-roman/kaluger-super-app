@@ -25,7 +25,7 @@ sample({
   target: $cancellingLesson,
 });
 
-const getCancellationInfoFx = createEffect(async (lessonId: string): Promise<CancellationInfo> => {
+export const getCancellationInfoFx = createEffect(async (lessonId: string): Promise<CancellationInfo> => {
   try {
     return await lessonsApi.getCancellationInfo(lessonId);
   } catch (error) {
@@ -86,13 +86,10 @@ sample({
   clock: lessonCancellationConfirmed,
   source: $cancellingLesson,
   filter: Boolean,
-  fn: (lesson) => {
-    if (!lesson) throw new Error("No lesson to cancel");
-    return {
-      id: lesson.id,
-      data: { status: "CANCELLED" as const },
-    };
-  },
+  fn: (lesson) => ({
+    id: lesson.id,
+    data: { status: "CANCELLED" as const },
+  }),
   target: lessonModel.updateLesson,
 });
 

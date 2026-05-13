@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import { setCachedTokenVersion } from "../lib/tokenVersionCache";
 import type { VerifyEmailChangeResult } from "../types";
 import {
   MAX_VERIFICATION_ATTEMPTS,
@@ -167,6 +168,10 @@ export const verifyEmailChange = async (
     }
     throw error;
   }
+
+  // Prime the token-version cache so the freshly-minted JWT below passes the
+  // next authenticateToken check without a DB refetch.
+  setCachedTokenVersion(updatedUser.id, updatedUser.tokenVersion);
 
   const token = generateToken({
     userId: updatedUser.id,

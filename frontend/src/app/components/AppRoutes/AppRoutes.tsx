@@ -15,9 +15,7 @@ const AdminPage = lazy(() =>
   import("@pages/AdminPage").then((m) => ({ default: m.AdminPage })),
 );
 const ReportsPage = lazy(() =>
-  import("@pages/ReportsPage/ReportsPage").then((m) => ({
-    default: m.ReportsPage,
-  })),
+  import("@pages/ReportsPage").then((m) => ({ default: m.ReportsPage })),
 );
 const ProfilePage = lazy(() =>
   import("@pages/profile").then((m) => ({ default: m.ProfilePage })),

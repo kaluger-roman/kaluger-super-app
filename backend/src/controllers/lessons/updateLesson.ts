@@ -1,6 +1,7 @@
 import type { Response } from "express";
-import type { UpdateLessonDto } from "../../types";
+import { Prisma } from "@prisma/client";
 import type { Lesson } from "@prisma/client";
+import type { UpdateLessonDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
@@ -137,80 +138,100 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
 
     let lesson: Awaited<ReturnType<typeof prisma.lesson.update>>;
     let result: ShiftResult | undefined;
-    try {
-      const txResult = await prisma.$transaction(async (tx) => {
-        // Conflict check inside transaction prevents TOCTOU between read
-        // and write — concurrent updates can no longer slip through after
-        // both pass the precheck.
-        if (timeChanging) {
-          const conflictingLesson = await tx.lesson.findFirst({
-            where: {
-              id: { not: id },
-              tutorId: userId,
-              status: { not: "CANCELLED" },
-              OR: [
-                {
-                  startTime: { lt: end },
-                  endTime: { gt: start },
+    // Serializable isolation + bounded retry on P2034 (transaction conflict /
+    // serialization failure) gives a true TOCTOU guarantee for concurrent
+    // updates on the same tutor. Default READ COMMITTED would let two
+    // overlapping requests both pass the conflict-check `findFirst` and both
+    // commit overlapping lessons — moving the check inside `$transaction`
+    // alone is not enough.
+    const MAX_TX_RETRIES = 3;
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        const txResult = await prisma.$transaction(
+          async (tx) => {
+            if (timeChanging) {
+              const conflictingLesson = await tx.lesson.findFirst({
+                where: {
+                  id: { not: id },
+                  tutorId: userId,
+                  status: { not: "CANCELLED" },
+                  OR: [
+                    {
+                      startTime: { lt: end },
+                      endTime: { gt: start },
+                    },
+                  ],
                 },
-              ],
-            },
-          });
-          if (conflictingLesson) {
-            throw new SchedulingConflictError(
-              "Временной слот конфликтует с существующим уроком"
-            );
-          }
-        }
+              });
+              if (conflictingLesson) {
+                throw new SchedulingConflictError(
+                  "Временной слот конфликтует с существующим уроком"
+                );
+              }
+            }
 
-        let plannedShift:
-          | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
-          | undefined;
-        if (shouldShiftRecurring) {
-          const newStart = truncateToMinute(new Date(start));
-          const newEnd = truncateToMinute(new Date(end));
-          plannedShift = await previewShiftFutureRecurringLessons(
-            existingLesson,
-            newStart,
-            newEnd,
-            tx
+            let plannedShift:
+              | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
+              | undefined;
+            if (shouldShiftRecurring) {
+              const newStart = truncateToMinute(new Date(start));
+              const newEnd = truncateToMinute(new Date(end));
+              plannedShift = await previewShiftFutureRecurringLessons(
+                existingLesson,
+                newStart,
+                newEnd,
+                tx
+              );
+
+              if (plannedShift.conflicts.length > 0) {
+                throw new RecurringShiftConflictError(
+                  "Перенесенная серия конфликтует с другими уроками"
+                );
+              }
+            }
+
+            if (nextLessonForTransfer && existingLesson.paymentDate) {
+              await tx.lesson.update({
+                where: { id: nextLessonForTransfer.id },
+                data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+              });
+            }
+            const updated = await tx.lesson.update({
+              where: { id },
+              data: dataToUpdate,
+              include: { student: { select: { id: true, name: true } } },
+            });
+
+            const shiftResult: ShiftResult | undefined = plannedShift
+              ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
+              : undefined;
+
+            return { lesson: updated, result: shiftResult };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+        );
+        lesson = txResult.lesson;
+        result = txResult.result;
+        break;
+      } catch (err) {
+        if (err instanceof SchedulingConflictError) {
+          return res.status(409).json({ error: err.message });
+        }
+        if (err instanceof RecurringShiftConflictError) {
+          return res.status(409).json({ error: err.message });
+        }
+        const prismaCode = (err as { code?: string }).code;
+        if (prismaCode === "P2034" && attempt < MAX_TX_RETRIES) {
+          // Jittered exponential-ish backoff before retrying the transaction.
+          await new Promise((r) =>
+            setTimeout(r, 10 * attempt + Math.floor(Math.random() * 20))
           );
-
-          if (plannedShift.conflicts.length > 0) {
-            throw new RecurringShiftConflictError(
-              "Перенесенная серия конфликтует с другими уроками"
-            );
-          }
+          continue;
         }
-
-        if (nextLessonForTransfer && existingLesson.paymentDate) {
-          await tx.lesson.update({
-            where: { id: nextLessonForTransfer.id },
-            data: { isPaid: true, paymentDate: existingLesson.paymentDate },
-          });
-        }
-        const updated = await tx.lesson.update({
-          where: { id },
-          data: dataToUpdate,
-          include: { student: { select: { id: true, name: true } } },
-        });
-
-        const shiftResult: ShiftResult | undefined = plannedShift
-          ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
-          : undefined;
-
-        return { lesson: updated, result: shiftResult };
-      });
-      lesson = txResult.lesson;
-      result = txResult.result;
-    } catch (err) {
-      if (err instanceof SchedulingConflictError) {
-        return res.status(409).json({ error: err.message });
+        throw err;
       }
-      if (err instanceof RecurringShiftConflictError) {
-        return res.status(409).json({ error: err.message });
-      }
-      throw err;
     }
 
     if (result?.shifted && result.shifted > 0) {

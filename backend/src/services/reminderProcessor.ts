@@ -85,12 +85,18 @@ export const processScheduledReminders = async () => {
   let failedCount = 0;
 
   // Все финализации статуса (SENT/FAILED/CANCELLED) делаются через
-  // updateMany c предикатом status='PROCESSING'. Если параллельный
-  // cancelRemindersForLesson / recalculateRemindersForUser уже перевёл
-  // запись в CANCELLED, наш update не тронет её (count=0) и не перепишет
-  // CANCELLED обратно. Это плюс — пользователь, отменивший урок прямо в
-  // момент доставки, получит свой CANCELLED, и watchdog не столкнётся с
-  // лишним PROCESSING-снапшотом.
+  // updateMany c предикатом status='PROCESSING' AND claimedAt=batchClaimedAt.
+  //
+  // Двойная защита:
+  //   1) status='PROCESSING': если параллельный cancelRemindersForLesson /
+  //      recalculateRemindersForUser уже перевёл запись в CANCELLED, наш
+  //      update не тронет её (count=0) и не перепишет CANCELLED обратно.
+  //   2) claimedAt=batchClaimedAt: если push занял >REMINDER_PROCESSING_TIMEOUT_MS
+  //      и watchdog следующего тика откатил запись в PENDING, а затем тот же
+  //      тик переклеймил её под новым claimedAt — наш finalize, относящийся
+  //      к старому батчу, не должен затирать состояние нового claim'а.
+  //      Без проверки claimedAt finalize бы матчился на NEW claim (status тоже
+  //      PROCESSING) и перетёр бы его как SENT/FAILED до фактической доставки.
   const finalize = async (
     reminderId: string,
     data: {
@@ -99,7 +105,7 @@ export const processScheduledReminders = async () => {
     },
   ) => {
     await prisma.scheduledReminder.updateMany({
-      where: { id: reminderId, status: "PROCESSING" },
+      where: { id: reminderId, status: "PROCESSING", claimedAt: now },
       data: { ...data, claimedAt: null },
     });
   };
