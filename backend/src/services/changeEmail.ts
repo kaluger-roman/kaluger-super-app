@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import { setCachedTokenVersion } from "../lib/tokenVersionCache";
 import type { VerifyEmailChangeResult } from "../types";
 import {
   MAX_VERIFICATION_ATTEMPTS,
@@ -148,6 +149,7 @@ export const verifyEmailChange = async (
         verificationCodeExpiry: null,
         verificationCodeSentAt: null,
         verificationAttempts: 0,
+        tokenVersion: { increment: 1 },
       },
       select: {
         id: true,
@@ -156,6 +158,7 @@ export const verifyEmailChange = async (
         createdAt: true,
         isEmailVerified: true,
         taxEnabled: true,
+        tokenVersion: true,
       },
     });
   } catch (error) {
@@ -166,9 +169,27 @@ export const verifyEmailChange = async (
     throw error;
   }
 
-  const token = generateToken({ userId: updatedUser.id, email: updatedUser.email });
+  // Prime the token-version cache so the freshly-minted JWT below passes the
+  // next authenticateToken check without a DB refetch.
+  setCachedTokenVersion(updatedUser.id, updatedUser.tokenVersion);
 
-  return { token, user: updatedUser };
+  const token = generateToken({
+    userId: updatedUser.id,
+    email: updatedUser.email,
+    tokenVersion: updatedUser.tokenVersion,
+  });
+
+  return {
+    token,
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      createdAt: updatedUser.createdAt,
+      isEmailVerified: updatedUser.isEmailVerified,
+      taxEnabled: updatedUser.taxEnabled,
+    },
+  };
 };
 
 export const resendEmailChangeCode = async (userId: string): Promise<void> => {

@@ -12,12 +12,14 @@ jest.mock("../../lib/prisma", () => ({
   default: {
     user: {
       update: jest.fn(() => Promise.resolve()),
+      findUnique: jest.fn(() => Promise.resolve({ tokenVersion: 0 })),
     },
   },
 }));
 
 import { verifyToken } from "../../utils/auth";
 import prisma from "../../lib/prisma";
+import { __clearTokenVersionCacheForTests } from "../../lib/tokenVersionCache";
 import { authenticateToken, AuthRequest } from "../auth";
 
 const app = express();
@@ -27,6 +29,12 @@ app.get("/protected", authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 describe("authenticateToken middleware", () => {
+  beforeEach(() => {
+    // Reset in-process tokenVersion cache so the prisma.user.findUnique
+    // mock is exercised on every test, not skipped due to a prior real hit.
+    __clearTokenVersionCacheForTests();
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });

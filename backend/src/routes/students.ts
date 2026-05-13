@@ -10,17 +10,15 @@ import {
 } from "../controllers/students";
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const studentsRouter = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+studentsRouter.use(authenticateToken);
 
-router.get("/", getStudents);
-router.get("/:id", getStudent);
-router.post("/", createStudent);
-router.put("/:id", updateStudent);
-router.put("/:id/archive", archiveStudent);
-router.put("/:id/unarchive", unarchiveStudent);
-router.delete("/:id", deleteStudent);
-
-export default router;
+studentsRouter.get("/", getStudents);
+studentsRouter.get("/:id", getStudent);
+studentsRouter.post("/", createStudent);
+studentsRouter.put("/:id", updateStudent);
+studentsRouter.put("/:id/archive", archiveStudent);
+studentsRouter.put("/:id/unarchive", unarchiveStudent);
+studentsRouter.delete("/:id", deleteStudent);

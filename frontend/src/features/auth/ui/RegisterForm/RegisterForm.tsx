@@ -1,6 +1,6 @@
-import type { FC, FormEvent } from "react";
+import type { FC, KeyboardEvent } from "react";
 
-import { useMediaQuery, useTheme } from "@mui/material";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { useRegisterForm } from "./RegisterForm.hooks";
@@ -21,9 +21,7 @@ export const RegisterForm: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = () => {
     if (!validateForm()) {
       return;
     }
@@ -35,11 +33,18 @@ export const RegisterForm: FC = () => {
     });
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !isLoading) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <Styled.StyledPaper elevation={3} $isMobile={isMobile}>
       <RegisterFormHeader isMobile={isMobile} />
 
-      <form onSubmit={handleSubmit}>
+      <Box onKeyDown={handleKeyDown}>
         <RegisterFormFields
           formData={formData}
           setters={setters}
@@ -53,8 +58,9 @@ export const RegisterForm: FC = () => {
           authError={authError}
           isLoading={isLoading}
           isMobile={isMobile}
+          onSubmit={handleSubmit}
         />
-      </form>
+      </Box>
     </Styled.StyledPaper>
   );
 };

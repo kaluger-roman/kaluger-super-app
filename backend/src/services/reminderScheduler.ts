@@ -1,4 +1,8 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma";
+
+const isUniqueViolation = (err: unknown): boolean =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 
 export const scheduleRemindersForLesson = async (lessonId: string) => {
   const lesson = await prisma.lesson.findUnique({
@@ -33,35 +37,37 @@ export const scheduleRemindersForLesson = async (lessonId: string) => {
     });
   }
 
-  if (reminders.length > 0) {
-    // Skip reminders that already exist (idempotency guard)
-    const existing = await prisma.scheduledReminder.findMany({
-      where: {
-        lessonId: lesson.id,
-        status: "PENDING",
-      },
-      select: { intervalMinutes: true },
-    });
-
-    const existingIntervals = new Set(existing.map((r) => r.intervalMinutes));
-    const newReminders = reminders.filter((r) => !existingIntervals.has(r.intervalMinutes));
-
-    if (newReminders.length > 0) {
-      await prisma.scheduledReminder.createMany({
-        data: newReminders,
-      });
+  // Идемпотентная вставка: вместо read-then-write (TOCTOU) полагаемся на
+  // partial unique index `(lessonId, intervalMinutes) WHERE status='PENDING'`
+  // в БД. При параллельном вызове второй INSERT падает с P2002 и тихо
+  // пропускается — гарантия атомарна на уровне PostgreSQL.
+  for (const reminder of reminders) {
+    try {
+      await prisma.scheduledReminder.create({ data: reminder });
+    } catch (err) {
+      if (isUniqueViolation(err)) continue;
+      throw err;
     }
   }
 };
+
+// Любые ручки, которые "снимают" будущие напоминания, должны учитывать
+// и `PENDING`, и `PROCESSING`. Если PROCESSING-запись (claim в процессе
+// доставки) пропустить, watchdog в `processScheduledReminders` через
+// 10 минут вернёт её в PENDING — а к этому моменту recalculate уже мог
+// создать дубликат с тем же (lessonId, intervalMinutes), и watchdog
+// упадёт с P2002 на partial unique index, парализуя cron.
+const ACTIVE_REMINDER_STATUSES = ["PENDING", "PROCESSING"] as const;
 
 export const cancelRemindersForLesson = async (lessonId: string) => {
   await prisma.scheduledReminder.updateMany({
     where: {
       lessonId,
-      status: "PENDING",
+      status: { in: [...ACTIVE_REMINDER_STATUSES] },
     },
     data: {
       status: "CANCELLED",
+      claimedAt: null,
     },
   });
 };
@@ -71,14 +77,18 @@ export const recalculateRemindersForUser = async (userId: string) => {
 
   // Cancel + recreate atomically to avoid race conditions
   await prisma.$transaction(async (tx) => {
-    // Cancel all pending reminders
+    // Отменяем и PENDING, и PROCESSING — иначе claim, который сейчас
+    // доставляется в `processScheduledReminders`, останется в БД и
+    // столкнётся с новой PENDING-записью при попытке watchdog'а вернуть
+    // его в PENDING.
     await tx.scheduledReminder.updateMany({
       where: {
         userId,
-        status: "PENDING",
+        status: { in: [...ACTIVE_REMINDER_STATUSES] },
       },
       data: {
         status: "CANCELLED",
+        claimedAt: null,
       },
     });
 
@@ -128,10 +138,11 @@ export const cancelAllPendingReminders = async (userId: string) => {
   await prisma.scheduledReminder.updateMany({
     where: {
       userId,
-      status: "PENDING",
+      status: { in: [...ACTIVE_REMINDER_STATUSES] },
     },
     data: {
       status: "CANCELLED",
+      claimedAt: null,
     },
   });
 };

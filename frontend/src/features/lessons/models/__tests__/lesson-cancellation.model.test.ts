@@ -1,4 +1,4 @@
-import { allSettled, fork } from "effector";
+import { allSettled, fork, scopeBind } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { lessonModel } from "@entities";
@@ -243,6 +243,72 @@ describe("lesson-cancellation.model", () => {
 
       // The cancellation context for the active dialog must remain intact
       expect(scope.getState($cancellingLesson)).toEqual(targetLesson);
+    });
+
+    it("should ignore a stale getCancellationInfo response for an earlier lesson (regression: cancel-dialog race)", async () => {
+      // Regression for bug-hunt 2026-05-10 #10: when the user clicks
+      // «Отменить» on lesson A (slow API), then quickly on lesson B
+      // (fast API), without filtering by params the slow response for A
+      // would overwrite $cancellationInfo and reopen the dialog with
+      // financial data of A while $cancellingLesson is B — leading the
+      // user to confirm cancellation of B based on transfer info of A.
+      const scope = fork();
+      const lessonA = createMockLesson({ id: "lesson-A" });
+      const lessonB = createMockLesson({ id: "lesson-B" });
+
+      const infoA: CancellationInfo = {
+        nextLessonId: "next-A",
+        nextLessonStartTime: "2026-02-01T10:00:00.000Z",
+        nextLessonStudentName: "A-Student",
+        transferAmount: 1111,
+        transferDate: "2026-01-30T00:00:00.000Z",
+      };
+      const infoB: CancellationInfo = {
+        nextLessonId: "next-B",
+        nextLessonStartTime: "2026-02-02T10:00:00.000Z",
+        nextLessonStudentName: "B-Student",
+        transferAmount: 2222,
+        transferDate: "2026-01-31T00:00:00.000Z",
+      };
+
+      let resolveA: ((value: CancellationInfo) => void) | undefined;
+      const promiseA = new Promise<CancellationInfo>((resolve) => {
+        resolveA = resolve;
+      });
+
+      vi.mocked(lessonsApi.getCancellationInfo).mockImplementation(
+        async (id: string) => {
+          if (id === "lesson-A") return promiseA;
+          return infoB;
+        },
+      );
+
+      // Fire both events through scopeBind (no allSettled): allSettled would
+      // wait for *all* pending effects in the scope to settle, which dead-
+      // locks on the deliberately-unresolved promiseA. setTimeout is enough
+      // to let the synchronous sample chains and fast B resolve.
+      const cancelInScope = scopeBind(lessonCancelRequested, { scope });
+
+      cancelInScope(lessonA);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      cancelInScope(lessonB);
+      // Let B's fast effect resolve and reach $cancellationInfo + dialog.
+      await new Promise<void>((resolve) => setTimeout(resolve, 30));
+
+      expect(scope.getState($cancellingLesson)).toEqual(lessonB);
+      expect(scope.getState($cancellationInfo)).toEqual(infoB);
+      expect(scope.getState($confirmDialog).message).toContain("B-Student");
+
+      // Late A response — must be ignored by the params/cancellingLesson
+      // filter in the model.
+      resolveA!(infoA);
+      await new Promise<void>((resolve) => setTimeout(resolve, 30));
+
+      expect(scope.getState($cancellingLesson)).toEqual(lessonB);
+      expect(scope.getState($cancellationInfo)).toEqual(infoB);
+      expect(scope.getState($confirmDialog).message).toContain("B-Student");
+      expect(scope.getState($confirmDialog).message).not.toContain("A-Student");
     });
 
     it("should clear $cancellingLesson only when the matching lesson becomes CANCELLED", async () => {

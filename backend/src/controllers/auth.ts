@@ -129,8 +129,12 @@ export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
       });
     }
 
-    // Generate token
-    const token = generateToken({ userId: user.id, email: user.email });
+    // Generate token (include tokenVersion for revocation on password/email change)
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+    });
 
     res.json({
       message: "Вход выполнен успешно",

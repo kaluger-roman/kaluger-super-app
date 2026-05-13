@@ -1,8 +1,7 @@
-import type { FC, FormEvent } from "react";
+import type { FC, KeyboardEvent } from "react";
 
 import { Typography, Alert, useMediaQuery, useTheme } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
-import { Link } from "react-router-dom";
 
 import { TextField, Button } from "@shared";
 
@@ -20,14 +19,18 @@ export const LoginForm: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = () => {
     if (!email || !password) {
       return;
     }
-
     loginFormModel.submitLogin({ email, password });
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !isLoading) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   return (
@@ -44,7 +47,7 @@ export const LoginForm: FC = () => {
         </Typography>
       </Styled.HeaderBox>
 
-      <form onSubmit={handleSubmit}>
+      <Styled.FieldsBox onKeyDown={handleKeyDown}>
         <TextField
           fullWidth
           label="Email"
@@ -86,23 +89,22 @@ export const LoginForm: FC = () => {
 
         {authError && <Alert severity="error">{authError}</Alert>}
 
-        <Button
-          type="submit"
+        <Styled.SubmitButton
           fullWidth
           variant="contained"
           size={isMobile ? "medium" : "large"}
           disabled={isLoading}
-          sx={{ mt: 2, mb: 2 }}
+          onClick={handleSubmit}
         >
           {isLoading ? "Вход..." : "Войти"}
-        </Button>
+        </Styled.SubmitButton>
 
-        <Link to="/register" style={{ textDecoration: "none", width: "100%" }}>
+        <Styled.RegisterLink to="/register">
           <Button fullWidth variant="text" size={isMobile ? "medium" : "large"}>
             Нет аккаунта? Зарегистрироваться
           </Button>
-        </Link>
-      </form>
+        </Styled.RegisterLink>
+      </Styled.FieldsBox>
     </Styled.FormPaper>
   );
 };
