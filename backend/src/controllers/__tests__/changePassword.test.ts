@@ -100,7 +100,7 @@ describe("POST /api/auth/change-password", () => {
     expect(res.body.error).toBe("Новый пароль должен отличаться от текущего");
   });
 
-  it("should change password successfully", async () => {
+  it("should change password successfully and revoke previous tokens", async () => {
     const newPassword = "NewPassword1";
     const res = await request(app)
       .post("/api/auth/change-password")
@@ -125,7 +125,7 @@ describe("POST /api/auth/change-password", () => {
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
 
-    // Verify old password no longer works
+    // Old token must be revoked after password change (tokenVersion bumped)
     const res2 = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${authToken}`)
@@ -134,11 +134,11 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "AnotherPassword1",
         confirmPassword: "AnotherPassword1",
       });
-    expect(res2.status).toBe(400);
-    expect(res2.body.error).toBe("Неверный текущий пароль");
+    expect(res2.status).toBe(401);
+    expect(res2.body.error).toBe("Токен отозван");
   });
 
-  it("should return 404 when user not found", async () => {
+  it("should return 401 when token references non-existent user", async () => {
     const fakeToken = generateToken({
       userId: "non-existent-id",
       email: "noone@example.com",
@@ -151,7 +151,7 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "NewPassword1",
         confirmPassword: "NewPassword1",
       });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe("Пользователь не найден");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("Токен отозван");
   });
 });

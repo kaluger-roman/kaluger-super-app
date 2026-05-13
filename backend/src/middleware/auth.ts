@@ -29,10 +29,16 @@ export const authenticateToken = async (
 
   // Verify tokenVersion against DB so password/email changes immediately
   // revoke previously issued tokens.
-  const dbUser = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { tokenVersion: true },
-  });
+  let dbUser;
+  try {
+    dbUser = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { tokenVersion: true },
+    });
+  } catch (error) {
+    console.error("Auth middleware DB error:", error);
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+  }
 
   if (!dbUser) {
     return res.status(401).json({ error: "Токен отозван" });

@@ -12,6 +12,7 @@ jest.mock("../../lib/prisma", () => ({
   default: {
     user: {
       update: jest.fn(() => Promise.resolve()),
+      findUnique: jest.fn(() => Promise.resolve({ tokenVersion: 0 })),
     },
   },
 }));

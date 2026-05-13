@@ -1,7 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 
-import { styled } from "@shared";
+import { Button, styled } from "@shared";
 
 export const FormPaper = styled(Paper)<{ $isMobile: boolean }>`
   padding: ${({ $isMobile }) => ($isMobile ? "24px" : "32px")};
@@ -41,4 +41,19 @@ export const ForgotPasswordLink = styled(Link)`
   &:hover {
     text-decoration: underline;
   }
+`;
+
+export const FieldsBox = styled(Box)`
+  display: flex;
+  flex-direction: column;
+`;
+
+export const SubmitButton = styled(Button)`
+  margin-top: 16px;
+  margin-bottom: 16px;
+`;
+
+export const RegisterLink = styled(Link)`
+  text-decoration: none;
+  width: 100%;
 `;

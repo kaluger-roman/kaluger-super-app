@@ -20,6 +20,7 @@ export const StudentFormActions: FC<StudentFormActionsProps> = ({
   isMobile,
   onClose,
   onDelete,
+  onSubmit,
 }) => {
   const actions = useUnit({
     archiveRequested: studentsArchiveModel.archiveRequested,
@@ -77,7 +78,7 @@ export const StudentFormActions: FC<StudentFormActionsProps> = ({
           Отмена
         </Button>
         <Button
-          type="submit"
+          onClick={onSubmit}
           variant="contained"
           startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
           disabled={isLoading}

@@ -39,4 +39,5 @@ export type StudentFormActionsProps = {
   isMobile: boolean;
   onClose: () => void;
   onDelete: () => void;
+  onSubmit: () => void;
 };

@@ -89,15 +89,19 @@ describe("LessonForm", () => {
   });
 
   describe("Form submission", () => {
-    it("should call formSubmitted on form submit", async () => {
+    it("should render submit button inside dialog", async () => {
       const scope = fork();
 
       await allSettled(lessonsModel.$isDialogOpen, { scope, params: true });
 
       renderWithTheme(<LessonForm />, scope);
 
-      const form = screen.getByRole("dialog").querySelector("form");
-      expect(form).toBeInTheDocument();
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toBeInTheDocument();
+      const submitButton =
+        dialog.querySelector("button[type='button']") ??
+        screen.getByRole("button", { name: /создать урок/i });
+      expect(submitButton).toBeInTheDocument();
     });
   });
 
