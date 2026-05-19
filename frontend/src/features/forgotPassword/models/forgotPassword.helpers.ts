@@ -1,11 +1,7 @@
-export const extractAxiosError = (error: unknown): string => {
-  const axiosError = error as {
-    response?: { data?: { error?: string } };
-    message?: string;
-  };
-  return (
-    axiosError?.response?.data?.error ||
-    axiosError?.message ||
+import { extractAxiosError as extractAxiosErrorShared } from "@shared";
+
+export const extractAxiosError = (error: unknown): string =>
+  extractAxiosErrorShared(
+    error,
     "Не удалось отправить запрос. Попробуйте позже"
   );
-};

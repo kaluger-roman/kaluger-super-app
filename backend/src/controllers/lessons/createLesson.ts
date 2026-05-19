@@ -5,7 +5,10 @@ import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
 import { truncateToMinute } from "../../utils/time";
-import { scheduleRemindersForLesson } from "../../services";
+import {
+  broadcastStudentLessonCreated,
+  scheduleRemindersForLesson,
+} from "../../services";
 import type { Student } from "@prisma/client";
 import type { LessonStatus, Prisma } from "@prisma/client";
 
@@ -15,7 +18,7 @@ const createSingleLesson = async (
   userId: string,
   data: CreateLessonDto,
   student: Student,
-  res: Response
+  res: Response,
 ): Promise<Response | void> => {
   const {
     subject,
@@ -51,7 +54,7 @@ const createSingleLesson = async (
       const conflicts = await checkSchedulingConflicts(userId, start, end, tx);
       if (conflicts.length > 0) {
         throw new SchedulingConflictError(
-          "Временной слот конфликтует с существующим уроком"
+          "Временной слот конфликтует с существующим уроком",
         );
       }
       return tx.lesson.create({
@@ -84,7 +87,7 @@ const createSingleLesson = async (
   // Schedule reminders for the new lesson
   if (lesson.status === "SCHEDULED") {
     scheduleRemindersForLesson(lesson.id).catch((err) =>
-      console.error("Failed to schedule reminders:", err)
+      console.error("Failed to schedule reminders:", err),
     );
   }
 
@@ -92,13 +95,15 @@ const createSingleLesson = async (
   if (wsManager) {
     wsManager.broadcastLessonStatusUpdate(lesson.id, lesson.status, userId);
   }
+
+  void broadcastStudentLessonCreated(lesson);
 };
 
 const createRecurringLessons = async (
   userId: string,
   data: CreateLessonDto,
   student: Student,
-  res: Response
+  res: Response,
 ): Promise<Response | void> => {
   const {
     subject,
@@ -116,7 +121,8 @@ const createRecurringLessons = async (
   const end = truncateToMinute(new Date(endTime));
 
   const lessonPrice = price ?? student.hourlyRate;
-  const candidateSlots: Array<{ start: Date; end: Date; isFirst: boolean }> = [];
+  const candidateSlots: Array<{ start: Date; end: Date; isFirst: boolean }> =
+    [];
   const threeMonthsLater = truncateToMinute(new Date(start));
   threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
@@ -130,14 +136,16 @@ const createRecurringLessons = async (
       isFirst: currentStart.getTime() === start.getTime(),
     });
     currentStart = truncateToMinute(
-      new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+      new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000),
     );
     currentEnd = truncateToMinute(
-      new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
+      new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000),
     );
   }
 
-  let createdLessons: Awaited<ReturnType<typeof prisma.lesson.createManyAndReturn>>;
+  let createdLessons: Awaited<
+    ReturnType<typeof prisma.lesson.createManyAndReturn>
+  >;
   let firstLesson: Awaited<ReturnType<typeof prisma.lesson.findFirst>>;
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -147,7 +155,7 @@ const createRecurringLessons = async (
           userId,
           slot.start,
           slot.end,
-          tx
+          tx,
         );
         if (conflicts.length === 0) {
           slotsToCreate.push({
@@ -168,11 +176,13 @@ const createRecurringLessons = async (
 
       if (slotsToCreate.length === 0) {
         throw new SchedulingConflictError(
-          "Невозможно создать регулярные уроки из-за конфликтов в расписании"
+          "Невозможно создать регулярные уроки из-за конфликтов в расписании",
         );
       }
 
-      const created = await tx.lesson.createManyAndReturn({ data: slotsToCreate });
+      const created = await tx.lesson.createManyAndReturn({
+        data: slotsToCreate,
+      });
       const first = await tx.lesson.findFirst({
         where: { id: created[0]?.id },
         include: { student: true },
@@ -197,7 +207,10 @@ const createRecurringLessons = async (
   for (const l of createdLessons) {
     if (l.status === "SCHEDULED") {
       scheduleRemindersForLesson(l.id).catch((err) =>
-        console.error("Failed to schedule reminders for recurring lesson:", err)
+        console.error(
+          "Failed to schedule reminders for recurring lesson:",
+          err,
+        ),
       );
     }
   }
@@ -207,8 +220,12 @@ const createRecurringLessons = async (
     wsManager.broadcastLessonStatusUpdate(
       firstLesson.id,
       firstLesson.status,
-      userId
+      userId,
     );
+  }
+
+  for (const l of createdLessons) {
+    void broadcastStudentLessonCreated(l);
   }
 };
 

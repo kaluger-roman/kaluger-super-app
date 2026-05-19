@@ -1,6 +1,7 @@
 import prisma from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
+import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
 
 export const updateLessonStatuses = async () => {
   const now = truncateToMinute(new Date());
@@ -54,6 +55,7 @@ export const updateLessonStatuses = async () => {
           lesson.tutorId
         );
       }
+      void broadcastStudentLessonStatusUpdated(lesson.id, "IN_PROGRESS");
     }
 
     for (const lesson of lessonsToComplete) {
@@ -75,6 +77,7 @@ export const updateLessonStatuses = async () => {
           lesson.tutorId
         );
       }
+      void broadcastStudentLessonStatusUpdated(lesson.id, "COMPLETED");
     }
 
     console.log(`Updated ${startedCount} lessons to IN_PROGRESS`);

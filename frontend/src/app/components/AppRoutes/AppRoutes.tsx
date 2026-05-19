@@ -1,6 +1,6 @@
 import type { FC } from "react";
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
@@ -12,6 +12,10 @@ import {
   ScreenPage,
   ForgotPasswordPage,
   ResetPasswordPage,
+  StudentCabinetLayout,
+  StudentInvitePage,
+  StudentSchedulePage,
+  StudentSettingsPage,
 } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
@@ -20,6 +24,7 @@ import { StudentsPage } from "@pages/students";
 import { AuthLayout } from "../AuthLayout";
 import { AuthRoute } from "../AuthRoute";
 import { ProtectedRoute } from "../ProtectedRoute";
+import { StudentProtectedRoute } from "../StudentProtectedRoute";
 
 type AppRoutesProps = {
   isLoggedIn: boolean;
@@ -112,6 +117,20 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
           </AuthLayout>
         }
       />
+      <Route
+        path="/student-invite/:token"
+        element={<StudentInvitePage />}
+      />
+      <Route
+        path="/student/cabinet"
+        element={
+          <StudentProtectedRoute element={<StudentCabinetLayout />} />
+        }
+      >
+        <Route index element={<Navigate to="schedule" replace />} />
+        <Route path="schedule" element={<StudentSchedulePage />} />
+        <Route path="settings" element={<StudentSettingsPage />} />
+      </Route>
       <Route
         path="/"
         element={<ProtectedRoute element={<DashboardPage />} isLoggedIn={isLoggedIn} />}

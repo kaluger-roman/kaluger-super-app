@@ -1,0 +1,222 @@
+openapi: 3.0.3
+info:
+  title: Student Invitations API (029-student-cabinet)
+  version: 1.0.0
+  description: |
+    Эндпоинты управления ссылками-приглашениями ученика. Делятся на два слоя:
+    1. **Tutor-эндпоинты** под `/api/students/:id/invitations` — требуют tutor JWT
+       и проверяют владение карточкой (`Student.tutorId === currentUser.id`).
+    2. **Публичный эндпоинт** под `/api/student-invitations/validate/:token` — не требует
+       авторизации, используется фронтендом для предварительной проверки токена при
+       открытии страницы регистрации.
+servers:
+  - url: /api
+paths:
+  /students/{studentId}/invitations:
+    post:
+      summary: Сгенерировать (или перевыпустить) ссылку-приглашение для ученика
+      description: |
+        Только для преподавателя-владельца карточки. Если у `Student` уже есть связанный
+        `StudentUser` — возвращает 409 Conflict (FR-001, FR-004a). Если есть активная
+        `PENDING` — её `status` меняется на `REVOKED`, создаётся новая `PENDING` (FR-004).
+
+        Покрывает FR-001…FR-007.
+      tags: [tutor]
+      security:
+        - tutorBearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/studentIdPath'
+      responses:
+        "201":
+          description: Новая ссылка создана.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuedInvitationResponse'
+        "401":
+          description: Не авторизован.
+        "403":
+          description: Преподаватель не владеет карточкой ученика (FR-007).
+        "404":
+          description: Карточка ученика не найдена.
+        "409":
+          description: |
+            По карточке уже есть зарегистрированный аккаунт — новые ссылки запрещены
+            (FR-004a). Также возвращается 409 если карточка архивирована (R-14).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Получить статус приглашения для карточки ученика
+      description: |
+        Возвращает один из трёх состояний:
+        - `not_issued` — никаких приглашений никогда не выпускалось (или все REVOKED/USED просрочены)
+        - `pending` — есть активная ссылка, можно скопировать
+        - `registered` — ученик уже зарегистрировался по ссылке
+
+        Покрывает FR-003.
+      tags: [tutor]
+      security:
+        - tutorBearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/studentIdPath'
+      responses:
+        "200":
+          description: Текущий статус.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationStatusResponse'
+        "401":
+          description: Не авторизован.
+        "403":
+          description: Чужая карточка.
+        "404":
+          description: Карточка не найдена.
+
+    delete:
+      summary: Отозвать активную ссылку (опционально)
+      description: |
+        Помечает текущую `PENDING`-запись как `REVOKED`. Если активной ссылки нет — 204
+        (idempotent). Полезно если преподаватель решил передумать после генерации.
+      tags: [tutor]
+      security:
+        - tutorBearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/studentIdPath'
+      responses:
+        "204":
+          description: Отозвана (или нечего отзывать — обе ситуации возвращают 204).
+        "401":
+          description: Не авторизован.
+        "403":
+          description: Чужая карточка.
+
+  /student-invitations/validate/{token}:
+    get:
+      summary: Проверить валидность invitation-токена (публично)
+      description: |
+        Используется фронтендом перед показом формы регистрации, чтобы заранее
+        отрисовать "Ссылка недействительна". Не раскрывает детали (использован /
+        отозван / не существует) — все три случая → `{ valid: false }` (FR-016).
+      tags: [public]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            minLength: 32
+      responses:
+        "200":
+          description: Результат валидации.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateInvitationResponse'
+        "429":
+          description: Превышен rate-limit на валидацию (защита от перебора).
+
+components:
+  parameters:
+    studentIdPath:
+      in: path
+      name: studentId
+      required: true
+      schema:
+        type: string
+
+  securitySchemes:
+    tutorBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Существующий tutor JWT (`JWT_SECRET`).
+
+  schemas:
+    IssuedInvitationResponse:
+      type: object
+      required: [inviteUrl, expiresAt, status]
+      properties:
+        inviteUrl:
+          type: string
+          format: uri
+          description: |
+            Полный URL для копирования преподавателем (`<FRONT_BASE>/student-invite/<rawToken>`).
+            Сам raw-токен передаётся только в ответе на этот POST — после этого хранится
+            на сервере только хеш (FR-015).
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending]
+
+    InvitationStatusResponse:
+      description: |
+        ВАЖНО: raw-токен возвращается **только в ответе на POST** (на момент создания).
+        После этого на сервере хранится только его SHA-256 хеш (FR-015), и повторно
+        получить URL для копирования нельзя — только пере-выпустить (POST), что отзовёт
+        старый. Поэтому GET-ответ для `pending` содержит только метаданные без URL.
+      oneOf:
+        - type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [not_issued]
+        - type: object
+          required: [status, expiresAt, createdAt]
+          properties:
+            status:
+              type: string
+              enum: [pending]
+            createdAt:
+              type: string
+              format: date-time
+            expiresAt:
+              type: string
+              format: date-time
+        - type: object
+          required: [status, registeredAt, studentEmail]
+          properties:
+            status:
+              type: string
+              enum: [registered]
+            registeredAt:
+              type: string
+              format: date-time
+            studentEmail:
+              type: string
+              format: email
+              description: Email, под которым ученик зарегистрировался (для отображения преподавателю).
+
+    ValidateInvitationResponse:
+      oneOf:
+        - type: object
+          required: [valid, studentName, tutorName]
+          properties:
+            valid:
+              type: boolean
+              enum: [true]
+            studentName:
+              type: string
+              description: ФИО из карточки ученика — чтобы на странице регистрации показать "Привет, <имя>".
+            tutorName:
+              type: string
+              description: ФИО преподавателя, выдавшего ссылку.
+        - type: object
+          required: [valid]
+          properties:
+            valid:
+              type: boolean
+              enum: [false]
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

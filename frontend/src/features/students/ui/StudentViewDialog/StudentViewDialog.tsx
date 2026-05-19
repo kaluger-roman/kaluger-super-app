@@ -27,6 +27,7 @@ import { StudentMeta } from "./StudentMeta";
 import { StudentNotes } from "./StudentNotes";
 import * as studentViewDialogModel from "./StudentViewDialog.model";
 import * as Styled from "./StudentViewDialog.styled";
+import { InvitationManager } from "../../../tutorStudentInvitation";
 import { studentsModel, studentsArchiveModel } from "../../models";
 
 type StudentViewDialogProps = {
@@ -83,6 +84,9 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
 
             {student.notes && <Divider />}
             {student.notes && <StudentNotes notes={student.notes} />}
+
+            <Divider />
+            <InvitationManager studentId={student.id} />
 
             <Divider />
             <StudentMeta

@@ -1,16 +1,12 @@
+import { extractAxiosError as extractAxiosErrorShared } from "@shared";
+
 import type { TokenStatus } from "./resetPassword.types";
 
-export const extractAxiosError = (error: unknown): string => {
-  const axiosError = error as {
-    response?: { data?: { error?: string } };
-    message?: string;
-  };
-  return (
-    axiosError?.response?.data?.error ||
-    axiosError?.message ||
+export const extractAxiosError = (error: unknown): string =>
+  extractAxiosErrorShared(
+    error,
     "Не удалось сменить пароль. Попробуйте позже"
   );
-};
 
 const getResponseError = (error: unknown): string | undefined => {
   const axiosError = error as {

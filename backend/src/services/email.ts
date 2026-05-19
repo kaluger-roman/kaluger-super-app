@@ -46,6 +46,28 @@ export const sendEmailChangeVerification = async (
   });
 };
 
+export const sendStudentVerificationEmail = async (
+  email: string,
+  code: string,
+): Promise<void> => {
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM || "",
+    to: email,
+    subject: "Подтверждение email — Личный кабинет ученика",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Подтверждение email</h2>
+        <p>Вы зарегистрировались в личном кабинете ученика. Ваш код подтверждения:</p>
+        <h1 style="background-color: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">
+          ${code}
+        </h1>
+        <p>Код действителен в течение 15 минут.</p>
+        <p>Если вы не регистрировались, просто проигнорируйте это письмо.</p>
+      </div>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (
   email: string,
   resetUrl: string,

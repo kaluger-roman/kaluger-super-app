@@ -1,6 +1,7 @@
 import type { FC, MouseEvent } from "react";
 
 import type { Lesson } from "@shared";
+import { groupByDay } from "@shared";
 
 import type { LessonListType } from "../../LessonsList.types";
 import { LessonCard } from "../LessonCard";
@@ -13,33 +14,8 @@ type WeeklyViewProps = {
   onMenuClick?: (event: MouseEvent<HTMLElement>, lesson: Lesson) => void;
 };
 
-const groupLessonsByDay = (lessons: Lesson[]) => {
-  const groups: { [key: string]: Lesson[] } = {};
-
-  lessons.forEach((lesson) => {
-    const date = new Date(lesson.startTime);
-    const dayKey = date.toLocaleDateString("ru-RU", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-    if (!groups[dayKey]) {
-      groups[dayKey] = [];
-    }
-    groups[dayKey].push(lesson);
-  });
-
-  Object.values(groups).forEach((dayLessons) => {
-    dayLessons.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  });
-
-  return groups;
-};
-
 export const WeeklyView: FC<WeeklyViewProps> = ({ lessons, onCardClick, onMenuClick }) => {
-  const groupedLessons = groupLessonsByDay(lessons);
+  const groupedLessons = groupByDay(lessons, (lesson) => lesson.startTime);
 
   if (lessons.length === 0) {
     return (

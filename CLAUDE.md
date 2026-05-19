@@ -139,6 +139,8 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, Material UI styled-components (frontend); Express, Prisma, bcryptjs, express-rate-limit, Resend (backend) — все уже в проекте (028-forgot-password)
 - PostgreSQL via Prisma ORM (новая таблица `password_reset_tokens`) (028-forgot-password)
+- TypeScript 5.x (strict) — фронт и бек, Node.js 20 (029-student-cabinet)
+- PostgreSQL через Prisma ORM. Две новые таблицы (`student_users`, `student_invitations`) + одно новое поле в `students` (`studentUserId`). (029-student-cabinet)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

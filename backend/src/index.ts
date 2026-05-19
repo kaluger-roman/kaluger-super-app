@@ -21,6 +21,9 @@ import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/remin
 import { adminRouter as adminRoutes } from "./routes/admin";
 import { screenRouter as screenRoutes } from "./routes/screen";
 import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
+import studentAuthRoutes from "./routes/studentAuth";
+import studentInvitationRoutes from "./routes/studentInvitations";
+import studentCabinetRoutes from "./routes/studentCabinet";
 
 const app = express();
 
@@ -47,6 +50,9 @@ app.use("/api/reminder-settings", reminderSettingsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/screen", screenRoutes);
 app.use("/api/tax-periods", taxPeriodsRoutes);
+app.use("/api/student-auth", studentAuthRoutes);
+app.use("/api/student-invitations", studentInvitationRoutes);
+app.use("/api/student-cabinet", studentCabinetRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -84,6 +90,9 @@ if (process.env.NODE_ENV !== "test") {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+    console.log(
+      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`
+    );
 
     const CRON_TIMEZONE = "Europe/Moscow";
 

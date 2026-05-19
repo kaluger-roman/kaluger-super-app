@@ -8,3 +8,7 @@ export { NewsPage } from "./news";
 export { ScreenPage } from "./screen";
 export { ForgotPasswordPage } from "./forgotPassword";
 export { ResetPasswordPage } from "./resetPassword";
+export { StudentCabinetLayout } from "./studentCabinet";
+export { StudentInvitePage } from "./studentInvite";
+export { StudentSchedulePage } from "./studentSchedule";
+export { StudentSettingsPage } from "./studentSettings";

@@ -59,7 +59,8 @@ feature/models/
 - **One component per file** in its own directory
 - **Every folder has `index.ts`** — re-export public API
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
-- **Separate files for:** constants, helpers, hooks, types — never mix in one file
+- **Separate files for:** constants, helpers, hooks, types — never mix in one file. Никаких `const X = ...` или вспомогательных функций в файле компонента — только сам компонент и его props-тип. Всё остальное → `*.constants.ts(x)` / `*.helpers.ts` / `*.types.ts` рядом
+- **Shared types split by domain.** Один большой `shared/types/index.ts` не масштабируется — разнеси по `types/auth.ts`, `types/student.ts`, `types/lesson.ts`, …, а `index.ts` оставь barrel'ом из `export type`
 - **Components < 150 lines** — split if larger
 - **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
@@ -101,6 +102,12 @@ feature/models/
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+
+### Shared utilities
+
+- **Дата/время** — все примитивы (`addDays`, `getWeekStart`, `getWeekEnd`, `groupByDay`, `formatTime`, `formatDuration`, `formatTimeRange`, `toDateKey`) живут в `shared/lib/date.helpers.ts`. Не объявлять локальные `setDate(getDate() + n)` в компонентах/моделях — импортировать из `@shared`.
+- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.ts`. Тоже импортировать через `@shared`.
+- **Ошибки axios** — единый `extractAxiosError(err, fallback?)` в `shared/lib/error.helpers.ts`. Не дублировать `axiosError?.response?.data?.error || axiosError?.message || "..."` в каждой модели. При необходимости фолбэк — вторым аргументом.
 
 ## Effector Conventions
 

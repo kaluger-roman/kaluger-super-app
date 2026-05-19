@@ -4,8 +4,8 @@ import {
   formatDate,
   formatDateShort,
   formatDateTime,
-  formatMonth,
   formatDay,
+  formatMonth,
   formatWeekRange,
 } from "../dateFormat";
 

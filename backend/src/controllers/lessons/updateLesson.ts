@@ -5,11 +5,12 @@ import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import {
-  previewShiftFutureRecurringLessons,
   applyShiftFutureRecurringLessons,
-  updatePriceForFutureRecurringLessons,
+  broadcastStudentLessonUpdated,
   cancelRemindersForLesson,
+  previewShiftFutureRecurringLessons,
   scheduleRemindersForLesson,
+  updatePriceForFutureRecurringLessons,
 } from "../../services";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
@@ -251,6 +252,14 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
         );
       }
     }
+
+    void broadcastStudentLessonUpdated({
+      id: lesson.id,
+      subject: lesson.subject,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+      status: lesson.status,
+    });
   } catch (error) {
     console.error("Update lesson error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

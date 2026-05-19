@@ -9,12 +9,22 @@ import { ru } from "date-fns/locale";
 import { useUnit } from "effector-react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
-import { userModel } from "@entities";
-import { theme, NotificationProvider, setNavigate } from "@shared";
+import { studentUserModel, userModel } from "@entities";
+import {
+  getStudentToken,
+  theme,
+  NotificationProvider,
+  setNavigate,
+} from "@shared";
 
 import * as Styled from "./App.styled";
 import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
-import { appInitModel, blockingModel, webSocketModel } from "./model";
+import {
+  appInitModel,
+  blockingModel,
+  studentWebSocketModel,
+  webSocketModel,
+} from "./model";
 import type { BeforeInstallPromptEvent } from "./model/app-init.types";
 
 const AppRouter: FC = () => {
@@ -34,12 +44,20 @@ const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
   const isBlocking = useUnit(blockingModel.$isBlocking);
   const isAuthenticated = useUnit(userModel.$isAuthenticated);
+  const isStudentAuthenticated = useUnit(
+    studentUserModel.$isStudentAuthenticated
+  );
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (token) {
       userModel.setAuthToken(token);
       userModel.getProfileFx().finally(() => appInitModel.initializeApp({}));
+    } else if (getStudentToken()) {
+      // Rehydrate student session on app boot if a student token survives a refresh.
+      studentUserModel
+        .getCurrentStudentFx()
+        .finally(() => appInitModel.initializeApp({}));
     } else {
       appInitModel.appBootedUnauthenticated();
     }
@@ -82,6 +100,20 @@ const App: FC = () => {
       webSocketModel.disconnectWebSocket();
     };
   }, [isAuthenticated]);
+
+  // Session-scoped student WS — one connection for the whole cabinet, so
+  // future features (calls, push fallbacks, …) just subscribe to events.
+  useEffect(() => {
+    if (isStudentAuthenticated) {
+      studentWebSocketModel.connectStudentWebSocket();
+    } else {
+      studentWebSocketModel.disconnectStudentWebSocket();
+    }
+
+    return () => {
+      studentWebSocketModel.disconnectStudentWebSocket();
+    };
+  }, [isStudentAuthenticated]);
 
   if (!appInitialized) {
     return (

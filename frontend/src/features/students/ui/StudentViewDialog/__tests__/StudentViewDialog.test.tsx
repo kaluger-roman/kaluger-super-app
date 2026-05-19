@@ -176,14 +176,16 @@ describe("StudentViewDialog", () => {
       renderWithProviders(
         <StudentViewDialog open={true} student={studentWithoutContactsAndNotes} />
       );
+      // Без контактов и заметок остаются дивайдеры до InvitationManager и до StudentMeta
       const dividers = screen.getAllByRole("separator");
-      expect(dividers.length).toBe(1);
+      expect(dividers.length).toBe(2);
     });
 
     it("should render all dividers when all sections are present", () => {
       renderWithProviders(<StudentViewDialog open={true} student={mockStudent} />);
+      // Дивайдеры разделяют: contacts, notes, InvitationManager, StudentMeta
       const dividers = screen.getAllByRole("separator");
-      expect(dividers.length).toBe(3);
+      expect(dividers.length).toBe(4);
     });
   });
 

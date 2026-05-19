@@ -1,0 +1,1 @@
+export { StudentInvitePage } from "./StudentInvitePage";
