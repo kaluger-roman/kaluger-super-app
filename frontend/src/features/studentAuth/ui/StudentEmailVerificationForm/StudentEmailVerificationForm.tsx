@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { useEffect } from "react";
 
 import { Alert, Button, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -16,14 +15,6 @@ export const StudentEmailVerificationForm: FC = () => {
   );
   const isVerifying = useUnit(studentEmailVerificationModel.$isVerifying);
   const isResending = useUnit(studentEmailVerificationModel.$isResending);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = setInterval(() => {
-      studentEmailVerificationModel.cooldownTick();
-    }, 1000);
-    return () => clearInterval(id);
-  }, [cooldown]);
 
   const handleSubmit = () => {
     studentEmailVerificationModel.codeSubmitted();

@@ -1,4 +1,6 @@
-import { Box, Paper, styled } from "@mui/material";
+import { Box, Paper } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const Wrapper = styled(Paper)({
   padding: "32px",

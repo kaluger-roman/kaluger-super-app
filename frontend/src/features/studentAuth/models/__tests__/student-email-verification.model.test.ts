@@ -65,10 +65,19 @@ describe("features/studentAuth/models/student-email-verification.model", () => {
     );
 
     const scope = fork();
-    await allSettled(model.resendRequested, { scope, params: undefined });
+
+    // Fire-and-forget: после resend модель запускает patronum `interval`,
+    // у которого внутренний timeoutFx остаётся pending. Не ждём `allSettled`
+    // целиком — продвигаем macrotask queue и сразу гасим интервал, чтобы
+    // pending не утёк за пределы теста.
+    void allSettled(model.resendRequested, { scope, params: undefined });
+    await new Promise((resolve) => setImmediate(resolve));
 
     expect(scope.getState(model.$resendCooldownSeconds)).toBe(60);
     expect(scope.getState(model.$resendError)).toBeNull();
+    expect(scope.getState(model.$isCooldownRunning)).toBe(true);
+
+    await allSettled(model.cooldownEnded, { scope, params: undefined });
   });
 
   it("captures error from resend failure", async () => {
@@ -89,5 +98,21 @@ describe("features/studentAuth/models/student-email-verification.model", () => {
     await allSettled(model.cooldownTick, { scope, params: undefined });
     await allSettled(model.cooldownTick, { scope, params: undefined });
     expect(scope.getState(model.$resendCooldownSeconds)).toBe(0);
+  });
+
+  it("auto-stops the cooldown interval when the counter reaches 0 (regression: timer logic must live in the model, not in the component's useEffect)", async () => {
+    const scope = fork({ values: [[model.$resendCooldownSeconds, 1]] });
+
+    // Стартуем интервал, как будто только что прошёл успешный resend.
+    void allSettled(model.cooldownStarted, { scope, params: undefined });
+    await Promise.resolve();
+    expect(scope.getState(model.$isCooldownRunning)).toBe(true);
+
+    // Один тик доводит счётчик до нуля и должен погасить интервал автоматически
+    // (через `sample({ clock: $resendCooldownSeconds, filter: s === 0, target: cooldownEnded })`).
+    await allSettled(model.cooldownTick, { scope, params: undefined });
+
+    expect(scope.getState(model.$resendCooldownSeconds)).toBe(0);
+    expect(scope.getState(model.$isCooldownRunning)).toBe(false);
   });
 });

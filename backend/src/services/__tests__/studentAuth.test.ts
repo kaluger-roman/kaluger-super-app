@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { faker } from "@faker-js/faker";
 
 import prisma from "../../lib/prisma";
@@ -141,6 +142,59 @@ describe("studentAuth service", () => {
       });
       expect(second.ok).toBe(false);
       if (!second.ok) expect(second.status).toBe(410);
+    });
+
+    it("two concurrent registrations on the same token: exactly one succeeds, the other fails atomically", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+      const token = extractTokenFromUrl(issued.inviteUrl);
+
+      const buildConcurrentDto = () => ({
+        token,
+        name: "Гонка",
+        email: faker.internet.email().toLowerCase(),
+        password: VALID_PASSWORD,
+        passwordConfirmation: VALID_PASSWORD,
+      });
+
+      const [first, second] = await Promise.all([
+        registerStudentByInvite(buildConcurrentDto()),
+        registerStudentByInvite(buildConcurrentDto()),
+      ]);
+
+      const okResults = [first, second].filter((r) => r.ok);
+      const failResults = [first, second].filter((r) => !r.ok);
+      expect(okResults).toHaveLength(1);
+      expect(failResults).toHaveLength(1);
+
+      // Проигравший запрос должен получить ровно 410 — инвайт уже использован.
+      // В частности, P2002 на studentId @unique не должен превратиться в 500
+      // или в 409 (т. к. email-ы у запросов разные).
+      const losing = failResults[0];
+      if (losing.ok) throw new Error("unreachable");
+      expect(losing.status).toBe(410);
+
+      const usersForStudent = await prisma.studentUser.findMany({
+        where: { studentId },
+      });
+      expect(usersForStudent).toHaveLength(1);
+    });
+
+    it("maps P2002 on studentId to 410 (race with concurrent invite for same student)", async () => {
+      const dto = await buildDto();
+      const knownError = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint failed",
+        { code: "P2002", clientVersion: "test", meta: { target: ["studentId"] } }
+      );
+      const txSpy = jest
+        .spyOn(prisma, "$transaction")
+        .mockRejectedValueOnce(knownError);
+
+      const result = await registerStudentByInvite(dto);
+      txSpy.mockRestore();
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.status).toBe(410);
     });
 
     it("returns 409 when email already exists in student_users", async () => {

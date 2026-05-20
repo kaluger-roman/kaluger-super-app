@@ -134,6 +134,7 @@ feature/models/
 - `useUnit` with array destructuring — use separate calls for stores
 - Side effects in `fn` — `fn` must be a pure function (no API calls, no mutations, no model events calls, no model effects calls)
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
+- `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
 
 **useUnit pattern:**
 
@@ -150,6 +151,23 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 ```
 
 **sample order:** `{ clock, source, filter, fn, target }`
+
+**Timers in models (patronum):**
+
+```typescript
+import { interval } from "patronum";
+
+// ✅ периодический тик внутри модели
+const { tick, isRunning } = interval({
+  timeout: 1000,
+  start: cooldownStarted,
+  stop: cooldownEnded,
+});
+
+sample({ clock: tick, target: cooldownTick });
+```
+
+Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 

@@ -13,6 +13,7 @@ import {
   validateEmail,
   validatePassword,
 } from "../../utils/auth";
+import { StudentInvitationConsumedError } from "../../utils/errors";
 import { generateStudentToken } from "../../utils/studentAuth";
 import {
   hashInvitationToken,
@@ -78,7 +79,16 @@ export const registerStudentByInvite = async (
   let createdStudentUser;
   try {
     createdStudentUser = await prisma.$transaction(async (tx) => {
-      const studentUser = await tx.studentUser.create({
+      // Атомарно "забираем" инвайт: только один параллельный запрос увидит count === 1.
+      // Это устраняет race между pre-check `invitation.status` и созданием StudentUser.
+      const consumed = await tx.studentInvitation.updateMany({
+        where: { id: invitation.id, status: "PENDING" },
+        data: { status: "USED", usedAt: new Date() },
+      });
+      if (consumed.count === 0) {
+        throw new StudentInvitationConsumedError();
+      }
+      return tx.studentUser.create({
         data: {
           email,
           password: passwordHash,
@@ -86,21 +96,29 @@ export const registerStudentByInvite = async (
           studentId: invitation.studentId,
         },
       });
-      await tx.studentInvitation.update({
-        where: { id: invitation.id },
-        data: { status: "USED", usedAt: new Date() },
-      });
-      return studentUser;
     });
   } catch (err) {
-    // Race condition: concurrent request with the same email passed the check
-    // but lost the DB unique constraint. Map P2002 to the same 409 the caller
-    // would have seen had it lost the original check.
+    if (err instanceof StudentInvitationConsumedError) {
+      return { ok: false, status: 410, error: INVALID_LINK_ERROR };
+    }
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      return { ok: false, status: 409, error: EMAIL_TAKEN_ERROR };
+      const rawTarget = err.meta?.target;
+      const fields = Array.isArray(rawTarget)
+        ? rawTarget
+        : typeof rawTarget === "string"
+          ? [rawTarget]
+          : [];
+      if (fields.includes("studentId")) {
+        // Параллельный запрос с другим инвайтом успел создать StudentUser
+        // для того же student.id — отдаём ту же ошибку, что и при невалидной ссылке.
+        return { ok: false, status: 410, error: INVALID_LINK_ERROR };
+      }
+      if (fields.includes("email")) {
+        return { ok: false, status: 409, error: EMAIL_TAKEN_ERROR };
+      }
     }
     throw err;
   }

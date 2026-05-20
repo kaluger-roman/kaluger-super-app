@@ -14,7 +14,7 @@ import {
   studentRegistrationRateLimiter,
 } from "../middleware/rateLimit";
 
-const router = Router();
+const router: Router = Router();
 
 router.post("/register", studentRegistrationRateLimiter, studentRegister);
 router.post("/login", studentAuthRateLimiter, studentLogin);
@@ -33,4 +33,4 @@ router.post(
 router.get("/me", authenticateStudent, studentMe);
 router.post("/logout", authenticateStudent, studentLogout);
 
-export default router;
+export { router as studentAuthRouter };

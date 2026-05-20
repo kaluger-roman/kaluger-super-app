@@ -1,4 +1,6 @@
-import { Alert, Box, Paper, styled } from "@mui/material";
+import { Alert, Box, Paper } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const RootBox = styled(Box)(({ theme }) => ({
   minHeight: "100vh",

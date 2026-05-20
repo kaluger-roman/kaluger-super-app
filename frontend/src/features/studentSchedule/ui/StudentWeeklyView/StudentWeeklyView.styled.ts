@@ -1,4 +1,6 @@
-import { Box, Typography, styled } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const Container = styled(Box)({});
 

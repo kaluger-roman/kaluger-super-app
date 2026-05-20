@@ -21,9 +21,9 @@ import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/remin
 import { adminRouter as adminRoutes } from "./routes/admin";
 import { screenRouter as screenRoutes } from "./routes/screen";
 import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
-import studentAuthRoutes from "./routes/studentAuth";
-import studentInvitationRoutes from "./routes/studentInvitations";
-import studentCabinetRoutes from "./routes/studentCabinet";
+import { studentAuthRouter as studentAuthRoutes } from "./routes/studentAuth";
+import { studentInvitationsRouter as studentInvitationRoutes } from "./routes/studentInvitations";
+import { studentCabinetRouter as studentCabinetRoutes } from "./routes/studentCabinet";
 
 const app = express();
 

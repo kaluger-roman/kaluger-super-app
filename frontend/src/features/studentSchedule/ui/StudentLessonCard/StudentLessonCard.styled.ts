@@ -1,4 +1,6 @@
-import { Box, Card, Chip, Typography, styled } from "@mui/material";
+import { Box, Card, Chip, Typography } from "@mui/material";
+
+import { styled } from "@shared";
 
 const statusBorder: Record<string, string> = {
   SCHEDULED: "#1976d2",

@@ -1,4 +1,6 @@
-import { AppBar, Box, IconButton, Toolbar, styled } from "@mui/material";
+import { AppBar, Box, IconButton, Toolbar } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const RootBox = styled(Box)({
   display: "flex",

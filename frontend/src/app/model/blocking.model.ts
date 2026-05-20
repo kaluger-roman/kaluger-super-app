@@ -3,6 +3,7 @@ import { combine } from "effector";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
+import { studentUserModel } from "@entities/studentUser";
 import { taxRatePeriodModel } from "@entities/taxRatePeriod";
 import { adminAuthModel, adminDataModel } from "@features/admin";
 import { changeEmailModel } from "@features/changeEmail";
@@ -54,6 +55,7 @@ export const $isBlocking = combine(
     saveTaxRatePeriods: taxRatePeriodsModalModel.savePeriodsFx.pending,
     setTaxEnabled: financesModel.setTaxEnabledFx.pending,
     studentLogin: studentLoginModel.studentLoginFx.pending,
+    studentLogout: studentUserModel.studentLogoutFx.pending,
     studentVerifyEmail: studentEmailVerificationModel.verifyEmailFx.pending,
     studentResendVerification:
       studentEmailVerificationModel.resendVerificationFx.pending,

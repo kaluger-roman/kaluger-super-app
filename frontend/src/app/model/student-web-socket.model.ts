@@ -15,17 +15,14 @@ import { getStudentToken } from "@shared";
 
 export const connectStudentWebSocket = createEvent();
 export const disconnectStudentWebSocket = createEvent();
+export const studentWebSocketOpened = createEvent();
 export const studentWebSocketClosed = createEvent();
 
 export const setStudentWebSocketConnection = createEvent<WebSocket | null>();
 
 export const $studentWebSocketConnection = createStore<WebSocket | null>(null);
 export const $isStudentWebSocketEnabled = createStore(false);
-export const $isStudentWebSocketConnected = $studentWebSocketConnection.map(
-  (connection) =>
-    connection?.readyState ===
-    (typeof WebSocket !== "undefined" ? WebSocket.OPEN : 1)
-);
+export const $isStudentWebSocketConnected = createStore(false);
 
 const getWsUrl = (): string =>
   process.env.NODE_ENV === "production"
@@ -66,7 +63,7 @@ export const connectStudentWebSocketFx = createEffect(
 
     ws.onopen = () => {
       console.log("Student WS connected");
-      setStudentWebSocketConnection(ws);
+      studentWebSocketOpened();
     };
 
     ws.onmessage = (event) => {
@@ -83,6 +80,12 @@ export const connectStudentWebSocketFx = createEffect(
       console.error("Student WS error:", error);
     };
 
+    // Сохраняем connection синхронно — ДО возвращения из эффекта. Иначе если
+    // disconnectStudentWebSocket срабатывает между созданием WebSocket и
+    // onopen (быстрый logout/нав), стор остаётся null и handshake продолжится
+    // без шанса быть закрытым (orphaned socket).
+    setStudentWebSocketConnection(ws);
+
     return ws;
   }
 );
@@ -98,6 +101,18 @@ export const disconnectStudentWebSocketFx = createEffect(
 sample({
   clock: setStudentWebSocketConnection,
   target: $studentWebSocketConnection,
+});
+
+sample({
+  clock: studentWebSocketOpened,
+  fn: () => true,
+  target: $isStudentWebSocketConnected,
+});
+
+sample({
+  clock: studentWebSocketClosed,
+  fn: () => false,
+  target: $isStudentWebSocketConnected,
 });
 
 sample({

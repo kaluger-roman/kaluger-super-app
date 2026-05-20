@@ -3,7 +3,6 @@ import type { FC, FormEvent } from "react";
 import {
   Alert,
   ToggleButton,
-  ToggleButtonGroup,
   Typography,
   useMediaQuery,
   useTheme,
@@ -59,7 +58,7 @@ export const LoginForm: FC = () => {
         </Typography>
       </Styled.HeaderBox>
 
-      <ToggleButtonGroup
+      <Styled.RoleToggleGroup
         value={loginRole}
         exclusive
         onChange={(_e, value) => {
@@ -69,11 +68,10 @@ export const LoginForm: FC = () => {
         }}
         fullWidth
         size={isMobile ? "small" : "medium"}
-        sx={{ marginBottom: "16px" }}
       >
         <ToggleButton value="tutor">Преподаватель</ToggleButton>
         <ToggleButton value="student">Ученик</ToggleButton>
-      </ToggleButtonGroup>
+      </Styled.RoleToggleGroup>
 
       <form onSubmit={handleSubmit}>
         <TextField

@@ -33,6 +33,15 @@ export const studentLogoutFx = createEffect(async () => {
   }
 });
 
+const persistStudentTokenFx = createEffect((token: string) => {
+  setStudentToken(token);
+});
+
+const clearStudentSessionFx = createEffect(() => {
+  clearStudentToken();
+  navigate("/login", { replace: true });
+});
+
 // Stores
 export const $studentSession = createStore<StudentSession | null>(null);
 
@@ -68,9 +77,7 @@ sample({
 
 sample({
   clock: studentAuthTokenReceived,
-  target: createEffect((token: string) => {
-    setStudentToken(token);
-  }),
+  target: persistStudentTokenFx,
 });
 
 sample({
@@ -86,8 +93,5 @@ sample({
 
 sample({
   clock: studentLoggedOut,
-  target: createEffect(() => {
-    clearStudentToken();
-    navigate("/login", { replace: true });
-  }),
+  target: clearStudentSessionFx,
 });

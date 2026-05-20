@@ -1,4 +1,4 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, ToggleButtonGroup, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 
 import { styled } from "@shared";
@@ -24,6 +24,10 @@ export const EmojiTypography = styled(Typography)<{ component?: React.ElementTyp
 
 export const TitleTypography = styled(Typography)<{ component?: React.ElementType }>`
   font-weight: 600;
+`;
+
+export const RoleToggleGroup = styled(ToggleButtonGroup)`
+  margin-bottom: 16px;
 `;
 
 export const ForgotPasswordRow = styled(Box)`

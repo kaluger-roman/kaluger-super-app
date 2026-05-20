@@ -3,7 +3,7 @@ import { Router } from "express";
 import { studentInvitationValidate } from "../controllers";
 import { studentInvitationValidationRateLimiter } from "../middleware/rateLimit";
 
-const router = Router();
+const router: Router = Router();
 
 router.get(
   "/validate/:token",
@@ -11,4 +11,4 @@ router.get(
   studentInvitationValidate
 );
 
-export default router;
+export { router as studentInvitationsRouter };

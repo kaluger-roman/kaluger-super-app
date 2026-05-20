@@ -21,6 +21,14 @@ export const studentLoginFx = createEffect(
     studentAuthApi.login(dto)
 );
 
+const persistStudentTokenFx = createEffect((data: StudentAuthResponse) => {
+  setStudentToken(data.token);
+});
+
+const navigateToStudentCabinetFx = createEffect(() => {
+  navigate("/student/cabinet", { replace: true });
+});
+
 export const $isLoggingIn = studentLoginFx.pending;
 
 sample({ clock: studentLoginRequested, target: studentLoginFx });
@@ -33,9 +41,7 @@ sample({
 
 sample({
   clock: studentLoginFx.doneData,
-  target: createEffect((data: StudentAuthResponse) => {
-    setStudentToken(data.token);
-  }),
+  target: persistStudentTokenFx,
 });
 
 sample({
@@ -46,9 +52,7 @@ sample({
 
 sample({
   clock: studentLoginFx.done,
-  target: createEffect(() => {
-    navigate("/student/cabinet", { replace: true });
-  }),
+  target: navigateToStudentCabinetFx,
 });
 
 sample({

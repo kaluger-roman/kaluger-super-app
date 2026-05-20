@@ -1,9 +1,5 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
+import { interval } from "patronum";
 
 import { studentUserModel } from "@entities";
 import type { StudentSession } from "@shared";
@@ -19,15 +15,14 @@ export const $resendCooldownSeconds = createStore<number>(0);
 export const codeSubmitted = createEvent();
 export const resendRequested = createEvent();
 export const cooldownTick = createEvent();
+export const cooldownStarted = createEvent();
+export const cooldownEnded = createEvent();
 
 export const verifyEmailFx = createEffect(
-  async (code: string): Promise<StudentSession> =>
-    studentAuthApi.verifyEmail(code)
+  async (code: string): Promise<StudentSession> => studentAuthApi.verifyEmail(code)
 );
 
-export const resendVerificationFx = createEffect(async () =>
-  studentAuthApi.resendVerification()
-);
+export const resendVerificationFx = createEffect(async () => studentAuthApi.resendVerification());
 
 export const $isVerifying = verifyEmailFx.pending;
 export const $isResending = resendVerificationFx.pending;
@@ -72,10 +67,25 @@ sample({
   target: $resendError,
 });
 
-// Cooldown ticker — компонент обновляет $resendCooldownSeconds через setInterval.
+export const { tick: cooldownIntervalTick, isRunning: $isCooldownRunning } = interval({
+  timeout: 1000,
+  start: cooldownStarted,
+  stop: cooldownEnded,
+});
+
+sample({ clock: cooldownIntervalTick, target: cooldownTick });
+
+sample({ clock: resendVerificationFx.done, target: cooldownStarted });
+
 sample({
   clock: cooldownTick,
   source: $resendCooldownSeconds,
   fn: (seconds) => Math.max(0, seconds - 1),
   target: $resendCooldownSeconds,
+});
+
+sample({
+  clock: $resendCooldownSeconds,
+  filter: (seconds) => seconds === 0,
+  target: cooldownEnded,
 });

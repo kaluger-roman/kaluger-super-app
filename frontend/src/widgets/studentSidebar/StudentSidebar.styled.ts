@@ -6,8 +6,9 @@ import {
   ListItemIcon,
   Toolbar,
   Typography,
-  styled,
 } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const StyledDrawer = styled(Drawer)<{ $drawerWidth: number }>(
   ({ $drawerWidth }) => ({
