@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-05-22
+
+### Added
+- Student personal cabinet (MVP): tutor generates a one-shot invite link from the student card, student registers via `/student-invite/<token>` (full name + email + password), gets a separate `StudentUser` account isolated from the tutor `User`, and lands in their cabinet automatically authenticated (4b0480a)
+- Unified `/login` page with a "Войти как: преподаватель / ученик" toggle — tutor flow keeps the existing `/api/auth/*`, student flow uses a new `/api/student-auth/*` namespace with its own JWT, rate limits and email-verification flow; `/admin/login` remains a separate page (4b0480a)
+- Student cabinet sections: read-only weekly "Расписание" (lesson cards stripped of `price`, `isPaid`, `notes`, `homework`) and "Настройки" (student data + inviting tutor info); separate components from the tutor schedule to prevent leakage of tutor-only actions (4b0480a)
+- Realtime updates for student schedule via a dedicated `/ws/student?token=<studentToken>` WebSocket path with `STUDENT_JWT_SECRET` and an isolated client pool inside the shared `WebSocketManager` — student receives create/update/delete/status-change/shift events without reload (4b0480a)
+- Tutor's student card now shows "Ученик зарегистрирован" indicator with the registration date once the student signs up; the "Создать ссылку-приглашение" control is hidden afterwards, and regenerating the link invalidates any previous one immediately (4b0480a)
+- E2E test drafts covering invite, login toggle, schedule, realtime sync, PWA and student settings journeys (1598a2e)
+
+### Fixed
+- Recurring lesson shift now broadcasts a student schedule event for every shifted lesson in the series — previously only the base lesson updated on the student cabinet, the rest stayed stale until reload
+- Student email verification attempt counter is now incremented atomically via Prisma `increment` — closes a race where parallel wrong-code requests read the same snapshot and overwrote each other, bypassing the attempts limit
+- `getCurrentStudentFx` registered with the global `$isBlocking` overlay so the initial student-cabinet load shows the loading state instead of a blank screen
+- PR #48 review feedback addressed across the cabinet flow (2b6a699)
+
+### Infrastructure
+- Prisma migration `029_student_cabinet`: new `student_users` and `student_invitations` tables; new `students.studentUserId` field linking the tutor-owned student card to the new student account (4b0480a)
+- New env variable `STUDENT_JWT_SECRET`, distinct from `JWT_SECRET` and `ADMIN_JWT_SECRET` (4b0480a)
+
 ## 2026-05-10
 
 ### Added
