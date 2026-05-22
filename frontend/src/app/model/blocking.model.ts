@@ -56,6 +56,7 @@ export const $isBlocking = combine(
     setTaxEnabled: financesModel.setTaxEnabledFx.pending,
     studentLogin: studentLoginModel.studentLoginFx.pending,
     studentLogout: studentUserModel.studentLogoutFx.pending,
+    studentGetCurrent: studentUserModel.getCurrentStudentFx.pending,
     studentVerifyEmail: studentEmailVerificationModel.verifyEmailFx.pending,
     studentResendVerification:
       studentEmailVerificationModel.resendVerificationFx.pending,

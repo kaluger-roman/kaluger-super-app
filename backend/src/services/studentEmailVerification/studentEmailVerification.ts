@@ -69,9 +69,15 @@ export const verifyStudentEmailCode = async (
   }
 
   if (studentUser.verificationCode !== code) {
-    const attempts = studentUser.verificationAttempts + 1;
+    // Атомарный инкремент — иначе параллельные запросы с неверным кодом
+    // читают одинаковый снапшот и перезаписывают друг друга, обходя лимит.
+    const updated = await prisma.studentUser.update({
+      where: { id: studentUser.id },
+      data: { verificationAttempts: { increment: 1 } },
+      select: { verificationAttempts: true },
+    });
 
-    if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+    if (updated.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
       await prisma.studentUser.update({
         where: { id: studentUser.id },
         data: {
@@ -84,10 +90,6 @@ export const verifyStudentEmailCode = async (
       return { ok: false, reason: "attempts_exceeded" };
     }
 
-    await prisma.studentUser.update({
-      where: { id: studentUser.id },
-      data: { verificationAttempts: attempts },
-    });
     return { ok: false, reason: "wrong_code" };
   }
 

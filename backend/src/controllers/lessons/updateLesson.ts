@@ -260,6 +260,21 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       endTime: lesson.endTime,
       status: lesson.status,
     });
+
+    // Также сообщаем ученику о каждом сдвинутом уроке серии — иначе у него
+    // в расписании останутся старые времена для всех уроков, кроме базового.
+    if (plannedShift?.planned) {
+      for (const planned of plannedShift.planned) {
+        if (planned.original.id === lesson.id) continue;
+        void broadcastStudentLessonUpdated({
+          id: planned.original.id,
+          subject: planned.original.subject,
+          startTime: planned.shiftedStart,
+          endTime: planned.shiftedEnd,
+          status: planned.original.status,
+        });
+      }
+    }
   } catch (error) {
     console.error("Update lesson error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
