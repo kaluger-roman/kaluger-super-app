@@ -92,6 +92,15 @@ describe("features/changePassword/models/changePassword.model", () => {
     it("should call changePasswordFx on formSubmitted", async () => {
       vi.mocked(authApi.changePassword).mockResolvedValueOnce({
         message: "Пароль успешно изменён",
+        token: "fresh-jwt-token",
+        user: {
+          id: "user-1",
+          email: "test@example.com",
+          name: "Test User",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({
@@ -114,6 +123,15 @@ describe("features/changePassword/models/changePassword.model", () => {
     it("should reset form after successful change", async () => {
       vi.mocked(authApi.changePassword).mockResolvedValueOnce({
         message: "Пароль успешно изменён",
+        token: "fresh-jwt-token",
+        user: {
+          id: "user-1",
+          email: "test@example.com",
+          name: "Test User",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({
@@ -162,6 +180,15 @@ describe("features/changePassword/models/changePassword.model", () => {
     it("should close dialog after successful change", async () => {
       vi.mocked(authApi.changePassword).mockResolvedValueOnce({
         message: "Пароль успешно изменён",
+        token: "fresh-jwt-token",
+        user: {
+          id: "user-1",
+          email: "test@example.com",
+          name: "Test User",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({

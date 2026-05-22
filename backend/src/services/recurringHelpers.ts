@@ -1,7 +1,9 @@
-import type { Lesson, Prisma } from "@prisma/client";
+import type { Lesson, Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../lib/prisma";
 import type { ShiftResult } from "../types";
 import { truncateToMinute } from "../utils/time";
+
+type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
 type PlannedShift = {
   original: Lesson;
@@ -57,7 +59,8 @@ export const groupRecurringLessonsByPattern = (lessons: Array<Lesson>) => {
 export const previewShiftFutureRecurringLessons = async (
   existingLesson: Lesson,
   newStart: Date,
-  newEnd: Date
+  newEnd: Date,
+  client: PrismaLike = prisma
 ): Promise<ShiftPreview> => {
   const oldStart = truncateToMinute(new Date(existingLesson.startTime));
   const oldEnd = truncateToMinute(new Date(existingLesson.endTime));
@@ -67,7 +70,7 @@ export const previewShiftFutureRecurringLessons = async (
 
   const key = getRecurringLessonKey(existingLesson);
 
-  const futureLessons = await prisma.lesson.findMany({
+  const futureLessons = await client.lesson.findMany({
     where: {
       tutorId: existingLesson.tutorId,
       studentId: existingLesson.studentId,
@@ -101,7 +104,7 @@ export const previewShiftFutureRecurringLessons = async (
 
   const conflictResults = await Promise.all(
     planned.map(async (p) => {
-      const conflict = await prisma.lesson.findFirst({
+      const conflict = await client.lesson.findFirst({
         where: {
           id: { notIn: plannedIds },
           tutorId: existingLesson.tutorId,

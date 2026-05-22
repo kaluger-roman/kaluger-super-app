@@ -149,6 +149,49 @@ describe("reminderScheduler service", () => {
       expect(reminders).toHaveLength(0);
     });
 
+    it("should not create duplicate PENDING reminders when called concurrently (regression: TOCTOU on idempotency guard)", async () => {
+      // Regression for bug-hunt 2026-05-10 #9: previously findMany +
+      // createMany were not atomic, so two parallel calls (e.g. cron +
+      // manual update) could each see an empty Set and both insert,
+      // delivering duplicate push notifications. The partial unique
+      // index on (lessonId, intervalMinutes) WHERE status='PENDING'
+      // makes the second insert fail with P2002 — caught and skipped.
+      await prisma.reminderSettings.create({
+        data: {
+          userId,
+          enabled: true,
+          intervals: [10, 60],
+          muteWhenInLesson: false,
+        },
+      });
+
+      const futureTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const lesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: futureTime,
+          endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+          status: "SCHEDULED",
+          tutorId: userId,
+          studentId,
+        },
+      });
+
+      await Promise.all([
+        scheduleRemindersForLesson(lesson.id),
+        scheduleRemindersForLesson(lesson.id),
+      ]);
+
+      const pending = await prisma.scheduledReminder.findMany({
+        where: { lessonId: lesson.id, status: "PENDING" },
+        orderBy: { intervalMinutes: "asc" },
+      });
+
+      expect(pending.length).toBe(2);
+      expect(pending.map((p) => p.intervalMinutes)).toEqual([10, 60]);
+    });
+
     it("should not create reminders for cancelled lessons", async () => {
       await prisma.reminderSettings.create({
         data: {
@@ -183,6 +226,45 @@ describe("reminderScheduler service", () => {
   });
 
   describe("cancelRemindersForLesson", () => {
+    it("should also cancel PROCESSING reminders and clear claimedAt (regression: stale push after lesson edit/delete)", async () => {
+      // Regression for code-review issue on PR #45: with the new PROCESSING
+      // intermediate state, a reminder claimed mid-delivery would not be
+      // cancelled by cancelRemindersForLesson, the watchdog would later
+      // revert it to PENDING and the next tick would deliver a stale push
+      // for the already-edited/deleted lesson.
+      const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      const lesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: futureTime,
+          endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+          status: "SCHEDULED",
+          tutorId: userId,
+          studentId,
+        },
+      });
+
+      const processing = await prisma.scheduledReminder.create({
+        data: {
+          scheduledAt: new Date(futureTime.getTime() - 30 * 60 * 1000),
+          intervalMinutes: 30,
+          lessonId: lesson.id,
+          userId,
+          status: "PROCESSING",
+          claimedAt: new Date(),
+        },
+      });
+
+      await cancelRemindersForLesson(lesson.id);
+
+      const after = await prisma.scheduledReminder.findUnique({
+        where: { id: processing.id },
+      });
+      expect(after!.status).toBe("CANCELLED");
+      expect(after!.claimedAt).toBeNull();
+    });
+
     it("should set PENDING reminders to CANCELLED", async () => {
       const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
       const lesson = await prisma.lesson.create({
@@ -233,6 +315,62 @@ describe("reminderScheduler service", () => {
   });
 
   describe("recalculateRemindersForUser", () => {
+    it("should cancel PROCESSING reminders during recalculate so the partial unique index can't trip the watchdog (regression: cron-halting P2002)", async () => {
+      // Regression for code-review issue on PR #45: previously
+      // recalculateRemindersForUser only cancelled PENDING, leaving a
+      // concurrently in-flight PROCESSING row. The createMany then inserted
+      // a new PENDING for the same (lessonId, intervalMinutes) — invisible
+      // to the partial unique index — and the next watchdog
+      // updateMany(PROCESSING -> PENDING) collided with the new PENDING,
+      // raising P2002 and halting the entire reminder cron.
+      await prisma.reminderSettings.create({
+        data: {
+          userId,
+          enabled: true,
+          intervals: [30],
+          muteWhenInLesson: false,
+        },
+      });
+
+      const futureTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const lesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "EGE",
+          startTime: futureTime,
+          endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+          status: "SCHEDULED",
+          tutorId: userId,
+          studentId,
+        },
+      });
+
+      const processing = await prisma.scheduledReminder.create({
+        data: {
+          scheduledAt: new Date(futureTime.getTime() - 30 * 60 * 1000),
+          intervalMinutes: 30,
+          lessonId: lesson.id,
+          userId,
+          status: "PROCESSING",
+          claimedAt: new Date(),
+        },
+      });
+
+      await recalculateRemindersForUser(userId);
+
+      const cancelledOrig = await prisma.scheduledReminder.findUnique({
+        where: { id: processing.id },
+      });
+      expect(cancelledOrig!.status).toBe("CANCELLED");
+      expect(cancelledOrig!.claimedAt).toBeNull();
+
+      const pending = await prisma.scheduledReminder.findMany({
+        where: { lessonId: lesson.id, status: "PENDING" },
+      });
+      expect(pending).toHaveLength(1);
+      expect(pending[0].intervalMinutes).toBe(30);
+    });
+
     it("should cancel existing and recreate reminders for future lessons", async () => {
       await prisma.reminderSettings.create({
         data: {

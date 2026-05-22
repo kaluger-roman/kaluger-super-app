@@ -125,7 +125,7 @@ describe("tax-periods endpoints", () => {
         where: { userId },
         orderBy: { startDate: "asc" },
       });
-      expect(stored.map((p) => p.rate)).toEqual([7, 13]);
+      expect(stored.map((p) => p.rate.toNumber())).toEqual([7, 13]);
     });
 
     it("returns 400 on duplicate startDates within payload", async () => {

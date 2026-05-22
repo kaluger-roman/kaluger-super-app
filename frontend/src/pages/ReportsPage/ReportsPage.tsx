@@ -24,6 +24,16 @@ export const ReportsPage: FC = () => {
   const loading = useUnit(statisticsModel.$isLoading);
   const error = useUnit(statisticsModel.$error);
 
+  if (!statistics && error) {
+    return (
+      <Styled.Container>
+        <Styled.ErrorPaper>
+          <Typography color="error">{error}</Typography>
+        </Styled.ErrorPaper>
+      </Styled.Container>
+    );
+  }
+
   if (!statistics) {
     return null;
   }

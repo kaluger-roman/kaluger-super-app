@@ -3,9 +3,9 @@ import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import prisma from "../lib/prisma";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 
-const router = Router();
+export const testRouter = Router();
 
-router.post("/reset", async (_req: Request, res: Response) => {
+testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.scheduledReminder.deleteMany();
   await prisma.pushSubscription.deleteMany();
   await prisma.reminderSettings.deleteMany();
@@ -20,7 +20,7 @@ router.post("/reset", async (_req: Request, res: Response) => {
   res.status(204).end();
 });
 
-router.get("/mailbox/:email", (req: Request, res: Response) => {
+testRouter.get("/mailbox/:email", (req: Request, res: Response) => {
   const entry = findLatestMailFor(req.params.email);
   if (!entry) {
     return res.status(404).json({ error: "no mail" });
@@ -28,12 +28,12 @@ router.get("/mailbox/:email", (req: Request, res: Response) => {
   res.json(entry);
 });
 
-router.delete("/mailbox", (_req: Request, res: Response) => {
+testRouter.delete("/mailbox", (_req: Request, res: Response) => {
   clearTestMailbox();
   res.status(204).end();
 });
 
-router.post("/users", async (req: Request, res: Response) => {
+testRouter.post("/users", async (req: Request, res: Response) => {
   const { email: rawEmail, password, name, taxEnabled } = req.body;
   const email = normalizeEmail(rawEmail);
   const hashed = await hashPassword(password);
@@ -46,7 +46,11 @@ router.post("/users", async (req: Request, res: Response) => {
       taxEnabled: Boolean(taxEnabled),
     },
   });
-  const token = generateToken({ userId: user.id, email: user.email });
+  const token = generateToken({
+    userId: user.id,
+    email: user.email,
+    tokenVersion: user.tokenVersion,
+  });
   res.status(201).json({
     user: {
       id: user.id,
@@ -59,7 +63,7 @@ router.post("/users", async (req: Request, res: Response) => {
   });
 });
 
-router.post("/users/:userId/tax-periods", async (req: Request, res: Response) => {
+testRouter.post("/users/:userId/tax-periods", async (req: Request, res: Response) => {
   const { userId } = req.params;
   const periods: Array<{ startDate: string; rate: number }> = req.body.periods;
   await prisma.taxRatePeriod.deleteMany({ where: { userId } });
@@ -83,7 +87,7 @@ router.post("/users/:userId/tax-periods", async (req: Request, res: Response) =>
   res.json({ periods: stored });
 });
 
-router.post("/users/:userId/students", async (req: Request, res: Response) => {
+testRouter.post("/users/:userId/students", async (req: Request, res: Response) => {
   const { userId } = req.params;
   const data = req.body;
   const student = await prisma.student.create({
@@ -100,7 +104,7 @@ router.post("/users/:userId/students", async (req: Request, res: Response) => {
   res.status(201).json({ student });
 });
 
-router.post("/lessons", async (req: Request, res: Response) => {
+testRouter.post("/lessons", async (req: Request, res: Response) => {
   const data = req.body;
   const lesson = await prisma.lesson.create({
     data: {
@@ -120,7 +124,7 @@ router.post("/lessons", async (req: Request, res: Response) => {
   res.status(201).json({ lesson });
 });
 
-router.patch("/lessons/:id", async (req: Request, res: Response) => {
+testRouter.patch("/lessons/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   const data: Record<string, unknown> = {};
   if (req.body.startTime !== undefined) data.startTime = new Date(req.body.startTime);
@@ -134,7 +138,7 @@ router.patch("/lessons/:id", async (req: Request, res: Response) => {
   res.json({ lesson });
 });
 
-router.get("/lessons", async (req: Request, res: Response) => {
+testRouter.get("/lessons", async (req: Request, res: Response) => {
   const tutorId = req.query.tutorId as string | undefined;
   const lessons = await prisma.lesson.findMany({
     where: tutorId ? { tutorId } : undefined,
@@ -143,7 +147,7 @@ router.get("/lessons", async (req: Request, res: Response) => {
   res.json({ lessons });
 });
 
-router.get("/users/:userId/students", async (req: Request, res: Response) => {
+testRouter.get("/users/:userId/students", async (req: Request, res: Response) => {
   const { userId } = req.params;
   const archived = req.query.archived === "true";
   const students = await prisma.student.findMany({
@@ -152,7 +156,7 @@ router.get("/users/:userId/students", async (req: Request, res: Response) => {
   res.json({ students });
 });
 
-router.post("/news", async (req: Request, res: Response) => {
+testRouter.post("/news", async (req: Request, res: Response) => {
   const items = (req.body.items ?? []) as Array<{
     title: string;
     content: string;
@@ -175,7 +179,7 @@ router.post("/news", async (req: Request, res: Response) => {
   res.json({ items: stored });
 });
 
-router.post(
+testRouter.post(
   "/run-lesson-status-tick",
   async (_req: Request, res: Response) => {
     const { updateLessonStatuses } = await import(
@@ -186,7 +190,7 @@ router.post(
   },
 );
 
-router.post(
+testRouter.post(
   "/run-recurring-lessons-tick",
   async (_req: Request, res: Response) => {
     const { processRecurringLessons } = await import(
@@ -197,7 +201,7 @@ router.post(
   },
 );
 
-router.get(
+testRouter.get(
   "/users/:userId/scheduled-reminders",
   async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -209,7 +213,7 @@ router.get(
   },
 );
 
-router.get(
+testRouter.get(
   "/users/:userId/push-subscriptions",
   async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -219,5 +223,3 @@ router.get(
     res.json({ subscriptions });
   },
 );
-
-export default router;

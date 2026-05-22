@@ -298,5 +298,49 @@ describe("passwordReset service", () => {
       expect(after?.password).toBe(before?.password);
       expect(fakeTokenHash).toMatch(/^[0-9a-f]{64}$/);
     });
+
+    it("should reject second concurrent reset with the same token (regression: race in applyPasswordReset)", async () => {
+      // Regression for bug-hunt 2026-05-10 #7: previously findValidResetToken
+      // and the apply-transaction were not atomic, so two parallel requests
+      // with the same token could both pass the read and both write a new
+      // password. We simulate the race by marking the token as used between
+      // findValidResetToken and the transaction (intercepting the
+      // user.findUnique call that runs in between).
+      const { token, recordId } = await createValidToken();
+      const findUniqueImpl = (async (
+        args: Parameters<typeof prisma.user.findUnique>[0],
+      ) => {
+        // Concurrent winner finishes its own apply: mark token used
+        await prisma.passwordResetToken.update({
+          where: { id: recordId },
+          data: { usedAt: new Date() },
+        });
+        spy.mockRestore();
+        return prisma.user.findUnique(args);
+      }) as unknown as typeof prisma.user.findUnique;
+      const spy = jest
+        .spyOn(prisma.user, "findUnique")
+        .mockImplementationOnce(findUniqueImpl);
+
+      try {
+        await expect(
+          applyPasswordReset(token, VALID_NEW_PASSWORD, VALID_NEW_PASSWORD),
+        ).rejects.toMatchObject({
+          statusCode: 400,
+          message: "Эта ссылка уже была использована. Запросите новую",
+        });
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        // Critical: password must NOT have been changed by the loser
+        expect(await comparePassword(VALID_NEW_PASSWORD, user!.password)).toBe(
+          false,
+        );
+        expect(await comparePassword(ORIGINAL_PASSWORD, user!.password)).toBe(
+          true,
+        );
+      } finally {
+        spy.mockRestore();
+      }
+    });
   });
 });

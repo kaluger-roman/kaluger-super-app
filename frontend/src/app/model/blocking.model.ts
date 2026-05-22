@@ -8,6 +8,7 @@ import { adminAuthModel, adminDataModel } from "@features/admin";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
 import { forgotPasswordModel } from "@features/forgotPassword";
+import { lessonCancellationModel } from "@features/lessons";
 import { resetPasswordModel } from "@features/resetPassword";
 import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
 import { financesModel, profileModel } from "@pages/profile";
@@ -21,6 +22,7 @@ export const $isBlocking = combine(
     addLesson: lessonModel.addLessonFx.pending,
     updateLesson: lessonModel.updateLessonFx.pending,
     removeLesson: lessonModel.removeLessonFx.pending,
+    cancellationInfo: lessonCancellationModel.getCancellationInfoFx.pending,
     loadStudents: studentModel.$isStudentsLoading,
     loadStudent: studentModel.loadStudentFx.pending,
     addStudent: studentModel.addStudentFx.pending,

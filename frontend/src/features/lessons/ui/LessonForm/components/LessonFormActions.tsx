@@ -12,6 +12,7 @@ type LessonFormActionsProps = {
   formData: LessonFormData;
   onClose: () => void;
   onCancelLesson: () => void;
+  onSubmit: () => void;
 };
 
 export const LessonFormActions = ({
@@ -21,6 +22,7 @@ export const LessonFormActions = ({
   formData,
   onClose,
   onCancelLesson,
+  onSubmit,
 }: LessonFormActionsProps) => {
   const handleClose = () => {
     if (!isLoading) {
@@ -55,7 +57,7 @@ export const LessonFormActions = ({
             Отмена
           </Button>
           <Button
-            type="submit"
+            onClick={onSubmit}
             variant="contained"
             disabled={isLoading || !formData.studentId}
             fullWidth={isMobile}

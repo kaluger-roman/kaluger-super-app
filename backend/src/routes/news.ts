@@ -2,12 +2,10 @@ import { Router } from "express";
 import { getNews, hasUnreadNews, markNewsRead } from "../controllers/news";
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const newsRouter = Router();
 
-router.use(authenticateToken);
+newsRouter.use(authenticateToken);
 
-router.get("/", getNews);
-router.get("/has-unread", hasUnreadNews);
-router.post("/mark-read", markNewsRead);
-
-export default router;
+newsRouter.get("/", getNews);
+newsRouter.get("/has-unread", hasUnreadNews);
+newsRouter.post("/mark-read", markNewsRead);

@@ -100,6 +100,47 @@ describe("processRecurringLessons", () => {
     expect(lessons.length).toBeGreaterThanOrEqual(2); // original + some created
   });
 
+  it("should skip a concurrent run and not create duplicate lessons (regression: cron overlap-guard)", async () => {
+    // Regression for bug-hunt 2026-05-10 #8: previously the function had
+    // no overlap-guard and no transaction around findMany+createMany.
+    // Two concurrent ticks (manual trigger overlapping cron, or restart
+    // during a long batch) could each pass the conflict check for the
+    // same slot and both insert. With the guard, the second call exits
+    // immediately and no duplicates appear.
+    const { tutor, student } = await createTutorAndStudentTracked();
+
+    const lastStart = truncateToMinute(
+      new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    );
+    const lastEnd = truncateToMinute(
+      new Date(lastStart.getTime() + 60 * 60 * 1000)
+    );
+    await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: lastStart,
+        endTime: lastEnd,
+        isRecurring: true,
+        tutorId: tutor.id,
+        studentId: student.id,
+        status: "SCHEDULED",
+      },
+    });
+
+    await Promise.all([
+      processRecurringLessons(),
+      processRecurringLessons(),
+    ]);
+
+    const lessons = await prisma.lesson.findMany({
+      where: { tutorId: tutor.id, isRecurring: true },
+      orderBy: { startTime: "asc" },
+    });
+    const slots = new Set(lessons.map((l) => l.startTime.getTime()));
+    expect(slots.size).toBe(lessons.length);
+  });
+
   it("should not create lessons that conflict with existing ones", async () => {
     // Setup a tutor/student and a recurring lesson at specific time
     const { tutor, student } = await createTutorAndStudentTracked();

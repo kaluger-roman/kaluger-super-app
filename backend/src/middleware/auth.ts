@@ -1,5 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../lib/prisma";
+import {
+  getCachedTokenVersion,
+  setCachedTokenVersion,
+} from "../lib/tokenVersionCache";
 import type { JwtPayload } from "../types";
 import { verifyToken } from "../utils/auth";
 import { isValidTimezone } from "../utils/time";
@@ -8,7 +12,7 @@ export type AuthRequest = Request & {
   user?: JwtPayload;
 };
 
-export const authenticateToken = (
+export const authenticateToken = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -25,6 +29,40 @@ export const authenticateToken = (
     return res
       .status(401)
       .json({ error: "Недействительный или истекший токен" });
+  }
+
+  // Verify tokenVersion so password/email changes immediately revoke
+  // previously issued tokens. Short-lived in-process cache amortizes the
+  // per-request DB roundtrip; services that bump tokenVersion populate it
+  // with the fresh value so the next JWT passes without a refetch.
+  const tokenVersion = payload.tokenVersion ?? 0;
+  const cached = getCachedTokenVersion(payload.userId);
+
+  if (cached !== undefined) {
+    if (tokenVersion !== cached) {
+      return res.status(401).json({ error: "Токен отозван" });
+    }
+  } else {
+    let dbUser;
+    try {
+      dbUser = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { tokenVersion: true },
+      });
+    } catch (error) {
+      console.error("Auth middleware DB error:", error);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+
+    if (!dbUser) {
+      return res.status(401).json({ error: "Токен отозван" });
+    }
+
+    if (tokenVersion !== dbUser.tokenVersion) {
+      return res.status(401).json({ error: "Токен отозван" });
+    }
+
+    setCachedTokenVersion(payload.userId, dbUser.tokenVersion);
   }
 
   req.user = payload;

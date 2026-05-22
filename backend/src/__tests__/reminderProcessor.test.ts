@@ -410,10 +410,14 @@ describe("reminderProcessor service", () => {
 
     const backlogSize = 105;
     const past = Date.now() - 60 * 60 * 1000;
+    // Each reminder uses a distinct intervalMinutes value so the partial
+    // unique index `(lessonId, intervalMinutes) WHERE status='PENDING'` does
+    // not reject the synthetic backlog. Real backlogs come from many lessons
+    // accumulating during downtime, not from one lesson.
     await prisma.scheduledReminder.createMany({
       data: Array.from({ length: backlogSize }, (_, i) => ({
         scheduledAt: new Date(past - i * 1000),
-        intervalMinutes: 30,
+        intervalMinutes: i + 1,
         lessonId: lesson.id,
         userId,
         status: "PENDING" as const,
@@ -432,6 +436,102 @@ describe("reminderProcessor service", () => {
     expect(claimed).toBeLessThanOrEqual(100);
     expect(claimed).toBeGreaterThan(0);
     expect(stillPending).toBe(backlogSize - claimed);
+  });
+
+  it("should leave PENDING in PROCESSING after a simulated mid-cycle crash and recover them on the next tick (regression: silent loss)", async () => {
+    // Regression for bug-hunt 2026-05-10 #3: previously the claim transaction
+    // marked the whole batch SENT before delivery; if the process crashed
+    // mid-cycle the remaining reminders were lost forever. The fix introduces
+    // a PROCESSING state + claimedAt watchdog so a crashed batch is recovered
+    // on the next tick.
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    await prisma.reminderSettings.create({
+      data: {
+        userId,
+        enabled: true,
+        intervals: [30],
+        muteWhenInLesson: false,
+      },
+    });
+
+    const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const lesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: futureTime,
+        endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+        status: "SCHEDULED",
+        tutorId: userId,
+        studentId,
+      },
+    });
+
+    // Simulate a crashed previous tick: reminder is left in PROCESSING with a
+    // claimedAt older than REMINDER_PROCESSING_TIMEOUT_MS (10 min).
+    const stuckReminder = await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: lesson.id,
+        userId,
+        status: "PROCESSING",
+        claimedAt: new Date(Date.now() - 11 * 60 * 1000),
+      },
+    });
+
+    await processScheduledReminders();
+
+    const recovered = await prisma.scheduledReminder.findUnique({
+      where: { id: stuckReminder.id },
+    });
+    // Recovered then immediately delivered (mocked sendNotification resolves)
+    expect(recovered!.status).toBe("SENT");
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not recover PROCESSING claimed within the watchdog window (regression: watchdog cutoff)", async () => {
+    const futureTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const lesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: futureTime,
+        endTime: new Date(futureTime.getTime() + 60 * 60 * 1000),
+        status: "SCHEDULED",
+        tutorId: userId,
+        studentId,
+      },
+    });
+
+    // Active processing claim — well within timeout.
+    const fresh = await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: lesson.id,
+        userId,
+        status: "PROCESSING",
+        claimedAt: new Date(Date.now() - 30 * 1000),
+      },
+    });
+
+    await processScheduledReminders();
+
+    const after = await prisma.scheduledReminder.findUnique({
+      where: { id: fresh.id },
+    });
+    // Не должно быть тронуто — ещё в окне таймаута
+    expect(after!.status).toBe("PROCESSING");
+    expect(webpush.sendNotification).not.toHaveBeenCalled();
   });
 
   it("should apply per-user settings correctly when batch contains multiple users (regression: improve-hunt 2026-05-09 #3)", async () => {

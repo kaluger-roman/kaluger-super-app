@@ -1,7 +1,7 @@
-import type { FC } from "react";
+import type { FC, KeyboardEvent } from "react";
 import { useEffect } from "react";
 
-import { useMediaQuery, useTheme } from "@mui/material";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { lessonModel } from "@entities";
@@ -47,9 +47,20 @@ export const LessonForm: FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    lessonFormModel.formSubmitted(e);
+  const handleSubmit = () => {
+    lessonFormModel.formSubmitted();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      e.key === "Enter" &&
+      !isLoading &&
+      formData.studentId &&
+      (e.target as HTMLElement).tagName !== "TEXTAREA"
+    ) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   const handleClose = () => {
@@ -77,7 +88,7 @@ export const LessonForm: FC = () => {
         {lesson ? "Редактировать урок" : "Создать новый урок"}
       </Styled.StyledDialogTitle>
 
-      <form onSubmit={handleSubmit}>
+      <Box onKeyDown={handleKeyDown}>
         <LessonFormContent
           formData={formData}
           errors={errors}
@@ -96,8 +107,9 @@ export const LessonForm: FC = () => {
           formData={formData}
           onClose={handleClose}
           onCancelLesson={handleCancelLesson}
+          onSubmit={handleSubmit}
         />
-      </form>
+      </Box>
 
       <ConfirmDialog
         open={confirmDialog.open}

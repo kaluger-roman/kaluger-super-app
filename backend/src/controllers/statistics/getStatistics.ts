@@ -156,7 +156,7 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         : Promise.resolve(null),
     ]);
 
-    const earningsValue = earnings._sum.price || 0;
+    const earningsValue = earnings._sum.price?.toNumber() ?? 0;
 
     let taxAmount: number | null = null;
     let taxBreakdown: Awaited<
@@ -168,13 +168,13 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
         (period) => ({
           id: period.id,
           startDate: period.startDate.toISOString(),
-          rate: period.rate,
+          rate: period.rate.toNumber(),
         }),
       );
       // Pass the effective date (paymentDate ?? startTime) so legacy paid
       // lessons without a paymentDate still get a rate assigned.
       const lessonsForTax = paidLessonsForTax.map((lesson) => ({
-        price: lesson.price,
+        price: lesson.price === null ? null : lesson.price.toNumber(),
         paymentDate: lesson.paymentDate ?? lesson.startTime,
       }));
       const result = buildTaxBreakdown(lessonsForTax, periods, {
@@ -191,16 +191,16 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
       totalLessons,
       upcomingLessons,
       earnings: earningsValue,
-      lastMonthEarnings: lastMonthEarnings._sum.price || 0,
-      lostEarnings: lostEarnings._sum.price || 0,
-      prepaidIncome: prepaidIncome._sum.price || 0,
-      upcomingIncome: upcomingIncome._sum.price || 0,
+      lastMonthEarnings: lastMonthEarnings._sum.price?.toNumber() ?? 0,
+      lostEarnings: lostEarnings._sum.price?.toNumber() ?? 0,
+      prepaidIncome: prepaidIncome._sum.price?.toNumber() ?? 0,
+      upcomingIncome: upcomingIncome._sum.price?.toNumber() ?? 0,
       trialLessonsCount: trialLessonsCount || 0,
-      unpaidDebtSum: unpaid._sum.price || 0,
+      unpaidDebtSum: unpaid._sum.price?.toNumber() ?? 0,
       unpaidDebtCount: unpaid._count.id || 0,
-      unpaidDebtOver24hSum: unpaidOver24h._sum.price || 0,
+      unpaidDebtOver24hSum: unpaidOver24h._sum.price?.toNumber() ?? 0,
       unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
-      paymentsInRangeSum: paymentsInRange._sum.price || 0,
+      paymentsInRangeSum: paymentsInRange._sum.price?.toNumber() ?? 0,
       paymentsInRangeCount: paymentsInRange._count.id || 0,
       taxAmount,
       taxBreakdown,

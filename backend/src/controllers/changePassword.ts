@@ -20,9 +20,13 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "Пароли не совпадают" });
     }
 
-    await changePasswordService(userId!, currentPassword, newPassword);
+    const result = await changePasswordService(userId!, currentPassword, newPassword);
 
-    res.json({ message: "Пароль успешно изменён" });
+    res.json({
+      message: "Пароль успешно изменён",
+      token: result.token,
+      user: result.user,
+    });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
     console.error("Change password error:", error);

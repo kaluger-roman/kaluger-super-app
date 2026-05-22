@@ -18,20 +18,20 @@ import {
 import { authenticateToken } from "../middleware/auth";
 import { authRateLimiter, passwordResetRateLimiter } from "../middleware/rateLimit";
 
-const router = Router();
+const authRouter = Router();
 
-router.post("/register", authRateLimiter, register);
-router.post("/login", authRateLimiter, login);
-router.post("/verify-email", authRateLimiter, verifyEmail);
-router.post("/resend-verification", authRateLimiter, resendVerification);
-router.put("/profile", authenticateToken, updateProfile);
-router.get("/profile", authenticateToken, getProfile);
-router.post("/change-password", authenticateToken, changePassword);
-router.post("/change-email", authenticateToken, changeEmail);
-router.post("/verify-email-change", authenticateToken, verifyEmailChange);
-router.post("/resend-email-change-code", authenticateToken, resendEmailChangeCode);
-router.post("/forgot-password", passwordResetRateLimiter, forgotPassword);
-router.post("/reset-password/verify", verifyResetToken);
-router.post("/reset-password", resetPassword);
+authRouter.post("/register", authRateLimiter, register);
+authRouter.post("/login", authRateLimiter, login);
+authRouter.post("/verify-email", authRateLimiter, verifyEmail);
+authRouter.post("/resend-verification", authRateLimiter, resendVerification);
+authRouter.put("/profile", authenticateToken, updateProfile);
+authRouter.get("/profile", authenticateToken, getProfile);
+authRouter.post("/change-password", authRateLimiter, authenticateToken, changePassword);
+authRouter.post("/change-email", authRateLimiter, authenticateToken, changeEmail);
+authRouter.post("/verify-email-change", authenticateToken, verifyEmailChange);
+authRouter.post("/resend-email-change-code", authenticateToken, resendEmailChangeCode);
+authRouter.post("/forgot-password", passwordResetRateLimiter, forgotPassword);
+authRouter.post("/reset-password/verify", passwordResetRateLimiter, verifyResetToken);
+authRouter.post("/reset-password", passwordResetRateLimiter, resetPassword);
 
-export default router;
+export { authRouter };

@@ -7,17 +7,15 @@ import {
 } from "../controllers/statistics";
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const statisticsRouter = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+statisticsRouter.use(authenticateToken);
 
 // Основная статистика
-router.get("/", getStatistics);
+statisticsRouter.get("/", getStatistics);
 
 // Детальная статистика
-router.get("/by-subject", getLessonsBySubject);
-router.get("/by-type", getLessonsByType);
-router.get("/by-student", getStudentStatistics);
-
-export default router;
+statisticsRouter.get("/by-subject", getLessonsBySubject);
+statisticsRouter.get("/by-type", getLessonsByType);
+statisticsRouter.get("/by-student", getStudentStatistics);

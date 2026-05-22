@@ -224,7 +224,7 @@ describe("Auth Controller", () => {
   });
 
   describe("getProfile", () => {
-    it("returns 404 when user not found", async () => {
+    it("returns 401 when token references non-existent user (revoked)", async () => {
       // generate token for non-existing user
       const fakeToken = generateToken({
         userId: "non-existent-id",
@@ -234,8 +234,8 @@ describe("Auth Controller", () => {
         .get("/api/auth/profile")
         .set("Authorization", `Bearer ${fakeToken}`)
         .send();
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe("Пользователь не найден");
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("Токен отозван");
     });
 
     it("returns user profile on success", async () => {
@@ -255,16 +255,19 @@ describe("Auth Controller", () => {
         .fn()
         .mockRejectedValueOnce(new Error("DB error"));
 
-      const res = await request(app)
-        .get("/api/auth/profile")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send();
+      try {
+        const res = await request(app)
+          .get("/api/auth/profile")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send();
 
-      expect(res.status).toBe(500);
-      expect(res.body.error).toBe("Внутренняя ошибка сервера");
-
-      // Restore original function
-      prisma.user.findUnique = originalFindUnique;
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe("Внутренняя ошибка сервера");
+      } finally {
+        // Restore original function regardless of assertion outcome,
+        // so a leaked mock cannot break later tests.
+        prisma.user.findUnique = originalFindUnique;
+      }
     });
   });
 

@@ -43,7 +43,7 @@ export const authApi = {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
-  }): Promise<{ message: string }> => {
+  }): Promise<AuthResponse> => {
     const response = await api.post("/auth/change-password", data);
     return response.data;
   },

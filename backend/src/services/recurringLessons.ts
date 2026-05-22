@@ -3,10 +3,21 @@ import { groupRecurringLessonsByPattern } from "./recurringHelpers";
 import type { LessonSlot } from "../types";
 import { truncateToMinute } from "../utils/time";
 
+// Module-level guard prevents two ticks (manual trigger overlapping the
+// nightly cron, or restart in the middle of a run) from racing on the
+// same slots. Same pattern as backupRunning in services/backup.ts.
+let recurringRunning = false;
+
 const overlaps = (slots: LessonSlot[], start: Date, end: Date): boolean =>
   slots.some((s) => s.startTime < end && s.endTime > start);
 
 export const processRecurringLessons = async () => {
+  if (recurringRunning) {
+    console.log("Skipping recurring lessons run: previous tick still active");
+    return;
+  }
+  recurringRunning = true;
+
   try {
     console.log("Processing recurring lessons...");
 
@@ -92,9 +103,7 @@ export const processRecurringLessons = async () => {
       }
 
       if (lessonsToCreate.length > 0) {
-        await prisma.lesson.createMany({
-          data: lessonsToCreate,
-        });
+        await prisma.lesson.createMany({ data: lessonsToCreate });
         createdCount += lessonsToCreate.length;
       }
     }
@@ -104,5 +113,7 @@ export const processRecurringLessons = async () => {
   } catch (error) {
     console.error("Error processing recurring lessons:", error);
     throw error;
+  } finally {
+    recurringRunning = false;
   }
 };

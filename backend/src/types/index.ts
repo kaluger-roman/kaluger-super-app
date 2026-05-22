@@ -86,6 +86,7 @@ export type TaxBreakdownEntry = {
 export type JwtPayload = {
   userId: string;
   email: string;
+  tokenVersion?: number;
 };
 
 export type VerifyEmailDto = {

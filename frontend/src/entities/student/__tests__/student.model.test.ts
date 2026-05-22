@@ -193,5 +193,31 @@ describe("student.model", () => {
       expect(scope.getState($isRemoveStudent)).toBe(false);
       expect(scope.getState($isStudentsLoading)).toBe(false);
     });
+
+    it("should set $isStudentsLoading=true while load*Fx pending (regression: empty state flicker)", async () => {
+      // Block both loaders so we can observe the pending state
+      let resolveActive: () => void = () => undefined;
+      let resolveArchived: () => void = () => undefined;
+      vi.mocked(studentsApi.getAll).mockImplementation((archived) =>
+        archived
+          ? new Promise((resolve) => {
+              resolveArchived = () => resolve([]);
+            })
+          : new Promise((resolve) => {
+              resolveActive = () => resolve([mockStudent]);
+            })
+      );
+
+      const scope = fork();
+      const settled = allSettled(loadStudents, { scope });
+
+      expect(scope.getState($isStudentsLoading)).toBe(true);
+
+      resolveActive();
+      resolveArchived();
+      await settled;
+
+      expect(scope.getState($isStudentsLoading)).toBe(false);
+    });
   });
 });
