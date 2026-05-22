@@ -9,7 +9,6 @@ import {
   ReportsPage,
   ProfilePage,
   NewsPage,
-  ScreenPage,
   ForgotPasswordPage,
   ResetPasswordPage,
 } from "@pages";
@@ -90,10 +89,6 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
       <Route
         path="/profile"
         element={<ProtectedRoute element={<ProfilePage />} isLoggedIn={isLoggedIn} />}
-      />
-      <Route
-        path="/screen"
-        element={<ProtectedRoute element={<ScreenPage />} isLoggedIn={isLoggedIn} />}
       />
       <Route path="/admin" element={<AdminPage />} />
       <Route

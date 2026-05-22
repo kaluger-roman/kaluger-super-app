@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-05-22
+
+### Removed
+- Screen broadcast feature in full: `/screen` page with token UI, `ScreenshotMonitor` sidebar entry, frontend `screenApi` (`/screen/token`, `/screen/latest`) and Effector `screen.model`, backend `/api/screen/*` routes and controllers (`uploadScreen`, `getLatestScreen`, `getScreenToken`, HMAC token helpers), WebSocket `screen_updated` event with its frontend handler, and Mac capture tooling (`scripts/screen-capture.sh`, `scripts/com.kaluger.screen-capture.plist`)
+
 ## 2026-05-10
 
 ### Performance
