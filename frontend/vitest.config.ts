@@ -9,7 +9,33 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: [path.resolve(__dirname, "./src/__tests__/setup.ts")],
     css: true,
-    exclude: ["node_modules", "dist", "e2e/**", "playwright-report/**"],
+    exclude: [
+      "node_modules/**",
+      "dist",
+      "e2e/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
+    deps: {
+      optimizer: {
+        web: {
+          enabled: true,
+          include: [
+            "@mui/material",
+            "@mui/icons-material",
+            "@mui/system",
+            "@mui/x-date-pickers",
+            "@emotion/react",
+            "@emotion/styled",
+            "react-router-dom",
+            "react-big-calendar",
+            "effector-react",
+            "patronum",
+            "date-fns",
+          ],
+        },
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

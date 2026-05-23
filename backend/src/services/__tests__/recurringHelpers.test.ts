@@ -249,6 +249,6 @@ describe("recurringHelpers", () => {
     expect(r.updated).toBeGreaterThanOrEqual(1);
 
     const u = await prisma.lesson.findUnique({ where: { id: future.id } });
-    expect(u!.price).toBe(250);
+    expect(u!.price?.toNumber()).toBe(250);
   });
 });

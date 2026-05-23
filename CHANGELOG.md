@@ -18,13 +18,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Recurring lesson shift now broadcasts a student schedule event for every shifted lesson in the series — previously only the base lesson updated on the student cabinet, the rest stayed stale until reload
 - Student email verification attempt counter is now incremented atomically via Prisma `increment` — closes a race where parallel wrong-code requests read the same snapshot and overwrote each other, bypassing the attempts limit
 - `getCurrentStudentFx` registered with the global `$isBlocking` overlay so the initial student-cabinet load shows the loading state instead of a blank screen
+- Hard-reload / deep-link inside `/student/cabinet/*` no longer kicks the student to `/login` — boot-orchestration moved into `appInitModel`, so the student-only path no longer triggers `initializeAppFx` (which would 401 on tutor endpoints and force-redirect via the tutor axios interceptor)
+- `InvitationManager` disables "Создать ссылку-приглашение" / "Создать новую" for archived students with an inline warning instead of relying on a 409 from the backend after a click
+- `DialogTitle` in `StudentViewDialog` no longer wraps a nested `<Typography variant="h6">` inside its `<h2>` — fixes a React DOM hydration warning
+- `StudentViewDialog` now uses `dividers` on its content and a thin always-visible scrollbar so users on macOS understand the content can scroll
+- `InstallPrompt` banner on 375px viewports — "Установить" button no longer gets clipped; text wrapper shrinks with `min-width: 0` while the button keeps its content-width via `flex-shrink: 0`
 - PR #48 review feedback addressed across the cabinet flow (2b6a699)
+
+### Removed
+- Screen broadcast feature in full: `/screen` page with token UI, `ScreenshotMonitor` sidebar entry, frontend `screenApi` (`/screen/token`, `/screen/latest`) and Effector `screen.model`, backend `/api/screen/*` routes and controllers (`uploadScreen`, `getLatestScreen`, `getScreenToken`, HMAC token helpers), WebSocket `screen_updated` event with its frontend handler, and Mac capture tooling (`scripts/screen-capture.sh`, `scripts/com.kaluger.screen-capture.plist`)
 
 ### Infrastructure
 - Prisma migration `029_student_cabinet`: new `student_users` and `student_invitations` tables; new `students.studentUserId` field linking the tutor-owned student card to the new student account (4b0480a)
 - New env variable `STUDENT_JWT_SECRET`, distinct from `JWT_SECRET` and `ADMIN_JWT_SECRET` (4b0480a)
 
 ## 2026-05-10
+
+### Fixed
+- Race condition in `applyPasswordReset` — two concurrent requests with the same one-time token can no longer both apply a password change; the token's `usedAt` flip and password update now run inside `prisma.$transaction` with an atomic conditional `updateMany({ where: { id, usedAt: null } })`, so the second request fails with "ссылка уже использована"
+- TOCTOU in `updateLesson` — scheduling-conflict check moved inside the same `prisma.$transaction` as the lesson update (and the recurring-shift conflict pre-check now runs through the transaction client), so a concurrent insert/update can no longer slip a conflicting lesson past validation
+- Race condition in `processRecurringLessons` cron — added a module-level overlap guard (same pattern as `backupRunning`) and wrapped the conflict-check + `createMany` of every group inside `prisma.$transaction`, preventing duplicate weekly slots when the nightly tick overlaps with a manual trigger or process restart
+- TOCTOU in `scheduleRemindersForLesson` — replaced the read-then-write idempotency guard with a partial unique index `(lessonId, intervalMinutes) WHERE status='PENDING'` plus per-row `create` with `P2002`-skip; concurrent calls (e.g. fast double-submit on lesson edit) can no longer deliver duplicate push notifications
+- Silent loss in `processScheduledReminders` — added intermediate `PROCESSING` status and `claimedAt` field with a watchdog that reverts stale claims (>10 min) back to `PENDING`; if the Node process is killed between the claim transaction and the delivery loop, reminders are now recovered on the next tick instead of staying permanently in `SENT` without delivery
+- Stale-response race in `lesson-cancellation` model on the frontend — `getCancellationInfoFx.done` samples now filter by matching the response `params` against the current `$cancellingLesson.id`; clicking «Отменить» on lesson A then quickly on B no longer reopens the confirm dialog with A's transfer info while $cancellingLesson is B
+- Money/tax precision — `Lesson.price`, `Student.hourlyRate`, `TaxRatePeriod.rate` migrated from `Float` to `Decimal(10,2)` / `Decimal(5,2)`; `Prisma.Decimal.prototype.toJSON` overridden in `lib/prisma.ts` so `res.json` continues to emit `number`, preserving the API contract for the frontend
+- Brute-force exposure on password-reset token — `passwordResetRateLimiter` (5 req / 15 min) is now also applied to `POST /api/auth/reset-password/verify` and `POST /api/auth/reset-password` (previously only `/forgot-password` was rate-limited)
+- `backend/jest.config.js` typo `setupFilesAfterEach` → `setupFilesAfterEnv` — `setup.ts` was previously silently ignored by jest
+
+### Changed
+- Custom `Error` subclasses moved to `backend/src/utils/errors.ts` (`SchedulingConflictError`, `RecurringShiftConflictError`); local declarations inside controllers removed. `docs/conventions/backend.md` documents the rule.
+
+### Performance
+- **Backend tests 38s → 14–18s (-53..-62%)**: switched `ts-jest` preset to `@swc/jest` with `@swc-contrib/mut-cjs-exports@14.x` WASM plugin for `jest.spyOn` compatibility on CommonJS named exports; older `swc_mut_cjs_exports@10.7` is incompatible with `@swc/core@1.15`
+- **Frontend setup time -31% (42s → 29s)**: removed unused MSW from `frontend/src/__tests__/setup.ts` (no test calls `server.use`; all API tests already use `vi.mock("@shared/api/base")`); added `deps.optimizer.web.include` for MUI / router / effector / date-fns to pre-bundle heavy modules (~-25% wall locally)
+- **CI**: backend now matrix-sharded `[1,2]`, type-check moved to its own job, vitest blob reporter + merge-reports job, cache for `node_modules/.vite` and `@prisma/client`, `--maxWorkers=2` for 2-vCPU runners
+- Frontend route-level code-splitting via `React.lazy` + `Suspense` for AdminPage, ReportsPage, ProfilePage, NewsPage, ScreenPage, Forgot/ResetPasswordPage, DashboardPage, LessonsPage, StudentsPage — initial bundle for `/login` no longer includes lesson/admin/reports code
+
+### Added
+- `docs/research/2026-05-10-test-speedup.md` — research report covering Phase 1+2 optimizations (this PR) and Phase 3 backlog (`@quramy/jest-prisma` transactions, vitest `--no-isolate` for Effector stores)
+- `docs/improvement-reports/2026-05-10-improve-hunt.md` — improve-hunt report (10 candidates)
+
+### Infrastructure
+- Prisma migration `20260510173034_add_token_version_and_indexes` — adds `User.tokenVersion` column + `students.tutorId_archived` index (#2 + #4 from improve-hunt)
+- Prisma migration `20260510182545_partial_unique_pending_reminders` — cleans up any existing duplicate PENDING reminders and creates the partial unique index used by the new scheduler idempotency contract
+- Prisma migration `20260510182600_add_processing_reminder_status` + `20260510182700_add_reminder_claimed_at` — add `PROCESSING` enum value and nullable `claimedAt` column to `scheduled_reminders` for the crash-safe claim/finalize flow
+- Prisma migration `20260510182800_money_to_decimal` — `ALTER COLUMN ... TYPE DECIMAL` for `lessons.price`, `students.hourlyRate`, `tax_rate_periods.rate`
+- New bug-hunt report `docs/bug-reports/2026-05-10-bug-hunt.md` (10 candidates, 8 fixed in this batch; #1 and #4 deferred as a temporary feature, screen monitoring)
+
+### Security
+- JWT revocation on password/email change — added `User.tokenVersion` field, included in JWT payload by `login` and `verifyEmailChange`, verified by `authenticateToken` middleware against DB; `changePassword`, `verifyEmailChange`, and `applyPasswordReset` now increment `tokenVersion` to invalidate all previously issued tokens. A stolen JWT can no longer survive a password reset (improve-hunt #2)
+- Rate limiting on sensitive auth/upload endpoints — `authRateLimiter` applied to `POST /api/auth/change-password` and `/change-email`; new `screenUploadRateLimiter` (60 req / min) on `POST /api/screen/upload` (improve-hunt #3)
+
+### Refactor
+- Removed `<form>` tags from `LoginForm`, `RegisterForm`, `LessonForm`, `StudentForm` per `docs/conventions/frontend.md`; submit via explicit `onClick` + `onKeyDown` Enter handler. `formSubmitted` Effector events changed to `createEvent()` without `FormEvent` payload
+- Backend route files (`lessons.ts`, `students.ts`, `statistics.ts`, `news.ts`, `__test__.ts`) converted from `export default router` to `export const xxxRouter` for consistency with `auth.ts`, `push.ts`, etc.
 
 ### Added
 - `/e2e-check` slash command — analyzes diff vs base ref, classifies user-facing changes as uncovered / possibly-affected / dead vs existing Playwright tests, optionally writes `*.draft.spec.ts` skeletons and a per-branch report under `docs/e2e-coverage/checks/` (4a045aa)

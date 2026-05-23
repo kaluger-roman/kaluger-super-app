@@ -112,6 +112,68 @@ describe("updateLesson controller", () => {
       .then((res) => expect(res.body.error).toMatch(/конфликт/));
   });
 
+  it("does not persist changes to the lesson when scheduling conflict is detected (regression: TOCTOU now checked inside transaction)", async () => {
+    // Regression for bug-hunt 2026-05-10 #6: previously the conflict
+    // check happened before $transaction, so a concurrent insert could
+    // slip through. Now the check runs inside the transaction; on
+    // conflict the whole transaction aborts and no field changes
+    // (description / status / price) reach the row.
+    const conflictStart = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+    const conflictEnd = new Date(conflictStart.getTime() + 3600000);
+    const conflicting = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "PHYSICS",
+        lessonType: "EGE",
+        startTime: conflictStart,
+        endTime: conflictEnd,
+        isRecurring: false,
+        status: "SCHEDULED",
+        price: 500,
+      },
+    });
+
+    const toUpdateStart = new Date(Date.now() + 4 * 24 * 3600 * 1000);
+    const toUpdateEnd = new Date(toUpdateStart.getTime() + 3600000);
+    const toUpdate = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "PHYSICS",
+        lessonType: "EGE",
+        startTime: toUpdateStart,
+        endTime: toUpdateEnd,
+        isRecurring: false,
+        status: "SCHEDULED",
+        description: "original",
+        price: 1000,
+      },
+    });
+
+    await request(app)
+      .put(`/api/lessons/${toUpdate.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        startTime: conflictStart.toISOString(),
+        endTime: conflictEnd.toISOString(),
+        description: "should-not-stick",
+        price: 9999,
+      })
+      .expect(409);
+
+    const after = await prisma.lesson.findUnique({
+      where: { id: toUpdate.id },
+    });
+    expect(after!.description).toBe("original");
+    expect(after!.price?.toNumber()).toBe(1000);
+    expect(after!.startTime.getTime()).toBe(toUpdateStart.getTime());
+    expect(after!.endTime.getTime()).toBe(toUpdateEnd.getTime());
+
+    await prisma.lesson.delete({ where: { id: conflicting.id } });
+    await prisma.lesson.delete({ where: { id: toUpdate.id } });
+  });
+
   it("computes status COMPLETED or IN_PROGRESS based on times", async () => {
     const now = new Date();
     const pastStart = new Date(now.getTime() - 2 * 3600000);

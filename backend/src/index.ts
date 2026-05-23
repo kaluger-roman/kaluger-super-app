@@ -16,19 +16,19 @@ if (process.env.NODE_ENV !== "test") {
   validateRequiredEnv();
 }
 
-import authRoutes from "./routes/auth";
-import studentRoutes from "./routes/students";
-import lessonRoutes from "./routes/lessons";
-import statisticsRoutes from "./routes/statistics";
-import newsRoutes from "./routes/news";
-import { pushRouter as pushRoutes } from "./routes/push";
-import { reminderSettingsRouter as reminderSettingsRoutes } from "./routes/reminderSettings";
-import { adminRouter as adminRoutes } from "./routes/admin";
-import { screenRouter as screenRoutes } from "./routes/screen";
-import { taxPeriodsRouter as taxPeriodsRoutes } from "./routes/taxPeriods";
-import { studentAuthRouter as studentAuthRoutes } from "./routes/studentAuth";
-import { studentInvitationsRouter as studentInvitationRoutes } from "./routes/studentInvitations";
-import { studentCabinetRouter as studentCabinetRoutes } from "./routes/studentCabinet";
+import { authRouter } from "./routes/auth";
+import { studentsRouter } from "./routes/students";
+import { lessonsRouter } from "./routes/lessons";
+import { statisticsRouter } from "./routes/statistics";
+import { newsRouter } from "./routes/news";
+import { pushRouter } from "./routes/push";
+import { reminderSettingsRouter } from "./routes/reminderSettings";
+import { adminRouter } from "./routes/admin";
+import { taxPeriodsRouter } from "./routes/taxPeriods";
+import { testRouter } from "./routes/__test__";
+import { studentAuthRouter } from "./routes/studentAuth";
+import { studentInvitationsRouter } from "./routes/studentInvitations";
+import { studentCabinetRouter } from "./routes/studentCabinet";
 
 const app = express();
 
@@ -45,23 +45,35 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/lessons", lessonRoutes);
-app.use("/api/statistics", statisticsRoutes);
-app.use("/api/news", newsRoutes);
-app.use("/api/push", pushRoutes);
-app.use("/api/reminder-settings", reminderSettingsRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/screen", screenRoutes);
-app.use("/api/tax-periods", taxPeriodsRoutes);
-app.use("/api/student-auth", studentAuthRoutes);
-app.use("/api/student-invitations", studentInvitationRoutes);
-app.use("/api/student-cabinet", studentCabinetRoutes);
+app.use("/api/auth", authRouter);
+app.use("/api/students", studentsRouter);
+app.use("/api/lessons", lessonsRouter);
+app.use("/api/statistics", statisticsRouter);
+app.use("/api/news", newsRouter);
+app.use("/api/push", pushRouter);
+app.use("/api/reminder-settings", reminderSettingsRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/tax-periods", taxPeriodsRouter);
+app.use("/api/student-auth", studentAuthRouter);
+app.use("/api/student-invitations", studentInvitationsRouter);
+app.use("/api/student-cabinet", studentCabinetRouter);
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date().toISOString() });
+if (process.env.NODE_ENV === "test") {
+  app.use("/api/__test__", testRouter);
+}
+
+// Health check — verifies DB connectivity so monitoring can detect outages
+app.get("/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "OK", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({
+      status: "ERROR",
+      reason: "database_unavailable",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Error handling
@@ -85,8 +97,11 @@ app.use("*", (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 // Create HTTP server and WebSocket manager
+const isTestEnv = process.env.NODE_ENV === "test";
+const shouldStartServer = !isTestEnv || process.env.E2E === "1";
+const shouldRunCrons = !isTestEnv;
 let server: ReturnType<typeof createServer> | null = null;
-if (process.env.NODE_ENV !== "test") {
+if (shouldStartServer) {
   server = createServer(app);
   const wsManager = new WebSocketManager(server);
 
@@ -98,6 +113,11 @@ if (process.env.NODE_ENV !== "test") {
     console.log(
       `Student WebSocket server available at ws://localhost:${PORT}/ws/student`,
     );
+
+    if (!shouldRunCrons) {
+      console.log("Cron jobs disabled (test mode)");
+      return;
+    }
 
     const CRON_TIMEZONE = "Europe/Moscow";
 

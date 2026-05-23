@@ -1,8 +1,8 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { authApi, notificationsModel } from "@shared";
-
-import { extractAxiosError } from "./changePassword.helpers";
+import { userModel } from "@entities";
+import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
+import type { AuthResponse } from "@shared";
 
 // Stores
 export const $isDialogOpen = createStore(false);
@@ -26,6 +26,13 @@ export const changePasswordFx = createEffect(
     return await authApi.changePassword(data);
   },
 );
+
+// Persist the fresh JWT returned by the backend after tokenVersion bump. Without
+// this the user is silently logged out on the next request, because the old
+// JWT no longer matches `User.tokenVersion`.
+const persistTokenFx = createEffect((token: string) => {
+  localStorage.setItem("authToken", token);
+});
 
 // Dialog open/close
 sample({ clock: dialogOpened, fn: () => true, target: $isDialogOpen });
@@ -75,6 +82,20 @@ sample({
   target: notificationsModel.showSuccessEvent,
 });
 
+// On success — write the fresh JWT (revoked the old one) and update user info.
+sample({
+  clock: changePasswordFx.doneData,
+  filter: (response: AuthResponse) => Boolean(response.token),
+  fn: (response: AuthResponse) => response.token!,
+  target: [userModel.setAuthToken, persistTokenFx],
+});
+
+sample({
+  clock: changePasswordFx.doneData,
+  fn: (response: AuthResponse) => response.user,
+  target: userModel.updateUser,
+});
+
 sample({
   clock: changePasswordFx.done,
   target: dialogClosed,
@@ -83,6 +104,6 @@ sample({
 // Error
 sample({
   clock: changePasswordFx.failData,
-  fn: extractAxiosError,
+  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при смене пароля"),
   target: $error,
 });

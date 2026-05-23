@@ -53,13 +53,3 @@ export const removeDraftPeriod = (
   payload: { tempId: string },
 ): DraftPeriod[] => draft.filter((p) => p.tempId !== payload.tempId);
 
-export const extractErrorMessage = (error: unknown): string => {
-  type AxiosLike = {
-    response?: { data?: { error?: string } };
-    message?: string;
-  };
-  const e = error as AxiosLike;
-  return (
-    e.response?.data?.error || e.message || "Не удалось сохранить периоды"
-  );
-};

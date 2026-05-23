@@ -12,6 +12,7 @@ export type LoginDto = {
 export type JwtPayload = {
   userId: string;
   email: string;
+  tokenVersion?: number;
 };
 
 export type VerifyEmailDto = {

@@ -100,7 +100,7 @@ describe("POST /api/auth/change-password", () => {
     expect(res.body.error).toBe("Новый пароль должен отличаться от текущего");
   });
 
-  it("should change password successfully", async () => {
+  it("should change password successfully, return fresh JWT, and revoke old token", async () => {
     const newPassword = "NewPassword1";
     const res = await request(app)
       .post("/api/auth/change-password")
@@ -112,8 +112,13 @@ describe("POST /api/auth/change-password", () => {
       });
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Пароль успешно изменён");
+    // Fresh JWT minted with bumped tokenVersion — frontend uses this to stay
+    // logged in after the old token is revoked.
+    expect(typeof res.body.token).toBe("string");
+    expect(res.body.token.length).toBeGreaterThan(0);
+    expect(res.body.user).toMatchObject({ id: userId });
 
-    // Verify new password works for login
+    // New password works for login.
     await prisma.user.update({
       where: { id: userId },
       data: { isEmailVerified: true },
@@ -125,7 +130,7 @@ describe("POST /api/auth/change-password", () => {
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
 
-    // Verify old password no longer works
+    // The OLD token is revoked: subsequent request with it returns 401.
     const res2 = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${authToken}`)
@@ -134,11 +139,19 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "AnotherPassword1",
         confirmPassword: "AnotherPassword1",
       });
-    expect(res2.status).toBe(400);
-    expect(res2.body.error).toBe("Неверный текущий пароль");
+    expect(res2.status).toBe(401);
+    expect(res2.body.error).toBe("Токен отозван");
+
+    // But the NEW token returned by change-password works (regression: PR
+    // previously discarded the new token, silently logging the user out).
+    const res3 = await request(app)
+      .get("/api/auth/profile")
+      .set("Authorization", `Bearer ${res.body.token}`);
+    expect(res3.status).toBe(200);
+    expect(res3.body.user.id).toBe(userId);
   });
 
-  it("should return 404 when user not found", async () => {
+  it("should return 401 when token references non-existent user", async () => {
     const fakeToken = generateToken({
       userId: "non-existent-id",
       email: "noone@example.com",
@@ -151,7 +164,7 @@ describe("POST /api/auth/change-password", () => {
         newPassword: "NewPassword1",
         confirmPassword: "NewPassword1",
       });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe("Пользователь не найден");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("Токен отозван");
   });
 });

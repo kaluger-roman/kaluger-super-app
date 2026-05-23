@@ -18,6 +18,7 @@ export type {
   CreateLessonDto,
   UpdateLessonDto,
   ShiftResult,
+  LessonSlot,
 } from "./lesson";
 export type {
   TaxRatePeriodDto,

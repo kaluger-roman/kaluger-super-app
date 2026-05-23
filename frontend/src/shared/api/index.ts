@@ -6,7 +6,6 @@ export { lessonsApi } from "./lessons";
 export { statisticsApi } from "./statistics";
 export { newsApi } from "./news";
 export { notificationsApi } from "./notifications";
-export { screenApi } from "./screen";
 export { taxPeriodsApi } from "./taxPeriods";
 export { studentAuthApi } from "./studentAuth";
 export { studentCabinetApi } from "./studentCabinet";

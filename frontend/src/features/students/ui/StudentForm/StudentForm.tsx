@@ -1,7 +1,7 @@
-import type { FC } from "react";
+import type { FC, KeyboardEvent } from "react";
 import { useEffect } from "react";
 
-import { DialogContent, useMediaQuery, useTheme } from "@mui/material";
+import { Box, DialogContent, useMediaQuery, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { studentModel } from "@entities";
@@ -44,9 +44,15 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
     studentFormModel.gradeChanged(value);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    studentFormModel.formSubmitted(event);
+  const handleSubmit = () => {
+    studentFormModel.formSubmitted();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !isLoading && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   const handleDeleteStudent = () => {
@@ -66,7 +72,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
       fullScreen={isMobile}
       $isMobile={isMobile}
     >
-      <form onSubmit={handleSubmit}>
+      <Box onKeyDown={handleKeyDown}>
         <Styled.StyledDialogTitle>
           {student ? (
             <>
@@ -101,9 +107,10 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
             isMobile={isMobile}
             onClose={onClose}
             onDelete={handleDeleteStudent}
+            onSubmit={handleSubmit}
           />
         </Styled.StyledDialogActions>
-      </form>
+      </Box>
 
       <StudentDeleteDialog
         open={deleteDialogOpen}

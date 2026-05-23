@@ -73,7 +73,11 @@ export const LessonCard: FC<LessonCardProps> = ({ lesson, onCardClick, onMenuCli
           </Styled.ContentColumn>
 
           {onMenuClick && (
-            <IconButton size="small" onClick={(e) => onMenuClick(e, lesson)}>
+            <IconButton
+              size="small"
+              aria-label="Меню урока"
+              onClick={(e) => onMenuClick(e, lesson)}
+            >
               <MoreVertIcon />
             </IconButton>
           )}

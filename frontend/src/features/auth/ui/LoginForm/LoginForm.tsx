@@ -1,4 +1,4 @@
-import type { FC, FormEvent } from "react";
+import type { FC, KeyboardEvent } from "react";
 
 import {
   Alert,
@@ -8,7 +8,6 @@ import {
   useTheme,
 } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
-import { Link } from "react-router-dom";
 
 import { TextField, Button } from "@shared";
 
@@ -34,13 +33,21 @@ export const LoginForm: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
+  const handleSubmit = () => {
+    if (!email || !password) {
+      return;
+    }
     if (loginRole === "tutor") {
       loginFormModel.submitLogin({ email, password });
     } else {
       studentLoginModel.studentLoginRequested({ email, password });
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !isLoading) {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
@@ -73,7 +80,7 @@ export const LoginForm: FC = () => {
         <ToggleButton value="student">Ученик</ToggleButton>
       </Styled.RoleToggleGroup>
 
-      <form onSubmit={handleSubmit}>
+      <Styled.FieldsBox onKeyDown={handleKeyDown}>
         <TextField
           fullWidth
           label="Email"
@@ -107,30 +114,28 @@ export const LoginForm: FC = () => {
 
         {authError && <Alert severity="error">{authError}</Alert>}
 
-        <Button
-          type="submit"
+        <Styled.SubmitButton
           fullWidth
           variant="contained"
           size={isMobile ? "medium" : "large"}
           disabled={isLoading}
-          sx={{ mt: 2, mb: 2 }}
+          onClick={handleSubmit}
         >
           {isLoading ? "Вход..." : "Войти"}
-        </Button>
+        </Styled.SubmitButton>
 
-        {loginRole === "tutor" && (
-          <Link to="/register" style={{ textDecoration: "none", width: "100%" }}>
+        {loginRole === "tutor" ? (
+          <Styled.RegisterLink to="/register">
             <Button fullWidth variant="text" size={isMobile ? "medium" : "large"}>
               Нет аккаунта? Зарегистрироваться
             </Button>
-          </Link>
-        )}
-        {loginRole === "student" && (
+          </Styled.RegisterLink>
+        ) : (
           <Typography variant="caption" color="text.secondary" align="center" component="div">
             Ученики регистрируются по ссылке от преподавателя.
           </Typography>
         )}
-      </form>
+      </Styled.FieldsBox>
     </Styled.FormPaper>
   );
 };

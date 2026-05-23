@@ -96,6 +96,31 @@ feature/models/
 - **Business logic in models**, not components
 - **No `<form>` tags** — use explicit `onClick` handlers on buttons instead of `onSubmit`
 
+### Accessibility (a11y)
+
+- **Icon-only buttons must have `aria-label`** — every `IconButton` (or styled `IconButton`) whose only visible content is an icon must include a Russian `aria-label` describing its action. `<Tooltip>` does NOT replace this — it sets `title`, which screen readers (notably VoiceOver) ignore on interactive elements.
+  ```tsx
+  // ✅ Good
+  <IconButton aria-label="Меню урока" onClick={onMenuClick}>
+    <MoreVertIcon />
+  </IconButton>
+
+  // ❌ Bad — screen reader announces just "button"
+  <IconButton onClick={onMenuClick}>
+    <MoreVertIcon />
+  </IconButton>
+
+  // ❌ Bad — Tooltip alone is not enough
+  <Tooltip title="Меню урока">
+    <IconButton onClick={onMenuClick}>
+      <MoreVertIcon />
+    </IconButton>
+  </Tooltip>
+  ```
+- **`<img>` must have `alt`** — empty `alt=""` is allowed only for purely decorative images.
+- **Use semantic elements** — `<button>` for clickable actions, not `<div onClick>`. If you must use a non-button element, add `role="button"`, `tabIndex={0}`, and a keyboard handler (`onKeyDown` for Enter/Space).
+- **Form inputs must be labeled** — every input needs a connected `<label>` (via `htmlFor`/`id`) or `aria-label`/`aria-labelledby`. MUI `TextField` with the `label` prop satisfies this; raw `<input>` does not.
+
 ### Code Quality
 
 - **Named exports only** — no `export default`

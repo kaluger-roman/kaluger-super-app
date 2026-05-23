@@ -13,21 +13,19 @@ import {
 } from "../controllers/students";
 import { authenticateToken } from "../middleware/auth";
 
-const router = Router();
+export const studentsRouter = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+studentsRouter.use(authenticateToken);
 
-router.get("/", getStudents);
-router.get("/:id", getStudent);
-router.post("/", createStudent);
-router.put("/:id", updateStudent);
-router.put("/:id/archive", archiveStudent);
-router.put("/:id/unarchive", unarchiveStudent);
-router.delete("/:id", deleteStudent);
+studentsRouter.get("/", getStudents);
+studentsRouter.get("/:id", getStudent);
+studentsRouter.post("/", createStudent);
+studentsRouter.put("/:id", updateStudent);
+studentsRouter.put("/:id/archive", archiveStudent);
+studentsRouter.put("/:id/unarchive", unarchiveStudent);
+studentsRouter.delete("/:id", deleteStudent);
 
-router.post("/:id/invitations", tutorIssueInvitation);
-router.get("/:id/invitations", tutorReadInvitationStatus);
-router.delete("/:id/invitations", tutorRevokeInvitation);
-
-export default router;
+studentsRouter.post("/:id/invitations", tutorIssueInvitation);
+studentsRouter.get("/:id/invitations", tutorReadInvitationStatus);
+studentsRouter.delete("/:id/invitations", tutorRevokeInvitation);

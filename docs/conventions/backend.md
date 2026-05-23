@@ -83,6 +83,31 @@ import { createStudent } from "./controllers/students/createStudent";
 - **No ESLint errors** — run lint and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
 
+## Custom Error Classes
+
+Custom `Error` subclasses used for `instanceof` flow control (e.g. mapping a
+domain exception to an HTTP status) **must** live in `src/utils/errors.ts`
+and be re-exported via `src/utils/index.ts`. Do **not** declare them locally
+inside controllers/services — local declarations duplicate types and make
+the error surface invisible to other modules.
+
+```typescript
+// ❌ Bad — local declaration inside the controller
+class SchedulingConflictError extends Error {}
+
+// ✅ Good — central declaration
+// src/utils/errors.ts
+export class SchedulingConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SchedulingConflictError";
+  }
+}
+
+// consumer
+import { SchedulingConflictError } from "../../utils";
+```
+
 ## Layer Responsibilities
 
 | Layer       | Does                                           | Doesn't             |

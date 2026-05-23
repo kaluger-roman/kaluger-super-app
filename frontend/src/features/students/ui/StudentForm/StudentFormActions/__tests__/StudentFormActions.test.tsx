@@ -37,10 +37,12 @@ const mockArchivedStudent: Student = {
 describe("StudentFormActions", () => {
   const mockOnClose = vi.fn();
   const mockOnDelete = vi.fn();
+  const mockOnSubmit = vi.fn();
 
   beforeEach(() => {
     mockOnClose.mockClear();
     mockOnDelete.mockClear();
+    mockOnSubmit.mockClear();
   });
 
   describe("Button visibility", () => {
@@ -51,6 +53,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -69,6 +72,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -87,6 +91,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -105,6 +110,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -123,6 +129,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -141,6 +148,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -160,6 +168,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />,
         scope
       );
@@ -180,6 +189,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />,
         scope
       );
@@ -201,6 +211,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -217,6 +228,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -232,6 +244,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -247,6 +260,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -263,6 +277,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -281,6 +296,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />,
         scope
       );
@@ -291,19 +307,22 @@ describe("StudentFormActions", () => {
     });
   });
 
-  describe("Submit button type", () => {
-    it("should have type submit for save button", () => {
+  describe("Submit button", () => {
+    it("should call onSubmit when save button clicked", async () => {
+      const user = userEvent.setup();
       renderWithProviders(
         <StudentFormActions
           isLoading={false}
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
       const saveButton = screen.getByRole("button", { name: /добавить/i });
-      expect(saveButton).toHaveAttribute("type", "submit");
+      await user.click(saveButton);
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
 
     it("should not have type submit for other buttons", () => {
@@ -314,6 +333,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -338,6 +358,7 @@ describe("StudentFormActions", () => {
           isMobile={true}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -360,6 +381,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -384,6 +406,7 @@ describe("StudentFormActions", () => {
           isMobile={true}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -403,6 +426,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -421,6 +445,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -443,6 +468,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />
       );
 
@@ -465,6 +491,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />,
         scope
       );
@@ -490,6 +517,7 @@ describe("StudentFormActions", () => {
           isMobile={false}
           onClose={mockOnClose}
           onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
         />,
         scope
       );
@@ -506,6 +534,7 @@ describe("StudentFormActions", () => {
               isMobile={false}
               onClose={mockOnClose}
               onDelete={mockOnDelete}
+          onSubmit={mockOnSubmit}
             />
           </ThemeProvider>
         </Provider>

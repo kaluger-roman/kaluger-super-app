@@ -32,3 +32,8 @@ export type ShiftResult = {
   shiftedIds?: string[];
   conflicts?: Array<{ lessonId: string; conflictingLessonId: string }>;
 };
+
+export type LessonSlot = {
+  startTime: Date;
+  endTime: Date;
+};

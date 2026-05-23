@@ -1,5 +1,3 @@
-import type { FormEvent } from "react";
-
 import { createStore, createEvent, sample } from "effector";
 import { createGate } from "effector-react";
 
@@ -51,7 +49,7 @@ export const $editingLesson = createStore<Lesson | undefined>(undefined, { skipV
 export const formOpened = createEvent<{ lesson?: Lesson; open: boolean }>();
 export const fieldChanged = createEvent<{ field: string; value: unknown }>();
 export const dateChanged = createEvent<{ field: "startTime" | "endTime"; value: Date | null }>();
-export const formSubmitted = createEvent<FormEvent>();
+export const formSubmitted = createEvent();
 export const confirmDialogOpened = createEvent<ConfirmDialogData>();
 export const confirmDialogClosed = createEvent();
 export const confirmActionTriggered = createEvent();

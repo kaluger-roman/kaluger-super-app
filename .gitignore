@@ -28,6 +28,10 @@ yarn-error.log*
 
 # Database backups
 /backend/backups
+/backend/backups-test
+
+# SWC plugin cache
+/backend/.swc
 
 # Landing
 /landing/.next
