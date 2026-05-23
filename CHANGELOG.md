@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-05-24
+
+### Added
+- `/auto-feature` slash command — sequential 7-phase orchestrator driving full feature development from a single user prompt: worktree → `/speckit.specify` (✋ checkpoint) → mockup React components in final FSD locations with `TODO(auto-feature)` markers + Playwright screenshots desktop/mobile/open-modals (✋ checkpoint) → `/speckit.clarify` + `/speckit.plan` + `/speckit.tasks` → `/speckit.implement` with Effector wiring + tests + lint + tsc + `/changelog` → code-review loop (cap 5 iterations, threshold 50, convergence detector, fixes applied in main agent) → `/manual-qa --fix` → final report with the QA remainder for the user. State persisted in `.claude/auto-feature/<slug>/state.json` with full resume support. All sub-agents on `opus` with explicit max-reasoning-effort instructions; no automatic git/PR operations (536b0bb)
+- `/code-review-local` slash command — local-diff variant of the official PR `code-review` plugin: 5 parallel Sonnet reviewers (CLAUDE.md compliance, shallow bug scan, deep logic with context reads, security/data leakage, type/contract safety) + parallel Haiku scorers using the same 0/25/50/75/100 rubric. Dedupes findings across agents, sorts by score, configurable `--threshold` (default 50 vs plugin's hardcoded 80), works against `git diff <base-ref>...HEAD` instead of a PR. Structured JSON output to `docs/code-reviews/<branch>/iter-N.json` plus `--silent` mode (path-only stdout) for orchestrator consumption (536b0bb)
+
+### Changed
+- `/manual-qa` slash command — added a stable JSON findings index (`*.findings.json` written next to the MD report) so orchestrators can read coverage, severity counts, per-finding category/severity/screenshot paths, and autofix status programmatically. Final stdout message extended with the JSON path. Constraint added: `findings.json` is always written (even on zero findings) as a public contract (536b0bb)
+
 ## 2026-05-22
 
 ### Removed
