@@ -11,7 +11,6 @@ import {
   DialogContent,
   Box,
   Button,
-  Typography,
   Divider,
   useMediaQuery,
   useTheme,
@@ -71,11 +70,9 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
         fullScreen={isMobile}
         $isMobile={isMobile}
       >
-        <DialogTitle>
-          <Typography variant="h6">Ученик</Typography>
-        </DialogTitle>
+        <DialogTitle>Ученик</DialogTitle>
 
-        <DialogContent>
+        <DialogContent dividers>
           <Box display="flex" flexDirection="column" gap={3}>
             <StudentInfo student={student} />
 
@@ -86,7 +83,7 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
             {student.notes && <StudentNotes notes={student.notes} />}
 
             <Divider />
-            <InvitationManager studentId={student.id} />
+            <InvitationManager studentId={student.id} studentArchived={student.archived} />
 
             <Divider />
             <StudentMeta

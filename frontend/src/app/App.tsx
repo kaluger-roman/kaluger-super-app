@@ -52,12 +52,9 @@ const App: FC = () => {
     const token = localStorage.getItem("authToken");
     if (token) {
       userModel.setAuthToken(token);
-      userModel.getProfileFx().finally(() => appInitModel.initializeApp({}));
+      userModel.getProfileFx();
     } else if (getStudentToken()) {
-      // Rehydrate student session on app boot if a student token survives a refresh.
-      studentUserModel
-        .getCurrentStudentFx()
-        .finally(() => appInitModel.initializeApp({}));
+      studentUserModel.getCurrentStudentFx();
     } else {
       appInitModel.appBootedUnauthenticated();
     }

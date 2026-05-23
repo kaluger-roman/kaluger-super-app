@@ -29,7 +29,7 @@ export const InstallPrompt = () => {
 
   return (
     <Styled.Banner elevation={3}>
-      <div>
+      <Styled.TextWrapper>
         <Styled.Text>
           {isChrome
             ? "Установите приложение для быстрого доступа и push-уведомлений"
@@ -40,15 +40,17 @@ export const InstallPrompt = () => {
             Нажмите <Styled.ShareIcon /> → «На экран Домой»
           </Styled.IosInstruction>
         )}
-      </div>
+      </Styled.TextWrapper>
       {isChrome && (
         <Styled.InstallButton variant="contained" size="small" onClick={handleInstall}>
           Установить
         </Styled.InstallButton>
       )}
-      <IconButton size="small" onClick={handleDismiss}>
-        <CloseIcon fontSize="small" />
-      </IconButton>
+      <Styled.CloseButtonWrapper>
+        <IconButton size="small" onClick={handleDismiss}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Styled.CloseButtonWrapper>
     </Styled.Banner>
   );
 };

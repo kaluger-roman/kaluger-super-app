@@ -20,10 +20,12 @@ import { formatDate } from "../../model/tutor-student-invitation.helpers";
 
 type InvitationManagerProps = {
   studentId: string;
+  studentArchived?: boolean;
 };
 
 export const InvitationManager: FC<InvitationManagerProps> = ({
   studentId,
+  studentArchived = false,
 }) => {
   useGate(tutorStudentInvitationModel.InvitationManagerGate, { studentId });
 
@@ -76,11 +78,16 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
           <Typography variant="body2" color="text.secondary">
             Статус: ссылка не выдана.
           </Typography>
+          {studentArchived && (
+            <Alert severity="warning">
+              Архивированному ученику нельзя выдать приглашение — снимите архивацию.
+            </Alert>
+          )}
           <Button
             variant="contained"
             startIcon={<LinkIcon />}
             onClick={handleIssue}
-            disabled={isIssuing}
+            disabled={isIssuing || studentArchived}
           >
             {isIssuing ? "Создаём…" : "Создать ссылку-приглашение"}
           </Button>
@@ -112,11 +119,16 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
           <Typography variant="caption" color="text.secondary">
             Действительна до {formatDate(status.expiresAt)} или до первой регистрации.
           </Typography>
+          {studentArchived && (
+            <Alert severity="warning">
+              Ученик в архиве — новую ссылку выдать нельзя. Можно только отозвать текущую.
+            </Alert>
+          )}
           <Styled.ButtonsRow>
             <Button
               variant="outlined"
               onClick={handleIssue}
-              disabled={isIssuing}
+              disabled={isIssuing || studentArchived}
             >
               Создать новую (отозвать текущую)
             </Button>
@@ -138,12 +150,17 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
             Ссылка создана и ожидает регистрации ученика (с {formatDate(status.createdAt)}).
             Если ссылка потеряна, создайте новую — старая станет недействительной.
           </Alert>
+          {studentArchived && (
+            <Alert severity="warning">
+              Ученик в архиве — новую ссылку выдать нельзя. Можно только отозвать текущую.
+            </Alert>
+          )}
           <Styled.ButtonsRow>
             <Button
               variant="contained"
               startIcon={<LinkIcon />}
               onClick={handleIssue}
-              disabled={isIssuing}
+              disabled={isIssuing || studentArchived}
             >
               Создать новую (отозвать текущую)
             </Button>

@@ -63,4 +63,20 @@ export const StyledDialog = styled(Dialog)<StyledDialogProps>(({ theme, $isMobil
     borderRadius: $isMobile ? 0 : theme.spacing(2),
     maxHeight: $isMobile ? "100vh" : "90vh",
   },
+  // На macOS системные скроллбары скрыты — без явного фолбэка пользователь
+  // не понимает, что контент диалога можно прокручивать.
+  "& .MuiDialogContent-root": {
+    scrollbarWidth: "thin",
+    scrollbarColor: `${theme.palette.action.active} transparent`,
+    "&::-webkit-scrollbar": {
+      width: 8,
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.palette.action.active,
+      borderRadius: 4,
+    },
+    "&::-webkit-scrollbar-track": {
+      backgroundColor: "transparent",
+    },
+  },
 }));
