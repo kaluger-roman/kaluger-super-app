@@ -159,7 +159,7 @@ All dates in DB are UTC. User's timezone arrives via `X-Timezone` header (IANA s
 ## Code Style
 
 - Extract functions only if reused 2+ times
-- Minimal comments — only for non-obvious logic
+- **Minimal comments — default zero.** Перед написанием комментария спросить себя: «без него читатель ошибётся / потеряет важный контекст?» Если нет — удалить. Не писать «// эта функция делает X», «// Routes», «// Middleware», «// Validate input», «Регрессия #N» — имена/структура и git blame уже это говорят. Оставлять только: скрытые инварианты, обходы багов (с источником), неинтуитивные side-effects, спорные «почему именно так». Это применяется и к тестам — описательное `it("...")` уже даёт контекст
 - Always wrap controllers in try-catch
 - Return early for error cases
 - Use `truncateToMinute()` for lesson times

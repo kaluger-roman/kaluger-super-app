@@ -12,7 +12,10 @@ type StudentContactsProps = {
 
 export const StudentContacts: FC<StudentContactsProps> = ({ student }) => (
   <Box>
-    <Styled.SectionTitle variant="subtitle2">📞 Контакты</Styled.SectionTitle>
+    <Styled.SectionTitle variant="subtitle2">
+      <Styled.SectionEmoji aria-hidden>📞</Styled.SectionEmoji>
+      Контакты
+    </Styled.SectionTitle>
     {student.phone && (
       <Typography variant="body2" color="text.secondary">
         Телефон: {student.phone}

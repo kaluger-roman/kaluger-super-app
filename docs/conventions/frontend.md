@@ -271,7 +271,7 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 ## Code Style
 
 - Extract functions only if reused 2+ times
-- Minimal comments — only for non-obvious logic
+- **Minimal comments — default zero.** Перед написанием комментария спросить себя: «без него читатель ошибётся / потеряет важный контекст?» Если нет — удалить. Не писать «// эта функция делает X», «// Form fields», «// Effects», «// Reactions», «// Создаём store», «Регрессия #N» — имена/структура и git blame уже это говорят. Оставлять только: скрытые инварианты, обходы багов (с источником), неинтуитивные side-effects, спорные «почему именно так». Это применяется и к тестам — описательное `it("...")` уже даёт контекст
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian
 - Use `frontend/src/shared/lib/dateFormat.ts` for date formatting

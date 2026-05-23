@@ -1,7 +1,8 @@
 import { allSettled, fork } from "effector";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { studentAuthApi, studentInvitationsApi } from "@shared";
+import { studentUserModel } from "@entities";
+import { navigate, setStudentToken, studentAuthApi, studentInvitationsApi } from "@shared";
 
 import * as model from "../student-invite.model";
 
@@ -68,7 +69,7 @@ describe("features/studentAuth/models/student-invite.model", () => {
     await allSettled(model.formSubmitted, { scope, params: undefined });
 
     expect(studentAuthApi.registerByInvite).not.toHaveBeenCalled();
-    expect(scope.getState(model.$formError)).toBe("Введите ФИО");
+    expect(scope.getState(model.$formErrors)).toEqual(["Введите ФИО"]);
   });
 
   it("rejects submission when passwords do not match", async () => {
@@ -85,7 +86,7 @@ describe("features/studentAuth/models/student-invite.model", () => {
     await allSettled(model.formSubmitted, { scope, params: undefined });
 
     expect(studentAuthApi.registerByInvite).not.toHaveBeenCalled();
-    expect(scope.getState(model.$formError)).toBe("Пароли не совпадают");
+    expect(scope.getState(model.$formErrors)).toEqual(["Пароли не совпадают"]);
   });
 
   it("rejects submission when password fails policy", async () => {
@@ -102,7 +103,28 @@ describe("features/studentAuth/models/student-invite.model", () => {
     await allSettled(model.formSubmitted, { scope, params: undefined });
 
     expect(studentAuthApi.registerByInvite).not.toHaveBeenCalled();
-    expect(scope.getState(model.$formError)).toMatch(/Пароль должен/);
+    const errors = scope.getState(model.$formErrors);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/Пароль должен/);
+  });
+
+  it("collects multiple validation errors at once", async () => {
+    const scope = fork({
+      values: [
+        [model.$token, "raw"],
+        [model.$name, "Иван"],
+        [model.$email, "good@example.com"],
+        [model.$password, "weak"],
+        [model.$passwordConfirmation, "different"],
+      ],
+    });
+
+    await allSettled(model.formSubmitted, { scope, params: undefined });
+
+    const errors = scope.getState(model.$formErrors);
+    expect(errors).toHaveLength(2);
+    expect(errors.some((e) => /Пароль должен/.test(e))).toBe(true);
+    expect(errors).toContain("Пароли не совпадают");
   });
 
   it("submits when all fields are valid and clears error on success", async () => {
@@ -136,6 +158,69 @@ describe("features/studentAuth/models/student-invite.model", () => {
       password: "GoodPass1",
       passwordConfirmation: "GoodPass1",
     });
+    expect(setStudentToken).toHaveBeenCalledWith("jwt");
+    expect(navigate).toHaveBeenCalledWith("/student/cabinet", {
+      replace: true,
+    });
+  });
+
+  it("redirects to /student/cabinet when StudentInviteGate opens with an active session", async () => {
+    const scope = fork({
+      values: [
+        [studentUserModel.$studentSession, { id: "s-1", email: "e", name: "N", isEmailVerified: true, tutor: { name: "T" } }],
+      ],
+    });
+
+    await allSettled(model.StudentInviteGate.open, {
+      scope,
+      params: { token: "raw" },
+    });
+
+    expect(navigate).toHaveBeenCalledWith("/student/cabinet", {
+      replace: true,
+    });
+  });
+
+  it("redirects when session appears while StudentInviteGate is open", async () => {
+    const scope = fork();
+    await allSettled(model.StudentInviteGate.open, {
+      scope,
+      params: { token: "raw" },
+    });
+
+    vi.mocked(navigate).mockClear();
+
+    await allSettled(studentUserModel.studentSessionUpdated, {
+      scope,
+      params: {
+        id: "s-1",
+        email: "e",
+        name: "N",
+        isEmailVerified: true,
+        tutor: { name: "T" },
+      },
+    });
+
+    expect(navigate).toHaveBeenCalledWith("/student/cabinet", {
+      replace: true,
+    });
+  });
+
+  it("does not redirect on session change when StudentInviteGate is closed", async () => {
+    const scope = fork();
+
+    await allSettled(studentUserModel.studentSessionUpdated, {
+      scope,
+      params: {
+        id: "s-1",
+        email: "e",
+        name: "N",
+        isEmailVerified: true,
+        tutor: { name: "T" },
+      },
+    });
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("clears form fields and validation on formReset", async () => {

@@ -18,6 +18,10 @@ const renderAt = (path: string, sessionValue: unknown) => {
         <Routes>
           <Route path="/login" element={<div>LOGIN_PAGE</div>} />
           <Route
+            path="/student/verify-email"
+            element={<div>VERIFY_EMAIL_PAGE</div>}
+          />
+          <Route
             path="/student/cabinet/schedule"
             element={
               <StudentProtectedRoute
@@ -38,7 +42,7 @@ describe("StudentProtectedRoute", () => {
     expect(screen.queryByText("STUDENT_SCHEDULE")).not.toBeInTheDocument();
   });
 
-  it("renders the protected element when a student session exists", () => {
+  it("renders the protected element when a student session exists and email is verified", () => {
     renderAt("/student/cabinet/schedule", {
       id: "su-1",
       name: "Иван",
@@ -47,5 +51,17 @@ describe("StudentProtectedRoute", () => {
       tutor: { name: "Анна" },
     });
     expect(screen.getByText("STUDENT_SCHEDULE")).toBeInTheDocument();
+  });
+
+  it("redirects to /student/verify-email when session exists but email is not verified", () => {
+    renderAt("/student/cabinet/schedule", {
+      id: "su-1",
+      name: "Иван",
+      email: "i@example.com",
+      isEmailVerified: false,
+      tutor: { name: "Анна" },
+    });
+    expect(screen.getByText("VERIFY_EMAIL_PAGE")).toBeInTheDocument();
+    expect(screen.queryByText("STUDENT_SCHEDULE")).not.toBeInTheDocument();
   });
 });

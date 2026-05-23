@@ -22,6 +22,7 @@ export type Student = {
   archivedAt?: string | null;
   archiveReason?: ArchiveReason | null;
   archiveComment?: string | null;
+  studentUser?: { id: string } | null;
   createdAt: string;
   updatedAt: string;
 };

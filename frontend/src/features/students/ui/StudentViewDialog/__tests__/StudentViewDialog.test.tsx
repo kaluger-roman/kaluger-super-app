@@ -90,7 +90,7 @@ describe("StudentViewDialog", () => {
 
     it("should render StudentMeta section", () => {
       renderWithProviders(<StudentViewDialog open={true} student={mockStudent} />);
-      expect(screen.getByText("ℹ️ Информация")).toBeInTheDocument();
+      expect(screen.getByText("Информация")).toBeInTheDocument();
     });
   });
 
@@ -103,7 +103,7 @@ describe("StudentViewDialog", () => {
         parentPhone: null,
       };
       renderWithProviders(<StudentViewDialog open={true} student={studentWithContact} />);
-      expect(screen.getByText("📞 Контакты")).toBeInTheDocument();
+      expect(screen.getByText("Контакты")).toBeInTheDocument();
     });
 
     it("should render StudentContacts when student has phone", () => {
@@ -114,7 +114,7 @@ describe("StudentViewDialog", () => {
         parentPhone: null,
       };
       renderWithProviders(<StudentViewDialog open={true} student={studentWithPhone} />);
-      expect(screen.getByText("📞 Контакты")).toBeInTheDocument();
+      expect(screen.getByText("Контакты")).toBeInTheDocument();
     });
 
     it("should render StudentContacts when student has parent phone", () => {
@@ -125,7 +125,7 @@ describe("StudentViewDialog", () => {
         parentPhone: "+79997654321",
       };
       renderWithProviders(<StudentViewDialog open={true} student={studentWithParentPhone} />);
-      expect(screen.getByText("📞 Контакты")).toBeInTheDocument();
+      expect(screen.getByText("Контакты")).toBeInTheDocument();
     });
 
     it("should not render StudentContacts when student has no contacts", () => {
@@ -136,7 +136,7 @@ describe("StudentViewDialog", () => {
         parentPhone: null,
       };
       renderWithProviders(<StudentViewDialog open={true} student={studentWithoutContacts} />);
-      expect(screen.queryByText("📞 Контакты")).not.toBeInTheDocument();
+      expect(screen.queryByText("Контакты")).not.toBeInTheDocument();
     });
 
     it("should render StudentNotes when student has notes", () => {
@@ -356,9 +356,9 @@ describe("StudentViewDialog", () => {
       renderWithProviders(<StudentViewDialog open={true} student={mockStudent} />);
 
       expect(screen.getByText(/Иван Иванов/)).toBeInTheDocument();
-      expect(screen.getByText("📞 Контакты")).toBeInTheDocument();
+      expect(screen.getByText("Контакты")).toBeInTheDocument();
       expect(screen.getByText("🗒️ Заметки")).toBeInTheDocument();
-      expect(screen.getByText("ℹ️ Информация")).toBeInTheDocument();
+      expect(screen.getByText("Информация")).toBeInTheDocument();
     });
 
     it("should display minimal student information when only required fields are present", () => {
@@ -372,9 +372,9 @@ describe("StudentViewDialog", () => {
       renderWithProviders(<StudentViewDialog open={true} student={minimalStudent} />);
 
       expect(screen.getByText(/Минимальный студент/)).toBeInTheDocument();
-      expect(screen.queryByText("📞 Контакты")).not.toBeInTheDocument();
+      expect(screen.queryByText("Контакты")).not.toBeInTheDocument();
       expect(screen.queryByText("🗒️ Заметки")).not.toBeInTheDocument();
-      expect(screen.getByText("ℹ️ Информация")).toBeInTheDocument();
+      expect(screen.getByText("Информация")).toBeInTheDocument();
     });
 
     it("should display archived student information correctly", () => {

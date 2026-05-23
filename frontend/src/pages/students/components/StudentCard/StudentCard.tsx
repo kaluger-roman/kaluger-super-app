@@ -1,12 +1,18 @@
 import type { FC } from "react";
 
-import { MoreVert as MoreVertIcon, ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import {
-  Typography,
-  CardContent,
-  IconButton,
-  AccordionSummary,
+  CheckCircle as RegisteredIcon,
+  ExpandMore as ExpandMoreIcon,
+  MoreVert as MoreVertIcon,
+} from "@mui/icons-material";
+import {
   AccordionDetails,
+  AccordionSummary,
+  CardContent,
+  Chip,
+  IconButton,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 
 import { studentsModel } from "@features/students";
@@ -26,7 +32,20 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
         <Styled.CardContentBox>
           <Styled.HeaderBox>
             <Styled.ContentBox>
-              <Styled.StudentName variant="h6">{student.name}</Styled.StudentName>
+              <Styled.NameRow>
+                <Styled.StudentName variant="h6">{student.name}</Styled.StudentName>
+                {student.studentUser && (
+                  <Tooltip title="У ученика есть личный кабинет">
+                    <Chip
+                      icon={<RegisteredIcon />}
+                      color="success"
+                      size="small"
+                      label="Зарегистрирован"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Tooltip>
+                )}
+              </Styled.NameRow>
 
               {student.phone && (
                 <Typography variant="body2" color="text.secondary">

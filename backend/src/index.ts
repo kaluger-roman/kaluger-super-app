@@ -10,6 +10,11 @@ import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 import { processScheduledReminders, runBackupJob } from "./services";
+import { validateRequiredEnv } from "./utils/validateEnv";
+
+if (process.env.NODE_ENV !== "test") {
+  validateRequiredEnv();
+}
 
 import authRoutes from "./routes/auth";
 import studentRoutes from "./routes/students";
@@ -33,7 +38,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
@@ -65,11 +70,11 @@ app.use(
     err: Error,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    next: express.NextFunction,
   ) => {
     console.error(err.stack);
     res.status(500).json({ error: "Something went wrong!" });
-  }
+  },
 );
 
 // 404 handler
@@ -91,7 +96,7 @@ if (process.env.NODE_ENV !== "test") {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
     console.log(
-      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`
+      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`,
     );
 
     const CRON_TIMEZONE = "Europe/Moscow";
@@ -106,7 +111,7 @@ if (process.env.NODE_ENV !== "test") {
           console.error("Error in recurring lessons cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -118,7 +123,7 @@ if (process.env.NODE_ENV !== "test") {
           console.error("Error in lesson status update cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -130,7 +135,7 @@ if (process.env.NODE_ENV !== "test") {
           console.error("Error in reminder processing cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -142,7 +147,7 @@ if (process.env.NODE_ENV !== "test") {
           console.error("Error in database backup cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     console.log(`Cron jobs scheduled (timezone: ${CRON_TIMEZONE}):`);

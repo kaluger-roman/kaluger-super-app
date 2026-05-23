@@ -2,9 +2,25 @@ import { Box, Dialog, DialogActions, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
+// inline-flex с gap'ом для эмоджи: пробел между глифом эмодзи и текстом
+// нестабилен на разных шрифтах.
 export const SectionTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   marginBottom: theme.spacing(1),
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+}));
+
+export const SectionEmoji = styled("span")({
+  display: "inline-block",
+  lineHeight: 1,
+});
+
+export const IconRow = styled(Typography)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
 }));
 
 type ActionsContainerProps = {

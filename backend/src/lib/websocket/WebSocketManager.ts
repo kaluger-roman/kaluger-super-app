@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { Server } from "http";
+import { Server, IncomingMessage } from "http";
+import { Socket } from "net";
 import type {
   AuthenticatedStudentWebSocket,
   AuthenticatedWebSocket,
@@ -9,6 +10,12 @@ import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
 import type { StudentLessonWsEvent } from "../../types";
 
+// `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
+// на одном HTTP, привязанные через `path`, конфликтуют — первый при path
+// mismatch вызывает `socket.destroy()` и убивает рукопожатие второго.
+const TUTOR_WS_PATH = "/ws";
+const STUDENT_WS_PATH = "/ws/student";
+
 export class WebSocketManager {
   private wss: WebSocketServer;
   private studentWss: WebSocketServer;
@@ -17,20 +24,39 @@ export class WebSocketManager {
     new Map();
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({
-      server,
-      path: "/ws",
-    });
+    this.wss = new WebSocketServer({ noServer: true });
     this.wss.on("connection", this.handleConnection.bind(this));
 
-    this.studentWss = new WebSocketServer({
-      server,
-      path: "/ws/student",
-    });
+    this.studentWss = new WebSocketServer({ noServer: true });
     this.studentWss.on(
       "connection",
       this.handleStudentConnection.bind(this)
     );
+
+    server.on("upgrade", this.handleUpgrade.bind(this));
+  }
+
+  private handleUpgrade(
+    request: IncomingMessage,
+    socket: Socket,
+    head: Buffer
+  ) {
+    const rawUrl = request.url ?? "/";
+    const pathname = rawUrl.split("?", 1)[0];
+
+    if (pathname === TUTOR_WS_PATH) {
+      this.wss.handleUpgrade(request, socket, head, (ws) => {
+        this.wss.emit("connection", ws, request);
+      });
+      return;
+    }
+    if (pathname === STUDENT_WS_PATH) {
+      this.studentWss.handleUpgrade(request, socket, head, (ws) => {
+        this.studentWss.emit("connection", ws, request);
+      });
+      return;
+    }
+    socket.destroy();
   }
 
   private async handleConnection(ws: AuthenticatedWebSocket, request: any) {
@@ -119,12 +145,8 @@ export class WebSocketManager {
       }
     }
 
-    this.studentClients.set(decoded.studentUserId, ws);
-
-    console.log(
-      `Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`
-    );
-
+    // Регистрируем close/error handlers ДО `set`, иначе синхронный close
+    // между set и регистрацией оставит запись-сироту в studentClients.
     ws.on("close", () => {
       console.log(
         `Student WebSocket disconnected: ${decoded.email} (${decoded.studentUserId})`
@@ -144,8 +166,18 @@ export class WebSocketManager {
       }
     });
 
-    // Students do not send messages in MVP — silently ignore any inbound.
     ws.on("message", () => {});
+
+    // Если socket закрылся, пока шёл async auth, не сохраняем мёртвую запись.
+    if (ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.studentClients.set(decoded.studentUserId, ws);
+
+    console.log(
+      `Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`
+    );
   }
 
   // Method to broadcast lesson status changes to all connected clients

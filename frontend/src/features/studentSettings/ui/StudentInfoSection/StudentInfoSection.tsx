@@ -4,7 +4,7 @@ import {
   CheckCircle as VerifiedIcon,
   WarningAmber as UnverifiedIcon,
 } from "@mui/icons-material";
-import { Box, Chip, Stack, Typography } from "@mui/material";
+import { Chip, Stack, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import * as Styled from "./StudentInfoSection.styled";
@@ -20,36 +20,32 @@ export const StudentInfoSection: FC = () => {
       <Typography variant="subtitle1" fontWeight={600} gutterBottom>
         Ваши данные
       </Typography>
-      <Stack gap={1}>
-        <Box>
-          <Typography variant="caption" color="text.secondary">
-            ФИО
-          </Typography>
+      <Stack gap={2}>
+        <Styled.Field>
+          <Styled.FieldLabel>ФИО</Styled.FieldLabel>
           <Typography variant="body1">{info.name}</Typography>
-        </Box>
-        <Box display="flex" gap={1} alignItems="center">
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Email
-            </Typography>
+        </Styled.Field>
+        <Styled.Field>
+          <Styled.FieldLabel>Email</Styled.FieldLabel>
+          <Styled.EmailRow>
             <Typography variant="body1">{info.email}</Typography>
-          </Box>
-          {info.isEmailVerified ? (
-            <Chip
-              icon={<VerifiedIcon />}
-              color="success"
-              size="small"
-              label="Подтверждён"
-            />
-          ) : (
-            <Chip
-              icon={<UnverifiedIcon />}
-              color="warning"
-              size="small"
-              label="Не подтверждён"
-            />
-          )}
-        </Box>
+            {info.isEmailVerified ? (
+              <Chip
+                icon={<VerifiedIcon />}
+                color="success"
+                size="small"
+                label="Подтверждён"
+              />
+            ) : (
+              <Chip
+                icon={<UnverifiedIcon />}
+                color="warning"
+                size="small"
+                label="Не подтверждён"
+              />
+            )}
+          </Styled.EmailRow>
+        </Styled.Field>
         <Typography variant="caption" color="text.secondary">
           Для изменения данных обратитесь к преподавателю.
         </Typography>

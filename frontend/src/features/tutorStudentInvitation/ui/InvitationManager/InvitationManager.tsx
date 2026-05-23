@@ -72,18 +72,26 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
       )}
 
       {status?.status === "not_issued" && !ephemeralInviteUrl && (
-        <Button
-          variant="contained"
-          startIcon={<LinkIcon />}
-          onClick={handleIssue}
-          disabled={isIssuing}
-        >
-          {isIssuing ? "Создаём…" : "Создать ссылку-приглашение"}
-        </Button>
+        <>
+          <Typography variant="body2" color="text.secondary">
+            Статус: ссылка не выдана.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<LinkIcon />}
+            onClick={handleIssue}
+            disabled={isIssuing}
+          >
+            {isIssuing ? "Создаём…" : "Создать ссылку-приглашение"}
+          </Button>
+        </>
       )}
 
       {status?.status === "pending" && ephemeralInviteUrl && (
         <>
+          <Typography variant="body2" color="text.secondary">
+            Статус: ожидает регистрации.
+          </Typography>
           <Styled.InfoAlert severity="info">
             Скопируйте ссылку и отправьте ученику. Повторно посмотреть её
             будет нельзя — только создать новую.

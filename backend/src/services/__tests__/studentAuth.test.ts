@@ -132,6 +132,30 @@ describe("studentAuth service", () => {
       expect(result.ok).toBe(false);
     });
 
+    it("fails before any DB mutation when STUDENT_JWT_SECRET is missing", async () => {
+      const dto = await buildDto();
+      const original = process.env.STUDENT_JWT_SECRET;
+      delete process.env.STUDENT_JWT_SECRET;
+      try {
+        await expect(registerStudentByInvite(dto)).rejects.toThrow(
+          "STUDENT_JWT_SECRET is not set"
+        );
+
+        const user = await prisma.studentUser.findUnique({
+          where: { email: dto.email },
+        });
+        expect(user).toBeNull();
+
+        const invitations = await prisma.studentInvitation.findMany({
+          where: { studentId },
+        });
+        expect(invitations).toHaveLength(1);
+        expect(invitations[0].status).toBe("PENDING");
+      } finally {
+        process.env.STUDENT_JWT_SECRET = original;
+      }
+    });
+
     it("returns 410 for an already-used invitation", async () => {
       const dto = await buildDto();
       const first = await registerStudentByInvite(dto);

@@ -9,13 +9,16 @@ type StudentProtectedRouteProps = {
   element: ReactElement;
 };
 
-export const StudentProtectedRoute: FC<StudentProtectedRouteProps> = ({
-  element,
-}) => {
+export const StudentProtectedRoute: FC<StudentProtectedRouteProps> = ({ element }) => {
   const isAuthenticated = useUnit(studentUserModel.$isStudentAuthenticated);
+  const session = useUnit(studentUserModel.$studentSession);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (session && !session.isEmailVerified) {
+    return <Navigate to="/student/verify-email" replace />;
   }
 
   return element;

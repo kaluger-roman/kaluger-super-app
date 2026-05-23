@@ -16,6 +16,7 @@ import {
   StudentInvitePage,
   StudentSchedulePage,
   StudentSettingsPage,
+  StudentVerifyEmailPage,
 } from "@pages";
 import { DashboardPage } from "@pages/dashboard";
 import { LessonsPage } from "@pages/lessons";
@@ -120,6 +121,10 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
       <Route
         path="/student-invite/:token"
         element={<StudentInvitePage />}
+      />
+      <Route
+        path="/student/verify-email"
+        element={<StudentVerifyEmailPage />}
       />
       <Route
         path="/student/cabinet"

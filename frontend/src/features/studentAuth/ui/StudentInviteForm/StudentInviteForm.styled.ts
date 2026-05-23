@@ -16,3 +16,8 @@ export const FieldsBox = styled(Box)({
   flexDirection: "column",
   gap: "12px",
 });
+
+export const ErrorList = styled("ul")({
+  margin: 0,
+  paddingInlineStart: "20px",
+});

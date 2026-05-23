@@ -9,6 +9,12 @@ const getStudentJwtSecret = (): string => {
   return secret;
 };
 
+// Вызывать ДО DB-мутаций, чтобы при отсутствующем секрете не оставлять
+// полусозданный StudentUser с погашенной ссылкой.
+export const assertStudentAuthConfigured = (): void => {
+  getStudentJwtSecret();
+};
+
 export const generateStudentToken = (
   payload: StudentJwtPayload
 ): string => {

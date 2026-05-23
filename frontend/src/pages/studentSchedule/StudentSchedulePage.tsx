@@ -5,13 +5,14 @@ import {
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { Alert, Button, Typography } from "@mui/material";
-import { useUnit } from "effector-react";
+import { useGate, useUnit } from "effector-react";
 
 import { StudentWeeklyView, formatRangeLabel, studentScheduleModel } from "@features";
 
 import * as Styled from "./StudentSchedulePage.styled";
 
 export const StudentSchedulePage: FC = () => {
+  useGate(studentScheduleModel.StudentSchedulePageGate);
   const weekStart = useUnit(studentScheduleModel.$weekStart);
   const lessons = useUnit(studentScheduleModel.$lessons);
   const loadError = useUnit(studentScheduleModel.$loadError);

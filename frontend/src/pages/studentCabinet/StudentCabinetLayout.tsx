@@ -2,14 +2,12 @@ import type { FC } from "react";
 import { useState } from "react";
 
 import { Menu as MenuIcon } from "@mui/icons-material";
-import { Typography } from "@mui/material";
-import { useGate, useUnit } from "effector-react";
+import { useGate } from "effector-react";
 import { Outlet } from "react-router-dom";
 
 import { studentUserModel } from "@entities";
 import { StudentSidebar } from "@widgets";
 
-import { StudentEmailVerificationBanner } from "./components";
 import { DRAWER_WIDTH } from "./StudentCabinetLayout.constants";
 import * as Styled from "./StudentCabinetLayout.styled";
 
@@ -17,8 +15,6 @@ export const StudentCabinetLayout: FC = () => {
   useGate(studentUserModel.StudentCabinetGate);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const session = useUnit(studentUserModel.$studentSession);
 
   return (
     <Styled.RootBox>
@@ -31,9 +27,9 @@ export const StudentCabinetLayout: FC = () => {
           >
             <MenuIcon />
           </Styled.MenuButton>
-          <Typography variant="h6" component="div">
+          <Styled.HeaderTitle variant="h6">
             Кабинет ученика
-          </Typography>
+          </Styled.HeaderTitle>
         </Styled.StyledToolbar>
       </Styled.StyledAppBar>
 
@@ -44,9 +40,6 @@ export const StudentCabinetLayout: FC = () => {
       />
 
       <Styled.ContentBox>
-        {session && !session.isEmailVerified && (
-          <StudentEmailVerificationBanner />
-        )}
         <Outlet />
       </Styled.ContentBox>
     </Styled.RootBox>

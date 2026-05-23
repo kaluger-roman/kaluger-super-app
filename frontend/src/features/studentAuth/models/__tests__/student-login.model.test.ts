@@ -1,6 +1,7 @@
 import { allSettled, fork } from "effector";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { userModel } from "@entities";
 import { studentAuthApi } from "@shared";
 
 import * as model from "../student-login.model";
@@ -63,6 +64,29 @@ describe("features/studentAuth/models/student-login.model", () => {
     expect(scope.getState(model.$studentLoginError)).toBe(
       "Неверный email или пароль"
     );
+  });
+
+  it("clears the lingering authToken on successful student login", async () => {
+    vi.mocked(studentAuthApi.login).mockResolvedValueOnce({
+      token: "jwt",
+      student: {
+        id: "su-1",
+        email: "s@example.com",
+        name: "S",
+        isEmailVerified: true,
+        tutor: { name: "T" },
+      },
+    });
+    localStorage.setItem("authToken", "stale-tutor-token");
+
+    const scope = fork();
+    await allSettled(model.studentLoginRequested, {
+      scope,
+      params: { email: "s@example.com", password: "GoodPass1" },
+    });
+
+    expect(localStorage.getItem("authToken")).toBeNull();
+    expect(scope.getState(userModel.$user)).toBeNull();
   });
 
   it("clears the previous error when a new login is requested", async () => {

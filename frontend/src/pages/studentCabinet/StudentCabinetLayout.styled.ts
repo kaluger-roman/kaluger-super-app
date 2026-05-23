@@ -1,4 +1,4 @@
-import { AppBar, Box, IconButton, Toolbar } from "@mui/material";
+import { AppBar, Box, IconButton, Toolbar, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -19,9 +19,14 @@ export const StyledToolbar = styled(Toolbar)({
   gap: "12px",
 });
 
-export const MenuButton = styled(IconButton)({
-  color: "inherit",
-});
+export const HeaderTitle = styled(Typography)(({ theme }) => ({
+  color: theme.palette.primary.contrastText,
+  fontWeight: 600,
+}));
+
+export const MenuButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.contrastText,
+}));
 
 export const ContentBox = styled(Box)({
   flex: 1,

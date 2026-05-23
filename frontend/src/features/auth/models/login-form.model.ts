@@ -4,6 +4,7 @@ import { createGate } from "effector-react";
 import { userModel, verificationModel } from "@entities";
 import {
   authApi,
+  clearStudentToken,
   extractAxiosError,
   navigate,
   notificationsModel,
@@ -94,7 +95,15 @@ sample({
   target: $loginError,
 });
 
-// Update user and token on success
+const clearStudentTokenFx = createEffect(() => {
+  clearStudentToken();
+});
+
+sample({
+  clock: loginFx.doneData,
+  target: clearStudentTokenFx,
+});
+
 sample({
   clock: loginFx.doneData,
   fn: ({ response }) => response.user,

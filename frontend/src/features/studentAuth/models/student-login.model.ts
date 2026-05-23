@@ -5,12 +5,12 @@ import {
   sample,
 } from "effector";
 
-import { studentUserModel } from "@entities";
+import { studentUserModel, userModel } from "@entities";
+import { loginFormModel } from "@features/auth/models";
 import type { StudentAuthResponse, StudentLoginRequest } from "@shared";
 import { navigate, setStudentToken, studentAuthApi } from "@shared";
 
 import { extractAxiosError } from "./student-auth.helpers";
-import { loginRoleToggled } from "../../auth/models/login-form.model";
 
 export const studentLoginRequested = createEvent<StudentLoginRequest>();
 
@@ -46,6 +46,11 @@ sample({
 
 sample({
   clock: studentLoginFx.doneData,
+  target: userModel.tutorSessionCleared,
+});
+
+sample({
+  clock: studentLoginFx.doneData,
   fn: (data) => data.student,
   target: studentUserModel.studentSessionUpdated,
 });
@@ -61,11 +66,8 @@ sample({
   target: $studentLoginError,
 });
 
-// Clear stale student error when user switches the login role toggle —
-// otherwise the error from a previous student attempt persists after toggling
-// to tutor and back to student.
 sample({
-  clock: loginRoleToggled,
+  clock: loginFormModel.loginRoleToggled,
   fn: () => null,
   target: $studentLoginError,
 });

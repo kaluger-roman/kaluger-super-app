@@ -1,18 +1,12 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
+import { createGate } from "effector-react";
 
 import type { StudentLessonsByWeekResponse, StudentVisibleLesson } from "@shared";
 import { studentCabinetApi } from "@shared";
 
-import {
-  addDays,
-  getWeekStart,
-  toIsoDate,
-} from "./student-schedule.helpers";
+import { addDays, getWeekStart, toIsoDate } from "./student-schedule.helpers";
+
+export const StudentSchedulePageGate = createGate();
 
 export const $weekStart = createStore<Date>(getWeekStart(new Date()));
 export const $lessons = createStore<StudentVisibleLesson[]>([]);
@@ -61,6 +55,12 @@ sample({
 sample({ clock: $weekStart, target: loadLessonsFx });
 
 sample({
+  clock: StudentSchedulePageGate.open,
+  source: $weekStart,
+  target: loadLessonsFx,
+});
+
+sample({
   clock: loadLessonsFx.doneData,
   fn: (data) => data.lessons,
   target: $lessons,
@@ -79,10 +79,7 @@ sample({
 });
 
 // WS-driven reactions: реагируем на события только если урок попадает в видимую неделю.
-const isLessonInWeek = (
-  weekStart: Date,
-  lesson: { startTime: string }
-): boolean => {
+const isLessonInWeek = (weekStart: Date, lesson: { startTime: string }): boolean => {
   const start = new Date(weekStart);
   const end = addDays(start, 7);
   const lessonStart = new Date(lesson.startTime);
@@ -96,8 +93,7 @@ sample({
     if (!isLessonInWeek(weekStart, lesson)) return lessons;
     if (lessons.some((existing) => existing.id === lesson.id)) return lessons;
     return [...lessons, lesson].sort(
-      (a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
   },
   target: $lessons,
@@ -111,17 +107,14 @@ sample({
     const fitsWeek = isLessonInWeek(weekStart, lesson);
 
     if (wasVisible && fitsWeek) {
-      return lessons.map((existing) =>
-        existing.id === lesson.id ? lesson : existing
-      );
+      return lessons.map((existing) => (existing.id === lesson.id ? lesson : existing));
     }
     if (wasVisible && !fitsWeek) {
       return lessons.filter((existing) => existing.id !== lesson.id);
     }
     if (!wasVisible && fitsWeek) {
       return [...lessons, lesson].sort(
-        (a, b) =>
-          new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
       );
     }
     return lessons;

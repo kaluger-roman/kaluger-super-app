@@ -13,7 +13,7 @@ export const StudentInviteForm: FC = () => {
   const passwordConfirmation = useUnit(
     studentInviteModel.$passwordConfirmation
   );
-  const formError = useUnit(studentInviteModel.$formError);
+  const formErrors = useUnit(studentInviteModel.$formErrors);
   const validationState = useUnit(studentInviteModel.$validationState);
   const isRegistering = useUnit(studentInviteModel.$isRegistering);
 
@@ -33,7 +33,19 @@ export const StudentInviteForm: FC = () => {
         </Typography>
       )}
 
-      {formError && <Alert severity="error">{formError}</Alert>}
+      {formErrors.length > 0 && (
+        <Alert severity="error">
+          {formErrors.length === 1 ? (
+            formErrors[0]
+          ) : (
+            <Styled.ErrorList>
+              {formErrors.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </Styled.ErrorList>
+          )}
+        </Alert>
+      )}
 
       <Styled.FieldsBox>
         <TextField

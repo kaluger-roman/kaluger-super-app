@@ -1,9 +1,4 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { studentUserModel } from "@entities";
@@ -41,22 +36,28 @@ export const passwordChanged = createEvent<string>();
 export const $passwordConfirmation = createStore<string>("");
 export const passwordConfirmationChanged = createEvent<string>();
 
-export const $formError = createStore<string | null>(null);
-export const $validationState = createStore<ValidateInvitationResponse | null>(
-  null
-);
+export const $formErrors = createStore<string[]>([]);
+export const $validationState = createStore<ValidateInvitationResponse | null>(null);
 
 export const formSubmitted = createEvent();
 export const formReset = createEvent();
 
-export const validateInvitationTokenFx = createEffect(
-  async (token: string) => studentInvitationsApi.validateToken(token)
+export const validateInvitationTokenFx = createEffect(async (token: string) =>
+  studentInvitationsApi.validateToken(token)
 );
 
 export const registerStudentByInviteFx = createEffect(
   async (dto: StudentRegisterByInviteRequest): Promise<StudentAuthResponse> =>
     studentAuthApi.registerByInvite(dto)
 );
+
+const persistStudentTokenFx = createEffect((data: StudentAuthResponse) => {
+  setStudentToken(data.token);
+});
+
+const navigateToStudentCabinetFx = createEffect(() => {
+  navigate("/student/cabinet", { replace: true });
+});
 
 export const $isValidating = validateInvitationTokenFx.pending;
 export const $isRegistering = registerStudentByInviteFx.pending;
@@ -91,35 +92,27 @@ sample({
 });
 
 sample({
-  clock: [
-    nameChanged,
-    emailChanged,
-    passwordChanged,
-    passwordConfirmationChanged,
-  ],
-  fn: () => null,
-  target: $formError,
+  clock: [nameChanged, emailChanged, passwordChanged, passwordConfirmationChanged],
+  fn: () => [] as string[],
+  target: $formErrors,
 });
 
-const validateLocalForm = (state: {
+const collectLocalErrors = (state: {
   name: string;
   email: string;
   password: string;
   passwordConfirmation: string;
-}): string | null => {
-  if (!isValidName(state.name)) {
-    return "Введите ФИО";
-  }
-  if (!isValidEmail(state.email)) {
-    return "Введите корректный email";
-  }
+}): string[] => {
+  const errors: string[] = [];
+  if (!isValidName(state.name)) errors.push("Введите ФИО");
+  if (!isValidEmail(state.email)) errors.push("Введите корректный email");
   if (!isValidPassword(state.password)) {
-    return "Пароль должен содержать минимум 8 символов, заглавную и строчную буквы, цифру";
+    errors.push("Пароль должен содержать минимум 8 символов, заглавную и строчную буквы, цифру");
   }
   if (state.password !== state.passwordConfirmation) {
-    return "Пароли не совпадают";
+    errors.push("Пароли не совпадают");
   }
-  return null;
+  return errors;
 };
 
 sample({
@@ -131,7 +124,7 @@ sample({
     password: $password,
     passwordConfirmation: $passwordConfirmation,
   },
-  filter: (state) => validateLocalForm(state) === null,
+  filter: (state) => collectLocalErrors(state).length === 0,
   target: registerStudentByInviteFx,
 });
 
@@ -143,16 +136,14 @@ sample({
     password: $password,
     passwordConfirmation: $passwordConfirmation,
   },
-  filter: (state) => validateLocalForm(state) !== null,
-  fn: (state) => validateLocalForm(state) ?? "",
-  target: $formError,
+  filter: (state) => collectLocalErrors(state).length > 0,
+  fn: (state) => collectLocalErrors(state),
+  target: $formErrors,
 });
 
 sample({
   clock: registerStudentByInviteFx.doneData,
-  target: createEffect((data: StudentAuthResponse) => {
-    setStudentToken(data.token);
-  }),
+  target: persistStudentTokenFx,
 });
 
 sample({
@@ -163,15 +154,27 @@ sample({
 
 sample({
   clock: registerStudentByInviteFx.done,
-  target: createEffect(() => {
-    navigate("/student/cabinet", { replace: true });
-  }),
+  target: navigateToStudentCabinetFx,
+});
+
+sample({
+  clock: StudentInviteGate.open,
+  source: studentUserModel.$studentSession,
+  filter: Boolean,
+  target: navigateToStudentCabinetFx,
+});
+
+sample({
+  clock: studentUserModel.$studentSession,
+  source: StudentInviteGate.status,
+  filter: (gateOpen, session) => gateOpen && session !== null,
+  target: navigateToStudentCabinetFx,
 });
 
 sample({
   clock: registerStudentByInviteFx.failData,
-  fn: extractAxiosError,
-  target: $formError,
+  fn: (err) => [extractAxiosError(err)],
+  target: $formErrors,
 });
 
 sample({
@@ -182,6 +185,12 @@ sample({
 
 sample({
   clock: formReset,
+  fn: () => [] as string[],
+  target: $formErrors,
+});
+
+sample({
+  clock: formReset,
   fn: () => null,
-  target: [$formError, $validationState],
+  target: $validationState,
 });

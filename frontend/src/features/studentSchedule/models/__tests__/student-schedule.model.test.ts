@@ -161,6 +161,24 @@ describe("features/studentSchedule/models/student-schedule.model", () => {
     expect(lessons.map((l) => l.id)).toEqual(["l-2"]);
   });
 
+  it("loads lessons on Gate.open without any week change", async () => {
+    vi.mocked(studentCabinetApi.getLessonsByWeek).mockResolvedValueOnce({
+      weekStart: "2026-05-04",
+      lessons: [makeLesson({ id: "l-initial" })],
+    });
+
+    const scope = fork({
+      values: [[model.$weekStart, new Date("2026-05-04T00:00:00.000Z")]],
+    });
+    await allSettled(model.StudentSchedulePageGate.open, {
+      scope,
+      params: undefined as unknown as void,
+    });
+
+    expect(studentCabinetApi.getLessonsByWeek).toHaveBeenCalledTimes(1);
+    expect(scope.getState(model.$lessons)).toHaveLength(1);
+  });
+
   it("lessonStatusUpdated mutates only the status field", async () => {
     const existing = makeLesson();
     const scope = fork({

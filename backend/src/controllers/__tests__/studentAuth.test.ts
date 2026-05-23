@@ -103,6 +103,161 @@ describe("studentAuth + studentInvitations controllers", () => {
         .set("Authorization", `Bearer ${tutorToken}`);
       expect(res.status).toBe(409);
     });
+
+    it("returns 401 without auth token", async () => {
+      const res = await request(app).post(
+        `/api/students/${studentId}/invitations`
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 404 for unknown student id", async () => {
+      const res = await request(app)
+        .post(`/api/students/00000000-0000-0000-0000-000000000000/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 409 for archived student", async () => {
+      const archived = await prisma.student.create({
+        data: { name: "Архивный", tutorId, archived: true },
+      });
+      const res = await request(app)
+        .post(`/api/students/${archived.id}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(409);
+      await prisma.student.delete({ where: { id: archived.id } });
+    });
+  });
+
+  describe("GET /api/students/:id/invitations", () => {
+    it("returns 401 without auth token", async () => {
+      const res = await request(app).get(
+        `/api/students/${studentId}/invitations`
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 404 for unknown student", async () => {
+      const res = await request(app)
+        .get(`/api/students/00000000-0000-0000-0000-000000000000/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 403 for non-owner tutor", async () => {
+      const other = await prisma.user.create({
+        data: {
+          email: faker.internet.email().toLowerCase(),
+          password: "hash",
+          name: "Чужой",
+          isEmailVerified: true,
+        },
+      });
+      const otherToken = generateToken({
+        userId: other.id,
+        email: other.email,
+      });
+      const res = await request(app)
+        .get(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${otherToken}`);
+      expect(res.status).toBe(403);
+      await prisma.user.delete({ where: { id: other.id } });
+    });
+
+    it("returns not_issued when no invitation exists", async () => {
+      const res = await request(app)
+        .get(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ status: "not_issued" });
+    });
+
+    it("returns pending after issue", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+
+      const res = await request(app)
+        .get(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("pending");
+      expect(typeof res.body.createdAt).toBe("string");
+      expect(typeof res.body.expiresAt).toBe("string");
+    });
+
+    it("returns registered when student already has an account", async () => {
+      const email = faker.internet.email().toLowerCase();
+      await prisma.studentUser.create({
+        data: { email, password: "hash", name: "Реги", studentId },
+      });
+      const res = await request(app)
+        .get(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        status: "registered",
+        studentEmail: email,
+      });
+    });
+  });
+
+  describe("DELETE /api/students/:id/invitations", () => {
+    it("returns 401 without auth token", async () => {
+      const res = await request(app).delete(
+        `/api/students/${studentId}/invitations`
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 404 for unknown student", async () => {
+      const res = await request(app)
+        .delete(`/api/students/00000000-0000-0000-0000-000000000000/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 403 for non-owner tutor", async () => {
+      const other = await prisma.user.create({
+        data: {
+          email: faker.internet.email().toLowerCase(),
+          password: "hash",
+          name: "Чужой",
+          isEmailVerified: true,
+        },
+      });
+      const otherToken = generateToken({
+        userId: other.id,
+        email: other.email,
+      });
+      const res = await request(app)
+        .delete(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${otherToken}`);
+      expect(res.status).toBe(403);
+      await prisma.user.delete({ where: { id: other.id } });
+    });
+
+    it("returns 204 and marks pending invitation as REVOKED", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+
+      const res = await request(app)
+        .delete(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(204);
+
+      const pending = await prisma.studentInvitation.findFirst({
+        where: { studentId, status: "PENDING" },
+      });
+      expect(pending).toBeNull();
+    });
+
+    it("returns 204 even when there is nothing to revoke", async () => {
+      const res = await request(app)
+        .delete(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(204);
+    });
   });
 
   describe("POST /api/student-auth/register", () => {
@@ -170,6 +325,57 @@ describe("studentAuth + studentInvitations controllers", () => {
         "/api/student-invitations/validate/totally-unknown"
       );
       expect(res.status).toBe(200);
+      expect(res.body).toEqual({ valid: false });
+    });
+
+    it("returns valid:false for expired token", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+      const token = issued.inviteUrl.split("/").pop()!;
+
+      await prisma.studentInvitation.updateMany({
+        where: { studentId, status: "PENDING" },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+
+      const res = await request(app).get(
+        `/api/student-invitations/validate/${token}`
+      );
+      expect(res.body).toEqual({ valid: false });
+    });
+
+    it("returns valid:false for revoked token", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+      const token = issued.inviteUrl.split("/").pop()!;
+
+      await request(app)
+        .delete(`/api/students/${studentId}/invitations`)
+        .set("Authorization", `Bearer ${tutorToken}`);
+
+      const res = await request(app).get(
+        `/api/student-invitations/validate/${token}`
+      );
+      expect(res.body).toEqual({ valid: false });
+    });
+
+    it("returns valid:false when student already registered", async () => {
+      const issued = await issueInvitation(tutorId, studentId);
+      if (!issued.ok) throw new Error("issue failed");
+      const token = issued.inviteUrl.split("/").pop()!;
+
+      await prisma.studentUser.create({
+        data: {
+          email: faker.internet.email().toLowerCase(),
+          password: "hash",
+          name: "Реги",
+          studentId,
+        },
+      });
+
+      const res = await request(app).get(
+        `/api/student-invitations/validate/${token}`
+      );
       expect(res.body).toEqual({ valid: false });
     });
   });
