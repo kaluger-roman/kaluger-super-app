@@ -1,8 +1,9 @@
 import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { studentUserModel, userModel } from "@entities";
 import { loginFormModel } from "@features/auth";
-import { studentsApi, lessonsApi, authApi } from "@shared";
+import { studentsApi, lessonsApi, authApi, studentAuthApi } from "@shared";
 
 import {
   $appInitialized,
@@ -22,6 +23,10 @@ vi.mock("@shared", async () => {
     },
     authApi: {
       login: vi.fn(),
+      getProfile: vi.fn(),
+    },
+    studentAuthApi: {
+      getProfile: vi.fn(),
     },
     navigate: vi.fn(),
   };
@@ -109,6 +114,78 @@ describe("app/model/app-init.model", () => {
       const scope = fork();
 
       await allSettled(appBootedUnauthenticated, { scope });
+
+      expect(scope.getState($appInitialized)).toBe(true);
+      expect(studentsApi.getAll).not.toHaveBeenCalled();
+      expect(lessonsApi.getUpcoming).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("boot orchestration", () => {
+    it("tutor boot — getProfileFx.done triggers initializeApp (loads tutor data)", async () => {
+      vi.mocked(authApi.getProfile).mockResolvedValue({
+        id: "u1",
+        email: "tutor@test.com",
+        name: "Tutor",
+        createdAt: "2026-05-23T00:00:00Z",
+        isEmailVerified: true,
+        taxEnabled: false,
+      });
+      vi.mocked(studentsApi.getAll).mockResolvedValue([]);
+      vi.mocked(lessonsApi.getUpcoming).mockResolvedValue({
+        lessons: [],
+        pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
+
+      const scope = fork();
+
+      await allSettled(userModel.getProfileFx, { scope });
+
+      expect(studentsApi.getAll).toHaveBeenCalled();
+      expect(lessonsApi.getUpcoming).toHaveBeenCalled();
+      expect(scope.getState($appInitialized)).toBe(true);
+    });
+
+    it("tutor boot — getProfileFx.fail marks app initialized but does NOT load tutor data", async () => {
+      vi.mocked(authApi.getProfile).mockRejectedValue({
+        response: { status: 401 },
+      });
+
+      const scope = fork();
+
+      await allSettled(userModel.getProfileFx, { scope });
+
+      expect(scope.getState($appInitialized)).toBe(true);
+      expect(studentsApi.getAll).not.toHaveBeenCalled();
+      expect(lessonsApi.getUpcoming).not.toHaveBeenCalled();
+    });
+
+    it("student boot — getCurrentStudentFx.done marks app initialized; tutor APIs are NOT called", async () => {
+      vi.mocked(studentAuthApi.getProfile).mockResolvedValue({
+        id: "s1",
+        email: "student@test.com",
+        name: "Student",
+        isEmailVerified: true,
+        tutor: null,
+      });
+
+      const scope = fork();
+
+      await allSettled(studentUserModel.getCurrentStudentFx, { scope });
+
+      expect(scope.getState($appInitialized)).toBe(true);
+      expect(studentsApi.getAll).not.toHaveBeenCalled();
+      expect(lessonsApi.getUpcoming).not.toHaveBeenCalled();
+    });
+
+    it("student boot — getCurrentStudentFx.fail still marks app initialized (interceptor handles redirect)", async () => {
+      vi.mocked(studentAuthApi.getProfile).mockRejectedValue({
+        response: { status: 401 },
+      });
+
+      const scope = fork();
+
+      await allSettled(studentUserModel.getCurrentStudentFx, { scope });
 
       expect(scope.getState($appInitialized)).toBe(true);
       expect(studentsApi.getAll).not.toHaveBeenCalled();

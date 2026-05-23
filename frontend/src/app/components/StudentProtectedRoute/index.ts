@@ -1,0 +1,1 @@
+export { StudentProtectedRoute } from "./StudentProtectedRoute";

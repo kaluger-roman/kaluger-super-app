@@ -38,6 +38,7 @@ model User {
   scheduledReminders  ScheduledReminder[]
   taxRatePeriods      TaxRatePeriod[]
   passwordResetTokens PasswordResetToken[]
+  studentInvitations  StudentInvitation[]
 
   @@map("users")
 }
@@ -95,11 +96,60 @@ model Student {
   tutorId String
   tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
 
-  lessons Lesson[]
+  lessons     Lesson[]
+  studentUser StudentUser?
+  invitations StudentInvitation[]
 
   @@unique([phone, tutorId])
   @@index([tutorId, archived])
   @@map("students")
+}
+
+model StudentUser {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password               String
+  name                   String
+  isEmailVerified        Boolean   @default(false)
+  verificationCode       String?
+  verificationCodeExpiry DateTime?
+  verificationCodeSentAt DateTime?
+  verificationAttempts   Int       @default(0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  studentId String?  @unique
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@map("student_users")
+}
+
+model StudentInvitation {
+  id        String                  @id @default(cuid())
+  tokenHash String                  @unique
+  status    StudentInvitationStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  tutorId String
+  tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([tutorId])
+  @@index([expiresAt])
+  @@map("student_invitations")
+}
+
+enum StudentInvitationStatus {
+  PENDING
+  USED
+  REVOKED
 }
 
 model Lesson {

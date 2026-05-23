@@ -1,5 +1,8 @@
 import { Server } from "http";
 
+const makeFakeServer = (): Server =>
+  ({ on: jest.fn() }) as unknown as Server;
+
 // Mocks for dependencies: ws, auth, and messageHandler
 jest.mock("ws", () => {
   class MockWSServer {
@@ -51,7 +54,7 @@ describe("WebSocketManager", () => {
   it("should ignore connection when authenticateWebSocket returns null", async () => {
     (authenticateWebSocket as jest.Mock).mockResolvedValue(null);
 
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
 
     const wssInstance = (WebSocketServer as any).instances[0];
 
@@ -73,7 +76,7 @@ describe("WebSocketManager", () => {
     const decoded = { userId: "u1", email: "a@b.com" };
     (authenticateWebSocket as jest.Mock).mockResolvedValue(decoded);
 
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
     // create ws mock that supports on and triggering events
@@ -118,7 +121,7 @@ describe("WebSocketManager", () => {
       userId: "u1",
       email: "a",
     });
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
     const ws1Handlers: Record<string, Function> = {};
@@ -160,7 +163,7 @@ describe("WebSocketManager", () => {
     const decoded = { userId: "u-reconnect", email: "r@b.com" };
     (authenticateWebSocket as jest.Mock).mockResolvedValue(decoded);
 
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
     const oldHandlers: Record<string, Function> = {};
@@ -213,7 +216,7 @@ describe("WebSocketManager", () => {
       throw new Error("socket closed");
     });
 
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
     const handlers: Record<string, Function> = {};
@@ -243,7 +246,7 @@ describe("WebSocketManager", () => {
       userId: "u1",
       email: "a",
     });
-    const manager = new WebSocketManager({} as Server);
+    const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
     const ws: any = {

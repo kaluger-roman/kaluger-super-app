@@ -2,7 +2,12 @@ import { createEffect, createEvent, sample, createStore } from "effector";
 import { createGate } from "effector-react";
 
 import { userModel, verificationModel } from "@entities";
-import { navigate, notificationsModel, authApi } from "@shared";
+import {
+  authApi,
+  extractAxiosError,
+  navigate,
+  notificationsModel,
+} from "@shared";
 
 export const RegisterFormGate = createGate();
 
@@ -51,13 +56,7 @@ sample({
 // Handle errors
 sample({
   clock: registerFx.failData,
-  fn: (error) => {
-    const axiosError = error as unknown as {
-      response?: { data?: { error?: string } };
-      message: string;
-    };
-    return axiosError?.response?.data?.error || axiosError?.message || "Произошла ошибка";
-  },
+  fn: (error) => extractAxiosError(error, "Произошла ошибка"),
   target: $registerError,
 });
 

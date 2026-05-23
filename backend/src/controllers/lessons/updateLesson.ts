@@ -6,11 +6,12 @@ import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
 import prisma from "../../lib/prisma";
 import {
-  previewShiftFutureRecurringLessons,
   applyShiftFutureRecurringLessons,
-  updatePriceForFutureRecurringLessons,
+  broadcastStudentLessonUpdated,
   cancelRemindersForLesson,
+  previewShiftFutureRecurringLessons,
   scheduleRemindersForLesson,
+  updatePriceForFutureRecurringLessons,
 } from "../../services";
 import {
   SchedulingConflictError,
@@ -138,6 +139,9 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
 
     let lesson: Awaited<ReturnType<typeof prisma.lesson.update>>;
     let result: ShiftResult | undefined;
+    let plannedShift:
+      | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
+      | undefined;
     // Serializable isolation + bounded retry on P2034 (transaction conflict /
     // serialization failure) gives a true TOCTOU guarantee for concurrent
     // updates on the same tutor. Default READ COMMITTED would let two
@@ -172,20 +176,20 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
               }
             }
 
-            let plannedShift:
+            let txPlannedShift:
               | Awaited<ReturnType<typeof previewShiftFutureRecurringLessons>>
               | undefined;
             if (shouldShiftRecurring) {
               const newStart = truncateToMinute(new Date(start));
               const newEnd = truncateToMinute(new Date(end));
-              plannedShift = await previewShiftFutureRecurringLessons(
+              txPlannedShift = await previewShiftFutureRecurringLessons(
                 existingLesson,
                 newStart,
                 newEnd,
                 tx
               );
 
-              if (plannedShift.conflicts.length > 0) {
+              if (txPlannedShift.conflicts.length > 0) {
                 throw new RecurringShiftConflictError(
                   "Перенесенная серия конфликтует с другими уроками"
                 );
@@ -204,16 +208,21 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
               include: { student: { select: { id: true, name: true } } },
             });
 
-            const shiftResult: ShiftResult | undefined = plannedShift
-              ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
+            const shiftResult: ShiftResult | undefined = txPlannedShift
+              ? await applyShiftFutureRecurringLessons(tx, txPlannedShift.planned)
               : undefined;
 
-            return { lesson: updated, result: shiftResult };
+            return {
+              lesson: updated,
+              result: shiftResult,
+              plannedShift: txPlannedShift,
+            };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
         );
         lesson = txResult.lesson;
         result = txResult.result;
+        plannedShift = txResult.plannedShift;
         break;
       } catch (err) {
         if (err instanceof SchedulingConflictError) {
@@ -283,6 +292,29 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
           lesson.status,
           userId!
         );
+      }
+    }
+
+    void broadcastStudentLessonUpdated({
+      id: lesson.id,
+      subject: lesson.subject,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+      status: lesson.status,
+    });
+
+    // Также сообщаем ученику о каждом сдвинутом уроке серии — иначе у него
+    // в расписании останутся старые времена для всех уроков, кроме базового.
+    if (plannedShift?.planned) {
+      for (const planned of plannedShift.planned) {
+        if (planned.original.id === lesson.id) continue;
+        void broadcastStudentLessonUpdated({
+          id: planned.original.id,
+          subject: planned.original.subject,
+          startTime: planned.shiftedStart,
+          endTime: planned.shiftedEnd,
+          status: planned.original.status,
+        });
       }
     }
   } catch (error) {

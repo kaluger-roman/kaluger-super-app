@@ -11,7 +11,6 @@ import {
   DialogContent,
   Box,
   Button,
-  Typography,
   Divider,
   useMediaQuery,
   useTheme,
@@ -27,6 +26,7 @@ import { StudentMeta } from "./StudentMeta";
 import { StudentNotes } from "./StudentNotes";
 import * as studentViewDialogModel from "./StudentViewDialog.model";
 import * as Styled from "./StudentViewDialog.styled";
+import { InvitationManager } from "../../../tutorStudentInvitation";
 import { studentsModel, studentsArchiveModel } from "../../models";
 
 type StudentViewDialogProps = {
@@ -70,11 +70,9 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
         fullScreen={isMobile}
         $isMobile={isMobile}
       >
-        <DialogTitle>
-          <Typography variant="h6">Ученик</Typography>
-        </DialogTitle>
+        <DialogTitle>Ученик</DialogTitle>
 
-        <DialogContent>
+        <DialogContent dividers>
           <Box display="flex" flexDirection="column" gap={3}>
             <StudentInfo student={student} />
 
@@ -83,6 +81,9 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
 
             {student.notes && <Divider />}
             {student.notes && <StudentNotes notes={student.notes} />}
+
+            <Divider />
+            <InvitationManager studentId={student.id} studentArchived={student.archived} />
 
             <Divider />
             <StudentMeta

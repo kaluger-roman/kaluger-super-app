@@ -59,7 +59,8 @@ feature/models/
 - **One component per file** in its own directory
 - **Every folder has `index.ts`** — re-export public API
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
-- **Separate files for:** constants, helpers, hooks, types — never mix in one file
+- **Separate files for:** constants, helpers, hooks, types — never mix in one file. Никаких `const X = ...` или вспомогательных функций в файле компонента — только сам компонент и его props-тип. Всё остальное → `*.constants.ts(x)` / `*.helpers.ts` / `*.types.ts` рядом
+- **Shared types split by domain.** Один большой `shared/types/index.ts` не масштабируется — разнеси по `types/auth.ts`, `types/student.ts`, `types/lesson.ts`, …, а `index.ts` оставь barrel'ом из `export type`
 - **Components < 150 lines** — split if larger
 - **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
@@ -127,6 +128,12 @@ feature/models/
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
 
+### Shared utilities
+
+- **Дата/время** — все примитивы (`addDays`, `getWeekStart`, `getWeekEnd`, `groupByDay`, `formatTime`, `formatDuration`, `formatTimeRange`, `toDateKey`) живут в `shared/lib/date.helpers.ts`. Не объявлять локальные `setDate(getDate() + n)` в компонентах/моделях — импортировать из `@shared`.
+- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.ts`. Тоже импортировать через `@shared`.
+- **Ошибки axios** — единый `extractAxiosError(err, fallback?)` в `shared/lib/error.helpers.ts`. Не дублировать `axiosError?.response?.data?.error || axiosError?.message || "..."` в каждой модели. При необходимости фолбэк — вторым аргументом.
+
 ## Effector Conventions
 
 **Naming (ESLint enforced):**
@@ -152,6 +159,7 @@ feature/models/
 - `useUnit` with array destructuring — use separate calls for stores
 - Side effects in `fn` — `fn` must be a pure function (no API calls, no mutations, no model events calls, no model effects calls)
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
+- `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
 
 **useUnit pattern:**
 
@@ -168,6 +176,23 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 ```
 
 **sample order:** `{ clock, source, filter, fn, target }`
+
+**Timers in models (patronum):**
+
+```typescript
+import { interval } from "patronum";
+
+// ✅ периодический тик внутри модели
+const { tick, isRunning } = interval({
+  timeout: 1000,
+  start: cooldownStarted,
+  stop: cooldownEnded,
+});
+
+sample({ clock: tick, target: cooldownTick });
+```
+
+Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
@@ -271,7 +296,7 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 ## Code Style
 
 - Extract functions only if reused 2+ times
-- Minimal comments — only for non-obvious logic
+- **Minimal comments — default zero.** Перед написанием комментария спросить себя: «без него читатель ошибётся / потеряет важный контекст?» Если нет — удалить. Не писать «// эта функция делает X», «// Form fields», «// Effects», «// Reactions», «// Создаём store», «Регрессия #N» — имена/структура и git blame уже это говорят. Оставлять только: скрытые инварианты, обходы багов (с источником), неинтуитивные side-effects, спорные «почему именно так». Это применяется и к тестам — описательное `it("...")` уже даёт контекст
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian
 - Use `frontend/src/shared/lib/dateFormat.ts` for date formatting

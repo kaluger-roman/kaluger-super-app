@@ -2,16 +2,26 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { userModel, verificationModel } from "@entities";
-import { navigate, authApi, notificationsModel } from "@shared";
+import {
+  authApi,
+  clearStudentToken,
+  extractAxiosError,
+  navigate,
+  notificationsModel,
+} from "@shared";
 
 export const LoginFormGate = createGate();
+
+export type LoginRole = "tutor" | "student";
 
 export const $email = createStore("");
 export const $password = createStore("");
 export const $loginError = createStore<string | null>(null);
+export const $loginRole = createStore<LoginRole>("tutor");
 
 export const emailChanged = createEvent<string>();
 export const passwordChanged = createEvent<string>();
+export const loginRoleToggled = createEvent<LoginRole>();
 export const formReset = createEvent();
 export const submitLogin = createEvent<{ email: string; password: string }>();
 
@@ -46,6 +56,17 @@ sample({
 });
 
 sample({
+  clock: loginRoleToggled,
+  target: $loginRole,
+});
+
+sample({
+  clock: loginRoleToggled,
+  fn: () => null,
+  target: $loginError,
+});
+
+sample({
   clock: formReset,
   fn: () => "",
   target: [$email, $password],
@@ -74,7 +95,15 @@ sample({
   target: $loginError,
 });
 
-// Update user and token on success
+const clearStudentTokenFx = createEffect(() => {
+  clearStudentToken();
+});
+
+sample({
+  clock: loginFx.doneData,
+  target: clearStudentTokenFx,
+});
+
 sample({
   clock: loginFx.doneData,
   fn: ({ response }) => response.user,
@@ -91,14 +120,7 @@ sample({
 // Handle errors
 sample({
   clock: loginFx.failData,
-  fn: (err: Error & { error?: unknown }) => {
-    const axiosError = err as {
-      response?: { data?: { error?: string }; status?: number };
-      message: string;
-    };
-
-    return axiosError?.response?.data?.error || axiosError?.message || "Произошла ошибка";
-  },
+  fn: (err) => extractAxiosError(err, "Произошла ошибка"),
   target: $loginError,
 });
 

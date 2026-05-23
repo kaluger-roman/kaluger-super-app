@@ -36,6 +36,20 @@ describe("StudentCard", () => {
     expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
   });
 
+  it("renders registered chip when studentUser is present", () => {
+    const registered: Student = {
+      ...mockStudent,
+      studentUser: { id: "su-1" },
+    };
+    renderWithTheme(<StudentCard student={registered} />);
+    expect(screen.getByText("Зарегистрирован")).toBeInTheDocument();
+  });
+
+  it("does not render registered chip when studentUser is null/undefined", () => {
+    renderWithTheme(<StudentCard student={mockStudent} />);
+    expect(screen.queryByText("Зарегистрирован")).not.toBeInTheDocument();
+  });
+
   it("should render student phone when provided", () => {
     renderWithTheme(<StudentCard student={mockStudent} />);
     expect(screen.getByText("+79991234567")).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { getTutorToken, clearTutorToken } from "../auth";
 import { API_BASE_URL } from "../config";
 
 export const api = axios.create({
@@ -11,7 +12,7 @@ export const api = axios.create({
 
 // Add auth token and timezone to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
+  const token = getTutorToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,7 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("authToken");
+      clearTutorToken();
       // Don't force redirect here - let React Router handle it
       // Only redirect if we're not already on login/register pages
       if (

@@ -11,3 +11,8 @@ export * from "./pushNotification";
 export * from "./reminderScheduler";
 export * from "./reminderProcessor";
 export * from "./taxRate";
+export * from "./studentAuth";
+export * from "./studentEmailVerification";
+export * from "./studentInvitation";
+export * from "./studentCabinet";
+export * from "./studentLessonBroadcast";

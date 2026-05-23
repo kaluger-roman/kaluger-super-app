@@ -17,8 +17,9 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       include: {
         lessons: {
           orderBy: { startTime: "desc" },
-          take: 5, // Last 5 lessons
+          take: 5,
         },
+        studentUser: { select: { id: true } },
       },
       orderBy: { name: "asc" },
     });
@@ -44,6 +45,7 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
         lessons: {
           orderBy: { startTime: "desc" },
         },
+        studentUser: { select: { id: true } },
       },
     });
 

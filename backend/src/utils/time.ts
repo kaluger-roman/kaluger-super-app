@@ -4,6 +4,35 @@ export const truncateToMinute = (date: Date) => {
   return d;
 };
 
+// Pure date primitives — общие для всех сервисов. Никогда не мутируют вход.
+
+export const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+// Понедельник 00:00 локального дня для произвольной даты (ISO-8601 неделя).
+export const getWeekStart = (date: Date): Date => {
+  const start = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+  const day = start.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + diff);
+  return start;
+};
+
+// Парсит ISO-строку или возвращает текущий понедельник при невалидном входе.
+export const parseWeekStart = (raw: string | undefined): Date => {
+  if (!raw) return getWeekStart(new Date());
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return getWeekStart(new Date());
+  return getWeekStart(parsed);
+};
+
 export const isValidTimezone = (timezone: string): boolean => {
   try {
     new Intl.DateTimeFormat(undefined, { timeZone: timezone });

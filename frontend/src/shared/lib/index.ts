@@ -1,4 +1,15 @@
-export { formatDate, formatDateTime, formatTime, formatDuration, toDateKey } from "./date.helpers";
+export {
+  addDays,
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatTime,
+  formatTimeRange,
+  getWeekEnd,
+  getWeekStart,
+  groupByDay,
+  toDateKey,
+} from "./date.helpers";
 export {
   formatDate as formatDateLong,
   formatDateShort,
@@ -14,6 +25,7 @@ export {
   truncateText,
   capitalizeFirst,
 } from "./lib.helpers";
+export { extractAxiosError } from "./error.helpers";
 export { setNavigate, navigate } from "./navigation";
 export {
   getStatusLabel,

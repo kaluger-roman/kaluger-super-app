@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Student Cabinet API (029-student-cabinet)
+  version: 1.0.0
+  description: |
+    Эндпоинты для разделов кабинета ученика — "Расписание" и "Настройки".
+    Все эндпоинты требуют student JWT (`authenticateStudent`). Tutor JWT не работает.
+servers:
+  - url: /api/student-cabinet
+paths:
+  /lessons:
+    get:
+      summary: Уроки текущего ученика на указанной неделе
+      description: |
+        Возвращает уроки ученика по дням указанной недели (понедельный вид).
+        Вернуть только урезанный набор полей — без price/isPaid/notes/homework
+        (FR-029, FR-030, FR-031, SC-005).
+
+        Если связанная карточка `Student` была удалена/архивирована — вернуть пустой
+        массив (не 404), чтобы UI показал "На этой неделе уроков нет" (FR-020a).
+      tags: [schedule]
+      security:
+        - studentBearerAuth: []
+      parameters:
+        - in: query
+          name: weekStart
+          description: |
+            ISO-дата понедельника недели (YYYY-MM-DD). Если не задан — текущая неделя
+            в часовом поясе сервера (R-10).
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Список уроков на неделе.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLessonsByWeekResponse'
+        "401":
+          description: Не авторизован (или прислан tutor JWT).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Email не подтверждён, и доступ к расписанию ограничен (опционально, см. R-04 — в MVP не используется).
+
+components:
+  securitySchemes:
+    studentBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    StudentLessonsByWeekResponse:
+      type: object
+      required: [weekStart, lessons]
+      properties:
+        weekStart:
+          type: string
+          format: date
+        lessons:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentLesson'
+
+    StudentLesson:
+      type: object
+      required: [id, subject, startTime, endTime, status]
+      properties:
+        id:
+          type: string
+        subject:
+          type: string
+          enum: [MATHEMATICS, PHYSICS]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [SCHEDULED, COMPLETED, CANCELLED]
+          description: |
+            Существующий enum LessonStatus (см. backend/prisma/schema.prisma).
+            Точные значения synced на этапе реализации.
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

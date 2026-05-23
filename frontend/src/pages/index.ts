@@ -7,3 +7,8 @@ export { ProfilePage } from "./profile";
 export { NewsPage } from "./news";
 export { ForgotPasswordPage } from "./forgotPassword";
 export { ResetPasswordPage } from "./resetPassword";
+export { StudentCabinetLayout } from "./studentCabinet";
+export { StudentInvitePage } from "./studentInvite";
+export { StudentSchedulePage } from "./studentSchedule";
+export { StudentSettingsPage } from "./studentSettings";
+export { StudentVerifyEmailPage } from "./studentVerifyEmail";

@@ -1,6 +1,7 @@
 import prisma from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
+import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
 
 // Module-level guard prevents two overlapping cron ticks (e.g. tick N still
 // running due to DB latency when tick N+1 fires) from both broadcasting the
@@ -97,6 +98,7 @@ export const updateLessonStatuses = async () => {
           "IN_PROGRESS",
           lesson.tutorId
         );
+        void broadcastStudentLessonStatusUpdated(lesson.id, "IN_PROGRESS");
       }
       for (const lesson of completedLessons) {
         wsManager.broadcastLessonStatusUpdate(
@@ -104,6 +106,7 @@ export const updateLessonStatuses = async () => {
           "COMPLETED",
           lesson.tutorId
         );
+        void broadcastStudentLessonStatusUpdated(lesson.id, "COMPLETED");
       }
     }
 

@@ -23,12 +23,12 @@ describe("StudentInfo", () => {
 
   it("should render student name", () => {
     renderWithTheme(<StudentInfo student={mockStudent} />);
-    expect(screen.getByText("👤 Иван Иванов")).toBeInTheDocument();
+    expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
   });
 
   it("should render grade when provided", () => {
     renderWithTheme(<StudentInfo student={mockStudent} />);
-    expect(screen.getByText("🎓 9 класс")).toBeInTheDocument();
+    expect(screen.getByText("9 класс")).toBeInTheDocument();
   });
 
   it("should not render grade when not provided", () => {
@@ -39,7 +39,7 @@ describe("StudentInfo", () => {
 
   it("should render hourly rate when provided", () => {
     renderWithTheme(<StudentInfo student={mockStudent} />);
-    expect(screen.getByText("💰 1500 ₽/урок")).toBeInTheDocument();
+    expect(screen.getByText("1500 ₽/урок")).toBeInTheDocument();
   });
 
   it("should not render hourly rate when not provided", () => {
@@ -56,9 +56,9 @@ describe("StudentInfo", () => {
 
   it("should render all fields when all provided", () => {
     renderWithTheme(<StudentInfo student={mockStudent} />);
-    expect(screen.getByText("👤 Иван Иванов")).toBeInTheDocument();
-    expect(screen.getByText("🎓 9 класс")).toBeInTheDocument();
-    expect(screen.getByText("💰 1500 ₽/урок")).toBeInTheDocument();
+    expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
+    expect(screen.getByText("9 класс")).toBeInTheDocument();
+    expect(screen.getByText("1500 ₽/урок")).toBeInTheDocument();
   });
 
   it("should render only name when no optional fields", () => {
@@ -70,7 +70,7 @@ describe("StudentInfo", () => {
       updatedAt: "2024-01-15T10:00:00Z",
     };
     renderWithTheme(<StudentInfo student={minimalStudent} />);
-    expect(screen.getByText("👤 Петр Петров")).toBeInTheDocument();
+    expect(screen.getByText("Петр Петров")).toBeInTheDocument();
     expect(screen.queryByText(/класс/)).not.toBeInTheDocument();
     expect(screen.queryByText(/₽\/урок/)).not.toBeInTheDocument();
   });

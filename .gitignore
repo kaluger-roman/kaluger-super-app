@@ -37,3 +37,8 @@ yarn-error.log*
 /landing/.next
 /landing/out
 .claude/worktrees/
+
+# Playwright
+/frontend/playwright-report
+/frontend/test-results
+/frontend/playwright/.cache

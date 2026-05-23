@@ -1,0 +1,1 @@
+export { StudentVerifyEmailPage } from "./StudentVerifyEmailPage";

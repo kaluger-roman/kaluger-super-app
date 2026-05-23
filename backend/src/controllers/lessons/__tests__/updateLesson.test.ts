@@ -585,4 +585,141 @@ describe("updateLesson controller", () => {
 
     txSpy.mockRestore();
   });
+
+  it("broadcasts every shifted lesson to the student, not only the base (regression: recurring series stayed stale on student schedule)", async () => {
+    // Регрессия: ранее controller бродкастил только base lesson, остальные
+    // сдвинутые уроки серии тихо обновлялись в БД, расписание ученика стейл.
+    const shiftStudent = await prisma.student.create({
+      data: {
+        name: "Student For Shift",
+        contactMethod: "WHATSAPP",
+        tutorId: userId,
+      },
+    });
+    const studentUser = await prisma.studentUser.create({
+      data: {
+        email: faker.internet.email().toLowerCase(),
+        password: "x",
+        name: "Shift Student",
+        isEmailVerified: true,
+        studentId: shiftStudent.id,
+      },
+    });
+
+    const baseStart = new Date(Date.now() + 50 * 24 * 3600 * 1000);
+    const baseEnd = new Date(baseStart.getTime() + 3600000);
+    const base = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: shiftStudent.id,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: baseStart,
+        endTime: baseEnd,
+        isRecurring: true,
+        status: "SCHEDULED",
+      },
+    });
+    const future1 = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: shiftStudent.id,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(baseStart.getTime() + 7 * 24 * 3600 * 1000),
+        endTime: new Date(baseEnd.getTime() + 7 * 24 * 3600 * 1000),
+        isRecurring: true,
+        status: "SCHEDULED",
+      },
+    });
+    const future2 = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: shiftStudent.id,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(baseStart.getTime() + 14 * 24 * 3600 * 1000),
+        endTime: new Date(baseEnd.getTime() + 14 * 24 * 3600 * 1000),
+        isRecurring: true,
+        status: "SCHEDULED",
+      },
+    });
+
+    const shiftMs = 30 * 60 * 1000;
+    const newBaseStart = new Date(baseStart.getTime() + shiftMs);
+    const newBaseEnd = new Date(baseEnd.getTime() + shiftMs);
+
+    const previewSpy = jest
+      .spyOn(recurringHelpers, "previewShiftFutureRecurringLessons")
+      .mockResolvedValue({
+        planned: [
+          {
+            original: base,
+            shiftedStart: newBaseStart,
+            shiftedEnd: newBaseEnd,
+          },
+          {
+            original: future1,
+            shiftedStart: new Date(future1.startTime.getTime() + shiftMs),
+            shiftedEnd: new Date(future1.endTime.getTime() + shiftMs),
+          },
+          {
+            original: future2,
+            shiftedStart: new Date(future2.startTime.getTime() + shiftMs),
+            shiftedEnd: new Date(future2.endTime.getTime() + shiftMs),
+          },
+        ],
+        conflicts: [],
+      });
+    const applySpy = jest
+      .spyOn(recurringHelpers, "applyShiftFutureRecurringLessons")
+      .mockResolvedValue({
+        shifted: 3,
+        shiftedIds: [base.id, future1.id, future2.id],
+      });
+
+    const broadcastEvent = jest.fn();
+    const wsSpy = jest
+      .spyOn(wsManager, "getWebSocketManager")
+      .mockReturnValue({
+        broadcastStudentLessonEvent: broadcastEvent,
+        broadcastLessonStatusUpdate: jest.fn(),
+      } as unknown as ReturnType<typeof wsManager.getWebSocketManager>);
+
+    try {
+      await request(app)
+        .put(`/api/lessons/${base.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          startTime: newBaseStart.toISOString(),
+          endTime: newBaseEnd.toISOString(),
+        })
+        .expect(200);
+
+      // broadcastStudentLessonUpdated вызывается через `void` (fire-and-forget)
+      // и внутри делает Prisma-запрос — ждём до 2с пока 3 события отстреляют.
+      const deadline = Date.now() + 2000;
+      while (Date.now() < deadline && broadcastEvent.mock.calls.length < 3) {
+        await new Promise((r) => setTimeout(r, 25));
+      }
+
+      const broadcastedIds = broadcastEvent.mock.calls.map(
+        (call) => (call[1] as { lesson: { id: string } }).lesson.id
+      );
+
+      expect(broadcastedIds).toContain(base.id);
+      expect(broadcastedIds).toContain(future1.id);
+      expect(broadcastedIds).toContain(future2.id);
+      expect(broadcastEvent).toHaveBeenCalledTimes(3);
+    } finally {
+      previewSpy.mockRestore();
+      applySpy.mockRestore();
+      wsSpy.mockRestore();
+      await prisma.lesson.deleteMany({
+        where: { id: { in: [base.id, future1.id, future2.id] } },
+      });
+      await prisma.student.delete({ where: { id: shiftStudent.id } });
+      await prisma.studentUser.delete({ where: { id: studentUser.id } });
+    }
+  });
 });

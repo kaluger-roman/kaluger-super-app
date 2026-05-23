@@ -9,7 +9,13 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: [path.resolve(__dirname, "./src/__tests__/setup.ts")],
     css: true,
-    exclude: ["node_modules/**", "e2e/**", "playwright-report/**", "test-results/**"],
+    exclude: [
+      "node_modules/**",
+      "dist",
+      "e2e/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
     deps: {
       optimizer: {
         web: {

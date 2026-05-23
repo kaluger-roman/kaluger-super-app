@@ -28,3 +28,21 @@ export const passwordResetRateLimiter = rateLimit({
   max: 5,
   message: { error: "Слишком много попыток. Попробуйте позже" },
 });
+
+export const studentAuthRateLimiter = rateLimit({
+  ...baseConfig,
+  max: 20,
+  message: { error: "Слишком много попыток. Попробуйте позже" },
+});
+
+export const studentRegistrationRateLimiter = rateLimit({
+  ...baseConfig,
+  max: 5,
+  message: { error: "Слишком много попыток. Попробуйте позже" },
+});
+
+export const studentInvitationValidationRateLimiter = rateLimit({
+  ...baseConfig,
+  max: 30,
+  message: { error: "Слишком много попыток. Попробуйте позже" },
+});

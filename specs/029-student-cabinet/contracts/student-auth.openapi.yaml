@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: Student Auth API (029-student-cabinet)
+  version: 1.0.0
+  description: |
+    Аутентификация учеников (`StudentUser`). Полностью изолирована от tutor-аутентификации
+    (`/api/auth/*`). Использует отдельный JWT-секрет `STUDENT_JWT_SECRET` и middleware
+    `authenticateStudent`. Все ответы — JSON; UI-сообщения и тексты ошибок на русском.
+servers:
+  - url: /api/student-auth
+paths:
+  /register:
+    post:
+      summary: Регистрация ученика по invitation-токену
+      description: |
+        Публичный эндпоинт. Тоже создаёт `StudentUser`, погашает `StudentInvitation`
+        в одной транзакции, отправляет письмо с кодом верификации email и возвращает
+        student JWT.
+
+        Покрывает FR-008…FR-013a, FR-014…FR-016.
+      tags: [public]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRegisterByInviteDto'
+      responses:
+        "201":
+          description: Аккаунт создан. Возвращает student JWT и профиль.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentAuthResponse'
+        "400":
+          description: |
+            Невалидные данные (неподходящий пароль, неверный email-формат, ФИО пустое,
+            подтверждение пароля не совпадает).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Email уже занят другим аккаунтом ученика (FR-011a).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "410":
+          description: |
+            Ссылка-приглашение уже использована или отозвана (USED/REVOKED) — нейтральное
+            сообщение "Ссылка недействительна" (FR-016).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Токен не существует — нейтральное "Ссылка недействительна" (FR-016).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Превышен rate-limit на регистрацию.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      summary: Логин ученика
+      description: |
+        Принимает email + password. При успехе возвращает student JWT и профиль.
+        Не подсказывает, существует ли email в подсистеме преподавателей (FR-018, R-12).
+      tags: [public]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentLoginDto'
+      responses:
+        "200":
+          description: Успешный вход.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentAuthResponse'
+        "401":
+          description: Неверный email или пароль (нейтральная формулировка).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Превышен rate-limit на логин.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /verify-email:
+    post:
+      summary: Подтверждение email кодом из письма
+      tags: [authenticated]
+      security:
+        - studentBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  pattern: "^[0-9]{6}$"
+      responses:
+        "200":
+          description: Email подтверждён.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSettingsResponse'
+        "400":
+          description: Неверный код, истёкший, либо превышены попытки.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Не авторизован.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /resend-verification:
+    post:
+      summary: Повторная отправка кода подтверждения email
+      description: Cooldown 60 секунд (`RESEND_COOLDOWN_SECONDS`).
+      tags: [authenticated]
+      security:
+        - studentBearerAuth: []
+      responses:
+        "204":
+          description: Код повторно отправлен.
+        "401":
+          description: Не авторизован.
+        "429":
+          description: Cooldown ещё не истёк.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me:
+    get:
+      summary: Профиль текущего ученика + связанный преподаватель
+      description: Используется для раздела "Настройки" и для гидратации сессии после refresh.
+      tags: [authenticated]
+      security:
+        - studentBearerAuth: []
+      responses:
+        "200":
+          description: Профиль ученика.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSettingsResponse'
+        "401":
+          description: Не авторизован.
+
+  /logout:
+    post:
+      summary: Логаут (no-op на сервере, токен инвалидируется на клиенте)
+      tags: [authenticated]
+      security:
+        - studentBearerAuth: []
+      responses:
+        "204":
+          description: Логаут (заглушка для симметрии с tutor-логаутом).
+
+components:
+  securitySchemes:
+    studentBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Токен подписан секретом `STUDENT_JWT_SECRET`. Отличен от tutor JWT —
+        tutor-токен не пройдёт middleware `authenticateStudent`.
+
+  schemas:
+    StudentRegisterByInviteDto:
+      type: object
+      required: [token, name, email, password, passwordConfirmation]
+      properties:
+        token:
+          type: string
+          description: Raw invitation token из URL `/student-invite/<token>`.
+          minLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: |
+            Минимум 8 символов, заглавная и строчная буквы, цифра.
+        passwordConfirmation:
+          type: string
+
+    StudentLoginDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    StudentAuthResponse:
+      type: object
+      required: [token, student]
+      properties:
+        token:
+          type: string
+          description: Bearer JWT.
+        student:
+          $ref: '#/components/schemas/StudentSettingsResponse'
+
+    StudentSettingsResponse:
+      type: object
+      required: [id, name, email, isEmailVerified, tutor]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        isEmailVerified:
+          type: boolean
+        tutor:
+          oneOf:
+            - type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+            - type: "null"
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Текст на русском.

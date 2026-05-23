@@ -7,7 +7,11 @@ export { statisticsApi } from "./statistics";
 export { newsApi } from "./news";
 export { notificationsApi } from "./notifications";
 export { taxPeriodsApi } from "./taxPeriods";
+export { studentAuthApi } from "./studentAuth";
+export { studentCabinetApi } from "./studentCabinet";
+export { studentInvitationsApi } from "./studentInvitations";
 export { api } from "./base";
+export { studentApi, publicApi } from "./studentBase";
 
 export type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics";
 export type { PaymentsSummary } from "./lessons";

@@ -1,8 +1,10 @@
 import type { FC } from "react";
 
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 
 import type { Student } from "@shared";
+
+import * as Styled from "./StudentViewDialog.styled";
 
 type StudentInfoProps = {
   student: Student;
@@ -10,18 +12,21 @@ type StudentInfoProps = {
 
 export const StudentInfo: FC<StudentInfoProps> = ({ student }) => (
   <Box>
-    <Typography variant="h6" gutterBottom>
-      👤 {student.name}
-    </Typography>
+    <Styled.IconRow gutterBottom variant="h6">
+      <Styled.SectionEmoji aria-hidden>👤</Styled.SectionEmoji>
+      {student.name}
+    </Styled.IconRow>
     {student.grade && (
-      <Typography variant="body1" color="text.secondary" gutterBottom>
-        🎓 {student.grade} класс
-      </Typography>
+      <Styled.IconRow gutterBottom variant="body1" color="text.secondary">
+        <Styled.SectionEmoji aria-hidden>🎓</Styled.SectionEmoji>
+        {student.grade} класс
+      </Styled.IconRow>
     )}
     {student.hourlyRate != null && student.hourlyRate > 0 && (
-      <Typography variant="body1" gutterBottom>
-        💰 {student.hourlyRate} ₽/урок
-      </Typography>
+      <Styled.IconRow gutterBottom variant="body1">
+        <Styled.SectionEmoji aria-hidden>💰</Styled.SectionEmoji>
+        {student.hourlyRate} ₽/урок
+      </Styled.IconRow>
     )}
   </Box>
 );

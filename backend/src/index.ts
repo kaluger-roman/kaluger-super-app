@@ -10,6 +10,11 @@ import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 import { processScheduledReminders, runBackupJob } from "./services";
+import { validateRequiredEnv } from "./utils/validateEnv";
+
+if (process.env.NODE_ENV !== "test") {
+  validateRequiredEnv();
+}
 
 import { authRouter } from "./routes/auth";
 import { studentsRouter } from "./routes/students";
@@ -21,6 +26,9 @@ import { reminderSettingsRouter } from "./routes/reminderSettings";
 import { adminRouter } from "./routes/admin";
 import { taxPeriodsRouter } from "./routes/taxPeriods";
 import { testRouter } from "./routes/__test__";
+import { studentAuthRouter } from "./routes/studentAuth";
+import { studentInvitationsRouter } from "./routes/studentInvitations";
+import { studentCabinetRouter } from "./routes/studentCabinet";
 
 const app = express();
 
@@ -30,7 +38,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
@@ -46,6 +54,9 @@ app.use("/api/push", pushRouter);
 app.use("/api/reminder-settings", reminderSettingsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/tax-periods", taxPeriodsRouter);
+app.use("/api/student-auth", studentAuthRouter);
+app.use("/api/student-invitations", studentInvitationsRouter);
+app.use("/api/student-cabinet", studentCabinetRouter);
 
 if (process.env.NODE_ENV === "test") {
   app.use("/api/__test__", testRouter);
@@ -71,11 +82,11 @@ app.use(
     err: Error,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    next: express.NextFunction,
   ) => {
     console.error(err.stack);
     res.status(500).json({ error: "Something went wrong!" });
-  }
+  },
 );
 
 // 404 handler
@@ -99,6 +110,9 @@ if (shouldStartServer) {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+    console.log(
+      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`,
+    );
 
     if (!shouldRunCrons) {
       console.log("Cron jobs disabled (test mode)");
@@ -117,7 +131,7 @@ if (shouldStartServer) {
           console.error("Error in recurring lessons cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -129,7 +143,7 @@ if (shouldStartServer) {
           console.error("Error in lesson status update cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -141,7 +155,7 @@ if (shouldStartServer) {
           console.error("Error in reminder processing cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     cron.schedule(
@@ -153,7 +167,7 @@ if (shouldStartServer) {
           console.error("Error in database backup cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE }
+      { timezone: CRON_TIMEZONE },
     );
 
     console.log(`Cron jobs scheduled (timezone: ${CRON_TIMEZONE}):`);

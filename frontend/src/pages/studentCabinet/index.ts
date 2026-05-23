@@ -1,0 +1,1 @@
+export { StudentCabinetLayout } from "./StudentCabinetLayout";

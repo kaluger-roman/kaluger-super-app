@@ -1,0 +1,1 @@
+export { StudentSettingsPage } from "./StudentSettingsPage";
