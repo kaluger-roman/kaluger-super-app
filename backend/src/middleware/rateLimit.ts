@@ -1,7 +1,6 @@
 import rateLimit from "express-rate-limit";
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-const ONE_MINUTE = 60 * 1000;
 
 const isTestEnv = process.env.NODE_ENV === "test";
 
@@ -16,13 +15,6 @@ export const authRateLimiter = rateLimit({
   ...baseConfig,
   max: 20,
   message: { error: "Слишком много попыток. Попробуйте позже" },
-});
-
-export const screenUploadRateLimiter = rateLimit({
-  ...baseConfig,
-  windowMs: ONE_MINUTE,
-  max: 60,
-  message: { error: "Слишком много загрузок. Попробуйте позже" },
 });
 
 export const adminLoginRateLimiter = rateLimit({

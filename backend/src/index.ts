@@ -19,7 +19,6 @@ import { newsRouter } from "./routes/news";
 import { pushRouter } from "./routes/push";
 import { reminderSettingsRouter } from "./routes/reminderSettings";
 import { adminRouter } from "./routes/admin";
-import { screenRouter } from "./routes/screen";
 import { taxPeriodsRouter } from "./routes/taxPeriods";
 import { testRouter } from "./routes/__test__";
 
@@ -46,7 +45,6 @@ app.use("/api/news", newsRouter);
 app.use("/api/push", pushRouter);
 app.use("/api/reminder-settings", reminderSettingsRouter);
 app.use("/api/admin", adminRouter);
-app.use("/api/screen", screenRouter);
 app.use("/api/tax-periods", taxPeriodsRouter);
 
 if (process.env.NODE_ENV === "test") {
