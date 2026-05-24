@@ -241,6 +241,32 @@ describe("WebSocketManager", () => {
     expect(manager.getConnectedUsersCount()).toBe(0);
   });
 
+  it("does not store orphan entry when socket already closed before set (regression: bug-hunt 2026-05-24 #4)", async () => {
+    const decoded = { userId: "u-prematurely-closed", email: "x@b.com" };
+    (authenticateWebSocket as jest.Mock).mockResolvedValue(decoded);
+
+    const manager = new WebSocketManager(makeFakeServer());
+    const wssInstance = (WebSocketServer as any).instances[0];
+
+    const handlers: Record<string, Function> = {};
+    const ws: any = {
+      send: jest.fn(),
+      close: jest.fn(),
+      readyState: (WebSocket as any).CLOSED ?? 3,
+      on: (event: string, fn: Function) => {
+        handlers[event] = fn;
+      },
+    };
+
+    wssInstance.simulateConnection(ws, { url: "/?token=ok" });
+    await new Promise((r) => setImmediate(r));
+
+    expect(handlers["close"]).toBeDefined();
+    expect(handlers["error"]).toBeDefined();
+    expect(manager.getConnectedUsersCount()).toBe(0);
+    expect(sendWelcomeMessage).not.toHaveBeenCalled();
+  });
+
   it("sendToUser should send only to specified user", async () => {
     (authenticateWebSocket as jest.Mock).mockResolvedValue({
       userId: "u1",

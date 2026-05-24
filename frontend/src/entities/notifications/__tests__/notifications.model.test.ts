@@ -1,10 +1,10 @@
 import { allSettled, fork } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { userModel } from "@entities/user";
 import { notificationsApi, showNotification } from "@shared";
 
-// Side-effect import: wires up the unsubscribe → settingsUpdated samples.
-import "../notifications-toggle.model";
+import { $autoSubscribeAttempted } from "../notifications-toggle.model";
 import * as notificationsModel from "../notifications.model";
 
 vi.mock("@shared", async () => {
@@ -252,6 +252,80 @@ describe("notifications.model", () => {
       });
 
       expect(vi.mocked(notificationsApi.updateSettings)).not.toHaveBeenCalled();
+    });
+
+    it("should auto-subscribe only once per session even on repeated loadSettingsFx (regression: bug-hunt 2026-05-24 #2)", async () => {
+      const subscribePushHandler = vi.fn(() => ({
+        subscription: {} as PushSubscription,
+        serverResponse: {} as never,
+      }));
+
+      const scope = fork({
+        values: [
+          [
+            notificationsModel.$reminderSettings,
+            { enabled: true, intervals: [], muteWhenInLesson: false },
+          ],
+          [notificationsModel.$isPushSubscribed, false],
+          [notificationsModel.$vapidKey, "vapid-key"],
+          [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
+        ],
+        handlers: [[notificationsModel.subscribePushFx, subscribePushHandler]],
+      });
+
+      mockedGetSettings.mockResolvedValue({
+        enabled: true,
+        intervals: [],
+        muteWhenInLesson: false,
+      });
+
+      await allSettled(notificationsModel.loadSettings, { scope });
+      await allSettled(notificationsModel.loadSettings, { scope });
+      await allSettled(notificationsModel.loadSettings, { scope });
+
+      expect(subscribePushHandler).toHaveBeenCalledTimes(1);
+      expect(scope.getState($autoSubscribeAttempted)).toBe(true);
+    });
+
+    it("should reset $autoSubscribeAttempted on logoutUser", async () => {
+      const scope = fork({
+        values: [[$autoSubscribeAttempted, true]],
+      });
+
+      await allSettled(userModel.logoutUser, { scope });
+
+      expect(scope.getState($autoSubscribeAttempted)).toBe(false);
+    });
+
+    it("should mark attempted even when subscribePushFx fails (regression: avoid retry loop on permission denied)", async () => {
+      const subscribePushHandler = vi.fn(() => {
+        throw new Error("permission denied");
+      });
+
+      const scope = fork({
+        values: [
+          [
+            notificationsModel.$reminderSettings,
+            { enabled: true, intervals: [], muteWhenInLesson: false },
+          ],
+          [notificationsModel.$isPushSubscribed, false],
+          [notificationsModel.$vapidKey, "vapid-key"],
+          [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
+        ],
+        handlers: [[notificationsModel.subscribePushFx, subscribePushHandler]],
+      });
+
+      mockedGetSettings.mockResolvedValue({
+        enabled: true,
+        intervals: [],
+        muteWhenInLesson: false,
+      });
+
+      await allSettled(notificationsModel.loadSettings, { scope });
+      await allSettled(notificationsModel.loadSettings, { scope });
+
+      expect(subscribePushHandler).toHaveBeenCalledTimes(1);
+      expect(scope.getState($autoSubscribeAttempted)).toBe(true);
     });
 
     it("should not disable settings on server when unsubscribePushFx fails (regression: .finally → .done)", async () => {

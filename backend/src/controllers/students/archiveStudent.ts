@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
+import { ACTIVE_REMINDER_STATUSES } from "../../services";
 
 export const archiveStudent = async (req: AuthRequest, res: Response) => {
   try {
@@ -31,9 +32,9 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
             startTime: { gte: now },
             status: { notIn: ["COMPLETED", "CANCELLED"] },
           },
-          status: "PENDING",
+          status: { in: [...ACTIVE_REMINDER_STATUSES] },
         },
-        data: { status: "CANCELLED" },
+        data: { status: "CANCELLED", claimedAt: null },
       });
 
       // Only delete still-active future lessons. CANCELLED/COMPLETED future

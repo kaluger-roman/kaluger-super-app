@@ -115,6 +115,7 @@ model StudentUser {
   verificationCodeExpiry DateTime?
   verificationCodeSentAt DateTime?
   verificationAttempts   Int       @default(0)
+  tokenVersion           Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 

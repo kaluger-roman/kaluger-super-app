@@ -104,9 +104,15 @@ export const verifyEmailChange = async (
   }
 
   if (user.verificationCode !== code) {
-    const attempts = user.verificationAttempts + 1;
+    // Атомарный инкремент — иначе параллельные запросы с неверным кодом
+    // читают одинаковый снапшот и перезаписывают друг друга, обходя лимит.
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { verificationAttempts: { increment: 1 } },
+      select: { verificationAttempts: true },
+    });
 
-    if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+    if (updated.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -122,10 +128,6 @@ export const verifyEmailChange = async (
       );
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { verificationAttempts: attempts },
-    });
     throw Object.assign(new Error("Неверный код верификации"), { statusCode: 400 });
   }
 
