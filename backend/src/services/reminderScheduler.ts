@@ -57,7 +57,7 @@ export const scheduleRemindersForLesson = async (lessonId: string) => {
 // 10 минут вернёт её в PENDING — а к этому моменту recalculate уже мог
 // создать дубликат с тем же (lessonId, intervalMinutes), и watchdog
 // упадёт с P2002 на partial unique index, парализуя cron.
-const ACTIVE_REMINDER_STATUSES = ["PENDING", "PROCESSING"] as const;
+export const ACTIVE_REMINDER_STATUSES = ["PENDING", "PROCESSING"] as const;
 
 export const cancelRemindersForLesson = async (lessonId: string) => {
   await prisma.scheduledReminder.updateMany({

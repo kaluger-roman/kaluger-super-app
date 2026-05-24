@@ -51,6 +51,7 @@ describe("studentCabinet controller", () => {
       studentUserId,
       email: studentUser.email,
       isStudent: true,
+      tokenVersion: studentUser.tokenVersion,
     });
 
     // Другой студент — для проверки изоляции
@@ -69,6 +70,7 @@ describe("studentCabinet controller", () => {
       studentUserId: otherStudentUser.id,
       email: otherStudentUser.email,
       isStudent: true,
+      tokenVersion: otherStudentUser.tokenVersion,
     });
 
     await prisma.lesson.create({

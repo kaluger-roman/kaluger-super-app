@@ -68,8 +68,8 @@ describe("deleteStudent integration tests", () => {
       },
     });
 
-    const originalDelete = prisma.student.delete;
-    prisma.student.delete = jest
+    const originalDeleteMany = prisma.student.deleteMany;
+    prisma.student.deleteMany = jest
       .fn()
       .mockRejectedValueOnce(new Error("DB error"));
 
@@ -78,6 +78,58 @@ describe("deleteStudent integration tests", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(500);
 
-    prisma.student.delete = originalDelete;
+    prisma.student.deleteMany = originalDeleteMany;
+  });
+
+  it("returns 404 on second DELETE when first already removed the student (regression: bug-hunt 2026-05-24 #6)", async () => {
+    const student = await prisma.student.create({
+      data: {
+        name: "DoubleDeleted",
+        contactMethod: "WHATSAPP",
+        phone: faker.phone.number(),
+        tutorId: userId,
+      },
+    });
+
+    await request(app)
+      .delete(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    await request(app)
+      .delete(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(404);
+  });
+
+  it("returns 404 when student belongs to another tutor and does not delete it", async () => {
+    const otherUser = await prisma.user.create({
+      data: {
+        email: faker.internet.email(),
+        password: "hashed",
+        name: faker.person.fullName(),
+      },
+    });
+    const otherStudent = await prisma.student.create({
+      data: {
+        name: "OtherTutorStudent",
+        contactMethod: "WHATSAPP",
+        phone: faker.phone.number(),
+        tutorId: otherUser.id,
+      },
+    });
+
+    await request(app)
+      .delete(`/api/students/${otherStudent.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(404);
+
+    const stillExists = await prisma.student.findUnique({
+      where: { id: otherStudent.id },
+    });
+    expect(stillExists).not.toBeNull();
+
+    await prisma.student.delete({ where: { id: otherStudent.id } });
+    await prisma.user.delete({ where: { id: otherUser.id } });
   });
 });

@@ -320,4 +320,124 @@ describe("deleteLesson controller", () => {
     expect(foundA2).toBeNull();
     expect(foundB).not.toBeNull();
   });
+
+  it("rolls back lesson deletion when reminder cancellation fails — single delete (regression: bug-hunt 2026-05-24 #7)", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+        isRecurring: false,
+        status: "SCHEDULED",
+      },
+    });
+    const reminder = await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() + 23 * 60 * 60 * 1000),
+        intervalMinutes: 60,
+        lessonId: lesson.id,
+        userId,
+        status: "PENDING",
+      },
+    });
+
+    const originalTransaction = prisma.$transaction;
+    prisma.$transaction = jest
+      .fn()
+      .mockImplementationOnce(async (cb: (tx: typeof prisma) => Promise<unknown>) => {
+        const fakeTx = {
+          ...prisma,
+          scheduledReminder: {
+            ...prisma.scheduledReminder,
+            updateMany: jest.fn().mockRejectedValueOnce(new Error("DB error")),
+          },
+        };
+        return cb(fakeTx as never);
+      });
+
+    await request(app)
+      .delete(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ deleteAllFuture: false })
+      .expect(500);
+
+    prisma.$transaction = originalTransaction;
+
+    const lessonAfter = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    const reminderAfter = await prisma.scheduledReminder.findUnique({
+      where: { id: reminder.id },
+    });
+    expect(lessonAfter).not.toBeNull();
+    expect(reminderAfter?.status).toBe("PENDING");
+  });
+
+  it("cancels PROCESSING reminders in addition to PENDING when deleting lesson (regression: bug-hunt 2026-05-24 #7)", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "PHYSICS",
+        lessonType: "EGE",
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+        isRecurring: false,
+        status: "SCHEDULED",
+      },
+    });
+    const processingReminder = await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() + 23 * 60 * 60 * 1000),
+        intervalMinutes: 60,
+        lessonId: lesson.id,
+        userId,
+        status: "PROCESSING",
+        claimedAt: new Date(),
+      },
+    });
+
+    let capturedWhere: unknown = null;
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    const txSpy = jest
+      .spyOn(prisma, "$transaction")
+      .mockImplementation(((arg: unknown) => {
+        if (typeof arg === "function") {
+          return (originalTransaction as unknown as (cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>)(
+            async (tx: unknown) => {
+              const txClient = tx as {
+                scheduledReminder: { updateMany: (args: { where?: unknown; data: unknown }) => Promise<unknown> };
+              };
+              const originalUpdateMany = txClient.scheduledReminder.updateMany.bind(
+                txClient.scheduledReminder
+              );
+              txClient.scheduledReminder.updateMany = (args) => {
+                capturedWhere = args.where;
+                return originalUpdateMany(args);
+              };
+              return (arg as (tx: unknown) => Promise<unknown>)(tx);
+            }
+          );
+        }
+        return (originalTransaction as (a: unknown) => Promise<unknown>)(arg);
+      }) as unknown as typeof prisma.$transaction);
+
+    await request(app)
+      .delete(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ deleteAllFuture: false })
+      .expect(200);
+
+    txSpy.mockRestore();
+
+    expect(capturedWhere).toMatchObject({
+      status: { in: expect.arrayContaining(["PENDING", "PROCESSING"]) },
+    });
+
+    const reminderAfter = await prisma.scheduledReminder.findUnique({
+      where: { id: processingReminder.id },
+    });
+    expect(reminderAfter === null || reminderAfter.status === "CANCELLED").toBe(true);
+  });
 });

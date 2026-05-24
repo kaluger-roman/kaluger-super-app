@@ -4,6 +4,7 @@ export type StudentJwtPayload = {
   studentUserId: string;
   email: string;
   isStudent: true;
+  tokenVersion: number;
 };
 
 export type StudentRequest = Request & {
