@@ -7,14 +7,14 @@ export const MonthBox = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
   padding: theme.spacing(1.5),
   borderRadius: theme.spacing(2),
-  background: "linear-gradient(135deg, #42a5f5 0%, #7e57c2 100%)",
+  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
   cursor: "pointer",
   boxShadow: theme.shadows[1],
   transition: "all 0.2s ease",
   "&:hover": {
     boxShadow: theme.shadows[2],
     transform: "translateY(-1px)",
-    background: "linear-gradient(135deg, #1976d2 0%, #512da8 100%)",
+    background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
   },
 }));
 

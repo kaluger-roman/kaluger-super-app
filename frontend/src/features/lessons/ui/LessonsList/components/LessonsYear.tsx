@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { Collapse } from "@mui/material";
 
 import type { Lesson } from "@shared";
+import { handleActivationKey } from "@shared";
 
 import type { LessonListType } from "../LessonsList.types";
 import { LessonsMonth } from "./LessonsMonth";
@@ -37,7 +38,14 @@ export const LessonsYear: FC<LessonsYearProps> = ({
 
   return (
     <Fragment>
-      <Styled.YearBox onClick={onToggleYear}>
+      <Styled.YearBox
+        onClick={onToggleYear}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+        aria-label={`${year}, ${isCollapsed ? "раскрыть" : "свернуть"}`}
+        onKeyDown={handleActivationKey(onToggleYear)}
+      >
         <Styled.YearText variant="h5">{year}</Styled.YearText>
         {isCollapsed ? <Styled.WhiteExpandMore /> : <Styled.WhiteExpandLess />}
       </Styled.YearBox>

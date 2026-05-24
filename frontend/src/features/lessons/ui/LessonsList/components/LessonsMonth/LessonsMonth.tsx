@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { Collapse } from "@mui/material";
 
 import type { Lesson } from "@shared";
+import { handleActivationKey } from "@shared";
 
 import type { LessonListType } from "../../LessonsList.types";
 import { LessonsDay } from "../LessonsDay";
@@ -29,7 +30,14 @@ export const LessonsMonth: FC<LessonsMonthProps> = ({
 }) => {
   return (
     <Fragment>
-      <Styled.MonthBox onClick={onToggle}>
+      <Styled.MonthBox
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+        aria-label={`${month}, ${isCollapsed ? "раскрыть" : "свернуть"}`}
+        onKeyDown={handleActivationKey(onToggle)}
+      >
         <Styled.MonthText variant="h6">📅&nbsp;&nbsp;&nbsp;{month}</Styled.MonthText>
         {isCollapsed ? <Styled.WhiteExpandMore /> : <Styled.WhiteExpandLess />}
       </Styled.MonthBox>

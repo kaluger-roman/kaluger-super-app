@@ -1,7 +1,7 @@
 import { createEffect, createEvent, sample } from "effector";
 
 import { taxRatePeriodModel, userModel } from "@entities";
-import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
+import { authApi, extractAxiosError, notificationsModel } from "@shared";
 
 import { NO_PERIODS_ERROR, isInvalidEnableAttempt } from "./finances.helpers";
 
@@ -44,6 +44,6 @@ sample({
 
 sample({
   clock: setTaxEnabledFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Не удалось обновить учёт налога"),
+  fn: (error) => extractAxiosError(error, "Не удалось обновить учёт налога"),
   target: notificationsModel.showErrorEvent,
 });

@@ -18,36 +18,47 @@ export const QuickActions = ({ studentsCount }: QuickActionsProps) => {
 
   return (
     <Styled.Container>
-      <Styled.ActionCard onClick={() => navigate("/lessons")}>
-        <Styled.ActionCardContent>
-          <Styled.ActionIcon as={SchoolIcon} color="primary" />
-          <Styled.ActionTitle variant="h6">Уроки</Styled.ActionTitle>
-        </Styled.ActionCardContent>
+      <Styled.ActionCard>
+        <Styled.ActionAction onClick={() => navigate("/lessons")} aria-label="Уроки">
+          <Styled.ActionCardContent>
+            <Styled.ActionIcon as={SchoolIcon} color="primary" />
+            <Styled.ActionTitle variant="h6">Уроки</Styled.ActionTitle>
+          </Styled.ActionCardContent>
+        </Styled.ActionAction>
       </Styled.ActionCard>
-      <Styled.ActionCard onClick={() => navigate("/students")}>
-        <Styled.ActionCardContent>
-          <Styled.ActionIcon as={GroupIcon} color="success" />
-          <Styled.ActionTitle variant="h6">Ученики</Styled.ActionTitle>
-          <Typography variant="body2" color="text.secondary">
-            {studentsCount} всего
-          </Typography>
-        </Styled.ActionCardContent>
+      <Styled.ActionCard>
+        <Styled.ActionAction
+          onClick={() => navigate("/students")}
+          aria-label={`Ученики, ${studentsCount} всего`}
+        >
+          <Styled.ActionCardContent>
+            <Styled.ActionIcon as={GroupIcon} color="success" />
+            <Styled.ActionTitle variant="h6">Ученики</Styled.ActionTitle>
+            <Typography variant="body2" color="text.secondary">
+              {studentsCount} всего
+            </Typography>
+          </Styled.ActionCardContent>
+        </Styled.ActionAction>
       </Styled.ActionCard>
-      <Styled.ActionCard onClick={() => navigate("/reports")}>
-        <Styled.ActionCardContent>
-          <Styled.ActionIcon as={CalendarIcon} color="info" />
-          <Styled.ActionTitle variant="h6">Отчеты</Styled.ActionTitle>
-          <Typography variant="body2" color="text.secondary">
-            Статистика
-          </Typography>
-        </Styled.ActionCardContent>
+      <Styled.ActionCard>
+        <Styled.ActionAction onClick={() => navigate("/reports")} aria-label="Отчёты">
+          <Styled.ActionCardContent>
+            <Styled.ActionIcon as={CalendarIcon} color="info" />
+            <Styled.ActionTitle variant="h6">Отчеты</Styled.ActionTitle>
+            <Typography variant="body2" color="text.secondary">
+              Статистика
+            </Typography>
+          </Styled.ActionCardContent>
+        </Styled.ActionAction>
       </Styled.ActionCard>
-      <Styled.NewLessonCard onClick={() => navigate("/lessons")}>
-        <Styled.NewLessonCardContent>
-          <Styled.NewLessonIcon as={AddIcon} />
-          <Styled.NewLessonTitle variant="h6">Новый урок</Styled.NewLessonTitle>
-          <Styled.NewLessonSubtitle variant="body2">Создать</Styled.NewLessonSubtitle>
-        </Styled.NewLessonCardContent>
+      <Styled.NewLessonCard>
+        <Styled.NewLessonAction onClick={() => navigate("/lessons")} aria-label="Создать новый урок">
+          <Styled.NewLessonCardContent>
+            <Styled.NewLessonIcon as={AddIcon} />
+            <Styled.NewLessonTitle variant="h6">Новый урок</Styled.NewLessonTitle>
+            <Styled.NewLessonSubtitle variant="body2">Создать</Styled.NewLessonSubtitle>
+          </Styled.NewLessonCardContent>
+        </Styled.NewLessonAction>
       </Styled.NewLessonCard>
     </Styled.Container>
   );

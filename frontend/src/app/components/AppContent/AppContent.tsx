@@ -51,9 +51,7 @@ export const AppContent: FC<AppContentProps> = ({ isLoggedIn, user }) => {
             user={user}
             onLogout={handleLogout}
             onMenuClick={sidebarModel.sidebarToggled}
-            onAvatarClick={(event: React.MouseEvent<HTMLElement>) =>
-              setUserMenuAnchor(event.currentTarget)
-            }
+            onAvatarClick={(event) => setUserMenuAnchor(event.currentTarget)}
             isMobile={isMobile}
           />
           <Sidebar

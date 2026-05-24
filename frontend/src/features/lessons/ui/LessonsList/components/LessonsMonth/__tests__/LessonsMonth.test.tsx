@@ -149,6 +149,44 @@ describe("LessonsMonth", () => {
       expect(mockOnToggle).toHaveBeenCalled();
     });
 
+    it("should call onToggle when Enter pressed on month header (keyboard a11y)", async () => {
+      renderWithTheme(
+        <LessonsMonth
+          month="Февраль 2026"
+          monthData={mockMonthData}
+          isCollapsed={false}
+          onToggle={mockOnToggle}
+          onCardClick={mockOnCardClick}
+          onMenuClick={mockOnMenuClick}
+          type="scheduled"
+        />
+      );
+
+      const monthHeader = screen.getByRole("button", { name: /февраль 2026/i });
+      monthHeader.focus();
+      await userEvent.keyboard("{Enter}");
+
+      expect(mockOnToggle).toHaveBeenCalled();
+    });
+
+    it("should expose role=button, tabIndex=0 and aria-expanded on month header", () => {
+      renderWithTheme(
+        <LessonsMonth
+          month="Февраль 2026"
+          monthData={mockMonthData}
+          isCollapsed={true}
+          onToggle={mockOnToggle}
+          onCardClick={mockOnCardClick}
+          onMenuClick={mockOnMenuClick}
+          type="scheduled"
+        />
+      );
+
+      const monthHeader = screen.getByRole("button", { name: /февраль 2026/i });
+      expect(monthHeader).toHaveAttribute("tabindex", "0");
+      expect(monthHeader).toHaveAttribute("aria-expanded", "false");
+    });
+
     it("should pass callbacks to day components", async () => {
       renderWithTheme(
         <LessonsMonth

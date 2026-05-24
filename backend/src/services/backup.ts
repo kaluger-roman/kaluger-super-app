@@ -206,7 +206,6 @@ export const runBackupJob = async (): Promise<void> => {
       return;
     }
 
-    // Check if enough time has passed since last backup
     if (settings.lastBackupAt) {
       const hoursSinceLastBackup =
         (Date.now() - settings.lastBackupAt.getTime()) / (1000 * 60 * 60);
@@ -224,17 +223,23 @@ export const runBackupJob = async (): Promise<void> => {
 
     console.log(`Backup created: ${path.basename(filePath)} (${sizeMb} MB)`);
 
-    // Update last backup timestamp
     await prisma.backupSettings.update({
       where: { id: settings.id },
       data: { lastBackupAt: new Date() },
     });
 
-    // Clean up old backups
     const deletedCount = cleanupOldBackups(settings.maxStorageMb);
     if (deletedCount > 0) {
       console.log(`Deleted ${deletedCount} old backup(s)`);
     }
+  } catch (error) {
+    const err = error as Error;
+    console.error("Backup job failed:", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    });
+    throw error;
   } finally {
     backupRunning = false;
   }

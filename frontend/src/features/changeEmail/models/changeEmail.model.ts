@@ -2,7 +2,7 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 import { interval, reset } from "patronum";
 
 import { userModel } from "@entities";
-import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
+import { authApi, extractAxiosError, notificationsModel } from "@shared";
 import type { AuthResponse } from "@shared";
 
 import { RESEND_TIMER_SECONDS } from "./changeEmail.constants";
@@ -184,16 +184,16 @@ sample({ clock: formReset, target: stopResendTimer });
 // Error handling
 sample({
   clock: changeEmailFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  fn: (error) => extractAxiosError(error, "Произошла ошибка"),
   target: $error,
 });
 sample({
   clock: verifyEmailChangeFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  fn: (error) => extractAxiosError(error, "Произошла ошибка"),
   target: $error,
 });
 sample({
   clock: resendEmailChangeCodeFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Произошла ошибка"),
+  fn: (error) => extractAxiosError(error, "Произошла ошибка"),
   target: $error,
 });

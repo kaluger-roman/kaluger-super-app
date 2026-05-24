@@ -8,6 +8,7 @@ import { createGate } from "effector-react";
 
 import type { InvitationStatusResponse } from "@shared";
 import { studentInvitationsApi } from "@shared";
+import { notificationsModel } from "@shared/model";
 
 import { extractAxiosError } from "./tutor-student-invitation.helpers";
 
@@ -100,6 +101,18 @@ sample({
   clock: revokeInvitationFx.done,
   fn: () => null,
   target: $ephemeralInviteUrl,
+});
+
+sample({
+  clock: issueInvitationFx.done,
+  fn: () => "Приглашение создано",
+  target: notificationsModel.showSuccessEvent,
+});
+
+sample({
+  clock: revokeInvitationFx.done,
+  fn: () => "Приглашение отозвано",
+  target: notificationsModel.showSuccessEvent,
 });
 
 sample({

@@ -1,4 +1,4 @@
-import { AppBar, IconButton, Toolbar, Typography } from "@mui/material";
+import { AppBar, IconButton, Toolbar, Typography, alpha } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -32,7 +32,7 @@ export const TitleText = styled(Typography)(({ theme }) => ({
 export const EmojiBox = styled("span")(({ theme }) => ({
   fontSize: 24,
   marginRight: theme.spacing(0.5),
-  filter: "drop-shadow(0 2px 4px #764ba2aa)",
+  filter: `drop-shadow(0 2px 4px ${alpha(theme.palette.primary.dark, 0.67)})`,
   [theme.breakpoints.up("sm")]: {
     fontSize: 32,
     marginRight: theme.spacing(1),
