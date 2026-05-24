@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-05-24
+
+### Security
+- nginx-aware `express-rate-limit`: backend now sets `app.set("trust proxy", 1)` so `req.ip` reflects the real client (X-Forwarded-For) instead of `127.0.0.1`. Login / forgot-password / admin-login / student-auth rate limits are no longer shared across the whole user base (beaa058)
+
+### Performance
+- `lessonStatusUpdater` cron (runs every minute): both `findMany` calls now `select: { id: true }` — Postgres no longer streams full Lesson rows (incl. `description`, `homework`, `notes`) just to read ids (beaa058)
+- Lesson list re-renders: `LessonCard` and `LessonsDay` wrapped in `React.memo`; `useLessonMenu` and `useLessonsGrouping` memoize their callbacks via `useCallback`, so a single WebSocket lesson update no longer re-renders every card in the visible month (beaa058)
+
+### Accessibility
+- `LessonsYear`, `LessonsMonth` headers are now real keyboard buttons: `role="button"`, `tabIndex={0}`, `aria-expanded`, Russian `aria-label`, and Enter/Space activation via a shared `handleActivationKey` helper (beaa058)
+- Dashboard quick actions migrated from clickable `Card` to `CardActionArea` with per-card `aria-label`, so keyboard / screen-reader users can reach Уроки / Ученики / Отчёты / Новый урок (beaa058)
+- `UserAvatar` in the header (the only entry point into the profile menu) exposes `role="button"`, `tabIndex={0}`, `aria-label="Меню пользователя <name>"`, `aria-haspopup="menu"` and Enter/Space activation (beaa058)
+
+### Fixed
+- `runBackupJob` now wraps its body in `try/catch` that logs `{ name, message, stack }` structured and re-throws — pg_dump / disk / Prisma failures previously surfaced in pm2 logs as `[object Object]` with no diagnostic context (beaa058)
+- `validateRequiredEnv` extended to cover `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — server now refuses to start on a half-configured deploy instead of failing on the first registration / password-reset / push subscription (beaa058)
+- Tutor invitation toasts: `Приглашение создано` / `Приглашение отозвано` now fire on `issueInvitationFx.done` / `revokeInvitationFx.done`, restoring success/error symmetry on slow connections (beaa058)
+
+### Changed
+- Lesson list visual identity: indigo/purple gradients on year / month headers and the AppHeader emoji shadow (`#667eea` / `#764ba2` / `#42a5f5` / `#7e57c2`) replaced with `theme.palette.primary` / `secondary` tokens — the list now matches the app's green palette and auto-adapts to theme changes (beaa058)
+
+### Refactor
+- `shared/lib`: removed duplicated `extractAxiosErrorMessage` / `AxiosLikeError` / `axios-error.helpers.ts` / `axios-error.types.ts`. Single canonical `extractAxiosError(err, fallback)` lives in `error.helpers.ts`, deliberately ignores axios `.message` (English `"Network Error"`) and requires a Russian fallback. 7 model files migrated (beaa058)
+- New shared helpers: `handleActivationKey` for keyboard activation on non-button elements (used by LessonsYear, LessonsMonth) (beaa058)
+
+### Added
+- `docs/improvement-reports/2026-05-24-improve-hunt.md` — improve-hunt report (10 high-impact candidates, all applied in this batch) (beaa058)
+- Regression coverage for every fix: `backend/src/__tests__/trustProxy.test.ts`, `runBackupJob.test.ts`, `lessonStatusUpdater.test.ts` (select-only) and extended `validateEnv.test.ts`; frontend `error.helpers.test.ts`, `keyboard.helpers.test.ts`, plus a11y / memo / toast cases in `UserAvatar`, `LessonsMonth`, `LessonCard`, `tutor-student-invitation.model` tests (beaa058)
+
 ## 2026-05-22
 
 ### Added
