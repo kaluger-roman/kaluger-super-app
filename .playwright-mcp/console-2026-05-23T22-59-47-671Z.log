@@ -1,8 +1,0 @@
-[    1309ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/static/js/bundle.js:101478
-[    1431ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/lessons:0
-[    1444ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/lessons:0
-[    1487ms] [LOG] WebSocket connected @ http://localhost:3000/static/js/bundle.js:123227
-[    1504ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/push/vapid-key:0
-[  109059ms] [LOG] Lesson cmpiydi3d001f8zqlurd8bt0c status updated to IN_PROGRESS via WebSocket @ http://localhost:3000/static/js/bundle.js:123298
-[  109134ms] [LOG] Lesson cmpiydi3c001d8zqlmnsi2a0b status updated to IN_PROGRESS via WebSocket @ http://localhost:3000/static/js/bundle.js:123298
-[  165954ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/lessons?currentTime=2026-05-23T23:02:33.616Z&page=1&limit=50:0
