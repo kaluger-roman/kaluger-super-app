@@ -1,4 +1,4 @@
-import { Box, MenuItem, Alert } from "@mui/material";
+import { Box } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -14,16 +14,8 @@ export const StudentName = styled("span")({
   fontWeight: 700,
 });
 
-export const StudentRate = styled("span")({
+export const StudentRate = styled("span")(({ theme }) => ({
   marginTop: 4,
   fontSize: 13,
-  color: "rgba(0,0,0,0.6)",
-});
-
-export const StyledMenuItem = styled(MenuItem)({
-  alignItems: "flex-start",
-});
-
-export const ErrorAlert = styled(Alert)(({ theme }) => ({
-  marginTop: theme.spacing(1),
+  color: theme.palette.text.secondary,
 }));

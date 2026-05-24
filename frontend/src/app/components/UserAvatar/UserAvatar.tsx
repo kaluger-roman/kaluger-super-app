@@ -1,6 +1,7 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 
 import type { User } from "@shared";
+import { handleActivationKey } from "@shared";
 
 import * as Styled from "./UserAvatar.styled";
 
@@ -11,14 +12,6 @@ type UserAvatarProps = {
 };
 
 export const UserAvatar: FC<UserAvatarProps> = ({ user, isMobile, onClick }) => {
-  const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-    if (!onClick) return;
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onClick(event);
-    }
-  };
-
   return (
     <Styled.Container
       onClick={onClick}
@@ -26,7 +19,7 @@ export const UserAvatar: FC<UserAvatarProps> = ({ user, isMobile, onClick }) => 
       tabIndex={onClick ? 0 : undefined}
       aria-label={onClick ? `Меню пользователя ${user.name}` : undefined}
       aria-haspopup={onClick ? "menu" : undefined}
-      onKeyDown={onClick ? handleKeyDown : undefined}
+      onKeyDown={onClick ? handleActivationKey(onClick) : undefined}
     >
       <Styled.AvatarBox>
         {user.name

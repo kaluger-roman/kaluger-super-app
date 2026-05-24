@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
 import type { KeyboardEvent } from "react";
+
+import { describe, it, expect, vi } from "vitest";
 
 import { handleActivationKey } from "../keyboard.helpers";
 

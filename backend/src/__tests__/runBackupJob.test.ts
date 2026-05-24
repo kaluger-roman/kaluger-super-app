@@ -20,20 +20,16 @@ describe("runBackupJob error logging", () => {
   let consoleErrorSpy: jest.SpyInstance;
   let consoleLogSpy: jest.SpyInstance;
 
-  beforeAll(async () => {
-    await prisma.backupSettings.upsert({
-      where: { id: "backup-settings-singleton" },
-      update: { enabled: true, lastBackupAt: null, intervalHours: 6 },
-      create: {
+  beforeEach(async () => {
+    await prisma.backupSettings.deleteMany();
+    await prisma.backupSettings.create({
+      data: {
         id: "backup-settings-singleton",
         enabled: true,
         intervalHours: 6,
         maxStorageMb: 300,
       },
     });
-  });
-
-  beforeEach(() => {
     consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
   });
@@ -44,6 +40,7 @@ describe("runBackupJob error logging", () => {
   });
 
   afterAll(async () => {
+    await prisma.backupSettings.deleteMany();
     await prisma.$disconnect();
   });
 
