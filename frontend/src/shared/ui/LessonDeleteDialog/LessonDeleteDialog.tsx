@@ -16,6 +16,7 @@ import { useUnit } from "effector-react";
 import * as lessonDeleteDialogModel from "./lesson-delete-dialog.model";
 import * as Styled from "./LessonDeleteDialog.styled";
 import { SUBJECT_LABELS } from "../../constants";
+import { formatDate, formatTimeRange } from "../../lib";
 
 type LessonDeleteDialogProps = {
   onConfirm: (deleteAllFuture?: boolean) => void;
@@ -54,7 +55,11 @@ export const LessonDeleteDialog: FC<LessonDeleteDialogProps> = ({ onConfirm }) =
         <Box display="flex" flexDirection="column" gap={2}>
           <Typography>
             Вы уверены, что хотите удалить урок <strong>{SUBJECT_LABELS[lesson.subject]}</strong> с
-            учеником <strong>{lesson.student?.name}</strong>?
+            учеником <strong>{lesson.student?.name}</strong>{" "}
+            <strong>
+              {formatDate(lesson.startTime)}, {formatTimeRange(lesson.startTime, lesson.endTime)}
+            </strong>
+            ?
           </Typography>
 
           {lesson.isRecurring && (

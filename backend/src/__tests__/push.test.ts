@@ -44,6 +44,23 @@ describe("push subscription integration tests", () => {
       expect(res.body).toHaveProperty("vapidPublicKey");
       expect(typeof res.body.vapidPublicKey).toBe("string");
       expect(res.body.vapidPublicKey.length).toBeGreaterThan(0);
+      expect(res.body.configured).toBe(true);
+    });
+
+    it("should return 200 with null when VAPID is not configured", async () => {
+      const prev = process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PUBLIC_KEY;
+
+      try {
+        const res = await request(app)
+          .get("/api/push/vapid-key")
+          .expect(200);
+
+        expect(res.body.vapidPublicKey).toBeNull();
+        expect(res.body.configured).toBe(false);
+      } finally {
+        process.env.VAPID_PUBLIC_KEY = prev;
+      }
     });
   });
 

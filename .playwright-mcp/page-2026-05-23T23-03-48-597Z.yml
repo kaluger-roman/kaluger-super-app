@@ -1,0 +1,79 @@
+- generic [ref=e7]:
+  - banner [ref=e8]:
+    - generic [ref=e9]:
+      - button "Открыть меню" [ref=e686] [cursor=pointer]:
+        - img [ref=e11]
+      - heading "graduation cap Kaluger Tutor" [level=5] [ref=e687]:
+        - generic "graduation cap" [ref=e688]: 🎓
+        - text: Kaluger Tutor
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: QR
+        - paragraph [ref=e17]: QA Roam
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - heading "📅 Уроки" [level=1] [ref=e689]
+        - heading "Управление расписанием и занятиями" [level=6] [ref=e690]
+        - generic [ref=e23]:
+          - group "view-mode" [ref=e691]:
+            - button "paged" [pressed] [ref=e692] [cursor=pointer]: Постранично
+            - button "schedule" [ref=e693] [cursor=pointer]: Расписание
+            - button "weekly" [ref=e694] [cursor=pointer]: Понедельно
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30] [cursor=pointer]:
+                - checkbox "Только неоплаченные" [ref=e695]
+                - generic [ref=e36]: Только неоплаченные
+              - generic [ref=e37] [cursor=pointer]:
+                - checkbox "Только без Д/З" [ref=e696]
+                - generic [ref=e43]: Только без Д/З
+            - separator [ref=e44]
+            - generic [ref=e45]:
+              - paragraph [ref=e46]: "Оплата:"
+              - button "Неделя" [ref=e697] [cursor=pointer]:
+                - generic [ref=e48]: Неделя
+              - button "Месяц" [ref=e698] [cursor=pointer]:
+                - generic [ref=e50]: Месяц
+              - button "Пр. месяц" [ref=e699] [cursor=pointer]:
+                - generic [ref=e52]: Пр. месяц
+              - generic [ref=e54]:
+                - generic: С
+                - group "С" [ref=e700]:
+                  - generic [ref=e56]:
+                    - generic [ref=e57]:
+                      - spinbutton "Day" [ref=e701]: DD
+                      - text: .
+                    - generic [ref=e59]:
+                      - spinbutton "Month" [ref=e702]: MM
+                      - text: .
+                    - spinbutton "Year" [ref=e703]: YYYY
+                  - button "Choose date" [ref=e704] [cursor=pointer]:
+                    - img [ref=e65]
+                  - group:
+                    - generic: С
+                  - textbox [ref=e67]
+              - generic [ref=e69]:
+                - generic: По
+                - group "По" [ref=e705]:
+                  - generic [ref=e71]:
+                    - generic [ref=e72]:
+                      - spinbutton "Day" [ref=e706]: DD
+                      - text: .
+                    - generic [ref=e74]:
+                      - spinbutton "Month" [ref=e707]: MM
+                      - text: .
+                    - spinbutton "Year" [ref=e708]: YYYY
+                  - button "Choose date" [ref=e709] [cursor=pointer]:
+                    - img [ref=e80]
+                  - group:
+                    - generic: По
+                  - textbox [ref=e82]
+      - tablist [ref=e86]:
+        - tab "Запланированные" [ref=e710] [cursor=pointer]
+        - tab "Прошедшие" [ref=e711] [cursor=pointer]
+        - tab "Отмененные" [active] [selected] [ref=e712] [cursor=pointer]: Отмененные
+      - generic [ref=e818]:
+        - heading "❌ Нет отмененных уроков" [level=5] [ref=e819]
+        - paragraph [ref=e820]: Отмененные уроки будут отображаться здесь
+      - button "Создать урок" [ref=e808] [cursor=pointer]:
+        - img [ref=e433]

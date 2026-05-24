@@ -1,4 +1,4 @@
-import { Box, Container, Paper, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Container, Paper, Tab, Tabs, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -33,3 +33,7 @@ export const StyledTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: "24px",
   borderBottom: `1px solid ${theme.palette.divider}`,
 }));
+
+export const AccessDeniedAlert = styled(Alert)({
+  marginBottom: "16px",
+});

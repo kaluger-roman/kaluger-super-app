@@ -1,0 +1,7 @@
+[     230ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/static/js/bundle.js:101478
+[     359ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/lessons:0
+[     381ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/lessons:0
+[     498ms] [LOG] WebSocket connected @ http://localhost:3000/static/js/bundle.js:123227
+[   84293ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3001/api/lessons:0
+[ 2416454ms] [LOG] Lesson cmpixl8kl000p8zqlynq4thth status updated to IN_PROGRESS via WebSocket @ http://localhost:3000/static/js/bundle.js:123298
+[ 6016407ms] [LOG] Lesson cmpixl8kl000p8zqlynq4thth status updated to COMPLETED via WebSocket @ http://localhost:3000/static/js/bundle.js:123298

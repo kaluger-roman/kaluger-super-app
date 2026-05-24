@@ -1,0 +1,315 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - banner [ref=e8]:
+      - generic [ref=e9]:
+        - button "Открыть меню" [ref=e1253] [cursor=pointer]:
+          - img [ref=e11]
+        - heading "graduation cap Kaluger Tutor" [level=5] [ref=e1254]:
+          - generic "graduation cap" [ref=e1255]: 🎓
+          - text: Kaluger Tutor
+        - generic [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: QR
+          - paragraph [ref=e17]: QA Roam
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - heading "📅 Уроки" [level=1] [ref=e1256]
+          - heading "Управление расписанием и занятиями" [level=6] [ref=e1257]
+          - generic [ref=e23]:
+            - group "view-mode" [ref=e1258]:
+              - button "paged" [pressed] [ref=e1259] [cursor=pointer]: Постранично
+              - button "schedule" [ref=e1260] [cursor=pointer]: Расписание
+              - button "weekly" [ref=e1261] [cursor=pointer]: Понедельно
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - generic [ref=e30] [cursor=pointer]:
+                  - checkbox "Только неоплаченные" [ref=e1262]
+                  - generic [ref=e36]: Только неоплаченные
+                - generic [ref=e37] [cursor=pointer]:
+                  - checkbox "Только без Д/З" [ref=e1263]
+                  - generic [ref=e43]: Только без Д/З
+              - separator [ref=e44]
+              - generic [ref=e45]:
+                - paragraph [ref=e46]: "Оплата:"
+                - button "Неделя" [ref=e1264] [cursor=pointer]:
+                  - generic [ref=e48]: Неделя
+                - button "Месяц" [ref=e1265] [cursor=pointer]:
+                  - generic [ref=e50]: Месяц
+                - button "Пр. месяц" [ref=e1266] [cursor=pointer]:
+                  - generic [ref=e52]: Пр. месяц
+                - generic [ref=e54]:
+                  - generic: С
+                  - group "С" [ref=e1267]:
+                    - generic [ref=e56]:
+                      - generic [ref=e57]:
+                        - spinbutton "Day" [ref=e1268]: DD
+                        - text: .
+                      - generic [ref=e59]:
+                        - spinbutton "Month" [ref=e1269]: MM
+                        - text: .
+                      - spinbutton "Year" [ref=e1270]: YYYY
+                    - button "Choose date" [ref=e1271] [cursor=pointer]:
+                      - img [ref=e65]
+                    - group:
+                      - generic: С
+                    - textbox [ref=e67]
+                - generic [ref=e69]:
+                  - generic: По
+                  - group "По" [ref=e1272]:
+                    - generic [ref=e71]:
+                      - generic [ref=e72]:
+                        - spinbutton "Day" [ref=e1273]: DD
+                        - text: .
+                      - generic [ref=e74]:
+                        - spinbutton "Month" [ref=e1274]: MM
+                        - text: .
+                      - spinbutton "Year" [ref=e1275]: YYYY
+                    - button "Choose date" [ref=e1276] [cursor=pointer]:
+                      - img [ref=e80]
+                    - group:
+                      - generic: По
+                    - textbox [ref=e82]
+        - tablist [ref=e86]:
+          - tab "Запланированные" [selected] [ref=e1277] [cursor=pointer]: Запланированные
+          - tab "Прошедшие" [ref=e1278] [cursor=pointer]
+          - tab "Отмененные" [ref=e1279] [cursor=pointer]: Отмененные
+        - generic [ref=e821]:
+          - generic [ref=e822] [cursor=pointer]:
+            - heading "2026" [level=5] [ref=e1280]
+            - img [ref=e824]
+          - generic [ref=e828]:
+            - generic [ref=e829] [cursor=pointer]:
+              - heading "📅 май 2026 г." [level=6] [ref=e1281]
+              - img [ref=e831]
+            - generic [ref=e835]:
+              - generic [ref=e836]:
+                - heading "воскресенье, 24 мая" [level=6] [ref=e1282]
+                - generic [ref=e838]:
+                  - generic [ref=e865] [cursor=pointer]:
+                    - generic [ref=e866]:
+                      - generic [ref=e867]:
+                        - heading "qa-roam Маша Иванова" [level=6] [ref=e1283]
+                        - generic [ref=e870]: В процессе
+                      - generic [ref=e871]:
+                        - paragraph [ref=e872]: ⏰ 02:00 - 03:00
+                        - paragraph [ref=e873]: 💰 1500 ₽
+                      - generic [ref=e874]:
+                        - paragraph [ref=e875]: 📚 Физика • ЕГЭ
+                        - generic [ref=e876]:
+                          - button "Не оплачено — нажмите чтобы отметить" [ref=e1284]:
+                            - img [ref=e878]
+                          - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1285]:
+                            - img [ref=e881]
+                    - button "Меню урока" [ref=e1286]:
+                      - img [ref=e885]
+                  - generic [ref=e889] [cursor=pointer]:
+                    - generic [ref=e890]:
+                      - generic [ref=e891]:
+                        - heading "qa-roam Анна Петрова" [level=6] [ref=e1287]
+                        - generic [ref=e894]: Запланирован
+                      - generic [ref=e895]:
+                        - paragraph [ref=e896]: ⏰ 04:39 - 05:39
+                        - paragraph [ref=e897]: 💰 1500 ₽
+                      - generic [ref=e898]:
+                        - paragraph [ref=e899]: 📚 Математика • ОГЭ
+                        - generic [ref=e900]:
+                          - button "Не оплачено — нажмите чтобы отметить" [ref=e1288]:
+                            - img [ref=e902]
+                          - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1289]:
+                            - img [ref=e905]
+                    - button "Меню урока" [ref=e1290]:
+                      - img [ref=e909]
+              - generic [ref=e911]:
+                - heading "понедельник, 25 мая" [level=6] [ref=e1291]
+                - generic [ref=e916] [cursor=pointer]:
+                  - generic [ref=e917]:
+                    - generic [ref=e918]:
+                      - heading "qa-roam Маша Иванова" [level=6] [ref=e1292]
+                      - generic [ref=e921]: Запланирован
+                    - generic [ref=e922]:
+                      - paragraph [ref=e923]: ⏰ 01:39 - 02:39
+                      - paragraph [ref=e924]: 💰 2500 ₽
+                    - generic [ref=e925]:
+                      - paragraph [ref=e926]: 📚 Физика • ЕГЭ
+                      - generic [ref=e927]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1293]:
+                          - img [ref=e929]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1294]:
+                          - img [ref=e932]
+                  - button "Меню урока" [ref=e1295]:
+                    - img [ref=e936]
+              - generic [ref=e938]:
+                - heading "вторник, 26 мая" [level=6] [ref=e1296]
+                - generic [ref=e943] [cursor=pointer]:
+                  - generic [ref=e944]:
+                    - generic [ref=e945]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1297]
+                      - generic [ref=e948]: Запланирован
+                      - generic [ref=e949]:
+                        - img [ref=e950]
+                        - generic [ref=e952]: Регулярный
+                    - generic [ref=e953]:
+                      - paragraph [ref=e954]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e955]: 💰 1500 ₽
+                    - generic [ref=e956]:
+                      - paragraph [ref=e957]: 📚 Математика • ОГЭ
+                      - generic [ref=e958]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1298]:
+                          - img [ref=e960]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1299]:
+                          - img [ref=e963]
+                  - button "Меню урока" [ref=e1300]:
+                    - img [ref=e967]
+              - generic [ref=e969]:
+                - heading "воскресенье, 31 мая" [level=6] [ref=e1301]
+                - generic [ref=e974] [cursor=pointer]:
+                  - generic [ref=e975]:
+                    - generic [ref=e976]:
+                      - heading "qa-roam Пётр Сидоров" [level=6] [ref=e1302]
+                      - generic [ref=e979]: Запланирован
+                    - generic [ref=e980]:
+                      - paragraph [ref=e981]: ⏰ 01:39 - 02:39
+                      - paragraph [ref=e982]: 💰 1200 ₽
+                    - generic [ref=e983]:
+                      - paragraph [ref=e984]: 📚 Математика • Школа
+                      - generic [ref=e985]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1303]:
+                          - img [ref=e987]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1304]:
+                          - img [ref=e990]
+                  - button "Меню урока" [ref=e1305]:
+                    - img [ref=e994]
+            - generic [ref=e996] [cursor=pointer]:
+              - heading "📅 июнь 2026 г." [level=6] [ref=e1306]
+              - img [ref=e998]
+            - generic [ref=e1002]:
+              - generic [ref=e1003]:
+                - heading "вторник, 2 июня" [level=6] [ref=e1307]
+                - generic [ref=e1008] [cursor=pointer]:
+                  - generic [ref=e1009]:
+                    - generic [ref=e1010]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1308]
+                      - generic [ref=e1013]: Запланирован
+                      - generic [ref=e1014]:
+                        - img [ref=e1015]
+                        - generic [ref=e1017]: Регулярный
+                    - generic [ref=e1018]:
+                      - paragraph [ref=e1019]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e1020]: 💰 1500 ₽
+                    - generic [ref=e1021]:
+                      - paragraph [ref=e1022]: 📚 Математика • ОГЭ
+                      - generic [ref=e1023]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1309]:
+                          - img [ref=e1025]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1310]:
+                          - img [ref=e1028]
+                  - button "Меню урока" [ref=e1311]:
+                    - img [ref=e1032]
+              - generic [ref=e1034]:
+                - heading "вторник, 9 июня" [level=6] [ref=e1312]
+                - generic [ref=e1039] [cursor=pointer]:
+                  - generic [ref=e1040]:
+                    - generic [ref=e1041]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1313]
+                      - generic [ref=e1044]: Запланирован
+                      - generic [ref=e1045]:
+                        - img [ref=e1046]
+                        - generic [ref=e1048]: Регулярный
+                    - generic [ref=e1049]:
+                      - paragraph [ref=e1050]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e1051]: 💰 1500 ₽
+                    - generic [ref=e1052]:
+                      - paragraph [ref=e1053]: 📚 Математика • ОГЭ
+                      - generic [ref=e1054]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1314]:
+                          - img [ref=e1056]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1315]:
+                          - img [ref=e1059]
+                  - button "Меню урока" [ref=e1316]:
+                    - img [ref=e1063]
+              - generic [ref=e1065]:
+                - heading "вторник, 16 июня" [level=6] [ref=e1317]
+                - generic [ref=e1070] [cursor=pointer]:
+                  - generic [ref=e1071]:
+                    - generic [ref=e1072]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1318]
+                      - generic [ref=e1075]: Запланирован
+                      - generic [ref=e1076]:
+                        - img [ref=e1077]
+                        - generic [ref=e1079]: Регулярный
+                    - generic [ref=e1080]:
+                      - paragraph [ref=e1081]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e1082]: 💰 1500 ₽
+                    - generic [ref=e1083]:
+                      - paragraph [ref=e1084]: 📚 Математика • ОГЭ
+                      - generic [ref=e1085]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1319]:
+                          - img [ref=e1087]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1320]:
+                          - img [ref=e1090]
+                  - button "Меню урока" [ref=e1321]:
+                    - img [ref=e1094]
+              - generic [ref=e1096]:
+                - heading "вторник, 23 июня" [level=6] [ref=e1322]
+                - generic [ref=e1101] [cursor=pointer]:
+                  - generic [ref=e1102]:
+                    - generic [ref=e1103]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1323]
+                      - generic [ref=e1106]: Запланирован
+                      - generic [ref=e1107]:
+                        - img [ref=e1108]
+                        - generic [ref=e1110]: Регулярный
+                    - generic [ref=e1111]:
+                      - paragraph [ref=e1112]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e1113]: 💰 1500 ₽
+                    - generic [ref=e1114]:
+                      - paragraph [ref=e1115]: 📚 Математика • ОГЭ
+                      - generic [ref=e1116]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1324]:
+                          - img [ref=e1118]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1325]:
+                          - img [ref=e1121]
+                  - button "Меню урока" [ref=e1326]:
+                    - img [ref=e1125]
+              - generic [ref=e1327]:
+                - heading "вторник, 30 июня" [level=6] [ref=e1328]
+                - generic [ref=e1332] [cursor=pointer]:
+                  - generic [ref=e1333]:
+                    - generic [ref=e1334]:
+                      - heading "qa-roam Анна Петрова" [level=6] [ref=e1335]
+                      - generic [ref=e1337]: Запланирован
+                      - generic [ref=e1338]:
+                        - img [ref=e1339]
+                        - generic [ref=e1341]: Регулярный
+                    - generic [ref=e1342]:
+                      - paragraph [ref=e1343]: ⏰ 07:39 - 08:39
+                      - paragraph [ref=e1344]: 💰 1500 ₽
+                    - generic [ref=e1345]:
+                      - paragraph [ref=e1346]: 📚 Математика • ОГЭ
+                      - generic [ref=e1347]:
+                        - button "Не оплачено — нажмите чтобы отметить" [ref=e1348]:
+                          - img [ref=e1349]
+                        - button "ДЗ не отправлено — нажмите чтобы отметить" [ref=e1351]:
+                          - img [ref=e1352]
+                  - button "Меню урока" [ref=e1355]:
+                    - img [ref=e1356]
+          - paragraph [ref=e1128]: ℹ️ Регулярные уроки рассчитываются автоматически на три месяца вперед
+        - navigation "pagination navigation" [ref=e1358]:
+          - list [ref=e1131]:
+            - listitem [ref=e1132]:
+              - button "Go to previous page" [disabled]:
+                - img
+            - listitem [ref=e1133]:
+              - button "page 1" [ref=e1359] [cursor=pointer]: "1"
+            - listitem [ref=e1135]:
+              - button "Go to page 2" [ref=e1360] [cursor=pointer]: "2"
+            - listitem [ref=e1137]:
+              - button "Go to next page" [ref=e1361] [cursor=pointer]:
+                - img [ref=e1139]
+        - button "Создать урок" [ref=e1362] [cursor=pointer]:
+          - img [ref=e433]
+  - alert [ref=e1363]:
+    - img [ref=e1365]
+    - generic [ref=e1367]: Урок удален
+    - button "Close" [ref=e1369] [cursor=pointer]:
+      - img [ref=e1370]

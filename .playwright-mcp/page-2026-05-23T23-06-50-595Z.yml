@@ -1,0 +1,30 @@
+- generic [ref=e7]:
+  - banner [ref=e8]:
+    - generic [ref=e9]:
+      - button "Открыть меню" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+      - heading "graduation cap Kaluger Tutor" [level=5] [ref=e13]:
+        - generic "graduation cap" [ref=e14]: 🎓
+        - text: Kaluger Tutor
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: QR
+        - paragraph [ref=e17]: QA Roam
+  - main [ref=e18]:
+    - generic [ref=e20]:
+      - heading "Админ-панель" [level=5] [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e37]: Email
+        - generic [ref=e23]:
+          - textbox "Email" [ref=e24]: wrong@admin.test
+          - group:
+            - generic: Email
+      - generic [ref=e25]:
+        - generic [ref=e38]: Пароль
+        - generic [ref=e26]:
+          - textbox "Пароль" [ref=e27]: wrongpass
+          - group:
+            - generic: Пароль
+      - alert [ref=e44]:
+        - img [ref=e46]
+        - generic [ref=e48]: Неверный email или пароль
+      - button "Войти" [ref=e28] [cursor=pointer]: Войти
