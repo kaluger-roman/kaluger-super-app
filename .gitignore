@@ -42,3 +42,7 @@ yarn-error.log*
 /frontend/playwright-report
 /frontend/test-results
 /frontend/playwright/.cache
+
+# Playwright MCP debug artifacts (per-session logs + page snapshots).
+# QA-report screenshots live in docs/qa-roam-reports/screenshots and are tracked.
+.playwright-mcp/
