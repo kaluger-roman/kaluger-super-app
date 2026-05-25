@@ -71,14 +71,26 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
           error={!!errors.studentId}
           helperText={errors.studentId}
           placeholder="Начните вводить имя"
+          slotProps={{
+            // Chrome/Safari ignore autoComplete="off" on inputs that look
+            // like form fields and surface their own saved-value suggestions
+            // on top of the listbox — visually that reads as a duplicate
+            // option. "new-password" is the standard MUI Autocomplete escape
+            // hatch that browsers actually honour.
+            htmlInput: { ...params.inputProps, autoComplete: "new-password" },
+          }}
         />
       )}
       renderOption={(props, student) => {
-        const { key, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
-          key: string;
+        // MUI v5 may inject its own `key` through `props`. Spread `props` first
+        // so MUI-supplied a11y attrs apply, then explicitly set a stable key
+        // from the student id — otherwise React reconciles options by position
+        // and renders duplicates when the listbox re-mounts.
+        const { key: _muiKey, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
+          key?: string;
         };
         return (
-          <Styled.OptionItem key={key} {...optionProps}>
+          <Styled.OptionItem key={student.id} {...optionProps}>
             <Styled.StudentInfoContainer>
               <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                 <Styled.StudentName>{student.name}</Styled.StudentName>
