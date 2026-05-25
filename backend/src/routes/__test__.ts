@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import prisma from "../lib/prisma";
+import { generateAdminToken } from "../utils/auth";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 
 export const testRouter = Router();
@@ -10,12 +11,15 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.pushSubscription.deleteMany();
   await prisma.reminderSettings.deleteMany();
   await prisma.lesson.deleteMany();
+  await prisma.studentInvitation.deleteMany();
+  await prisma.studentUser.deleteMany();
   await prisma.student.deleteMany();
   await prisma.taxRatePeriod.deleteMany();
   await prisma.passwordResetToken.deleteMany();
   await prisma.newsReadStatus.deleteMany();
   await prisma.newsItem.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.backupSettings.deleteMany();
   clearTestMailbox();
   res.status(204).end();
 });
@@ -223,3 +227,26 @@ testRouter.get(
     res.json({ subscriptions });
   },
 );
+
+testRouter.post("/admin/token", (_req: Request, res: Response) => {
+  const email = process.env.ADMIN_EMAIL || "admin@e2e.local";
+  const token = generateAdminToken({ email, isAdmin: true });
+  res.status(201).json({ token });
+});
+
+testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
+  const fs = await import("fs");
+  const path = await import("path");
+  const dir = path.resolve(
+    process.cwd(),
+    process.env.BACKUP_DIR || "backups",
+  );
+  if (fs.existsSync(dir)) {
+    for (const file of fs.readdirSync(dir)) {
+      if (file.endsWith(".sql.gz")) {
+        fs.unlinkSync(path.join(dir, file));
+      }
+    }
+  }
+  res.status(204).end();
+});

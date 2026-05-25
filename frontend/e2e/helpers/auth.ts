@@ -88,3 +88,24 @@ export const createAndLoginTutor = async (
   await seedAuthInBrowser(page, token);
   return { credentials, userId: user.id, token };
 };
+
+export const issueAdminToken = async (): Promise<string> => {
+  const { token } = await apiRequest<{ token: string }>(
+    "/api/__test__/admin/token",
+    { method: "POST", expectStatus: 201 },
+  );
+  return token;
+};
+
+export const seedAdminAuthInBrowser = async (
+  page: Page,
+  token: string,
+): Promise<void> => {
+  await page.addInitScript((adminToken) => {
+    window.localStorage.setItem("adminToken", adminToken);
+  }, token);
+};
+
+export const clearBackupFiles = async (): Promise<void> => {
+  await apiRequest("/api/__test__/backup/files", { method: "DELETE" });
+};

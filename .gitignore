@@ -29,6 +29,7 @@ yarn-error.log*
 # Database backups
 /backend/backups
 /backend/backups-test
+/backend/backups-e2e
 
 # SWC plugin cache
 /backend/.swc
