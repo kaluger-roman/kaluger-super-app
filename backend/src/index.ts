@@ -32,6 +32,11 @@ import { studentCabinetRouter } from "./routes/studentCabinet";
 
 const app = express();
 
+// nginx is the single hop in front of the app. Without trust proxy, req.ip
+// would always be 127.0.0.1 and express-rate-limit would treat every client
+// as one shared source, neutralising login/forgot-password limits.
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(helmet());
 app.use(

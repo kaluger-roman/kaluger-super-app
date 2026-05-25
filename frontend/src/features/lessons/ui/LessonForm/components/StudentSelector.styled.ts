@@ -1,6 +1,12 @@
-import { Box, MenuItem, Alert } from "@mui/material";
+import { Box } from "@mui/material";
 
 import { styled } from "@shared";
+
+export const OptionItem = styled("li")(({ theme }) => ({
+  alignItems: "flex-start",
+  paddingTop: theme.spacing(1),
+  paddingBottom: theme.spacing(1),
+}));
 
 export const StudentInfoContainer = styled(Box)({
   display: "flex",
@@ -8,22 +14,20 @@ export const StudentInfoContainer = styled(Box)({
   alignItems: "flex-start",
   whiteSpace: "normal",
   overflowWrap: "anywhere",
+  width: "100%",
 });
 
 export const StudentName = styled("span")({
   fontWeight: 700,
 });
 
-export const StudentRate = styled("span")({
+export const ArchivedBadge = styled("span")(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.secondary,
+}));
+
+export const StudentRate = styled("span")(({ theme }) => ({
   marginTop: 4,
   fontSize: 13,
-  color: "rgba(0,0,0,0.6)",
-});
-
-export const StyledMenuItem = styled(MenuItem)({
-  alignItems: "flex-start",
-});
-
-export const ErrorAlert = styled(Alert)(({ theme }) => ({
-  marginTop: theme.spacing(1),
+  color: theme.palette.text.secondary,
 }));

@@ -31,6 +31,7 @@ export const updateLessonStatuses = async () => {
           gt: now,
         },
       },
+      select: { id: true },
     });
 
     // Получаем уроки, которые должны стать COMPLETED
@@ -41,6 +42,7 @@ export const updateLessonStatuses = async () => {
           lte: now,
         },
       },
+      select: { id: true },
     });
 
     // Обновляем статусы батчами через updateMany c фильтром по статусу,

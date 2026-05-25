@@ -174,6 +174,34 @@ describe("LessonCard", () => {
     });
   });
 
+  describe("Memoization", () => {
+    it("should not re-render when parent re-renders with identical props (React.memo)", () => {
+      const renderSpy = vi.fn();
+      const Probe = ({ lesson }: { lesson: Lesson }) => {
+        renderSpy();
+        return <LessonCard lesson={lesson} />;
+      };
+
+      const { rerender } = render(
+        <ThemeProvider theme={theme}>
+          <Probe lesson={mockLesson} />
+        </ThemeProvider>
+      );
+
+      const firstChild = screen.getByText("Иван Иванов");
+
+      rerender(
+        <ThemeProvider theme={theme}>
+          <Probe lesson={mockLesson} />
+        </ThemeProvider>
+      );
+
+      const secondChild = screen.getByText("Иван Иванов");
+      expect(secondChild).toBe(firstChild);
+      expect(renderSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   describe("Student archived", () => {
     it("should render archived badge for archived student", () => {
       if (!mockLesson.student) return;

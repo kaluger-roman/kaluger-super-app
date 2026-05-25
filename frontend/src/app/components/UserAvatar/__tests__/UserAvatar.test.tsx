@@ -73,4 +73,33 @@ describe("UserAvatar", () => {
 
     expect(screen.getByText("JP")).toBeInTheDocument();
   });
+
+  it("should expose role=button, tabIndex and aria-label when onClick is provided", () => {
+    renderWithTheme(<UserAvatar user={mockUser} isMobile={false} onClick={vi.fn()} />);
+
+    const trigger = screen.getByRole("button", { name: /меню пользователя test user/i });
+    expect(trigger).toHaveAttribute("tabindex", "0");
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+  });
+
+  it("should invoke onClick via Enter keypress when focused", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+
+    renderWithTheme(<UserAvatar user={mockUser} isMobile={false} onClick={onClick} />);
+
+    const trigger = screen.getByRole("button", { name: /меню пользователя/i });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not expose button semantics when onClick is absent", () => {
+    renderWithTheme(<UserAvatar user={mockUser} isMobile={false} />);
+
+    expect(
+      screen.queryByRole("button", { name: /меню пользователя/i })
+    ).not.toBeInTheDocument();
+  });
 });

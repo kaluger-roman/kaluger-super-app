@@ -1,7 +1,7 @@
 import { sample } from "effector";
 
 import { lessonModel } from "@entities";
-import { extractAxiosErrorMessage } from "@shared";
+import { extractAxiosError } from "@shared";
 import { notificationsModel } from "@shared/model";
 
 sample({
@@ -24,18 +24,18 @@ sample({
 
 sample({
   clock: lessonModel.addLessonFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при создании урока"),
+  fn: (error) => extractAxiosError(error, "Ошибка при создании урока"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: lessonModel.updateLessonFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при обновлении урока"),
+  fn: (error) => extractAxiosError(error, "Ошибка при обновлении урока"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: lessonModel.removeLessonFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при удалении урока"),
+  fn: (error) => extractAxiosError(error, "Ошибка при удалении урока"),
   target: notificationsModel.showErrorEvent,
 });
