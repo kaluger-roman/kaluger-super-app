@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useMemo } from "react";
 
 import { Autocomplete, Box, TextField, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -7,6 +8,7 @@ import { studentModel } from "@entities";
 import type { Lesson, Student } from "@shared";
 
 import {
+  dedupeStudents,
   filterStudents,
   getStudentLabel,
   isSameStudent,
@@ -36,7 +38,11 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   const archivedStudents = useUnit(studentModel.$archivedStudents);
 
   const isCompletedLesson = lesson?.status === "COMPLETED";
-  const availableStudents = isCompletedLesson ? archivedStudents : activeStudents;
+  const sourceStudents = isCompletedLesson ? archivedStudents : activeStudents;
+  const availableStudents = useMemo(
+    () => dedupeStudents(sourceStudents),
+    [sourceStudents],
+  );
   const isFieldDisabled = isLoading || isCompletedLesson;
 
   const selectedStudent =
@@ -74,8 +80,11 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
         return (
           <Styled.OptionItem key={key} {...optionProps}>
             <Styled.StudentInfoContainer>
-              <Box display="flex" alignItems="center" gap={1}>
+              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                 <Styled.StudentName>{student.name}</Styled.StudentName>
+                {student.grade != null && (
+                  <Styled.GradeBadge>{student.grade} класс</Styled.GradeBadge>
+                )}
                 {student.archived && <Styled.ArchivedBadge>📦 Архив</Styled.ArchivedBadge>}
               </Box>
               {student.hourlyRate != null && student.hourlyRate > 0 && (
