@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { useMemo } from "react";
 
 import { Autocomplete, Box, TextField, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
@@ -8,7 +7,6 @@ import { studentModel } from "@entities";
 import type { Lesson, Student } from "@shared";
 
 import {
-  dedupeStudents,
   filterStudents,
   getStudentLabel,
   isSameStudent,
@@ -38,11 +36,7 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   const archivedStudents = useUnit(studentModel.$archivedStudents);
 
   const isCompletedLesson = lesson?.status === "COMPLETED";
-  const sourceStudents = isCompletedLesson ? archivedStudents : activeStudents;
-  const availableStudents = useMemo(
-    () => dedupeStudents(sourceStudents),
-    [sourceStudents],
-  );
+  const availableStudents = isCompletedLesson ? archivedStudents : activeStudents;
   const isFieldDisabled = isLoading || isCompletedLesson;
 
   const selectedStudent =
@@ -71,21 +65,9 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
           error={!!errors.studentId}
           helperText={errors.studentId}
           placeholder="Начните вводить имя"
-          slotProps={{
-            // Chrome/Safari ignore autoComplete="off" on inputs that look
-            // like form fields and surface their own saved-value suggestions
-            // on top of the listbox — visually that reads as a duplicate
-            // option. "new-password" is the standard MUI Autocomplete escape
-            // hatch that browsers actually honour.
-            htmlInput: { ...params.inputProps, autoComplete: "new-password" },
-          }}
         />
       )}
       renderOption={(props, student) => {
-        // MUI v5 may inject its own `key` through `props`. Spread `props` first
-        // so MUI-supplied a11y attrs apply, then explicitly set a stable key
-        // from the student id — otherwise React reconciles options by position
-        // and renders duplicates when the listbox re-mounts.
         const { key: _muiKey, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
           key?: string;
         };

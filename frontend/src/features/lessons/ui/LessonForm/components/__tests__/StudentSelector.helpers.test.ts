@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { Student } from "@shared";
 
 import {
-  dedupeStudents,
   filterStudents,
   getStudentLabel,
   isSameStudent,
@@ -19,31 +18,6 @@ const makeStudent = (over: Partial<Student> = {}): Student => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...over,
-});
-
-describe("dedupeStudents", () => {
-  it("should keep the first occurrence and drop duplicates by id", () => {
-    const ivanFirst = makeStudent({ id: "s-1", name: "Иван Иванов", hourlyRate: 2000 });
-    const ivanDuplicate = makeStudent({ id: "s-1", name: "Иван Иванов (stale)", hourlyRate: 5000 });
-    const petya = makeStudent({ id: "s-2", name: "Пётр" });
-
-    const result = dedupeStudents([ivanFirst, petya, ivanDuplicate]);
-
-    expect(result).toHaveLength(2);
-    expect(result[0]).toBe(ivanFirst);
-    expect(result[1]).toBe(petya);
-  });
-
-  it("should treat different ids with identical names as distinct", () => {
-    const ivanA = makeStudent({ id: "s-1", name: "Иван Иванов" });
-    const ivanB = makeStudent({ id: "s-2", name: "Иван Иванов" });
-
-    expect(dedupeStudents([ivanA, ivanB])).toHaveLength(2);
-  });
-
-  it("should return an empty array for an empty input", () => {
-    expect(dedupeStudents([])).toEqual([]);
-  });
 });
 
 describe("filterStudents", () => {

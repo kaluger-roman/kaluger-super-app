@@ -125,20 +125,6 @@ describe("StudentSelector", () => {
     expect(inner).toHaveBeenCalledWith({ target: { value: "s-2" } });
   });
 
-  it("should render a student only once even if the store contains duplicates by id", async () => {
-    const user = userEvent.setup();
-    const ivanFirst = makeStudent({ id: "s-1", name: "Иван Иванов" });
-    const ivanDuplicate = makeStudent({ id: "s-1", name: "Иван Иванов" });
-
-    renderWith([ivanFirst, ivanDuplicate], []);
-
-    const input = screen.getByRole("combobox", { name: /ученик/i });
-    await user.click(input);
-
-    const listbox = await screen.findByRole("listbox");
-    expect(within(listbox).getAllByText("Иван Иванов")).toHaveLength(1);
-  });
-
   it("should show the student grade in the option when present", async () => {
     const user = userEvent.setup();
     const ivan = makeStudent({ id: "s-1", name: "Иван Иванов", grade: 9 });
