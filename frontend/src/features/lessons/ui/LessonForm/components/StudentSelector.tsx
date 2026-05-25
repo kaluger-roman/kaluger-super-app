@@ -1,11 +1,16 @@
 import type { FC } from "react";
 
-import { Autocomplete, Box, TextField } from "@mui/material";
+import { Autocomplete, Box, TextField, useTheme } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { studentModel } from "@entities";
 import type { Lesson, Student } from "@shared";
 
+import {
+  filterStudents,
+  getStudentLabel,
+  isSameStudent,
+} from "./StudentSelector.helpers";
 import * as Styled from "./StudentSelector.styled";
 import type { LessonFormData } from "../types";
 
@@ -18,12 +23,6 @@ type StudentSelectorProps = {
   onChange: (field: string) => (e: { target?: { value: unknown } } | unknown) => void;
 };
 
-const filterStudents = (options: Student[], inputValue: string): Student[] => {
-  const query = inputValue.trim().toLowerCase();
-  if (!query) return options;
-  return options.filter((student) => student.name.toLowerCase().includes(query));
-};
-
 export const StudentSelector: FC<StudentSelectorProps> = ({
   formData,
   errors,
@@ -32,6 +31,7 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   lesson,
   onChange,
 }) => {
+  const theme = useTheme();
   const activeStudents = useUnit(studentModel.$students);
   const archivedStudents = useUnit(studentModel.$archivedStudents);
 
@@ -46,8 +46,8 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
     <Autocomplete<Student, false, false, false>
       options={availableStudents}
       value={selectedStudent}
-      getOptionLabel={(student) => student.name}
-      isOptionEqualToValue={(option, value) => option.id === value.id}
+      getOptionLabel={getStudentLabel}
+      isOptionEqualToValue={isSameStudent}
       filterOptions={(options, { inputValue }) => filterStudents(options, inputValue)}
       onChange={(_, newValue) => {
         onChange("studentId")({ target: { value: newValue?.id ?? "" } });
@@ -67,23 +67,26 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
           placeholder="Начните вводить имя"
         />
       )}
-      renderOption={(props, student) => (
-        <li {...props} key={student.id}>
-          <Styled.StudentInfoContainer>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Styled.StudentName>{student.name}</Styled.StudentName>
-              {student.archived && <span>📦(Архив)</span>}
-            </Box>
-            <Styled.StudentRate>
-              {student.hourlyRate != null && student.hourlyRate > 0
-                ? ` ${student.hourlyRate} ₽/занятие`
-                : ""}
-            </Styled.StudentRate>
-          </Styled.StudentInfoContainer>
-        </li>
-      )}
+      renderOption={(props, student) => {
+        const { key, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
+          key: string;
+        };
+        return (
+          <Styled.OptionItem key={key} {...optionProps}>
+            <Styled.StudentInfoContainer>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Styled.StudentName>{student.name}</Styled.StudentName>
+                {student.archived && <Styled.ArchivedBadge>📦 Архив</Styled.ArchivedBadge>}
+              </Box>
+              {student.hourlyRate != null && student.hourlyRate > 0 && (
+                <Styled.StudentRate>{student.hourlyRate} ₽/занятие</Styled.StudentRate>
+              )}
+            </Styled.StudentInfoContainer>
+          </Styled.OptionItem>
+        );
+      }}
       slotProps={{
-        popper: { style: { zIndex: 1500 } },
+        popper: { style: { zIndex: theme.zIndex.modal + 1 } },
       }}
     />
   );
