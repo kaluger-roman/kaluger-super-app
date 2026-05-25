@@ -26,6 +26,15 @@ export const ArchivedBadge = styled("span")(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
+export const GradeBadge = styled("span")(({ theme }) => ({
+  fontSize: 12,
+  padding: `${theme.spacing(0.25)} ${theme.spacing(1)}`,
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.action.hover,
+  color: theme.palette.text.secondary,
+  whiteSpace: "nowrap",
+}));
+
 export const StudentRate = styled("span")(({ theme }) => ({
   marginTop: 4,
   fontSize: 13,

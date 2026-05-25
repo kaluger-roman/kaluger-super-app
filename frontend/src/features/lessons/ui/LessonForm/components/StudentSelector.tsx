@@ -68,14 +68,17 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
         />
       )}
       renderOption={(props, student) => {
-        const { key, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
-          key: string;
+        const { key: _muiKey, ...optionProps } = props as React.HTMLAttributes<HTMLLIElement> & {
+          key?: string;
         };
         return (
-          <Styled.OptionItem key={key} {...optionProps}>
+          <Styled.OptionItem key={student.id} {...optionProps}>
             <Styled.StudentInfoContainer>
-              <Box display="flex" alignItems="center" gap={1}>
+              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                 <Styled.StudentName>{student.name}</Styled.StudentName>
+                {student.grade != null && (
+                  <Styled.GradeBadge>{student.grade} класс</Styled.GradeBadge>
+                )}
                 {student.archived && <Styled.ArchivedBadge>📦 Архив</Styled.ArchivedBadge>}
               </Box>
               {student.hourlyRate != null && student.hourlyRate > 0 && (

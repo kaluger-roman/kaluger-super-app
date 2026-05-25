@@ -125,6 +125,30 @@ describe("StudentSelector", () => {
     expect(inner).toHaveBeenCalledWith({ target: { value: "s-2" } });
   });
 
+  it("should show the student grade in the option when present", async () => {
+    const user = userEvent.setup();
+    const ivan = makeStudent({ id: "s-1", name: "Иван Иванов", grade: 9 });
+
+    renderWith([ivan], []);
+
+    const input = screen.getByRole("combobox", { name: /ученик/i });
+    await user.click(input);
+
+    expect(await screen.findByText("9 класс")).toBeInTheDocument();
+  });
+
+  it("should not show a grade row when grade is not set", async () => {
+    const user = userEvent.setup();
+    const ivan = makeStudent({ id: "s-1", name: "Иван Иванов", grade: null });
+
+    renderWith([ivan], []);
+
+    const input = screen.getByRole("combobox", { name: /ученик/i });
+    await user.click(input);
+
+    expect(screen.queryByText(/класс$/)).not.toBeInTheDocument();
+  });
+
   it("should use archived students when editing a completed lesson", async () => {
     const user = userEvent.setup();
     const active = makeStudent({ id: "active-1", name: "Активный" });
