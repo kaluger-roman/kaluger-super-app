@@ -1,8 +1,10 @@
 import { type FC, lazy, Suspense } from "react";
 
 import { CircularProgress } from "@mui/material";
+import { useUnit } from "effector-react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+import { blockingModel } from "@app/model";
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
 
@@ -69,11 +71,15 @@ const StudentVerifyEmailPage = lazy(() =>
   })),
 );
 
-const RouteFallback: FC = () => (
-  <Styled.FallbackContainer>
-    <CircularProgress />
-  </Styled.FallbackContainer>
-);
+const RouteFallback: FC = () => {
+  const isBlocking = useUnit(blockingModel.$isBlocking);
+  if (isBlocking) return null;
+  return (
+    <Styled.FallbackContainer>
+      <CircularProgress />
+    </Styled.FallbackContainer>
+  );
+};
 
 type AppRoutesProps = {
   isLoggedIn: boolean;
