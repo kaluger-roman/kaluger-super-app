@@ -108,6 +108,11 @@ testRouter.post("/users/:userId/students", async (req: Request, res: Response) =
       grade: data.grade ?? null,
       phone: data.phone ?? null,
       notes: data.notes ?? null,
+      archived: Boolean(data.archived),
+      archivedAt: data.archived ? new Date() : null,
+      archiveReason: data.archived
+        ? (data.archiveReason ?? "COMPLETED_STUDIES")
+        : null,
     },
   });
   res.status(201).json({ student });

@@ -34,6 +34,8 @@ export type StudentSeed = {
   grade?: number;
   phone?: string;
   notes?: string;
+  archived?: boolean;
+  archiveReason?: string;
 };
 
 export const createStudentFor = async (
