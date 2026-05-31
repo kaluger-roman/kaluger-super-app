@@ -174,6 +174,8 @@ export const getLessonsFor = async (
     status: string;
     isPaid: boolean;
     paymentDate: string | null;
+    price: string | number | null;
+    isRecurring: boolean;
   }>;
 }> =>
   apiRequest(
