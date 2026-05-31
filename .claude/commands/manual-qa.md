@@ -203,6 +203,7 @@ description: Ручное QA-тестирование фичи текущей в
 1. `mkdir -p docs/manual-qa-reports/<YYYY-MM-DD>-<branch>/screenshots`
 2. Отчёт: `docs/manual-qa-reports/<YYYY-MM-DD>-<branch>.md` (если занято — суффикс `-2`, `-3`, …).
 3. Скриншоты лежат в подпапке рядом и линкуются относительными путями: `![Логин](./<YYYY-MM-DD>-<branch>/screenshots/01-login.png)`.
+4. **Машинно-читаемый индекс находок:** рядом с MD-отчётом записать `findings.json` с тем же базовым именем (`docs/manual-qa-reports/<YYYY-MM-DD>-<branch>.findings.json`, с теми же суффиксами `-2`/`-3` при коллизиях). Это нужно оркестраторам (например, `/auto-feature`) для парсинга. Схема — см. секцию **«JSON-индекс находок»** ниже.
 
 **Структура отчёта:**
 
@@ -301,6 +302,96 @@ description: Ручное QA-тестирование фичи текущей в
 - #5 — однозначность=нет, изменение задевает контракт API
 ```
 
+---
+
+## JSON-индекс находок
+
+Параллельно с MD-отчётом записать `findings.json` (тот же путь, с расширением `.findings.json`). Структура — стабильный контракт для оркестраторов:
+
+```json
+{
+  "schema_version": 1,
+  "branch": "029-student-cabinet",
+  "feature_id": "029-student-cabinet",
+  "spec_path": "specs/029-student-cabinet/spec.md",
+  "base_url": "http://localhost:3000",
+  "run_at": "2026-05-24T15:32:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-05-24-029-student-cabinet.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 12,
+    "passed": 9,
+    "failed": 2,
+    "warned": 1,
+    "scenarios": [
+      { "id": "P1.1", "title": "...", "priority": "P1", "status": "pass" },
+      { "id": "P1.2", "title": "...", "priority": "P1", "status": "fail", "finding_ids": [3] }
+    ]
+  },
+  "summary": {
+    "total_findings": 7,
+    "by_severity": { "critical": 0, "high": 2, "medium": 3, "low": 2 },
+    "by_category": { "spec-mismatch": 1, "bug": 3, "ux": 2, "improvement": 1 },
+    "unambiguous_fix_count": 5
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "Пустой стейт на странице расписания не отображается",
+      "category": "bug",
+      "severity": "high",
+      "scenario_id": "P1.2",
+      "file": "frontend/src/pages/Schedule/Schedule.tsx",
+      "line_hint": 42,
+      "screenshots": ["docs/manual-qa-reports/2026-05-24-029-student-cabinet/screenshots/03-empty-state.png"],
+      "expected": "Сообщение «Уроков пока нет» и кнопка «Создать»",
+      "actual": "Белый экран, в консоли — ошибка undefined.map",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": ["frontend/src/pages/Schedule/Schedule.tsx"],
+      "autofix_tests_added": ["frontend/src/pages/Schedule/__tests__/Schedule.test.tsx"],
+      "autofix_note": null,
+      "console_excerpt": "TypeError: Cannot read properties of undefined (reading 'map')",
+      "network_excerpt": null,
+      "fix_suggestion": "Добавить условие if (!lessons) return <EmptyState />"
+    },
+    {
+      "id": 2,
+      "title": "...",
+      "category": "spec-mismatch",
+      "severity": "medium",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_note": "Требует решения PO по тексту ошибки"
+    }
+  ]
+}
+```
+
+**Правила заполнения:**
+
+- `category` — одно из `spec-mismatch | bug | ux | improvement` (соответствие иконкам ❌🐛⚠️💡 в MD).
+- `severity` — одно из `critical | high | medium | low`.
+- `readiness` — одно из `green | yellow | red` (по той же логике что в MD).
+- `unambiguous_fix` — boolean, дублирует поле «Однозначность исправления» из MD.
+- `autofix_status` — обязательное поле, значения:
+  - `fixed` — автофикс применён успешно и тесты прошли,
+  - `failed` — попытка автофикса не удалась (откат),
+  - `skipped` — не подходит под критерии автофикса (`unambiguous_fix=false` или категория исключена),
+  - `disabled` — запуск был без `--fix`.
+- `screenshots` — массив **абсолютных-от-корня-репо** путей (с префиксом `docs/...`), не относительных. Чтобы оркестратор мог их прочитать без знания cwd.
+- `file` / `line_hint` — лучшая догадка по результатам Read, может быть `null`.
+- Поля `expected`/`actual` — короткие, для контекста; полное описание остаётся в MD.
+
+**Если автофикс выключен** (`--fix` не передан):
+- `autofix_enabled: false`,
+- у всех находок `autofix_status: "disabled"`, остальные autofix-поля — `null`.
+
+**Если фича без спеки** (Этап 1 fallback): `spec_path: null`, `feature_id` = имя ветки.
+
+---
+
 **Финальное сообщение пользователю в stdout** — короткое, в этой структуре:
 
 ```
@@ -309,6 +400,7 @@ Manual QA: <branch>
 Находки: Critical N₁ / High N₂ / Medium N₃ / Low N₄
 Автофикс: <включён/выключен>, исправлено M
 Отчёт: docs/manual-qa-reports/YYYY-MM-DD-<branch>.md
+JSON: docs/manual-qa-reports/YYYY-MM-DD-<branch>.findings.json
 Главное: <одна строка с самым важным>
 ```
 
@@ -327,4 +419,5 @@ Manual QA: <branch>
 - **Скриншот обязателен** для каждой находки, кроме чисто текстовых (опечатки в копирайте) — там достаточно цитаты + строки.
 - **Нет жёсткого лимита на число находок** — фиксируй столько отдельных пунктов, сколько необходимо, чтобы добросовестно описать наблюдаемое состояние фичи. Дубликаты по-прежнему сводить в один пункт; не репортить субъективные предпочтения. Если находок объективно много (например, ≥ 20) — сгруппируй визуальные/копирайт-мелочи в один пункт-сводку, чтобы отчёт оставался читаемым, но не отбрасывай реальные баги ради лимита.
 - **Не сообщать stack trace из консоли целиком** — только релевантные строки (имя ошибки + место).
-- **В финальном тексте пользователю** — путь к отчёту, оценка готовности, главное действие на одну строку.
+- **В финальном тексте пользователю** — путь к MD-отчёту, путь к JSON, оценка готовности, главное действие на одну строку.
+- **`findings.json` обязателен** — пишется всегда (даже при отсутствии находок: тогда `findings: []` и `coverage.total: 0`). Это публичный контракт для оркестраторов.

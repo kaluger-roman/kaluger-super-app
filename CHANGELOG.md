@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-05-24
 
+### Added
+- `/auto-feature` slash command — sequential 7-phase orchestrator driving full feature development from a single user prompt: worktree → `/speckit.specify` (✋ checkpoint) → mockup React components in final FSD locations with `TODO(auto-feature)` markers + Playwright screenshots desktop/mobile/open-modals (✋ checkpoint) → `/speckit.clarify` + `/speckit.plan` + `/speckit.tasks` → `/speckit.implement` with Effector wiring + tests + lint + tsc + `/changelog` → code-review loop (cap 5 iterations, threshold 50, convergence detector, fixes applied in main agent) → `/manual-qa --fix` → final report with the QA remainder for the user. State persisted in `.claude/auto-feature/<slug>/state.json` with full resume support. All sub-agents on `opus` with explicit max-reasoning-effort instructions; no automatic git/PR operations (536b0bb)
+- `/code-review-local` slash command — local-diff variant of the official PR `code-review` plugin: 5 parallel Sonnet reviewers (CLAUDE.md compliance, shallow bug scan, deep logic with context reads, security/data leakage, type/contract safety) + parallel Haiku scorers using the same 0/25/50/75/100 rubric. Dedupes findings across agents, sorts by score, configurable `--threshold` (default 50 vs plugin's hardcoded 80), works against `git diff <base-ref>...HEAD` instead of a PR. Structured JSON output to `docs/code-reviews/<branch>/iter-N.json` plus `--silent` mode (path-only stdout) for orchestrator consumption (536b0bb)
+- `docs/improvement-reports/2026-05-24-improve-hunt.md` — improve-hunt report (10 high-impact candidates, all applied in this batch) (beaa058)
+- Regression coverage for every fix: `backend/src/__tests__/trustProxy.test.ts`, `runBackupJob.test.ts`, `lessonStatusUpdater.test.ts` (select-only) and extended `validateEnv.test.ts`; frontend `error.helpers.test.ts`, `keyboard.helpers.test.ts`, plus a11y / memo / toast cases in `UserAvatar`, `LessonsMonth`, `LessonCard`, `tutor-student-invitation.model` tests (beaa058)
+
+### Changed
+- `/manual-qa` slash command — added a stable JSON findings index (`*.findings.json` written next to the MD report) so orchestrators can read coverage, severity counts, per-finding category/severity/screenshot paths, and autofix status programmatically. Final stdout message extended with the JSON path. Constraint added: `findings.json` is always written (even on zero findings) as a public contract (536b0bb)
+- Lesson list visual identity: indigo/purple gradients on year / month headers and the AppHeader emoji shadow (`#667eea` / `#764ba2` / `#42a5f5` / `#7e57c2`) replaced with `theme.palette.primary` / `secondary` tokens — the list now matches the app's green palette and auto-adapts to theme changes (beaa058)
+
+### Fixed
+- Двойной клик по «Создать урок» больше не создаёт дубликат урока (та же защита для админ-логина) — `$lessonApiIsLoading` теперь считается через `combine(.pending)`, плюс фильтр на `formSubmitted`/`loginSubmitted` по `!pending`
+- `GET /api/push/vapid-key` отдаёт `200 {vapidPublicKey: null, configured: false}` вместо `500`, когда VAPID не сконфигурирован — фронт корректно держит `$vapidKey = null` и не пытается подписаться
+- Поле «Стоимость урока» в форме создания/редактирования урока автоматически заполняется из часовой ставки выбранного ученика (включая архивных), если поле пустое
+- В диалоге удаления урока теперь выводятся дата и диапазон времени урока — учителю с пересекающимися занятиями проще не перепутать
+- `/admin` под уже залогиненным учителем показывает понятный экран «Только для администраторов» с email и кнопкой «Назад на главную» вместо отдельной второй формы логина; кнопка «Войти» в админ-форме дизейблится во время сабмита
+- `runBackupJob` now wraps its body in `try/catch` that logs `{ name, message, stack }` structured and re-throws — pg_dump / disk / Prisma failures previously surfaced in pm2 logs as `[object Object]` with no diagnostic context (beaa058)
+- `validateRequiredEnv` extended to cover `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — server now refuses to start on a half-configured deploy instead of failing on the first registration / password-reset / push subscription (beaa058)
+- Tutor invitation toasts: `Приглашение создано` / `Приглашение отозвано` now fire on `issueInvitationFx.done` / `revokeInvitationFx.done`, restoring success/error symmetry on slow connections (beaa058)
+
 ### Security
 - nginx-aware `express-rate-limit`: backend now sets `app.set("trust proxy", 1)` so `req.ip` reflects the real client (X-Forwarded-For) instead of `127.0.0.1`. Login / forgot-password / admin-login / student-auth rate limits are no longer shared across the whole user base (beaa058)
 
@@ -18,26 +38,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dashboard quick actions migrated from clickable `Card` to `CardActionArea` with per-card `aria-label`, so keyboard / screen-reader users can reach Уроки / Ученики / Отчёты / Новый урок (beaa058)
 - `UserAvatar` in the header (the only entry point into the profile menu) exposes `role="button"`, `tabIndex={0}`, `aria-label="Меню пользователя <name>"`, `aria-haspopup="menu"` and Enter/Space activation (beaa058)
 
-### Fixed
-- Двойной клик по «Создать урок» больше не создаёт дубликат урока (та же защита для админ-логина) — `$lessonApiIsLoading` теперь считается через `combine(.pending)`, плюс фильтр на `formSubmitted`/`loginSubmitted` по `!pending`
-- `GET /api/push/vapid-key` отдаёт `200 {vapidPublicKey: null, configured: false}` вместо `500`, когда VAPID не сконфигурирован — фронт корректно держит `$vapidKey = null` и не пытается подписаться
-- Поле «Стоимость урока» в форме создания/редактирования урока автоматически заполняется из часовой ставки выбранного ученика (включая архивных), если поле пустое
-- В диалоге удаления урока теперь выводятся дата и диапазон времени урока — учителю с пересекающимися занятиями проще не перепутать
-- `/admin` под уже залогиненным учителем показывает понятный экран «Только для администраторов» с email и кнопкой «Назад на главную» вместо отдельной второй формы логина; кнопка «Войти» в админ-форме дизейблится во время сабмита
-- `runBackupJob` now wraps its body in `try/catch` that logs `{ name, message, stack }` structured and re-throws — pg_dump / disk / Prisma failures previously surfaced in pm2 logs as `[object Object]` with no diagnostic context (beaa058)
-- `validateRequiredEnv` extended to cover `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — server now refuses to start on a half-configured deploy instead of failing on the first registration / password-reset / push subscription (beaa058)
-- Tutor invitation toasts: `Приглашение создано` / `Приглашение отозвано` now fire on `issueInvitationFx.done` / `revokeInvitationFx.done`, restoring success/error symmetry on slow connections (beaa058)
-
-### Changed
-- Lesson list visual identity: indigo/purple gradients on year / month headers and the AppHeader emoji shadow (`#667eea` / `#764ba2` / `#42a5f5` / `#7e57c2`) replaced with `theme.palette.primary` / `secondary` tokens — the list now matches the app's green palette and auto-adapts to theme changes (beaa058)
-
 ### Refactor
 - `shared/lib`: removed duplicated `extractAxiosErrorMessage` / `AxiosLikeError` / `axios-error.helpers.ts` / `axios-error.types.ts`. Single canonical `extractAxiosError(err, fallback)` lives in `error.helpers.ts`, deliberately ignores axios `.message` (English `"Network Error"`) and requires a Russian fallback. 7 model files migrated (beaa058)
 - New shared helpers: `handleActivationKey` for keyboard activation on non-button elements (used by LessonsYear, LessonsMonth) (beaa058)
-
-### Added
-- `docs/improvement-reports/2026-05-24-improve-hunt.md` — improve-hunt report (10 high-impact candidates, all applied in this batch) (beaa058)
-- Regression coverage for every fix: `backend/src/__tests__/trustProxy.test.ts`, `runBackupJob.test.ts`, `lessonStatusUpdater.test.ts` (select-only) and extended `validateEnv.test.ts`; frontend `error.helpers.test.ts`, `keyboard.helpers.test.ts`, plus a11y / memo / toast cases in `UserAvatar`, `LessonsMonth`, `LessonCard`, `tutor-student-invitation.model` tests (beaa058)
 
 ### Internal
 - `/qa-roam` skill: убран жёсткий лимит «не более 5 пунктов» в отчёте — теперь записывается всё, что прошло фильтры Этапа 3, отсортированное по приоритету
