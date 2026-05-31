@@ -37,7 +37,9 @@ sample({ clock: passwordChanged, target: $password });
 
 sample({
   clock: loginSubmitted,
-  source: { email: $email, password: $password },
+  source: { email: $email, password: $password, isLoading: loginFx.pending },
+  filter: ({ isLoading }) => !isLoading,
+  fn: ({ email, password }) => ({ email, password }),
   target: loginFx,
 });
 

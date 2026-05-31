@@ -1,4 +1,4 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { combine, createEvent, createEffect, createStore, sample } from "effector";
 
 import type { Lesson, CreateLessonDto, UpdateLessonDto, PaymentsSummary } from "@shared";
 import { lessonsApi } from "@shared";
@@ -135,7 +135,21 @@ export const $allPagination = createStore({
   limit: 10,
   totalPages: 0,
 });
-export const $lessonApiIsLoading = createStore(false);
+export const $lessonApiIsLoading = combine(
+  [
+    loadCompletedLessonsFx.pending,
+    loadCancelledLessonsFx.pending,
+    loadAllLessonsFx.pending,
+    loadLessonFx.pending,
+    loadUpcomingLessonsFx.pending,
+    loadWeeklyLessonsFx.pending,
+    loadScheduleLessonsFx.pending,
+    addLessonFx.pending,
+    updateLessonFx.pending,
+    removeLessonFx.pending,
+  ],
+  (pendings) => pendings.some(Boolean)
+);
 
 sample({
   clock: loadCompletedLessons,

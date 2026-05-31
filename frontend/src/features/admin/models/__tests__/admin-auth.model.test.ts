@@ -129,6 +129,29 @@ describe("features/admin/models/admin-auth.model", () => {
 
       expect(scope.getState($loginError)).toBeNull();
     });
+
+    it("должен вызвать loginFx один раз при двух последовательных loginSubmitted, пока первый запрос в полёте", async () => {
+      let resolveFirst: (value: { token: string }) => void = () => undefined;
+      const firstResponse = new Promise<{ token: string }>((resolve) => {
+        resolveFirst = resolve;
+      });
+      vi.mocked(adminApiMethods.login).mockReturnValueOnce(firstResponse);
+
+      const scope = fork({
+        values: [
+          [$email, "admin@test.com"],
+          [$password, "pass"],
+        ],
+      });
+
+      const first = allSettled(loginSubmitted, { scope });
+      const second = allSettled(loginSubmitted, { scope });
+
+      resolveFirst({ token: "token-123" });
+      await Promise.all([first, second]);
+
+      expect(adminApiMethods.login).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("logout", () => {

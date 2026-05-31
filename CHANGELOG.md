@@ -19,6 +19,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `UserAvatar` in the header (the only entry point into the profile menu) exposes `role="button"`, `tabIndex={0}`, `aria-label="Меню пользователя <name>"`, `aria-haspopup="menu"` and Enter/Space activation (beaa058)
 
 ### Fixed
+- Двойной клик по «Создать урок» больше не создаёт дубликат урока (та же защита для админ-логина) — `$lessonApiIsLoading` теперь считается через `combine(.pending)`, плюс фильтр на `formSubmitted`/`loginSubmitted` по `!pending`
+- `GET /api/push/vapid-key` отдаёт `200 {vapidPublicKey: null, configured: false}` вместо `500`, когда VAPID не сконфигурирован — фронт корректно держит `$vapidKey = null` и не пытается подписаться
+- Поле «Стоимость урока» в форме создания/редактирования урока автоматически заполняется из часовой ставки выбранного ученика (включая архивных), если поле пустое
+- В диалоге удаления урока теперь выводятся дата и диапазон времени урока — учителю с пересекающимися занятиями проще не перепутать
+- `/admin` под уже залогиненным учителем показывает понятный экран «Только для администраторов» с email и кнопкой «Назад на главную» вместо отдельной второй формы логина; кнопка «Войти» в админ-форме дизейблится во время сабмита
 - `runBackupJob` now wraps its body in `try/catch` that logs `{ name, message, stack }` structured and re-throws — pg_dump / disk / Prisma failures previously surfaced in pm2 logs as `[object Object]` with no diagnostic context (beaa058)
 - `validateRequiredEnv` extended to cover `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — server now refuses to start on a half-configured deploy instead of failing on the first registration / password-reset / push subscription (beaa058)
 - Tutor invitation toasts: `Приглашение создано` / `Приглашение отозвано` now fire on `issueInvitationFx.done` / `revokeInvitationFx.done`, restoring success/error symmetry on slow connections (beaa058)
@@ -33,6 +38,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `docs/improvement-reports/2026-05-24-improve-hunt.md` — improve-hunt report (10 high-impact candidates, all applied in this batch) (beaa058)
 - Regression coverage for every fix: `backend/src/__tests__/trustProxy.test.ts`, `runBackupJob.test.ts`, `lessonStatusUpdater.test.ts` (select-only) and extended `validateEnv.test.ts`; frontend `error.helpers.test.ts`, `keyboard.helpers.test.ts`, plus a11y / memo / toast cases in `UserAvatar`, `LessonsMonth`, `LessonCard`, `tutor-student-invitation.model` tests (beaa058)
+
+### Internal
+- `/qa-roam` skill: убран жёсткий лимит «не более 5 пунктов» в отчёте — теперь записывается всё, что прошло фильтры Этапа 3, отсортированное по приоритету
+- Новый отчёт QA Roam: `docs/qa-roam-reports/2026-05-24-qa-roam.md`
 
 ## 2026-05-22
 

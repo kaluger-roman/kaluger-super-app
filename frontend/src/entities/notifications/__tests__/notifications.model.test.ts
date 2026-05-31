@@ -33,12 +33,21 @@ describe("notifications.model", () => {
 
   describe("VAPID key loading", () => {
     it("should load VAPID key into store", async () => {
-      mockedGetVapidKey.mockResolvedValue({ vapidPublicKey: "test-key-123" });
+      mockedGetVapidKey.mockResolvedValue({ vapidPublicKey: "test-key-123", configured: true });
 
       const scope = fork();
       await allSettled(notificationsModel.loadVapidKeyFx, { scope, params: undefined });
 
       expect(scope.getState(notificationsModel.$vapidKey)).toBe("test-key-123");
+    });
+
+    it("should keep $vapidKey null when backend reports VAPID not configured", async () => {
+      mockedGetVapidKey.mockResolvedValue({ vapidPublicKey: null, configured: false });
+
+      const scope = fork();
+      await allSettled(notificationsModel.loadVapidKeyFx, { scope, params: undefined });
+
+      expect(scope.getState(notificationsModel.$vapidKey)).toBeNull();
     });
   });
 

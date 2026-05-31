@@ -1,4 +1,4 @@
-import type { Lesson, CreateLessonDto, UpdateLessonDto } from "@shared";
+import type { Lesson, CreateLessonDto, Student, UpdateLessonDto } from "@shared";
 import { toDateKey } from "@shared";
 
 import type { LessonFormData } from "../ui/LessonForm/types";
@@ -149,6 +149,19 @@ export const updateFormField = (
   ...formData,
   [field]: value,
 });
+
+export const applyHourlyRateAutofill = (
+  formData: LessonFormData,
+  students: Student[],
+  archivedStudents: Student[]
+): LessonFormData => {
+  if (!formData.studentId || formData.price) return formData;
+  const student =
+    students.find((s) => s.id === formData.studentId) ??
+    archivedStudents.find((s) => s.id === formData.studentId);
+  if (!student?.hourlyRate) return formData;
+  return { ...formData, price: String(student.hourlyRate) };
+};
 
 export const updateFormDate = (
   formData: LessonFormData,
