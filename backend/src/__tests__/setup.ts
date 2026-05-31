@@ -15,6 +15,7 @@ process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_dummy";
 jest.setTimeout(10000);
 
 import prisma from "../lib/prisma";
+import { __clearStudentTokenVersionCacheForTests } from "../lib/studentTokenVersionCache";
 import { __clearTokenVersionCacheForTests } from "../lib/tokenVersionCache";
 
 // The in-process tokenVersion cache survives within a jest worker; clear it
@@ -22,6 +23,7 @@ import { __clearTokenVersionCacheForTests } from "../lib/tokenVersionCache";
 // directly (e.g. forcing a verified state) cannot be served stale.
 beforeEach(() => {
   __clearTokenVersionCacheForTests();
+  __clearStudentTokenVersionCacheForTests();
 });
 
 afterAll(async () => {

@@ -37,6 +37,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
       studentUserId,
       email: studentUser.email,
       isStudent: true,
+      tokenVersion: studentUser.tokenVersion,
     });
 
     adminToken = generateAdminToken({

@@ -1,10 +1,11 @@
 import { createStore, createEvent, sample } from "effector";
 import { createGate } from "effector-react";
 
-import { lessonModel } from "@entities";
+import { lessonModel, studentModel } from "@entities";
 import type { Lesson, CreateLessonDto, UpdateLessonDto } from "@shared";
 
 import {
+  applyHourlyRateAutofill,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -84,8 +85,17 @@ sample({
 
 sample({
   clock: fieldChanged,
-  source: $formData,
-  fn: (formData, { field, value }) => updateFormField(formData, field, value),
+  source: {
+    formData: $formData,
+    students: studentModel.$students,
+    archivedStudents: studentModel.$archivedStudents,
+  },
+  fn: ({ formData, students, archivedStudents }, { field, value }) =>
+    applyHourlyRateAutofill(
+      updateFormField(formData, field, value),
+      students,
+      archivedStudents
+    ),
   target: $formData,
 });
 
@@ -110,8 +120,9 @@ sample({
 
 const validated = sample({
   clock: formSubmitted,
-  source: $formData,
-  fn: validateFormData,
+  source: { formData: $formData, isLoading: lessonModel.$lessonApiIsLoading },
+  filter: ({ isLoading }) => !isLoading,
+  fn: ({ formData }) => validateFormData(formData),
 });
 
 sample({

@@ -12,6 +12,12 @@ describe("validateRequiredEnv", () => {
     "JWT_SECRET",
     "ADMIN_JWT_SECRET",
     "STUDENT_JWT_SECRET",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
+    "FRONTEND_URL",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_SUBJECT",
   ];
 
   it("passes when all required secrets are set", () => {

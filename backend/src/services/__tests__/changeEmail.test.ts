@@ -156,6 +156,25 @@ describe("changeEmail service", () => {
       expect(user!.pendingEmail).toBe(newEmail);
     });
 
+    it("should count concurrent wrong-code submits atomically (regression: bug-hunt 2026-05-24 #1)", async () => {
+      const newEmail = faker.internet.email().toLowerCase();
+      await initiateEmailChange(userId, newEmail, password);
+
+      const PARALLEL_REQUESTS = 4;
+      const results = await Promise.allSettled(
+        Array.from({ length: PARALLEL_REQUESTS }, () =>
+          verifyEmailChange(userId, "000000"),
+        ),
+      );
+
+      results.forEach((r) => {
+        expect(r.status).toBe("rejected");
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user!.verificationAttempts).toBe(PARALLEL_REQUESTS);
+    });
+
     it("should suggest requesting a new code after the code was invalidated", async () => {
       const newEmail = faker.internet.email().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);

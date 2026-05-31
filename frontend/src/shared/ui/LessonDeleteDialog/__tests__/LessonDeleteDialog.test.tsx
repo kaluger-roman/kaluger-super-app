@@ -92,6 +92,20 @@ describe("LessonDeleteDialog", () => {
 
       expect(screen.getByText(/Это действие нельзя отменить/)).toBeInTheDocument();
     });
+
+    it("should show lesson date and time range in confirmation text", async () => {
+      const scope = fork();
+      const onConfirm = vi.fn();
+
+      await allSettled(lessonDeleteDialogModel.$lesson, { scope, params: mockNonRecurringLesson });
+      await allSettled(lessonDeleteDialogModel.$isOpen, { scope, params: true });
+
+      renderWithTheme(<LessonDeleteDialog onConfirm={onConfirm} />, scope);
+
+      // Date in DD.MM.YYYY and time range HH:MM—HH:MM should appear; exact hours depend on TZ
+      expect(screen.getByText(/\d{2}\.\d{2}\.\d{4}/)).toBeInTheDocument();
+      expect(screen.getByText(/\d{2}:\d{2}—\d{2}:\d{2}/)).toBeInTheDocument();
+    });
   });
 
   describe("Non-recurring lesson", () => {

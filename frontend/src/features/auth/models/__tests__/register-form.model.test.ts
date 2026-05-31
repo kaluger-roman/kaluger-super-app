@@ -72,7 +72,7 @@ describe("features/auth/models/register-form.model", () => {
       expect(scope.getState($registerError)).toBe("Пользователь уже существует");
     });
 
-    it("should handle network error", async () => {
+    it("should show the Russian fallback on a network error (English axios .message is suppressed)", async () => {
       const error = { message: "Network error" };
       vi.mocked(authApi.register).mockRejectedValue(error);
 
@@ -82,7 +82,7 @@ describe("features/auth/models/register-form.model", () => {
         params: { email: "new@example.com", password: "password", name: "User" },
       });
 
-      expect(scope.getState($registerError)).toBe("Network error");
+      expect(scope.getState($registerError)).toBe("Произошла ошибка");
     });
 
     it("should handle error without response data", async () => {

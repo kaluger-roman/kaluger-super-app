@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import type { Lesson } from "@shared";
+import type { Lesson, Student } from "@shared";
 
 import type { LessonFormData } from "../../ui/LessonForm/types";
 import {
+  applyHourlyRateAutofill,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -612,5 +613,77 @@ describe("updateFormDate", () => {
 
     const duration = result.endTime.getTime() - result.startTime.getTime();
     expect(duration).toBe(60 * 60 * 1000); // 1 hour
+  });
+});
+
+const createMockStudent = (overrides: Partial<Student> = {}): Student =>
+  ({
+    id: "s-1",
+    name: "Иван",
+    contactMethod: "TELEGRAM",
+    phone: "+79000000001",
+    hourlyRate: 1500,
+    archived: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  } as unknown as Student);
+
+describe("applyHourlyRateAutofill", () => {
+  const baseFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    ...prepareFormData(),
+    studentId: "s-1",
+    price: "",
+    ...overrides,
+  });
+
+  it("подставляет почасовую ставку активного ученика, когда цена пуста", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData(),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("2000");
+  });
+
+  it("подставляет ставку архивного ученика, если он не найден среди активных", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ studentId: "s-arch" }),
+      [],
+      [createMockStudent({ id: "s-arch", hourlyRate: 800 })]
+    );
+
+    expect(result.price).toBe("800");
+  });
+
+  it("не трогает поле цены, если пользователь уже ввёл значение", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ price: "999" }),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("999");
+  });
+
+  it("ничего не подставляет, если у ученика нет ставки", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData(),
+      [createMockStudent({ id: "s-1", hourlyRate: null })],
+      []
+    );
+
+    expect(result.price).toBe("");
+  });
+
+  it("ничего не подставляет, если студент не выбран", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ studentId: "" }),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("");
   });
 });

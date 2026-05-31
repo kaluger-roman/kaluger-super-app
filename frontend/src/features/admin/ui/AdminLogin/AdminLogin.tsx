@@ -10,6 +10,7 @@ export const AdminLogin: FC = () => {
   const email = useUnit(adminAuthModel.$email);
   const password = useUnit(adminAuthModel.$password);
   const loginError = useUnit(adminAuthModel.$loginError);
+  const isLoginPending = useUnit(adminAuthModel.loginFx.pending);
   const actions = useUnit({
     login: adminAuthModel.loginSubmitted,
     changeEmail: adminAuthModel.emailChanged,
@@ -47,8 +48,9 @@ export const AdminLogin: FC = () => {
           fullWidth
           variant="contained"
           onClick={() => actions.login()}
+          disabled={isLoginPending}
         >
-          Войти
+          {isLoginPending ? "Вход..." : "Войти"}
         </Styled.StyledButton>
       </Styled.StyledPaper>
     </Styled.StyledWrapper>

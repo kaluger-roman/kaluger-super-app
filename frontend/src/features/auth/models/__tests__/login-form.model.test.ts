@@ -162,7 +162,7 @@ describe("features/auth/models/login-form.model", () => {
       expect(scope.getState($loginError)).toBe("Неверные учетные данные");
     });
 
-    it("should handle network error", async () => {
+    it("should show the Russian fallback on a network error (English axios .message is suppressed)", async () => {
       const error = { message: "Network error" };
       vi.mocked(authApi.login).mockRejectedValue(error);
 
@@ -172,7 +172,7 @@ describe("features/auth/models/login-form.model", () => {
         params: { email: "test@example.com", password: "password" },
       });
 
-      expect(scope.getState($loginError)).toBe("Network error");
+      expect(scope.getState($loginError)).toBe("Произошла ошибка");
     });
 
     it("should handle error without response data", async () => {

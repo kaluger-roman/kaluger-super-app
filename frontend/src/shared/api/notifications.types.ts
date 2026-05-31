@@ -1,5 +1,6 @@
 export type VapidKeyResponse = {
-  vapidPublicKey: string;
+  vapidPublicKey: string | null;
+  configured: boolean;
 };
 
 export type SubscribeRequest = {

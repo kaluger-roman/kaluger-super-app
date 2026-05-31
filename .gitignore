@@ -43,3 +43,9 @@ yarn-error.log*
 /frontend/playwright-report
 /frontend/test-results
 /frontend/playwright/.cache
+
+# Playwright MCP debug artifacts (per-session logs + page snapshots).
+.playwright-mcp/
+
+# QA-report screenshots: храним локально для ревью, но в репозиторий не пушим.
+docs/**/screenshots/
