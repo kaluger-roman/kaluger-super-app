@@ -2,6 +2,11 @@ import { Router, Request, Response } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import prisma from "../lib/prisma";
 import { generateAdminToken } from "../utils/auth";
+import { generateStudentToken } from "../utils/studentAuth";
+import {
+  generateVerificationCode,
+  getVerificationCodeExpiry,
+} from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 
 export const testRouter = Router();
@@ -225,6 +230,43 @@ testRouter.get(
       where: { userId },
     });
     res.json({ subscriptions });
+  },
+);
+
+testRouter.post(
+  "/students/:studentId/student-user",
+  async (req: Request, res: Response) => {
+    const { studentId } = req.params;
+    const { name, email, password, isEmailVerified, withCode } = req.body;
+    const hashed = await hashPassword(password);
+    const code = withCode ? generateVerificationCode() : null;
+    const studentUser = await prisma.studentUser.create({
+      data: {
+        email: normalizeEmail(email),
+        password: hashed,
+        name,
+        studentId,
+        isEmailVerified: Boolean(isEmailVerified),
+        verificationCode: code,
+        verificationCodeExpiry: code ? getVerificationCodeExpiry() : null,
+        verificationCodeSentAt: code ? new Date() : null,
+      },
+    });
+    const token = generateStudentToken({
+      studentUserId: studentUser.id,
+      email: studentUser.email,
+      isStudent: true,
+    });
+    res.status(201).json({
+      studentUser: {
+        id: studentUser.id,
+        email: studentUser.email,
+        name: studentUser.name,
+        isEmailVerified: studentUser.isEmailVerified,
+      },
+      token,
+      verificationCode: code,
+    });
   },
 );
 
