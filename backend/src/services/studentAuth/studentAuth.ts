@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import prisma from "../../lib/prisma";
+import { setCachedStudentTokenVersion } from "../../lib/studentTokenVersionCache";
 import type {
   StudentLoginDto,
   StudentRegisterByInviteDto,
@@ -143,7 +144,9 @@ export const registerStudentByInvite = async (
     studentUserId: createdStudentUser.id,
     email: createdStudentUser.email,
     isStudent: true,
+    tokenVersion: createdStudentUser.tokenVersion,
   });
+  setCachedStudentTokenVersion(createdStudentUser.id, createdStudentUser.tokenVersion);
 
   const tutorName = invitation.student.tutorId
     ? ((
@@ -200,7 +203,9 @@ export const loginStudent = async (
     studentUserId: studentUser.id,
     email: studentUser.email,
     isStudent: true,
+    tokenVersion: studentUser.tokenVersion,
   });
+  setCachedStudentTokenVersion(studentUser.id, studentUser.tokenVersion);
 
   return {
     ok: true,

@@ -9,7 +9,7 @@ export const YearBox = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(3),
   padding: theme.spacing(2),
   borderRadius: theme.spacing(2),
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
   boxShadow: theme.shadows[2],
   transition: "all 0.3s ease",
   "&:hover": {

@@ -1,7 +1,7 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { userModel } from "@entities";
-import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
+import { authApi, extractAxiosError, notificationsModel } from "@shared";
 import type { AuthResponse } from "@shared";
 
 // Stores
@@ -104,6 +104,6 @@ sample({
 // Error
 sample({
   clock: changePasswordFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Ошибка при смене пароля"),
+  fn: (error) => extractAxiosError(error, "Ошибка при смене пароля"),
   target: $error,
 });

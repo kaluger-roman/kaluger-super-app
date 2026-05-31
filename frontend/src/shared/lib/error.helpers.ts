@@ -2,18 +2,14 @@ import type { AxiosError } from "axios";
 
 type ApiErrorBody = { error?: string };
 
-// Унифицированная экстракция текста ошибки из axios-ошибки.
-// Конвенция: backend возвращает `{ error: "..." }` на любых не-2xx ответах,
-// поэтому в первую очередь читаем `response.data.error`, затем — общий `message`.
-// Фолбэк-строку можно переопределить (например, для admin-форм).
+// Backend always serialises errors as `{ error: "..." }` in Russian. axios'
+// `error.message` is the underlying English string ("Network Error") and is
+// not user-facing — we deliberately fall back to the caller's Russian string
+// instead.
 export const extractAxiosError = (
   err: unknown,
   fallback = "Произошла ошибка. Попробуйте позже"
 ): string => {
   const axiosError = err as AxiosError<ApiErrorBody>;
-  return (
-    axiosError?.response?.data?.error ||
-    axiosError?.message ||
-    fallback
-  );
+  return axiosError?.response?.data?.error || fallback;
 };

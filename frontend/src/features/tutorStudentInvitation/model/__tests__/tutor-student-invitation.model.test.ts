@@ -2,6 +2,7 @@ import { allSettled, fork } from "effector";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { studentInvitationsApi } from "@shared";
+import { notificationsModel } from "@shared/model";
 
 import * as model from "../tutor-student-invitation.model";
 
@@ -103,6 +104,42 @@ describe("features/tutorStudentInvitation model", () => {
     });
 
     expect(scope.getState(model.$ephemeralInviteUrl)).toBeNull();
+  });
+
+  it("emits a success toast 'Приглашение создано' after issueInvitationFx", async () => {
+    vi.mocked(studentInvitationsApi.issueInvitation).mockResolvedValueOnce({
+      inviteUrl: "https://host/student-invite/new-raw",
+      expiresAt: "2027-01-01T00:00:00.000Z",
+      status: "pending",
+    });
+    vi.mocked(studentInvitationsApi.getStatus).mockResolvedValueOnce({
+      status: "pending",
+      createdAt: "2026-05-11T00:00:00.000Z",
+      expiresAt: "2027-01-01T00:00:00.000Z",
+    });
+
+    const scope = fork({ values: [[model.$studentId, "student-1"]] });
+    await allSettled(model.issueInvitationFx, { scope, params: "student-1" });
+
+    expect(scope.getState(notificationsModel.$notification)).toMatchObject({
+      message: "Приглашение создано",
+      type: "success",
+    });
+  });
+
+  it("emits a success toast 'Приглашение отозвано' after revokeInvitationFx", async () => {
+    vi.mocked(studentInvitationsApi.revoke).mockResolvedValueOnce(undefined);
+    vi.mocked(studentInvitationsApi.getStatus).mockResolvedValueOnce({
+      status: "not_issued",
+    });
+
+    const scope = fork({ values: [[model.$studentId, "student-1"]] });
+    await allSettled(model.revokeInvitationFx, { scope, params: "student-1" });
+
+    expect(scope.getState(notificationsModel.$notification)).toMatchObject({
+      message: "Приглашение отозвано",
+      type: "success",
+    });
   });
 
   it("captures axios error to $error on issue failure", async () => {

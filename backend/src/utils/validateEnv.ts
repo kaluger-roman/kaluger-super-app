@@ -3,6 +3,12 @@ const REQUIRED_ENV_VARS = [
   "JWT_SECRET",
   "ADMIN_JWT_SECRET",
   "STUDENT_JWT_SECRET",
+  "RESEND_API_KEY",
+  "EMAIL_FROM",
+  "FRONTEND_URL",
+  "VAPID_PUBLIC_KEY",
+  "VAPID_PRIVATE_KEY",
+  "VAPID_SUBJECT",
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];

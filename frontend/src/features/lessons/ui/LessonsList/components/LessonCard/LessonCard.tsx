@@ -1,4 +1,5 @@
-import type { FC, MouseEvent } from "react";
+import { memo, useCallback } from "react";
+import type { MouseEvent } from "react";
 
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { Typography, Chip, IconButton } from "@mui/material";
@@ -23,11 +24,23 @@ type LessonCardProps = {
   onCardClick?: (lesson: Lesson) => void;
   onMenuClick?: (event: MouseEvent<HTMLElement>, lesson: Lesson) => void;
 };
-export const LessonCard: FC<LessonCardProps> = ({ lesson, onCardClick, onMenuClick }) => {
+
+export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuClick }) => {
+  const handleCardClick = useCallback(() => {
+    onCardClick?.(lesson);
+  }, [onCardClick, lesson]);
+
+  const handleMenuClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      onMenuClick?.(event, lesson);
+    },
+    [onMenuClick, lesson]
+  );
+
   return (
     <Styled.StyledCard
       variant="outlined"
-      onClick={onCardClick ? () => onCardClick(lesson) : undefined}
+      onClick={onCardClick ? handleCardClick : undefined}
     >
       <Styled.StyledCardContent>
         <Styled.HeaderRow>
@@ -76,7 +89,7 @@ export const LessonCard: FC<LessonCardProps> = ({ lesson, onCardClick, onMenuCli
             <IconButton
               size="small"
               aria-label="Меню урока"
-              onClick={(e) => onMenuClick(e, lesson)}
+              onClick={handleMenuClick}
             >
               <MoreVertIcon />
             </IconButton>
@@ -85,4 +98,6 @@ export const LessonCard: FC<LessonCardProps> = ({ lesson, onCardClick, onMenuCli
       </Styled.StyledCardContent>
     </Styled.StyledCard>
   );
-};
+});
+
+LessonCard.displayName = "LessonCard";

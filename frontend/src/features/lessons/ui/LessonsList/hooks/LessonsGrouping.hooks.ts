@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { Lesson } from "@shared";
 
@@ -22,20 +22,20 @@ export const useLessonsGrouping = ({ lessons, type }: UseLessonsGroupingProps) =
     return groupLessonsByDate(filteredLessons, type);
   }, [filteredLessons, type]);
 
-  const toggleYear = (year: string) => {
+  const toggleYear = useCallback((year: string) => {
     setCollapsedYears((prev) => ({
       ...prev,
       [year]: !prev[year],
     }));
-  };
+  }, []);
 
-  const toggleMonth = (year: string, month: string) => {
+  const toggleMonth = useCallback((year: string, month: string) => {
     const key = `${year}_${month}`;
     setCollapsedMonths((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
-  };
+  }, []);
 
   return {
     filteredLessons,

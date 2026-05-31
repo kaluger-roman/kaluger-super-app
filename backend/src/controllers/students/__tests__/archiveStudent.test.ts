@@ -208,6 +208,86 @@ describe("Student Archiving", () => {
       expect(reminderAfter === null || reminderAfter.status === "CANCELLED").toBe(true);
     });
 
+    it("should cancel PROCESSING reminders for deleted future lessons (regression: bug-hunt 2026-05-24 #8)", async () => {
+      // Перехватываем $transaction, чтобы spy ловил вызовы внутри tx-клиента —
+      // фильтр updateMany должен включать обе активные стадии.
+      let capturedWhere: unknown = null;
+      const originalTransaction = prisma.$transaction.bind(prisma);
+      const txSpy = jest
+        .spyOn(prisma, "$transaction")
+        .mockImplementation(((arg: unknown) => {
+          if (typeof arg === "function") {
+            return (originalTransaction as unknown as (cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>)(
+              async (tx: unknown) => {
+                const txClient = tx as {
+                  scheduledReminder: { updateMany: (args: { where?: unknown; data: unknown }) => Promise<unknown> };
+                };
+                const originalUpdateMany = txClient.scheduledReminder.updateMany.bind(
+                  txClient.scheduledReminder
+                );
+                txClient.scheduledReminder.updateMany = (args) => {
+                  capturedWhere = args.where;
+                  return originalUpdateMany(args);
+                };
+                return (arg as (tx: unknown) => Promise<unknown>)(tx);
+              }
+            );
+          }
+          return (originalTransaction as (a: unknown) => Promise<unknown>)(arg);
+        }) as unknown as typeof prisma.$transaction);
+
+      const processingStudent = await prisma.student.create({
+        data: {
+          name: faker.person.fullName(),
+          tutorId: userId,
+          contactMethod: "WHATSAPP",
+          phone: faker.phone.number(),
+        },
+      });
+
+      const futureLesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+          price: 1000,
+          isRecurring: false,
+          tutorId: userId,
+          studentId: processingStudent.id,
+          status: "SCHEDULED" as const,
+        },
+      });
+
+      const processingReminder = await prisma.scheduledReminder.create({
+        data: {
+          scheduledAt: new Date(Date.now() + 23 * 60 * 60 * 1000),
+          intervalMinutes: 60,
+          lessonId: futureLesson.id,
+          userId,
+          status: "PROCESSING",
+          claimedAt: new Date(),
+        },
+      });
+
+      await request(app)
+        .put(`/api/students/${processingStudent.id}/archive`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({})
+        .expect(200);
+
+      txSpy.mockRestore();
+
+      expect(capturedWhere).toMatchObject({
+        status: { in: expect.arrayContaining(["PENDING", "PROCESSING"]) },
+      });
+
+      const reminderAfter = await prisma.scheduledReminder.findUnique({
+        where: { id: processingReminder.id },
+      });
+      expect(reminderAfter === null || reminderAfter.status === "CANCELLED").toBe(true);
+    });
+
     it("should return 404 when student not found", async () => {
       await request(app)
         .put("/api/students/non-existent-id/archive")

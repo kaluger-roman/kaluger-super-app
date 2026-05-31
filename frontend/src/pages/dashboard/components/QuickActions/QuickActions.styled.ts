@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CardContent, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -12,9 +12,9 @@ export const Container = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const ActionCard = styled(Card)({
-  cursor: "pointer",
-});
+export const ActionCard = styled(Card)({});
+
+export const ActionAction = styled(CardActionArea)({});
 
 export const ActionCardContent = styled(CardContent)(({ theme }) => ({
   textAlign: "center",
@@ -33,10 +33,11 @@ export const ActionTitle = styled(Typography)({
 });
 
 export const NewLessonCard = styled(Card)(({ theme }) => ({
-  cursor: "pointer",
   backgroundColor: theme.palette.primary.main,
   color: "white",
 }));
+
+export const NewLessonAction = styled(CardActionArea)({});
 
 export const NewLessonCardContent = styled(CardContent)(({ theme }) => ({
   textAlign: "center",

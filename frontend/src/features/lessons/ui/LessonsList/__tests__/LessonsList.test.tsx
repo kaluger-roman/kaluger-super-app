@@ -34,16 +34,19 @@ vi.mock("../components", () => ({
   }: {
     year: string;
     isCollapsed: boolean;
-    onToggleYear: () => void;
-    onToggleMonth: (month: string) => void;
+    onToggleYear: (year: string) => void;
+    onToggleMonth: (year: string, month: string) => void;
     onCardClick: (lesson: Lesson) => void;
     onMenuClick: (event: React.MouseEvent<HTMLElement>, lesson: Lesson) => void;
   }) => (
     <div data-testid={`lessons-year-${year}`}>
-      <button onClick={onToggleYear} aria-label={`toggle year ${year}`}>
+      <button onClick={() => onToggleYear(year)} aria-label={`toggle year ${year}`}>
         Year: {year} - {isCollapsed ? "collapsed" : "expanded"}
       </button>
-      <button onClick={() => onToggleMonth("January")} aria-label={`toggle month January`}>
+      <button
+        onClick={() => onToggleMonth(year, "January")}
+        aria-label={`toggle month January`}
+      >
         Toggle Month
       </button>
       <button

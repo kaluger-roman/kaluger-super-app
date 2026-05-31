@@ -7,21 +7,13 @@ export const deleteStudent = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.userId;
 
-    // Check if student exists and belongs to user
-    const existingStudent = await prisma.student.findFirst({
-      where: {
-        id,
-        tutorId: userId,
-      },
+    const result = await prisma.student.deleteMany({
+      where: { id, tutorId: userId },
     });
 
-    if (!existingStudent) {
+    if (result.count === 0) {
       return res.status(404).json({ error: "Ученик не найден" });
     }
-
-    await prisma.student.delete({
-      where: { id },
-    });
 
     res.json({ message: "Ученик успешно удален" });
   } catch (error) {

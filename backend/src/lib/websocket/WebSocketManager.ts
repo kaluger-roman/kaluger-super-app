@@ -79,14 +79,8 @@ export class WebSocketManager {
       }
     }
 
-    // Store client connection
-    this.clients.set(decoded.userId, ws);
-
-    console.log(`WebSocket connected: ${decoded.email} (${decoded.userId})`);
-
-    // Register handlers BEFORE sending welcome message — if send throws
-    // synchronously (socket already closing), the close/error handlers must
-    // be in place to clean up the entry in `clients`.
+    // Регистрируем close/error handlers ДО `set`, иначе синхронный close
+    // между set и регистрацией оставит запись-сироту в clients.
     ws.on("close", () => {
       console.log(
         `WebSocket disconnected: ${decoded.email} (${decoded.userId})`
@@ -112,14 +106,19 @@ export class WebSocketManager {
       }
     });
 
-    // Send welcome message only if socket is still open; guard against
-    // synchronous throw from ws.send when socket closed during handshake.
-    if (ws.readyState === WebSocket.OPEN) {
-      try {
-        sendWelcomeMessage(ws, decoded.userId);
-      } catch (error) {
-        console.error("Failed to send welcome message:", error);
-      }
+    // Если socket закрылся, пока шёл async auth, не сохраняем мёртвую запись.
+    if (ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.clients.set(decoded.userId, ws);
+
+    console.log(`WebSocket connected: ${decoded.email} (${decoded.userId})`);
+
+    try {
+      sendWelcomeMessage(ws, decoded.userId);
+    } catch (error) {
+      console.error("Failed to send welcome message:", error);
     }
   }
 
