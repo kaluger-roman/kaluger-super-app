@@ -261,6 +261,7 @@ testRouter.post(
       studentUserId: studentUser.id,
       email: studentUser.email,
       isStudent: true,
+      tokenVersion: studentUser.tokenVersion,
     });
     res.status(201).json({
       studentUser: {
