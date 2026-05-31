@@ -16,12 +16,23 @@ export const Banner = styled(MuiPaper)`
   gap: 12px;
 `;
 
+export const TextWrapper = styled("div")`
+  flex: 1 1 auto;
+  min-width: 0;
+`;
+
 export const Text = styled(MuiTypography)`
   font-size: 14px;
 `;
 
 export const InstallButton = styled(MuiButton)`
   white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+export const CloseButtonWrapper = styled("span")`
+  flex-shrink: 0;
+  display: inline-flex;
 `;
 
 export const IosInstruction = styled(MuiTypography)`

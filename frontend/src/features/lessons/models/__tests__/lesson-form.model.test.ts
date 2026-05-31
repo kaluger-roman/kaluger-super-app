@@ -1,6 +1,7 @@
 import { allSettled, fork } from "effector";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { lessonsApi } from "@shared";
 import type { Lesson } from "@shared";
 
 import {
@@ -11,9 +12,27 @@ import {
   formOpened,
   fieldChanged,
   dateChanged,
+  formSubmitted,
   confirmDialogOpened,
   confirmDialogClosed,
 } from "../lesson-form.model";
+
+vi.mock("@shared", async () => {
+  const actual = await vi.importActual("@shared");
+  return {
+    ...actual,
+    lessonsApi: {
+      getAll: vi.fn(),
+      getById: vi.fn(),
+      getUpcoming: vi.fn(),
+      getByWeek: vi.fn(),
+      getByDateRange: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
 
 const createMockLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
   id: "lesson-1",
@@ -32,6 +51,52 @@ const createMockLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
 });
 
 describe("lesson-form.model", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("formSubmitted (double-submit guard)", () => {
+    it("должен вызвать API один раз даже при двух последовательных formSubmitted, пока первый запрос в полёте", async () => {
+      const scope = fork({
+        values: new Map([
+          [
+            $formData,
+            {
+              subject: "PHYSICS",
+              lessonType: "EGE",
+              description: "",
+              startTime: new Date("2026-01-15T10:00:00.000Z"),
+              endTime: new Date("2026-01-15T11:00:00.000Z"),
+              price: "1500",
+              studentId: "student-1",
+              homework: "",
+              notes: "",
+              isRecurring: false,
+              isPaid: false,
+              isHomeworkSentByTeacher: false,
+              paymentDate: undefined,
+            },
+          ],
+        ]),
+      });
+
+      let resolveFirst: (lesson: Lesson) => void = () => undefined;
+      const firstResponse = new Promise<Lesson>((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      vi.mocked(lessonsApi.create).mockReturnValueOnce(firstResponse);
+
+      const firstSubmit = allSettled(formSubmitted, { scope });
+      const secondSubmit = allSettled(formSubmitted, { scope });
+
+      resolveFirst(createMockLesson({ id: "lesson-created" }));
+      await Promise.all([firstSubmit, secondSubmit]);
+
+      expect(lessonsApi.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("formOpened", () => {
     it("should initialize form with lesson data", async () => {
       const scope = fork();

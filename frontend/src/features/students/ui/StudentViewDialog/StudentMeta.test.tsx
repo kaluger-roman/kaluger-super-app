@@ -14,7 +14,7 @@ describe("StudentMeta", () => {
     renderWithTheme(
       <StudentMeta createdAt="2024-01-15T10:00:00Z" updatedAt="2024-12-20T15:30:00Z" />
     );
-    expect(screen.getByText("ℹ️ Информация")).toBeInTheDocument();
+    expect(screen.getByText("Информация")).toBeInTheDocument();
   });
 
   it("should render created date", () => {

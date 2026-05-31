@@ -2,7 +2,7 @@ import { createEffect, createEvent, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { taxRatePeriodModel, userModel } from "@entities";
-import { authApi, extractAxiosErrorMessage, notificationsModel } from "@shared";
+import { authApi, extractAxiosError, notificationsModel } from "@shared";
 
 import {
   PROFILE_SAVED_MESSAGE,
@@ -102,7 +102,7 @@ sample({
 
 sample({
   clock: updateProfileFx.failData,
-  fn: (error) => extractAxiosErrorMessage(error, "Не удалось обновить профиль"),
+  fn: (error) => extractAxiosError(error, "Не удалось обновить профиль"),
   target: notificationsModel.showErrorEvent,
 });
 

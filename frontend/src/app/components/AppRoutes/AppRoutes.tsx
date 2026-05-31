@@ -1,7 +1,7 @@
 import { type FC, lazy, Suspense } from "react";
 
 import { CircularProgress } from "@mui/material";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
@@ -10,6 +10,7 @@ import * as Styled from "./AppRoutes.styled";
 import { AuthLayout } from "../AuthLayout";
 import { AuthRoute } from "../AuthRoute";
 import { ProtectedRoute } from "../ProtectedRoute";
+import { StudentProtectedRoute } from "../StudentProtectedRoute";
 
 const AdminPage = lazy(() =>
   import("@pages/AdminPage").then((m) => ({ default: m.AdminPage })),
@@ -41,6 +42,31 @@ const LessonsPage = lazy(() =>
 );
 const StudentsPage = lazy(() =>
   import("@pages/students").then((m) => ({ default: m.StudentsPage })),
+);
+const StudentCabinetLayout = lazy(() =>
+  import("@pages/studentCabinet").then((m) => ({
+    default: m.StudentCabinetLayout,
+  })),
+);
+const StudentInvitePage = lazy(() =>
+  import("@pages/studentInvite").then((m) => ({
+    default: m.StudentInvitePage,
+  })),
+);
+const StudentSchedulePage = lazy(() =>
+  import("@pages/studentSchedule").then((m) => ({
+    default: m.StudentSchedulePage,
+  })),
+);
+const StudentSettingsPage = lazy(() =>
+  import("@pages/studentSettings").then((m) => ({
+    default: m.StudentSettingsPage,
+  })),
+);
+const StudentVerifyEmailPage = lazy(() =>
+  import("@pages/studentVerifyEmail").then((m) => ({
+    default: m.StudentVerifyEmailPage,
+  })),
 );
 
 const RouteFallback: FC = () => (
@@ -137,6 +163,18 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
             </AuthLayout>
           }
         />
+        <Route path="/student-invite/:token" element={<StudentInvitePage />} />
+        <Route path="/student/verify-email" element={<StudentVerifyEmailPage />} />
+        <Route
+          path="/student/cabinet"
+          element={
+            <StudentProtectedRoute element={<StudentCabinetLayout />} />
+          }
+        >
+          <Route index element={<Navigate to="schedule" replace />} />
+          <Route path="schedule" element={<StudentSchedulePage />} />
+          <Route path="settings" element={<StudentSettingsPage />} />
+        </Route>
         <Route
           path="/"
           element={<ProtectedRoute element={<DashboardPage />} isLoggedIn={isLoggedIn} />}

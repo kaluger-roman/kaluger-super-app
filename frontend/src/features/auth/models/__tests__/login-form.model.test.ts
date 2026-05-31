@@ -97,6 +97,31 @@ describe("features/auth/models/login-form.model", () => {
       expect(scope.getState(userModel.$user)).toEqual(mockResponse.user);
     });
 
+    it("clears studentToken on successful tutor login", async () => {
+      const mockResponse = {
+        user: {
+          id: "1",
+          email: "tutor@example.com",
+          name: "Tutor",
+          createdAt: "2024-01-01T00:00:00Z",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
+        token: "tutor-token",
+      };
+      vi.mocked(authApi.login).mockResolvedValue(mockResponse);
+      localStorage.setItem("studentToken", "stale-student-token");
+
+      const scope = fork();
+      await allSettled(loginFx, {
+        scope,
+        params: { email: "tutor@example.com", password: "password" },
+      });
+
+      expect(localStorage.getItem("authToken")).toBe("tutor-token");
+      expect(localStorage.getItem("studentToken")).toBeNull();
+    });
+
     it("should handle email not verified error", async () => {
       const error = {
         response: {
@@ -137,7 +162,7 @@ describe("features/auth/models/login-form.model", () => {
       expect(scope.getState($loginError)).toBe("Неверные учетные данные");
     });
 
-    it("should handle network error", async () => {
+    it("should show the Russian fallback on a network error (English axios .message is suppressed)", async () => {
       const error = { message: "Network error" };
       vi.mocked(authApi.login).mockRejectedValue(error);
 
@@ -147,7 +172,7 @@ describe("features/auth/models/login-form.model", () => {
         params: { email: "test@example.com", password: "password" },
       });
 
-      expect(scope.getState($loginError)).toBe("Network error");
+      expect(scope.getState($loginError)).toBe("Произошла ошибка");
     });
 
     it("should handle error without response data", async () => {

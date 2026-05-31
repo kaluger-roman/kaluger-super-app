@@ -25,7 +25,10 @@ export const StudentMeta: FC<StudentMetaProps> = ({
   archiveComment,
 }) => (
   <Box>
-    <Styled.SectionTitle variant="subtitle2">ℹ️ Информация</Styled.SectionTitle>
+    <Styled.SectionTitle variant="subtitle2">
+      <Styled.SectionEmoji aria-hidden>ℹ️</Styled.SectionEmoji>
+      Информация
+    </Styled.SectionTitle>
     <Typography variant="body2" color="text.secondary" gutterBottom>
       Добавлен: {formatDateLong(createdAt)}
     </Typography>

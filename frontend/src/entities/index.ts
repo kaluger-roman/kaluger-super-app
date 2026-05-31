@@ -1,5 +1,7 @@
 export * from "./user";
 export * from "./student";
+export * from "./studentUser";
+export * from "./studentInvitation";
 export * from "./lesson";
 export * from "./verification";
 export * from "./news";

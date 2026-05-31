@@ -6,4 +6,7 @@ export {
   deleteStudent,
   archiveStudent,
   unarchiveStudent,
+  tutorIssueInvitation,
+  tutorReadInvitationStatus,
+  tutorRevokeInvitation,
 } from "./students/index";

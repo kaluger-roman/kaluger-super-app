@@ -1,0 +1,1 @@
+export { StudentWeeklyView } from "./StudentWeeklyView";

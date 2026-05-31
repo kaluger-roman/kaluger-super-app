@@ -1,5 +1,6 @@
 import { createStore, sample, combine } from "effector";
 
+import { userModel } from "@entities/user";
 import { showNotification } from "@shared";
 
 import { toggleInterval } from "./notifications.helpers";
@@ -22,14 +23,35 @@ import {
 } from "./notifications.model";
 import type { ReminderSettings } from "./notifications.types";
 
-// Auto-subscribe device on initial load when server has enabled=true but no local push subscription
+// Срабатывает один раз за сессию — иначе при каждом PWA-resume
+// `loadSettingsFx` повторно тригерит `Notification.requestPermission()`.
+export const $autoSubscribeAttempted = createStore(false);
+
 sample({
   clock: [loadSettingsFx.doneData, loadVapidKeyFx.doneData, checkPushSubscriptionFx.doneData],
-  source: { settings: $reminderSettings, subscribed: $isPushSubscribed, vapidKey: $vapidKey, reg: $serviceWorkerRegistration },
-  filter: ({ settings, subscribed, vapidKey, reg }) =>
-    settings.enabled && !subscribed && vapidKey !== null && reg !== null,
+  source: {
+    settings: $reminderSettings,
+    subscribed: $isPushSubscribed,
+    vapidKey: $vapidKey,
+    reg: $serviceWorkerRegistration,
+    attempted: $autoSubscribeAttempted,
+  },
+  filter: ({ settings, subscribed, vapidKey, reg, attempted }) =>
+    !attempted && settings.enabled && !subscribed && vapidKey !== null && reg !== null,
   fn: ({ vapidKey, reg }) => ({ vapidKey: vapidKey!, registration: reg! }),
   target: subscribePushFx,
+});
+
+sample({
+  clock: [subscribePushFx.done, subscribePushFx.fail],
+  fn: () => true,
+  target: $autoSubscribeAttempted,
+});
+
+sample({
+  clock: userModel.logoutUser,
+  fn: () => false,
+  target: $autoSubscribeAttempted,
 });
 
 // Interval toggle → compute new intervals and update

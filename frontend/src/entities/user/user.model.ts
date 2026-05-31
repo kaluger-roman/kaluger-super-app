@@ -7,6 +7,8 @@ import { verificationModel } from "../verification";
 
 // Events
 export const logoutUser = createEvent();
+
+export const tutorSessionCleared = createEvent();
 export const setAuthToken = createEvent<string>();
 export const updateUser = createEvent<User>();
 
@@ -82,6 +84,22 @@ sample({
 
 sample({
   clock: logoutUser,
+  fn: () => {
+    localStorage.removeItem("authToken");
+    return null;
+  },
+  target: $authToken,
+});
+
+// Soft-clear: те же побочки, что у logoutUser, но без navigate.
+sample({
+  clock: tutorSessionCleared,
+  fn: () => null,
+  target: $user,
+});
+
+sample({
+  clock: tutorSessionCleared,
   fn: () => {
     localStorage.removeItem("authToken");
     return null;

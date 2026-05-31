@@ -57,3 +57,7 @@ export const formatWeekRange = (start: Date | string, end: Date | string): strin
 
   return `${startFormatted} — ${endFormatted}`;
 };
+
+// Низкоуровневые date-примитивы (addDays/getWeekStart/getWeekEnd/groupByDay,
+// formatTime/formatDuration/formatTimeRange, toDateKey) живут в `date.helpers.ts`.
+// Этот модуль содержит только локализованные форматтеры верхнего уровня.

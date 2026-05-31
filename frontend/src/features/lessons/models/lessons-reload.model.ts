@@ -156,12 +156,16 @@ sample({
 sample({
   clock: lessonModel.removeLessonFx.doneData,
   source: {
+    lessonsViewMode: viewModeModel.$lessonsViewMode,
+    currentTab: tabsModel.$currentTab,
     pagination: lessonModel.$upcomingPagination,
     onlyUnpaid: filtersModel.$onlyUnpaid,
     onlyWithoutHomework: filtersModel.$onlyWithoutHomework,
     paymentDateFrom: filtersModel.$paymentDateFrom,
     paymentDateTo: filtersModel.$paymentDateTo,
   },
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
   fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
     page: pagination.page,
     limit: pagination.limit,

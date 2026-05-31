@@ -8,3 +8,7 @@ export * from "./resetPassword";
 export * from "./students";
 export * from "./notificationSettings";
 export * from "./taxRatePeriods";
+export * from "./tutorStudentInvitation";
+export * from "./studentAuth";
+export * from "./studentSchedule";
+export * from "./studentSettings";

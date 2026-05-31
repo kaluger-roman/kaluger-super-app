@@ -56,8 +56,8 @@ export const LessonsList: FC<LessonsListProps> = ({
             yearData={groupedLessons[year]}
             isCollapsed={isYearCollapsed}
             collapsedMonths={collapsedMonths}
-            onToggleYear={() => toggleYear(year)}
-            onToggleMonth={(month) => toggleMonth(year, month)}
+            onToggleYear={toggleYear}
+            onToggleMonth={toggleMonth}
             onMenuClick={handleMenuClick}
             {...commonProps}
           />

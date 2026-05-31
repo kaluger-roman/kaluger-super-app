@@ -17,3 +17,10 @@ export class RecurringShiftConflictError extends Error {
     this.name = "RecurringShiftConflictError";
   }
 }
+
+export class StudentInvitationConsumedError extends Error {
+  constructor() {
+    super("Student invitation already consumed");
+    this.name = "StudentInvitationConsumedError";
+  }
+}

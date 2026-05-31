@@ -21,8 +21,15 @@ export const ContentBox = styled(Box)({
   flex: 1,
 });
 
-export const StudentName = styled(Typography)(({ theme }) => ({
+export const StudentName = styled(Typography)({
   fontWeight: 600,
+});
+
+export const NameRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  flexWrap: "wrap",
   marginBottom: theme.spacing(2),
 }));
 

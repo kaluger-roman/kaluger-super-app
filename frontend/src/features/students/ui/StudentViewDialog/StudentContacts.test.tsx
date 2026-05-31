@@ -28,7 +28,7 @@ describe("StudentContacts", () => {
 
   it("should render section title", () => {
     renderWithTheme(<StudentContacts student={mockStudent} />);
-    expect(screen.getByText("📞 Контакты")).toBeInTheDocument();
+    expect(screen.getByText("Контакты")).toBeInTheDocument();
   });
 
   it("should render student phone when provided", () => {

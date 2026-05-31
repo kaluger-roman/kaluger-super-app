@@ -1,7 +1,12 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import prisma from "../../lib/prisma";
-import { getRecurringLessonKey, cancelRemindersForLesson } from "../../services";
+import {
+  ACTIVE_REMINDER_STATUSES,
+  broadcastStudentLessonDeleted,
+  getRecurringLessonKey,
+  getStudentUserIdByLessonId,
+} from "../../services";
 
 export const deleteLesson = async (req: AuthRequest, res: Response) => {
   try {
@@ -38,22 +43,48 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
         .filter((l) => getRecurringLessonKey(l) === baseKey)
         .map((l) => l.id);
 
+      const studentUserId = toDeleteIds[0]
+        ? await getStudentUserIdByLessonId(toDeleteIds[0])
+        : null;
+
       if (toDeleteIds.length > 0) {
-        for (const lessonId of toDeleteIds) {
-          await cancelRemindersForLesson(lessonId);
-        }
-        await prisma.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
+        await prisma.$transaction(async (tx) => {
+          await tx.scheduledReminder.updateMany({
+            where: {
+              lessonId: { in: toDeleteIds },
+              status: { in: [...ACTIVE_REMINDER_STATUSES] },
+            },
+            data: { status: "CANCELLED", claimedAt: null },
+          });
+          await tx.lesson.deleteMany({ where: { id: { in: toDeleteIds } } });
+        });
       }
 
       res.json({
         message: "Будущие регулярные уроки данной серии успешно удалены",
         deleted: toDeleteIds.length,
       });
+
+      for (const lessonId of toDeleteIds) {
+        void broadcastStudentLessonDeleted(lessonId, studentUserId);
+      }
     } else {
-      await cancelRemindersForLesson(id);
-      await prisma.lesson.delete({ where: { id } });
+      const studentUserId = await getStudentUserIdByLessonId(id);
+
+      await prisma.$transaction(async (tx) => {
+        await tx.scheduledReminder.updateMany({
+          where: {
+            lessonId: id,
+            status: { in: [...ACTIVE_REMINDER_STATUSES] },
+          },
+          data: { status: "CANCELLED", claimedAt: null },
+        });
+        await tx.lesson.delete({ where: { id } });
+      });
 
       res.json({ message: "Урок успешно удален" });
+
+      void broadcastStudentLessonDeleted(id, studentUserId);
     }
   } catch (error) {
     console.error("Delete lesson error:", error);

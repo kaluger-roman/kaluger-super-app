@@ -1,6 +1,13 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
-import { lessonModel, newsModel, notificationsModel, studentModel, userModel } from "@entities";
+import {
+  lessonModel,
+  newsModel,
+  notificationsModel,
+  studentModel,
+  studentUserModel,
+  userModel,
+} from "@entities";
 import { loginFormModel } from "@features/auth";
 import { isIos, isInStandaloneMode } from "@shared";
 
@@ -160,6 +167,33 @@ sample({
 
 sample({
   clock: appBootedUnauthenticated,
+  fn: () => true,
+  target: $appInitialized,
+});
+
+// Boot-time orchestration. App.tsx kicks off the right session-hydration
+// effect; this model decides when to consider the app ready.
+//
+// - Tutor: profile loaded → kick off tutor data load (initializeAppFx);
+//   profile failed → skip data load, mark ready so the redirect (handled
+//   by the 401 axios interceptor) lands on /login without a stuck spinner.
+// - Student: any settle (done|fail) marks the app ready. Tutor data load
+//   is NOT triggered — student JWT would 401 the tutor endpoints and the
+//   interceptor would force-redirect, breaking the student cabinet.
+sample({
+  clock: userModel.getProfileFx.done,
+  fn: (): InitializeAppParams => ({}),
+  target: initializeApp,
+});
+
+sample({
+  clock: userModel.getProfileFx.fail,
+  fn: () => true,
+  target: $appInitialized,
+});
+
+sample({
+  clock: studentUserModel.getCurrentStudentFx.finally,
   fn: () => true,
   target: $appInitialized,
 });
