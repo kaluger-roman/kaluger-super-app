@@ -34,6 +34,8 @@ export type StudentSeed = {
   grade?: number;
   phone?: string;
   notes?: string;
+  archived?: boolean;
+  archiveReason?: string;
 };
 
 export const createStudentFor = async (
@@ -172,6 +174,8 @@ export const getLessonsFor = async (
     status: string;
     isPaid: boolean;
     paymentDate: string | null;
+    price: string | number | null;
+    isRecurring: boolean;
   }>;
 }> =>
   apiRequest(
@@ -204,3 +208,21 @@ export const getPushSubscriptionsFor = async (
 ): Promise<{
   subscriptions: Array<{ id: string; endpoint: string }>;
 }> => apiRequest(`/api/__test__/users/${userId}/push-subscriptions`);
+
+export const issueStudentInvitation = async (
+  tutorToken: string,
+  studentId: string,
+): Promise<{ inviteUrl: string; expiresAt: string }> =>
+  apiRequest(`/api/students/${studentId}/invitations`, {
+    method: "POST",
+    token: tutorToken,
+    expectStatus: 201,
+  });
+
+export const extractInviteToken = (inviteUrl: string): string => {
+  const match = inviteUrl.match(/\/student-invite\/([^/?#]+)/);
+  if (!match) {
+    throw new Error(`Cannot extract invite token from URL: ${inviteUrl}`);
+  }
+  return match[1];
+};
