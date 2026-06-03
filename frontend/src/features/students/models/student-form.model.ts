@@ -96,19 +96,18 @@ sample({
   target: $deleteDialogOpen,
 });
 
+sample({
+  clock: formSubmitted,
+  source: $formData,
+  filter: (formData) => !formData.name.trim(),
+  fn: () => "Имя ученика обязательно для заполнения",
+  target: notificationsModel.showErrorEvent,
+});
+
 const validatedSubmit = sample({
   clock: formSubmitted,
   source: { formData: $formData, editingStudent: $editingStudent },
-  filter: ({ formData }) => {
-    if (!formData.name.trim()) {
-      notificationsModel.showNotification({
-        type: "error",
-        message: "Имя студента обязательно для заполнения",
-      });
-      return false;
-    }
-    return true;
-  },
+  filter: ({ formData }) => Boolean(formData.name.trim()),
 });
 
 sample({
