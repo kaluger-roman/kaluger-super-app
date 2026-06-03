@@ -76,7 +76,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
         <Styled.StyledDialogTitle>
           {student ? (
             <>
-              Редактировать студента{" "}
+              Редактировать ученика{" "}
               {student?.archived && student?.archivedAt && (
                 <StudentArchivedInfo
                   archivedAt={student.archivedAt}
@@ -87,7 +87,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
               )}
             </>
           ) : (
-            "Добавить студента"
+            "Добавить ученика"
           )}
         </Styled.StyledDialogTitle>
 

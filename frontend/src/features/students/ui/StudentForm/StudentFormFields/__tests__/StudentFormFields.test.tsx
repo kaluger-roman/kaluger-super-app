@@ -39,7 +39,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByLabelText(/имя студента/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/имя ученика/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^телефон$/i)).toBeInTheDocument();
     expect(screen.getAllByRole("combobox")[0]).toBeInTheDocument();
     expect(screen.getByLabelText(/имя родителя/i)).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByLabelText(/имя студента/i)).toHaveValue("Иван Петров");
+    expect(screen.getByLabelText(/имя ученика/i)).toHaveValue("Иван Петров");
     expect(screen.getByLabelText(/^телефон$/i)).toHaveValue("+7 (999) 123-45-67");
     expect(screen.getByLabelText(/имя родителя/i)).toHaveValue("Мария Петрова");
     expect(screen.getByLabelText(/телефон родителя/i)).toHaveValue("+7 (999) 987-65-43");
@@ -89,7 +89,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     await user.type(nameInput, "Test");
 
     expect(onChange).toHaveBeenCalledWith("name");
@@ -363,7 +363,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -377,7 +377,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -391,7 +391,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeRequired();
   });
 
@@ -405,7 +405,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -419,7 +419,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByPlaceholderText(/введите имя студента/i);
+    const nameInput = screen.getByPlaceholderText(/введите имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -503,7 +503,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const notesInput = screen.getByPlaceholderText(/дополнительная информация о студенте/i);
+    const notesInput = screen.getByPlaceholderText(/дополнительная информация об ученике/i);
     expect(notesInput).toBeInTheDocument();
   });
 

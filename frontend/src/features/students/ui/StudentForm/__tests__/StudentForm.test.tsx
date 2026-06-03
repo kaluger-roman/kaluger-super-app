@@ -64,7 +64,7 @@ describe("StudentForm", () => {
       renderWithTheme(<StudentForm open={true} onClose={mockOnClose} />, scope);
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Добавить студента")).toBeInTheDocument();
+      expect(screen.getByText("Добавить ученика")).toBeInTheDocument();
     });
 
     it("should render dialog when opened for editing student", () => {
@@ -76,7 +76,7 @@ describe("StudentForm", () => {
       );
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Редактировать студента")).toBeInTheDocument();
+      expect(screen.getByText("Редактировать ученика")).toBeInTheDocument();
     });
   });
 
@@ -129,7 +129,7 @@ describe("StudentForm", () => {
 
       renderWithTheme(<StudentForm open={true} onClose={mockOnClose} />, scope);
 
-      const nameField = screen.getByLabelText(/имя студента/i);
+      const nameField = screen.getByLabelText(/имя ученика/i);
       expect(nameField).toBeInTheDocument();
     });
 

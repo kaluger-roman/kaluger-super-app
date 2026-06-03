@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-05-31
 
+### Changed
+- Unified student terminology in the UI from "студент" to "ученик" across the add/edit student dialog (title, name field label and placeholders) and the student create/update/delete error notifications
+
+### Fixed
+- Student form: submitting with an empty name now shows a clear "Имя ученика обязательно для заполнения" toast instead of silently doing nothing — the empty-name validation no longer calls an Effector unit from inside a pure `filter` (which threw `unit call from pure function` and swallowed the feedback)
+
 ### Tests
 - E2E coverage expanded by ~28 Playwright journeys across auth, students, lessons, profile/finance, admin and news. Highlights: student-cabinet flows (invite registration, role-toggle login, email verification, own schedule, realtime WS updates, settings), recurring-lesson series delete / price-change / cascade time-shift, full reschedule apply, scheduling-conflict error, unpaid-lesson cancel, student unarchive/delete, profile name edit, logout dialog, tax-period edit, admin login rejection, news pagination, and manual DB backup (38a21ad, e7eb634, 0a23ad3, 35c939f, 87878d1)
 - E2E test seams added to the `/api/__test__` router: direct student-user creation with verification state, admin token issuance, backup-file reset, and `archived` support on student seeding (c34e686, 38a21ad, e7eb634)
