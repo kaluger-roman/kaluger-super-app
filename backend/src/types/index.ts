@@ -64,3 +64,14 @@ export type {
   ValidateInvitationResponse,
   StudentLessonWsEvent,
 } from "./studentCabinet";
+export type {
+  CallStatusValue,
+  CallDirection,
+  CallerKindValue,
+  IceServer,
+  IceServersConfig,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  CallHistoryItem,
+  CallHistoryResponse,
+} from "./call";

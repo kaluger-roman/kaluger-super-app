@@ -8,6 +8,10 @@ import type {
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
+import {
+  handleCallSignal,
+  terminateActiveCallForParticipant,
+} from "./signaling";
 import type { StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
@@ -87,6 +91,7 @@ export class WebSocketManager {
       );
       if (this.clients.get(decoded.userId) === ws) {
         this.clients.delete(decoded.userId);
+        void terminateActiveCallForParticipant("tutor", decoded.userId);
       }
     });
 
@@ -152,6 +157,10 @@ export class WebSocketManager {
       );
       if (this.studentClients.get(decoded.studentUserId) === ws) {
         this.studentClients.delete(decoded.studentUserId);
+        void terminateActiveCallForParticipant(
+          "student",
+          decoded.studentUserId
+        );
       }
     });
 
@@ -165,7 +174,14 @@ export class WebSocketManager {
       }
     });
 
-    ws.on("message", () => {});
+    ws.on("message", (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        void handleCallSignal("student", ws.studentUserId, data);
+      } catch (error) {
+        console.error("Error parsing student WebSocket message:", error);
+      }
+    });
 
     // Если socket закрылся, пока шёл async auth, не сохраняем мёртвую запись.
     if (ws.readyState !== WebSocket.OPEN) {

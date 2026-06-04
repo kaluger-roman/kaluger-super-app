@@ -29,6 +29,7 @@ import { testRouter } from "./routes/__test__";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";
+import { callRecordsRouter, studentCallRecordsRouter } from "./routes/callRecords";
 
 const app = express();
 
@@ -62,6 +63,8 @@ app.use("/api/tax-periods", taxPeriodsRouter);
 app.use("/api/student-auth", studentAuthRouter);
 app.use("/api/student-invitations", studentInvitationsRouter);
 app.use("/api/student-cabinet", studentCabinetRouter);
+app.use("/api/calls", callRecordsRouter);
+app.use("/api/student", studentCallRecordsRouter);
 
 if (process.env.NODE_ENV === "test") {
   app.use("/api/__test__", testRouter);

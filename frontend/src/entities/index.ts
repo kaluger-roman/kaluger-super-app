@@ -7,3 +7,4 @@ export * from "./verification";
 export * from "./news";
 export * from "./notifications";
 export * from "./taxRatePeriod";
+export * from "./callRecord";
