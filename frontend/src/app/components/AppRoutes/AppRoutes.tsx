@@ -70,9 +70,9 @@ const StudentVerifyEmailPage = lazy(() =>
 );
 
 const RouteFallback: FC = () => (
-  <Styled.FallbackContainer>
-    <CircularProgress />
-  </Styled.FallbackContainer>
+  <Styled.FallbackBackdrop open>
+    <CircularProgress color="inherit" />
+  </Styled.FallbackBackdrop>
 );
 
 type AppRoutesProps = {

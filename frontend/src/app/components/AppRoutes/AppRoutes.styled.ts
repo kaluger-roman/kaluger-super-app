@@ -1,10 +1,11 @@
-import { Box } from "@mui/material";
+import { Backdrop } from "@mui/material";
 
 import { styled } from "@shared";
 
-export const FallbackContainer = styled(Box)`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-`;
+// Same full-screen dimmed overlay as the app-init and $isBlocking backdrops, so a
+// route chunk load looks identical to other loading states instead of a second,
+// differently-styled spinner on a white page.
+export const FallbackBackdrop = styled(Backdrop)(({ theme }) => ({
+  color: "#fff",
+  zIndex: theme.zIndex.modal + 1,
+}));

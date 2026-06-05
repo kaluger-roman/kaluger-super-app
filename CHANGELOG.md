@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - `/code-review-local` — added 3 recall angles ported from the `/code-review` (max effort) protocol: removed-behavior auditor, cross-file tracer, and wrapper/proxy correctness (5 → 8 parallel reviewer agents). Finding JSON schema unchanged, so the `/auto-feature` code-review loop stays compatible (frontmatter model also aligned to opus to match the body)
 
+### Fixed
+- Lessons page no longer strands you on an empty page after the last item leaves the current page (e.g. marking the only unsent homework on the last page as sent, marking the last unpaid lesson as paid, or deleting the last lesson on a page). The list now falls back to the last page that still has items instead of showing an empty "nothing left" state with the pagination control hidden. Applies to all paged tabs.
+- Opening the user menu, the sidebar drawer, or a dialog no longer shifts or breaks the page layout. Removed MUI's modal scroll-lock, which mutated `<body>` (overflow + scrollbar-width padding) on every popup and reflowed the content.
+- Unified the loading indicator: the lazy-route loader now uses the same full-screen overlay as the global blocking spinner, so startup no longer shows two different spinners at once.
+
 ## 2026-05-31
 
 ### Changed

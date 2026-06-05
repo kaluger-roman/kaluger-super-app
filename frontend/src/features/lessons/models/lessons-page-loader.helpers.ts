@@ -1,4 +1,5 @@
-import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
+import { buildLessonFilterParams, buildPagedLessonParams } from "./lessons-filters.helpers";
+import type { LessonFilterValues } from "./lessons-filters.types";
 
 export const getScheduleDateRangeParams = () => {
   const now = new Date();
@@ -14,45 +15,12 @@ export const getScheduleDateRangeParams = () => {
   };
 };
 
-type LoadParams = {
-  onlyUnpaid: boolean;
-  onlyWithoutHomework: boolean;
-  paymentDateFrom: Date | null;
-  paymentDateTo: Date | null;
-};
+export const createPagedLessonParams = (filters: LessonFilterValues) =>
+  buildPagedLessonParams(filters, 1, 10);
 
-export const createPagedLessonParams = ({
-  onlyUnpaid,
-  onlyWithoutHomework,
-  paymentDateFrom,
-  paymentDateTo,
-}: LoadParams) => ({
-  page: 1,
-  limit: 10,
-  onlyUnpaid,
-  onlyWithoutHomework,
-  ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-  ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-});
+type WeeklyParams = LessonFilterValues & { currentWeek: Date };
 
-type WeeklyParams = {
-  currentWeek: Date;
-  onlyUnpaid: boolean;
-  onlyWithoutHomework: boolean;
-  paymentDateFrom: Date | null;
-  paymentDateTo: Date | null;
-};
-
-export const createWeeklyLessonParams = ({
-  currentWeek,
-  onlyUnpaid,
-  onlyWithoutHomework,
-  paymentDateFrom,
-  paymentDateTo,
-}: WeeklyParams) => ({
+export const createWeeklyLessonParams = ({ currentWeek, ...filters }: WeeklyParams) => ({
   weekStart: currentWeek.toISOString(),
-  onlyUnpaid,
-  onlyWithoutHomework,
-  ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-  ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
+  ...buildLessonFilterParams(filters),
 });

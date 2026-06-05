@@ -1,4 +1,4 @@
-import type { PaymentDatePreset } from "./lessons-filters.types";
+import type { LessonFilterValues, PaymentDatePreset } from "./lessons-filters.types";
 
 export const toLocalStartOfDay = (date: Date): string => {
   const d = new Date(date);
@@ -40,3 +40,21 @@ export const calculatePresetDates = (preset: PaymentDatePreset): { from: Date; t
 
   return { from: monday, to: sunday };
 };
+
+export const buildLessonFilterParams = ({
+  onlyUnpaid,
+  onlyWithoutHomework,
+  paymentDateFrom,
+  paymentDateTo,
+}: LessonFilterValues) => ({
+  onlyUnpaid,
+  onlyWithoutHomework,
+  ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
+  ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
+});
+
+export const buildPagedLessonParams = (filters: LessonFilterValues, page: number, limit: number) => ({
+  page,
+  limit,
+  ...buildLessonFilterParams(filters),
+});
