@@ -1,6 +1,7 @@
 import "./lessons-reload.model";
 import "./lessons-notifications.model";
 import "./lessons-page-loader.model";
+import "./lessons-pagination-clamp.model";
 
 import * as lessonActionsModel from "./lesson-actions.model";
 import * as lessonCancellationModel from "./lesson-cancellation.model";

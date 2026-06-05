@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-05
+
+### Fixed
+- Lessons page no longer strands you on an empty page after the last item leaves the current page (e.g. marking the only unsent homework on the last page as sent, marking the last unpaid lesson as paid, or deleting the last lesson on a page). The list now falls back to the last page that still has items instead of showing an empty "nothing left" state with the pagination control hidden. Applies to all paged tabs.
+
 ## 2026-05-31
 
 ### Tests
