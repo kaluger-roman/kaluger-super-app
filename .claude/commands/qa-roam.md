@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(curl:*), Bash(psql:*), Bash(awk:*), Bash(jot:*), Bash(shuf:*), Bash(echo:*), Read, Write, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_press_key, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_close, mcp__playwright__browser_resize, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_fill_form, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_tabs, mcp__playwright__browser_drag, mcp__playwright__browser_file_upload
+allowed-tools: Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(curl:*), Bash(psql:*), Bash(awk:*), Bash(jot:*), Bash(shuf:*), Bash(echo:*), Bash(docker:*), Bash(bash scripts/qa-stack.sh:*), Bash(node:*), Bash(git:*), Read, Write, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_press_key, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_close, mcp__playwright__browser_resize, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_fill_form, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_tabs, mcp__playwright__browser_drag, mcp__playwright__browser_file_upload
 description: QA/user-роуминг по живому приложению через Playwright MCP со случайными сценариями, скриншотами и MD-отчётом по всем подтверждённым улучшениям в docs/qa-roam-reports/
 ---
 
@@ -8,8 +8,7 @@ description: QA/user-роуминг по живому приложению че�
 - Сегодня: !`date +%Y-%m-%d`
 - Сид (для случайной выборки в этом запуске): !`date +%s`
 - Существующие отчёты: !`ls -t docs/qa-roam-reports/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
-- Dev frontend (порт 3000): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "недоступен"`
-- Dev backend (порт 3001): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || curl -s -o /dev/null -w "%{http_code}" http://localhost:3001 2>/dev/null || echo "недоступен"`
+- QA-стек ветки: !`bash scripts/qa-stack.sh port 2>/dev/null || echo "не поднят — поднимется на Этапе 0"`
 - Роуты приложения (autodiscovered): !`grep -E 'path="[^"]+"' frontend/src/app/components/AppRoutes/AppRoutes.tsx 2>/dev/null | grep -oE 'path="[^"]+"' | sort -u || echo "(не найдено — структура роутинга изменилась, см. Этап 1)"`
 
 ## Задача
@@ -22,9 +21,12 @@ description: QA/user-роуминг по живому приложению че�
 - **Код НЕ менять**, тесты НЕ запускать, git-операций НЕ делать. Только отчёт + скриншоты.
 - Каждый запуск должен давать **разный** результат: рандомизация выбора сценариев — обязательна (см. Этап 2).
 
-`$ARGUMENTS`:
-- пусто → случайно выбрать 2–3 роута из autodiscovered списка
-- `<path>` (например `/students` или `/lessons`) → роуминг только по этому роуту и тому, что с него достижимо
+`$ARGUMENTS` (можно комбинировать):
+- пусто → случайно выбрать 2–3 роута из autodiscovered списка (фиксированный объём).
+- `<path>` (например `/students` или `/lessons`) → роуминг только по этому роуту и тому, что с него достижимо.
+- `--budget <N|N%>` → **режим токен-бюджета**: не ограничиваться 2–3 роутами, а крутить всё новые сценарии, пока есть бюджет токенов (см. секцию «Токен-бюджет»). Примеры: `--budget 20%` (20% от 5-часового окна подписки), `--budget 300k`, `--budget 250000`.
+- `--host` → не поднимать Docker; роуминг по уже запущенным dev-серверам (`http://localhost:3000`).
+- `--teardown` → в конце снести QA-стек (`bash scripts/qa-stack.sh down`). По умолчанию стек остаётся поднятым.
 
 ### Что считается «находкой»
 
@@ -44,13 +46,19 @@ description: QA/user-роуминг по живому приложению че�
 
 ## Этап 0. Предполётная проверка
 
-1. **Frontend и Backend подняты.** Если в Контексте выше статус-коды `недоступен` / `502` / `000` — остановиться и сказать пользователю одной строкой: `Dev сервер не запущен. Запусти "npm run dev" в frontend/ и backend/ и перезапусти /qa-roam.` Дальше не идти.
+1. **Поднять изолированный QA-стек ветки** (кроме `--host`):
 
-2. **Playwright MCP доступен.** Сделать пробный `mcp__playwright__browser_navigate` на `http://localhost:3000`. Если возвращается ошибка отсутствия инструмента — сказать пользователю: `Playwright MCP не подключён. Подключи через "claude mcp add playwright npx @playwright/mcp@latest" и перезапусти /qa-roam.` Дальше не идти.
+   ```bash
+   bash scripts/qa-stack.sh up
+   ```
 
-3. **Тестовый пользователь.** Через `psql "$DATABASE_URL"` (из `backend/.env` — обычно `tutor_app`) проверить наличие пользователя с email `qa-roam@test.local`. Если нет — создать через регистрацию **по UI** (это сам по себе первый journey, попутно покрывается) ИЛИ напрямую вставить запись (если есть подходящий seed-скрипт). Пароль: `QaRoam!2026`. Все дальнейшие действия — под этим пользователем.
+   Печатает JSON `{"url":"http://localhost:<port>",...}` — распарсить `url` как **base URL** всего роуминга. Стек изолирован (своя свежая БД, эфемерный порт), поэтому несколько `/qa-roam` и `/manual-qa` на разных ветках идут параллельно. Первая сборка 2–4 мин. Если вернулся `{"error":...}` или Docker не запущен — сказать `Запусти Docker Desktop и перезапусти /qa-roam` и не идти дальше. Детали — `docs/qa-docker.md`. При `--host` base URL = `http://localhost:3000` (старое поведение).
 
-4. **Тестовые данные.** Если у пользователя `qa-roam@test.local` пусто — создать минимальный набор через API (`POST /api/students`, `POST /api/lessons`) или прямой вставкой в БД: 3 ученика, 5 уроков (часть в прошлом, часть в будущем, часть recurring). Использовать префикс `qa-roam-` для имён, чтобы потом легко отличить.
+2. **Playwright MCP доступен.** Сделать пробный `mcp__playwright__browser_navigate` на **base URL** (URL стека из шага 1; при `--host` — `http://localhost:3000`). Если возвращается ошибка отсутствия инструмента — сказать пользователю: `Playwright MCP не подключён. Подключи через "claude mcp add playwright npx @playwright/mcp@latest" и перезапусти /qa-roam.` Дальше не идти.
+
+3. **Тестовый пользователь.** БД стека пустая. Проверить/создать `qa-roam@test.local` (пароль `QaRoam!2026`) — либо регистрацией **по UI** (это сам по себе первый journey, попутно покрывается), либо через `bash scripts/qa-stack.sh exec-backend '...'`. Быстрый просмотр: `bash scripts/qa-stack.sh psql "select email from users limit 5;"`. Все дальнейшие действия — под этим пользователем. (Админ-доступ к стеку, если нужен: `admin@qa.local` / `QaAdmin!2026`.)
+
+4. **Тестовые данные.** БД свежая — создать минимальный набор: через API (`POST /api/students`, `POST /api/lessons`) под залогиненным пользователем, прямой вставкой через `exec-backend`, либо `bash scripts/qa-stack.sh exec-backend 'npm run db:seed'` (в изолированной БД безопасно). Ориентир: 3 ученика, 5 уроков (часть в прошлом, часть в будущем, часть recurring). Префикс `qa-roam-` для имён.
 
 > Цель этапа — выйти из подготовки с залогиненным контекстом и предсказуемыми данными. На UI-логин/setup тратить максимум 5 минут — дальше идти через API/БД.
 
@@ -131,6 +139,26 @@ echo $MODS | tr ' ' '\n' \
 
 ---
 
+## Токен-бюджет (режим `--budget`)
+
+Если задан `--budget`, qa-roam **не ограничивается 2–3 роутами** — он крутит всё новые сценарии и сам докидывает идеи по ходу, пока есть бюджет токенов за текущее 5-часовое окно подписки.
+
+1. **На старте** (сразу после подъёма стека) зафиксировать момент начала прогона и запомнить его как `RUN_START`:
+   ```bash
+   date -u +%Y-%m-%dT%H:%M:%SZ
+   ```
+2. **После каждого завершённого сценария** (пробы из Этапа 2) свериться с бюджетом:
+   ```bash
+   node scripts/qa-token-usage.mjs --since <RUN_START> --budget <spec>
+   ```
+   Скрипт печатает JSON со `spent` / `budgetTokens` / `percentOfBudgetUsed` / `verdict`. Знаменатель для `%` авто-детектится из истории сессий (максимальный 5-часовой блок); можно переопределить `--limit <N>` или env `QA_SESSION_TOKEN_LIMIT`. Метрика по умолчанию — `billed` (input+output+cache_creation, без дешёвых cache-read).
+3. **`verdict == "stop"`** → завершить роуминг, перейти к фильтрации (Этап 3) и отчёту (Этап 4). **`verdict == "continue"`** → выбрать следующий сценарий (новый роут из autodiscovered-списка или более глубокий journey на текущем) и продолжить цикл.
+4. Новые сценарии генерировать по принципам Этапа 1.3: смотри `browser_snapshot`, придумывай осмысленный путь реального пользователя. Идти **вширь** (новые роуты) и **вглубь** (edge-cases, негативные пути, realtime), не повторяя уже покрытое.
+
+Оговорка: usage **текущего** хода ещё не сброшен на диск, поэтому замер слегка запаздывает (недооценка) — стоп срабатывает чуть раньше реального лимита, что безопасно. Без `--budget` бюджет не проверяется (обычный режим, 2–3 роута).
+
+---
+
 ## Этап 2. Активный обход через Playwright MCP
 
 Для каждого выбранного роута сделать 1–2 «пробы» (одна полноценная попытка пройти осмысленный путь — например создание сущности от и до). Для **каждой пробы**:
@@ -159,7 +187,7 @@ echo $MODS | tr ' ' '\n' \
 Жёсткой отсечки «10 действий на пробу» нет — это убило бы любой нетривиальный journey (recurring-серия, forgot-password-цикл, отчёт-с-фильтрами легко требуют 15–25 шагов). Вместо этого:
 
 - **На пробу:** идти до естественного конца journey (сохранил / убедился, что не получилось / упёрся в баг). Если в районе **25 действий** ещё не видно края — это сигнал «застрял», свернуть пробу и записать наблюдение «journey слишком длинный/непонятный для нового пользователя» (это сама по себе находка).
-- **На всю команду:** общий потолок ~60 действий браузера и ~25 скриншотов на запуск. Если упёрся — отчитаться по тому, что успел.
+- **На всю команду:** в обычном режиме — потолок ~60 действий браузера и ~25 скриншотов на запуск. В режиме `--budget` потолка по числу действий/скриншотов нет: продолжай новые сценарии, пока `node scripts/qa-token-usage.mjs` не вернёт `verdict: stop` (см. «Токен-бюджет»); скриншоты при этом снимай так же щедро.
 - **Скриншоты** — снимать щедро, не экономить: каждое «не так» снимать сразу (потом не вернуться к тому же состоянию), плюс кадр «до» и «после» для каждой пробы. Это дешёвый эвиденс — лучше иметь лишний, чем потерять.
 
 ### Шаблон промпта для себя (внутренний)
@@ -214,6 +242,7 @@ echo $MODS | tr ' ' '\n' \
 **Покрытые роуты:** `/students`, `/lessons`
 **Модификатор:** mobile-375 + edge-input-emoji
 **Действий выполнено:** ~38 / **Скриншотов:** 18
+**Токен-бюджет:** выключен | напр.: 20% → 2,994,405 ток.; потрачено 2,8M (94%); остановлен после 7 сценариев
 **Всего наблюдений до фильтрации:** N → в отчёте: M (все, что прошло фильтры Этапа 3)
 
 ## Резюме
@@ -269,5 +298,6 @@ echo $MODS | tr ' ' '\n' \
 - **Только то, что видел сам в этом запуске.** Не репортить «по памяти» из других проходов.
 - **Описания на русском**, как говорил бы реальный пользователь («не понятно, что делать», «думал, что сломалось»).
 - **Не редактировать прод-код, не запускать тесты, не делать git-операций.**
-- **Уважать тестовые данные.** Префикс `qa-roam-` для всего создаваемого. Не удалять то, что создано не этим процессом.
-- В финальном сообщении пользователю — путь к отчёту, seed, выбранные области, и одна строка-сводка: `N улучшений (High X, Medium Y, Low Z); Quick Wins: <короткие заголовки>`.
+- **Изолированная БД стека.** Префикс `qa-roam-` для создаваемого (для удобства), но чистить за собой не обязательно — стек сносится `bash scripts/qa-stack.sh down` (или флагом `--teardown`). Личную БД пользователя не трогать — она не используется.
+- **Docker-стек по умолчанию остаётся поднятым** после прогона (для ручной до-проверки) — печатать его URL в финале. При `--host` стек не поднимается.
+- В финальном сообщении пользователю — путь к отчёту, seed, выбранные области, URL стека, и одна строка-сводка: `N улучшений (High X, Medium Y, Low Z); Quick Wins: <короткие заголовки>`. В режиме `--budget` добавить: потрачено/бюджет токенов (`%`) и сколько сценариев пройдено до остановки.

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-06
+
+### Added
+- Isolated per-branch Docker QA stacks for `/qa-roam` and `/manual-qa`: `scripts/qa-stack.sh` (`up`/`port`/`status`/`exec-backend`/`psql`/`down`/`down-all`) brings up a `qa-<branch>` stack (nginx-served prod build + backend + Postgres) on an ephemeral port. Several `/qa-roam` and `/manual-qa` runs on different branches/worktrees now work in parallel without fighting over ports 3000/3001 or sharing the developer's local database (`docker-compose.qa.yml`, `backend/Dockerfile.qa`, `frontend/Dockerfile.qa`, `frontend/nginx.qa.conf`, `docs/qa-docker.md`)
+- Token-budget mode for `/qa-roam` (`--budget 20%` or `--budget 300k`): instead of a fixed 2–3 routes, the agent keeps roaming new scenarios and, after each one, checks token usage for the current 5-hour subscription window via `scripts/qa-token-usage.mjs`, stopping when the budget is reached. The percent denominator is auto-detected from the largest historical 5-hour block (overridable via `--limit`/`QA_SESSION_TOKEN_LIMIT`)
+
+### Changed
+- `/qa-roam` and `/manual-qa` now boot an isolated Docker stack themselves instead of requiring manually-started dev servers; test-data prep runs inside the backend container (`qa-stack.sh exec-backend`) against the stack's fresh DB, so `db:seed` is safe again. New `--host` flag keeps the old behaviour (reuse running dev servers on `localhost:3000`), `--teardown` removes the stack after the run
+
+### Fixed
+- WebSocket URLs were hardcoded to `ws://localhost:3001` — extracted `resolveWsUrl` (`@shared`, same-origin and scheme-aware ws/wss) so realtime works behind the QA stack's nginx and any reverse proxy. Behaviour-neutral for the real (https) production deploy
+
 ## 2026-06-05
 
 ### Changed

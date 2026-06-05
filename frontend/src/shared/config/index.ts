@@ -3,6 +3,11 @@ export const API_BASE_URL =
     ? "/api"
     : process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
+export const resolveWsUrl = (path: string): string =>
+  process.env.NODE_ENV === "production"
+    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${path}`
+    : `ws://localhost:3001${path}`;
+
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
