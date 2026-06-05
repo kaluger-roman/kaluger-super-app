@@ -1,5 +1,6 @@
 import { combine } from "effector";
 
+import { callHistoryModel } from "@entities/callRecord";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
@@ -72,6 +73,7 @@ export const $isBlocking = combine(
       tutorStudentInvitationModel.issueInvitationFx.pending,
     tutorInvitationRevoke:
       tutorStudentInvitationModel.revokeInvitationFx.pending,
+    loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

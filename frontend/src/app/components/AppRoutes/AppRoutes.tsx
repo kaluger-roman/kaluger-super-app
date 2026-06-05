@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
+import { CallOverlay } from "@features/videoCall";
 
 import * as Styled from "./AppRoutes.styled";
 import { AuthLayout } from "../AuthLayout";
@@ -67,6 +68,9 @@ const StudentVerifyEmailPage = lazy(() =>
   import("@pages/studentVerifyEmail").then((m) => ({
     default: m.StudentVerifyEmailPage,
   })),
+);
+const CallHistoryPage = lazy(() =>
+  import("@pages/callHistory").then((m) => ({ default: m.CallHistoryPage })),
 );
 
 const RouteFallback: FC = () => (
@@ -174,12 +178,20 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
           <Route index element={<Navigate to="schedule" replace />} />
           <Route path="schedule" element={<StudentSchedulePage />} />
           <Route path="settings" element={<StudentSettingsPage />} />
+          <Route path="calls" element={<CallHistoryPage />} />
         </Route>
+        <Route
+          path="/call/history"
+          element={
+            <ProtectedRoute element={<CallHistoryPage />} isLoggedIn={isLoggedIn} />
+          }
+        />
         <Route
           path="/"
           element={<ProtectedRoute element={<DashboardPage />} isLoggedIn={isLoggedIn} />}
         />
       </Routes>
+      <CallOverlay />
     </Suspense>
   );
 };

@@ -141,6 +141,8 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - PostgreSQL via Prisma ORM (новая таблица `password_reset_tokens`) (028-forgot-password)
 - TypeScript 5.x (strict) — фронт и бек, Node.js 20 (029-student-cabinet)
 - PostgreSQL через Prisma ORM. Две новые таблицы (`student_users`, `student_invitations`) + одно новое поле в `students` (`studentUserId`). (029-student-cabinet)
+- TypeScript 5.x (strict), Node.js 20 + Frontend — React, Effector, Material UI, styled-components, browser WebRTC APIs (`RTCPeerConnection`, `navigator.mediaDevices.getUserMedia`/`getDisplayMedia`), patronum (timers). Backend — Express, Prisma, `ws` (existing WebSocketManager). **No new runtime npm dependencies** (WebRTC is a browser primitive; STUN/TURN are infra, configured via env). coturn is an **operational/infra** dependency, not an npm package. (030-webrtc-video-calls)
+- PostgreSQL via Prisma ORM. One new table `call_records` (+ migration). Signaling messages are ephemeral (never persisted). (030-webrtc-video-calls)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

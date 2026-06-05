@@ -16,3 +16,5 @@ export * from "./studentEmailVerification";
 export * from "./studentInvitation";
 export * from "./studentCabinet";
 export * from "./studentLessonBroadcast";
+export * from "./callSignaling";
+export * from "./callRecord";

@@ -1,10 +1,21 @@
 import { WebSocket } from "ws";
 import { AuthenticatedWebSocket } from "./types";
+import { handleCallSignal } from "./signaling";
+import { isCallSignalType } from "./signaling.types";
 
 export const handleMessage = (
   ws: AuthenticatedWebSocket,
   data: unknown
 ): void => {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    isCallSignalType((data as { type?: unknown }).type)
+  ) {
+    void handleCallSignal("tutor", ws.userId, data);
+    return;
+  }
+
   console.log(`Received message from ${ws.userId}:`, data);
 
   // Skip the echo when the socket has already started closing — `ws.send`

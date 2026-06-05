@@ -39,6 +39,7 @@ model User {
   taxRatePeriods      TaxRatePeriod[]
   passwordResetTokens PasswordResetToken[]
   studentInvitations  StudentInvitation[]
+  callRecords         CallRecord[]
 
   @@map("users")
 }
@@ -99,6 +100,7 @@ model Student {
   lessons     Lesson[]
   studentUser StudentUser?
   invitations StudentInvitation[]
+  callRecords CallRecord[]
 
   @@unique([phone, tutorId])
   @@index([tutorId, archived])
@@ -310,4 +312,38 @@ model NewsReadStatus {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("news_read_statuses")
+}
+
+enum CallStatus {
+  COMPLETED
+  MISSED
+  REJECTED
+  CANCELED
+  FAILED
+}
+
+enum CallerKind {
+  TUTOR
+  STUDENT
+}
+
+model CallRecord {
+  id              String     @id @default(cuid())
+  callerKind      CallerKind
+  status          CallStatus
+  startedAt       DateTime   @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+
+  tutorId String
+  tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([tutorId, startedAt])
+  @@index([studentId, startedAt])
+  @@map("call_records")
 }

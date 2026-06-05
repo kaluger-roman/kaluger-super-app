@@ -8,6 +8,7 @@ import {
   Newspaper as NewsIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
+  VideoCall as VideoCallIcon,
 } from "@mui/icons-material";
 import {
   List,
@@ -52,6 +53,11 @@ const navigationItems: NavigationItem[] = [
     label: "Отчеты",
     path: "/reports",
     icon: <ReportsIcon />,
+  },
+  {
+    label: "История звонков",
+    path: "/call/history",
+    icon: <VideoCallIcon />,
   },
   {
     label: "Новости",

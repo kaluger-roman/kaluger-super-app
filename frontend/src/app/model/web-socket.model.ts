@@ -1,6 +1,12 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel } from "@entities/lesson";
+import {
+  dispatchCallSignal,
+  isCallSignalOutbound,
+  setCallTransport,
+} from "@features/videoCall";
+import type { CallSignalingOutbound } from "@features/videoCall";
 import { LessonStatus } from "@shared/types";
 
 // Events
@@ -26,12 +32,18 @@ export const connectWebSocketFx = createEffect(() => {
 
   ws.onopen = () => {
     console.log("WebSocket connected");
+    setCallTransport((message) => ws.send(JSON.stringify(message)));
     setWebSocketConnection(ws);
   };
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+
+      if (isCallSignalOutbound(data.type)) {
+        dispatchCallSignal(data as CallSignalingOutbound);
+        return;
+      }
 
       if (data.type === "lesson_status_updated") {
         handleLessonStatusUpdate({
@@ -46,6 +58,7 @@ export const connectWebSocketFx = createEffect(() => {
 
   ws.onclose = () => {
     console.log("WebSocket disconnected");
+    setCallTransport(null);
     setWebSocketConnection(null);
     webSocketClosed();
   };
