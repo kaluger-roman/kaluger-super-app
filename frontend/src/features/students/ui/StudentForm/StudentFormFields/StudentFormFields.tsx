@@ -28,13 +28,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
   return (
     <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3} pt={1}>
       <TextField
-        label="Имя студента"
+        label="Имя ученика"
         value={formData.name}
         onChange={onChange("name")}
         fullWidth
         required
         autoFocus
-        placeholder="Введите имя студента"
+        placeholder="Введите имя ученика"
         size={isMobile ? "small" : "medium"}
       />
 
@@ -152,7 +152,7 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         fullWidth
         multiline
         rows={isMobile ? 2 : 3}
-        placeholder="Дополнительная информация о студенте"
+        placeholder="Дополнительная информация об ученике"
         size={isMobile ? "small" : "medium"}
       />
     </Box>

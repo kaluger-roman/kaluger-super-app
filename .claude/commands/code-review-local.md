@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git ls-files:*), Bash(mkdir:*), Bash(date:*), Bash(ls:*), Bash(wc:*), Bash(jq:*), Read, Glob, Grep, Write, Agent
-description: Локальный code-review (5 параллельных Sonnet reviewers + Haiku scoring 0-100) на git diff base...HEAD, с настраиваемым порогом и JSON-выводом для оркестрации.
+allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git add:*), Bash(git reset:*), Bash(mkdir:*), Bash(date:*), Bash(ls:*), Bash(wc:*), Bash(jq:*), Read, Glob, Grep, Write, Agent
+description: Локальный code-review (8 параллельных opus reviewers + Haiku scoring 0-100) на git diff base...HEAD, с настраиваемым порогом и JSON-выводом для оркестрации.
 ---
 
 ## Контекст
@@ -12,9 +12,9 @@ description: Локальный code-review (5 параллельных Sonnet r
 
 ## Задача
 
-Прогнать code-review **на локальные изменения текущей ветки** (а не на PR), используя ту же логику что у официального plugin'а `code-review:code-review` — 5 параллельных Sonnet-агентов + Haiku scoring 0-100, — но с тремя ключевыми отличиями:
+Прогнать code-review **на локальные изменения текущей ветки** (а не на PR), используя логику официального plugin'а `code-review:code-review` плюс recall-углы из `/code-review` (max effort) — 8 параллельных opus-агентов + Haiku scoring 0-100, — но с тремя ключевыми отличиями:
 
-1. **Источник diff:** `git diff <base-ref>...HEAD` вместо `gh pr diff`. По умолчанию `<base-ref>=main`.
+1. **Источник diff:** изменения текущей ветки относительно `<base-ref>` (по умолчанию `main`), а не `gh pr diff`. **Автоопределение режима** (см. Этап 0): есть коммиты поверх base → committed-режим `git diff <base-ref>...HEAD`; коммитов нет (типично для `/auto-feature`, который НЕ коммитит до финальной фазы) → working-tree-режим — ревью незакоммиченного рабочего дерева БЕЗ единого коммита.
 2. **Порог фильтрации настраиваемый:** по умолчанию **50** (а не 80, как в plugin'е). Меняется через `--threshold`.
 3. **Вывод структурирован:** машинно-читаемый JSON в `docs/code-reviews/<branch>/iter-<N>.json` + краткий человекочитаемый stdout.
 
@@ -41,8 +41,12 @@ description: Локальный code-review (5 параллельных Sonnet r
 
 1. Убедиться, что есть git и мы в репозитории: `git rev-parse --is-inside-work-tree`. Если нет — ошибка.
 2. Убедиться, что `<base-ref>` существует: `git rev-parse --verify <base-ref>`. Если нет — ошибка с предложением: `--base-ref origin/main` или `--base-ref HEAD~10`.
-3. Посчитать размер diff'а: `git diff --shortstat <base-ref>...HEAD`. Если **0 изменений** — записать пустой JSON-отчёт и выйти со stdout `"No diff vs <base-ref> — nothing to review."`.
-4. Если diff > **2000 строк** (insertions+deletions) — предупредить пользователя в stdout: `Warning: diff is large (XXXX lines) — review may take 3-5 minutes.` и продолжить.
+3. **Определить режим diff (committed vs working-tree)** — важно для интеграции с `/auto-feature`, который НЕ коммитит до финальной фазы:
+   - Есть коммиты поверх base (`git rev-list --count <base-ref>..HEAD` > 0) → **committed**: дальше `<DIFF-CMD>` = `git diff <base-ref>...HEAD`.
+   - Коммитов нет (== 0) → **working-tree** (ревью незакоммиченных изменений БЕЗ единого коммита): один раз выполнить `git add -N -- .` (пометить untracked как intent-to-add, чтобы новые файлы попали в diff), задать `<DIFF-CMD>` = `git diff <base-ref>` (двухточечный: base ↔ рабочее дерево), и **сразу после снятия патча** восстановить индекс `git reset -q` (рабочие файлы не трогает, коммитов не создаёт).
+   Везде ниже `<DIFF-CMD>` = выбранная команда.
+4. Посчитать размер diff'а: `<DIFF-CMD> --shortstat`. Если **0 изменений** — записать пустой JSON-отчёт и выйти со stdout `"No diff vs <base-ref> — nothing to review."`.
+5. Если diff > **2000 строк** (insertions+deletions) — предупредить пользователя в stdout: `Warning: diff is large (XXXX lines) — review may take 3-5 minutes.` и продолжить.
 
 ---
 
@@ -52,12 +56,13 @@ description: Локальный code-review (5 параллельных Sonnet r
 
 1. **Список изменённых файлов** (для маршрутизации reviewer'ов):
    ```bash
-   git diff --name-only <base-ref>...HEAD
+   <DIFF-CMD> --name-only
    ```
 2. **Полный diff** (single source of truth для всех reviewer'ов):
    ```bash
-   git diff <base-ref>...HEAD > /tmp/code-review-local-diff-$$.patch
+   <DIFF-CMD> > /tmp/code-review-local-diff-$$.patch
    ```
+   (в working-tree-режиме сразу после снятия патча — `git reset -q`, см. Этап 0.3.)
 3. **Список релевантных CLAUDE.md:**
    - Корневой `CLAUDE.md` (если есть).
    - Для каждой изменённой папки — все `CLAUDE.md` вверх по дереву (от файла до корня).
@@ -71,13 +76,13 @@ description: Локальный code-review (5 параллельных Sonnet r
 
 ---
 
-## Этап 2. Запуск 5 параллельных reviewer-агентов
+## Этап 2. Запуск 8 параллельных reviewer-агентов
 
 **ВАЖНО (max effort):** запустить агентов через инструмент `Agent` с `model: "opus"` и в каждом промпте явно указать:
 
 > Operate at **maximum reasoning effort**. Think deeply before each conclusion. Do not skim — read every changed hunk carefully. Better to spend extra time than to miss a real bug.
 
-Запустить все 5 агентов **в одном сообщении** (параллельно). Каждому передать:
+Запустить все 8 агентов **в одном сообщении** (параллельно). Каждому передать:
 - путь к diff-файлу (`/tmp/code-review-local-diff-$$.patch`),
 - список изменённых файлов,
 - список путей к релевантным CLAUDE.md и docs/conventions/*,
@@ -110,13 +115,37 @@ description: Локальный code-review (5 параллельных Sonnet r
 - Изменения Prisma-схемы без миграции, или миграция без backfill для NOT NULL.
 - Effector: события без типов, эффекты без error-handling, stores без явного типа.
 
+> Агенты #6–#8 — recall-углы, перенесённые из протокола `/code-review` (max effort). Они ловят то, что shallow/deep-сканы пропускают: исчезнувшее поведение, поломку вызывающих и ошибки делегирования в обёртках.
+
+**Agent #6 — Removed-behavior auditor (удалённое поведение)**
+- Для **каждой строки, которую diff УДАЛЯЕТ или заменяет**, назвать инвариант/поведение, которое она обеспечивала, затем найти в новом коде место, где этот инвариант восстановлен.
+- Если восстановления нет — это finding: убранный guard или проверка, потерянная ветка обработки ошибки, суженная валидация, удалённый тест, покрывавший реальный кейс.
+- Категории: `bug` (убранная защита/валидация), `logic` (потерянная ветка), `convention` (удалён тест вопреки правилу «всё новое покрыто тестами»).
+- **Не дублировать** Agent #2/#3 — фокус строго на том, что **исчезло** из кода, а не на том, что добавлено.
+
+**Agent #7 — Cross-file tracer (call-sites и контракты)**
+- Для каждой функции/метода, которые diff меняет, найти **вызывающих** (Grep по символу) и проверить, не ломает ли изменение их call-site: новое предусловие, изменённая форма возврата, новое исключение, новая зависимость по порядку/таймингу.
+- Проверить и **вызываемых**: не делает ли параллельное изменение в этом же diff'е существующий вызов небезопасным.
+- Может **читать связанные файлы** (Read/Grep): сигнатуры, типы, Prisma-схему, фронтовых потребителей API.
+- `file`/`line_start` указывать на место, где нужен фикс (может быть **вне diff'а** — напр. файл-вызывающий); `snippet` тогда из этого файла.
+- Категории: `bug`/`logic` (сломанный call-site), `type` (рассогласование контракта controller↔service↔front).
+- **Не дублировать** Agent #3: тот ищет логические инварианты **внутри** изменённого кода; этот — **разрыв контракта между изменённым кодом и остальной кодовой базой**.
+
+**Agent #8 — Wrapper/proxy correctness (обёртки и прокси)**
+- Когда diff добавляет/меняет тип, **оборачивающий** другой (cache, proxy, decorator, adapter, repository поверх Prisma, Effector-обёртка над эффектом): проверить, что каждый метод ходит в **обёрнутый экземпляр**, а не обратно через registry/session/глобал.
+  - Пример: кеширующий провайдер с полем `delegate`, который резолвит id через `session.get(...)` вместо `delegate.get(...)`, повторно войдёт в кеш или зарекурсится.
+- Проверить, что обёртка **форвардит все методы**, которые реально используют вызывающие (нет «дыр» в делегировании).
+- Может читать оба типа (обёртку и обёрнутый) через Read.
+- Категории: `bug` (рекурсия / повторный вход / потерянный метод), `logic`.
+- Если в diff'е **нет** оборачивающих типов — вернуть `{"agent": "wrapper-proxy", "findings": []}` и не выдумывать.
+
 ### Формат ответа агента (обязательный)
 
 Каждый агент возвращает **только** JSON следующего вида (без markdown-обвязки, без префиксов):
 
 ```json
 {
-  "agent": "claude-md|shallow-bug|deep-logic|security|type-safety",
+  "agent": "claude-md|shallow-bug|deep-logic|security|type-safety|removed-behavior|cross-file|wrapper-proxy",
   "findings": [
     {
       "title": "Краткое описание проблемы (одна строка, на русском)",
@@ -258,7 +287,7 @@ Severity: critical <N>, high <N>, medium <N>
 ## Ограничения
 
 - **Не редактировать прод-код.** Команда строго read-only по отношению к исходникам. Фиксы — задача вызывающей стороны (оркестратора или человека).
-- **Не делать git-операций** кроме `git diff`/`git log`/`git rev-parse` (read-only).
+- **Не делать git-операций, меняющих историю/ветки/рабочие файлы.** Read-only `git diff`/`git log`/`git rev-parse`/`git rev-list` — всегда ОК. В **working-tree-режиме** (Этап 0.3) допускается ТОЛЬКО `git add -N -- .` с ОБЯЗАТЕЛЬНЫМ последующим `git reset -q` — это не меняет рабочие файлы и не создаёт коммитов. Никаких `commit`/`push`/`checkout`/`branch`/`stash`.
 - **Не запускать тесты, линтеры, билды.** Это отдельные шаги (CI / pre-commit). Reviewer'ы должны явно игнорировать "issues a linter would catch".
 - **Не работать с GitHub** (`gh`-командами). Это локальная команда, никаких комментариев в PR не делать.
 - **Findings строго в JSON-схеме.** Если reviewer вернул не-JSON или нарушил схему — пытаться извлечь JSON по `{...}` блоку; если не получилось — пометить `agent` как `failed` и продолжить без его findings (в `summary` записать `agents_failed: ["<role>"]`).

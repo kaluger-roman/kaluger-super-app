@@ -53,18 +53,18 @@ sample({
 
 sample({
   clock: studentModel.addStudentFx.failData,
-  fn: (error) => extractAxiosError(error, "Ошибка при добавлении студента"),
+  fn: (error) => extractAxiosError(error, "Ошибка при добавлении ученика"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: studentModel.updateStudentFx.failData,
-  fn: (error) => extractAxiosError(error, "Ошибка при обновлении студента"),
+  fn: (error) => extractAxiosError(error, "Ошибка при обновлении ученика"),
   target: notificationsModel.showErrorEvent,
 });
 
 sample({
   clock: studentModel.removeStudentFx.failData,
-  fn: (error) => extractAxiosError(error, "Ошибка при удалении студента"),
+  fn: (error) => extractAxiosError(error, "Ошибка при удалении ученика"),
   target: notificationsModel.showErrorEvent,
 });

@@ -208,7 +208,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при добавлении студента",
+        message: "Ошибка при добавлении ученика",
         type: "error",
       });
     });
@@ -230,7 +230,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при добавлении студента",
+        message: "Ошибка при добавлении ученика",
         type: "error",
       });
     });
@@ -252,7 +252,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при добавлении студента",
+        message: "Ошибка при добавлении ученика",
         type: "error",
       });
     });
@@ -273,7 +273,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при добавлении студента",
+        message: "Ошибка при добавлении ученика",
         type: "error",
       });
     });
@@ -295,7 +295,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при добавлении студента",
+        message: "Ошибка при добавлении ученика",
         type: "error",
       });
     });
@@ -346,7 +346,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при обновлении студента",
+        message: "Ошибка при обновлении ученика",
         type: "error",
       });
     });
@@ -367,7 +367,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при обновлении студента",
+        message: "Ошибка при обновлении ученика",
         type: "error",
       });
     });
@@ -388,7 +388,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при обновлении студента",
+        message: "Ошибка при обновлении ученика",
         type: "error",
       });
     });
@@ -408,7 +408,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при обновлении студента",
+        message: "Ошибка при обновлении ученика",
         type: "error",
       });
     });
@@ -429,7 +429,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при обновлении студента",
+        message: "Ошибка при обновлении ученика",
         type: "error",
       });
     });
@@ -474,7 +474,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при удалении студента",
+        message: "Ошибка при удалении ученика",
         type: "error",
       });
     });
@@ -492,7 +492,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при удалении студента",
+        message: "Ошибка при удалении ученика",
         type: "error",
       });
     });
@@ -510,7 +510,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при удалении студента",
+        message: "Ошибка при удалении ученика",
         type: "error",
       });
     });
@@ -527,7 +527,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при удалении студента",
+        message: "Ошибка при удалении ученика",
         type: "error",
       });
     });
@@ -545,7 +545,7 @@ describe("studentsFeedback.model", () => {
 
       const notification = scope.getState(notificationsModel.$notification);
       expect(notification).toMatchObject({
-        message: "Ошибка при удалении студента",
+        message: "Ошибка при удалении ученика",
         type: "error",
       });
     });
