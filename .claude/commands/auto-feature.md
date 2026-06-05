@@ -460,6 +460,8 @@ On failure: { "error": "...", "step_failed": "implement|wiring|tests|lint|tsc|ch
 
 **Цель:** прогнать `/code-review-local --threshold 50` в цикле, фиксить findings в основном потоке, до пустого результата или convergence detector. Cap = 5 итераций.
 
+> **БЕЗ КОММИТОВ.** `/code-review-local` сам автоопределяет режим: если на ветке нет коммитов (как здесь — `/auto-feature` не коммитит до Фазы 7), он ревьюит **рабочее дерево** (`git add -N` + `git diff <base>` + `git reset`). Поэтому Main в Фазе 5 **НЕ** делает `git commit`/`git amend` между итерациями — фиксы просто остаются в рабочем дереве, и следующая итерация ревьюит их как есть. Это убирает permission-промпты на `git commit`. (Если в main-сессии нужны команды вроде `curl`/`lsof` — делегируй сабагенту: changelog-hook может ложно блокировать их в main-сессии, пока CHANGELOG не в коммите; npm/git/node/echo работают.)
+
 **Логика цикла (в Main):**
 
 ```
