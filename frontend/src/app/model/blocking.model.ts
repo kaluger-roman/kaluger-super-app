@@ -1,4 +1,5 @@
-import { combine } from "effector";
+import { combine, createStore, sample } from "effector";
+import { delay } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
@@ -21,6 +22,8 @@ import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
 import { tutorStudentInvitationModel } from "@features/tutorStudentInvitation";
 import { financesModel, profileModel } from "@pages/profile";
 import { statisticsModel } from "@pages/ReportsPage";
+
+import { BLOCKING_OVERLAY_DELAY_MS } from "./blocking.constants";
 
 export const $isBlocking = combine(
   {
@@ -77,3 +80,34 @@ export const $isBlocking = combine(
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );
+
+// Overlay shows only when a request stays pending past the threshold —
+// requests faster than this must not flash a full-screen spinner.
+export const $isBlockingVisible = createStore(false);
+
+const blockingStarted = sample({
+  clock: $isBlocking.updates,
+  filter: Boolean,
+});
+
+const blockingStopped = sample({
+  clock: $isBlocking.updates,
+  filter: (isBlocking) => !isBlocking,
+});
+
+const blockingPersisted = delay({
+  source: blockingStarted,
+  timeout: BLOCKING_OVERLAY_DELAY_MS,
+});
+
+sample({
+  clock: blockingPersisted,
+  source: $isBlocking,
+  filter: Boolean,
+  target: $isBlockingVisible,
+});
+
+sample({
+  clock: blockingStopped,
+  target: $isBlockingVisible,
+});

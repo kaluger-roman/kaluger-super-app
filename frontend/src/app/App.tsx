@@ -42,7 +42,7 @@ const AppRouter: FC = () => {
 
 const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
-  const isBlocking = useUnit(blockingModel.$isBlocking);
+  const isBlockingVisible = useUnit(blockingModel.$isBlockingVisible);
   const isAuthenticated = useUnit(userModel.$isAuthenticated);
   const isStudentAuthenticated = useUnit(
     studentUserModel.$isStudentAuthenticated
@@ -133,7 +133,7 @@ const App: FC = () => {
             <NotificationProvider />
             <OfflineIndicator />
             <InstallPrompt />
-            <Styled.ModalBackdrop open={isBlocking}>
+            <Styled.ModalBackdrop open={isBlockingVisible}>
               <CircularProgress color="inherit" />
             </Styled.ModalBackdrop>
           </PullToRefresh>
