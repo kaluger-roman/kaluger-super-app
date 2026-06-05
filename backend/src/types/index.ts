@@ -69,7 +69,6 @@ export type {
   CallDirection,
   CallerKindValue,
   IceServer,
-  IceServersConfig,
   CallSignalingInbound,
   CallSignalingOutbound,
   CallHistoryItem,

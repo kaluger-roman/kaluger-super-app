@@ -3,7 +3,6 @@ import { createEffect, sample } from "effector";
 import {
   $callId,
   acceptCall,
-  callEnded,
   callResourcesReleased,
   callRinging,
   callStarted,
@@ -11,7 +10,6 @@ import {
   cancelCall,
   hangUp,
   mediaAcquisitionFailed,
-  peerMediaStateChanged,
   rejectCall,
 } from "./call.model";
 import type { IceServerPayload, StartCallParams } from "./call.types";
@@ -39,7 +37,7 @@ export const callAcceptedReceived = createEffect<
   void
 >(async ({ callId, iceServers }) => {
   iceServersByCall.set(callId, iceServers);
-  await addLocalMediaFx({ callId, iceServers });
+  await addLocalMediaFx({ callId, iceServers, polite: false });
   await sendOfferFx(callId);
 });
 
@@ -48,7 +46,7 @@ export const offerReceived = createEffect<
   void
 >(async ({ callId, sdp }) => {
   const iceServers = iceServersByCall.get(callId) ?? [];
-  await addLocalMediaFx({ callId, iceServers });
+  await addLocalMediaFx({ callId, iceServers, polite: true });
   await sendAnswerFx({ callId, sdp });
 });
 
@@ -109,4 +107,3 @@ sample({ clock: teardownFx.done, target: callResourcesReleased });
 sample({ clock: addLocalMediaFx.failData, target: mediaAcquisitionFailed });
 
 export const teardownCall = teardownFx;
-export { peerMediaStateChanged, rejectCall, cancelCall, hangUp, callEnded };

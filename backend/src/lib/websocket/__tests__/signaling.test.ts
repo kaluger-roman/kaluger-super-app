@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 
 import prisma from "../../prisma";
+import * as callSignalingService from "../../../services/callSignaling";
 import { callRegistry } from "../../../services/callSignaling";
 import type { CallerKindValue, CallSignalingOutbound } from "../../../types";
 import {
@@ -157,6 +158,31 @@ describe("handleCallSignal routing", () => {
     );
     expect(messagesOfType("call_incoming")).toHaveLength(0);
     expect(messagesOfType("call_ringing")).toHaveLength(0);
+  });
+
+  it("should short-circuit a repeat invite without re-resolving the pair from the DB", async () => {
+    await handleCallSignal(
+      "tutor",
+      tutorId,
+      { type: "call_invite", targetStudentId: studentId },
+      send
+    );
+    sent = [];
+
+    const resolveSpy = jest.spyOn(callSignalingService, "resolvePairForTutor");
+    try {
+      await handleCallSignal(
+        "tutor",
+        tutorId,
+        { type: "call_invite", targetStudentId: studentId },
+        send
+      );
+
+      expect(resolveSpy).not.toHaveBeenCalled();
+      expect(messagesOfType("call_incoming")).toHaveLength(0);
+    } finally {
+      resolveSpy.mockRestore();
+    }
   });
 
   it("should relay offer/answer/ice verbatim to the peer", async () => {

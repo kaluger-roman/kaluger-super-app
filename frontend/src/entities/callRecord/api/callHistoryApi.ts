@@ -1,11 +1,17 @@
-import { api, getStudentToken, studentApi } from "@shared";
+import { api, studentApi } from "@shared";
 
-import type { CallHistoryRecord, CallHistoryResponse } from "../callRecord.types";
+import type {
+  CallHistoryPrincipal,
+  CallHistoryRecord,
+  CallHistoryResponse,
+} from "../callRecord.types";
 
-export const getCallHistory = async (): Promise<CallHistoryRecord[]> => {
-  const isStudent = getStudentToken() !== null;
-  const { data } = isStudent
-    ? await studentApi.get<CallHistoryResponse>("/student/calls/history")
-    : await api.get<CallHistoryResponse>("/calls/history");
+export const getCallHistory = async (
+  principal: CallHistoryPrincipal
+): Promise<CallHistoryRecord[]> => {
+  const { data } =
+    principal === "student"
+      ? await studentApi.get<CallHistoryResponse>("/student/calls/history")
+      : await api.get<CallHistoryResponse>("/calls/history");
   return data.items;
 };

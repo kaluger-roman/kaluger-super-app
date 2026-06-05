@@ -42,6 +42,22 @@ describe("features/videoCall/model/call.model transitions", () => {
     });
   });
 
+  it("should set a tutor peer with an empty id when the student starts a call without an id", async () => {
+    const scope = fork();
+
+    await allSettled(callModel.callStarted, {
+      scope,
+      params: { peerName: "Анна Петрова" },
+    });
+
+    expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
+    expect(scope.getState(callModel.$outgoingCallPeer)).toEqual({
+      id: "",
+      name: "Анна Петрова",
+      role: "tutor",
+    });
+  });
+
   it("should move to incoming and store the caller on incomingCallReceived", async () => {
     const scope = fork();
 
@@ -100,7 +116,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     expect(cancelScope.getState(callModel.$callPhase)).toBe("idle");
   });
 
-  it("should show the offline message and mark the peer offline on call_unavailable", async () => {
+  it("should return to idle on call_unavailable", async () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
@@ -109,10 +125,6 @@ describe("features/videoCall/model/call.model transitions", () => {
     await allSettled(callModel.unavailableReceived, { scope });
 
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
-    expect(scope.getState(callModel.$callStatusMessage)).toEqual({
-      kind: "error",
-      text: "Собеседник сейчас не в сети",
-    });
   });
 
   it("leaves the incoming phase and shows a connecting status when the callee accepts", async () => {
@@ -132,19 +144,25 @@ describe("features/videoCall/model/call.model transitions", () => {
     });
   });
 
-  it("should show the busy and no-answer messages", async () => {
+  it("should return to idle on canceledReceived", async () => {
+    const scope = fork();
+    await allSettled(callModel.incomingCallReceived, {
+      scope,
+      params: { callId: "call-cancel", callerName: "Анна" },
+    });
+    expect(scope.getState(callModel.$callPhase)).toBe("incoming");
+
+    await allSettled(callModel.canceledReceived, { scope });
+    expect(scope.getState(callModel.$callPhase)).toBe("idle");
+  });
+
+  it("should return to idle on busy and no-answer", async () => {
     const busyScope = fork();
     await allSettled(callModel.busyReceived, { scope: busyScope });
-    expect(busyScope.getState(callModel.$callStatusMessage)).toEqual({
-      kind: "error",
-      text: "Абонент занят",
-    });
+    expect(busyScope.getState(callModel.$callPhase)).toBe("idle");
 
     const noAnswerScope = fork();
     await allSettled(callModel.noAnswerReceived, { scope: noAnswerScope });
-    expect(noAnswerScope.getState(callModel.$callStatusMessage)).toEqual({
-      kind: "error",
-      text: "Нет ответа",
-    });
+    expect(noAnswerScope.getState(callModel.$callPhase)).toBe("idle");
   });
 });

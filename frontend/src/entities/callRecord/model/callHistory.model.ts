@@ -2,12 +2,16 @@ import { createEffect, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { getCallHistory } from "../api/callHistoryApi";
-import type { CallHistoryRecord } from "../callRecord.types";
+import type {
+  CallHistoryPrincipal,
+  CallHistoryRecord,
+} from "../callRecord.types";
 
-export const CallHistoryGate = createGate();
+export const CallHistoryGate = createGate<CallHistoryPrincipal>();
 
 export const loadCallHistoryFx = createEffect(
-  async (): Promise<CallHistoryRecord[]> => getCallHistory()
+  async (principal: CallHistoryPrincipal): Promise<CallHistoryRecord[]> =>
+    getCallHistory(principal)
 );
 
 export const $callHistory = createStore<CallHistoryRecord[]>([]);

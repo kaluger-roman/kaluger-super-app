@@ -61,6 +61,14 @@ const handleInvite = async (
   data: Extract<CallSignalingInbound, { type: "call_invite" }>,
   send: OutboundSender
 ): Promise<void> => {
+  const existingForSender = callRegistry.findActiveCallForParticipant(
+    senderKind,
+    senderId
+  );
+  if (existingForSender?.callerKind === senderKind) {
+    return;
+  }
+
   const pair =
     senderKind === "tutor"
       ? await resolvePairForTutor(senderId, data.targetStudentId ?? "")

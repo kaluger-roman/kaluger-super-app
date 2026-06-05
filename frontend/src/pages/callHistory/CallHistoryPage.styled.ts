@@ -18,10 +18,12 @@ export const StyledTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
 }));
 
-export const TitleIcon = styled("span")({
+export const TitleIcon = styled("span")(({ theme }) => ({
+  display: "inline-flex",
   flexShrink: 0,
   lineHeight: 1,
-});
+  color: theme.palette.primary.main,
+}));
 
 export const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),

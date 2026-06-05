@@ -22,7 +22,7 @@ export const getTutorCallHistory = async (
       tutorUserId,
       parseHistoryQuery(req.query)
     );
-    res.json({ items, nextCursor: null });
+    res.json({ items });
   } catch (error) {
     console.error("Get tutor call history error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
@@ -43,7 +43,7 @@ export const getStudentCallHistory = async (
       studentUserId,
       parseHistoryQuery(req.query)
     );
-    res.json({ items, nextCursor: null });
+    res.json({ items });
   } catch (error) {
     console.error("Get student call history error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

@@ -30,21 +30,31 @@ describe("entities/callRecord/model/callHistory.model", () => {
     vi.clearAllMocks();
   });
 
-  it("should load history into $callHistory when the gate opens", async () => {
+  it("should load the tutor history when the gate opens for a tutor", async () => {
     mockedGetCallHistory.mockResolvedValue(sampleRecords);
     const scope = fork();
 
-    await allSettled(CallHistoryGate.open, { scope, params: undefined });
+    await allSettled(CallHistoryGate.open, { scope, params: "tutor" });
 
     expect(mockedGetCallHistory).toHaveBeenCalledTimes(1);
+    expect(mockedGetCallHistory).toHaveBeenCalledWith("tutor");
     expect(scope.getState($callHistory)).toEqual(sampleRecords);
+  });
+
+  it("should request the student history when the gate opens for a student", async () => {
+    mockedGetCallHistory.mockResolvedValue([]);
+    const scope = fork();
+
+    await allSettled(CallHistoryGate.open, { scope, params: "student" });
+
+    expect(mockedGetCallHistory).toHaveBeenCalledWith("student");
   });
 
   it("should keep an empty list and not throw when the request fails", async () => {
     mockedGetCallHistory.mockRejectedValue(new Error("network"));
     const scope = fork();
 
-    await allSettled(loadCallHistoryFx, { scope });
+    await allSettled(loadCallHistoryFx, { scope, params: "tutor" });
 
     expect(scope.getState($callHistory)).toEqual([]);
   });

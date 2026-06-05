@@ -10,7 +10,7 @@ All responses in JSON. All user-facing error messages in Russian.
 
 - **Auth**: tutor JWT Bearer (existing `auth` middleware).
 - **Scope**: returns only records where `tutorId === req.userId`. Direction/peerName computed from the tutor's perspective.
-- **Query params** (optional): `limit` (default 50, max 100), `cursor` (record `id` for keyset pagination on `startedAt desc`). MVP may ship without pagination params and just return the most recent ≤50 — but the shape MUST allow adding them without breaking.
+- **Query params** (optional): `limit` (default 50, max 100). Returns the most recent ≤`limit` records.
 - **200 Response**:
 
 ```json
@@ -24,8 +24,7 @@ All responses in JSON. All user-facing error messages in Russian.
       "durationSeconds": 1845,
       "status": "completed"
     }
-  ],
-  "nextCursor": null
+  ]
 }
 ```
 
@@ -40,13 +39,13 @@ All responses in JSON. All user-facing error messages in Russian.
 - **Scope**: resolve `studentId` from `req.studentUserId` (`StudentUser.studentId`); return only records where `studentId` matches. Direction/peerName computed from the student's perspective (`peerName = tutor.name`).
 - **Query params / Response / Sort**: identical shape to the tutor endpoint.
 - **401**: missing/invalid student token.
-- **Edge**: a `StudentUser` not yet linked to a `Student` (`studentId === null`) → `200` with `{ "items": [], "nextCursor": null }` (no records possible).
+- **Edge**: a `StudentUser` not yet linked to a `Student` (`studentId === null`) → `200` with `{ "items": [] }` (no records possible).
 
 ---
 
 ## Response item type (shared)
 
-Matches `frontend/src/features/videoCall/videoCall.types.ts → CallHistoryRecord`:
+Matches `frontend/src/entities/callRecord/callRecord.types.ts → CallHistoryRecord`:
 
 ```ts
 type CallHistoryItem = {
@@ -60,7 +59,6 @@ type CallHistoryItem = {
 
 type CallHistoryResponse = {
   items: CallHistoryItem[];
-  nextCursor: string | null;
 };
 ```
 

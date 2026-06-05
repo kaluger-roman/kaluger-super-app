@@ -3,16 +3,12 @@ import { interval } from "patronum";
 
 import type { CallMediaState } from "../videoCall.types";
 import {
-  BUSY_MESSAGE,
   CONNECTING_MESSAGE,
   DEFAULT_PEER_MEDIA_STATE,
   DEFAULT_SELF_MEDIA_STATE,
   MEDIA_DENIED_MESSAGE,
-  NO_ANSWER_MESSAGE,
-  REJECTED_MESSAGE,
   toErrorMessage,
   toOutgoingPeer,
-  UNAVAILABLE_MESSAGE,
 } from "./call.helpers";
 import type {
   CallPeer,
@@ -44,6 +40,7 @@ export const unavailableReceived = createEvent();
 export const busyReceived = createEvent();
 export const noAnswerReceived = createEvent();
 export const rejectedReceived = createEvent();
+export const canceledReceived = createEvent();
 export const callErrorReceived = createEvent<string>();
 export const callFailed = createEvent<string>();
 export const mediaAcquisitionFailed = createEvent();
@@ -100,16 +97,14 @@ sample({ clock: selfMediaStateChanged, target: $selfMediaState });
 sample({ clock: peerMediaStateChanged, target: $peerMediaState });
 
 sample({ clock: unavailableReceived, target: callTerminated });
-sample({ clock: unavailableReceived, fn: () => UNAVAILABLE_MESSAGE, target: $callStatusMessage });
 
 sample({ clock: busyReceived, target: callTerminated });
-sample({ clock: busyReceived, fn: () => BUSY_MESSAGE, target: $callStatusMessage });
 
 sample({ clock: noAnswerReceived, target: callTerminated });
-sample({ clock: noAnswerReceived, fn: () => NO_ANSWER_MESSAGE, target: $callStatusMessage });
 
 sample({ clock: rejectedReceived, target: callTerminated });
-sample({ clock: rejectedReceived, fn: () => REJECTED_MESSAGE, target: $callStatusMessage });
+
+sample({ clock: canceledReceived, target: callTerminated });
 
 sample({ clock: callErrorReceived, target: callTerminated });
 sample({ clock: callErrorReceived, fn: (text) => toErrorMessage(text), target: $callStatusMessage });

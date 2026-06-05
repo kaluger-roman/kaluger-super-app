@@ -4,6 +4,7 @@ import { showNotification } from "@shared";
 
 import {
   BUSY_MESSAGE,
+  CANCELED_MESSAGE,
   MEDIA_DENIED_MESSAGE,
   NO_ANSWER_MESSAGE,
   REJECTED_MESSAGE,
@@ -13,6 +14,7 @@ import {
   busyReceived,
   callErrorReceived,
   callFailed,
+  canceledReceived,
   mediaAcquisitionFailed,
   noAnswerReceived,
   rejectedReceived,
@@ -20,6 +22,7 @@ import {
 } from "./call.model";
 
 const toErrorToast = (text: string) => ({ message: text, type: "error" as const });
+const toInfoToast = (text: string) => ({ message: text, type: "info" as const });
 
 sample({
   clock: unavailableReceived,
@@ -42,6 +45,12 @@ sample({
 sample({
   clock: rejectedReceived,
   fn: () => toErrorToast(REJECTED_MESSAGE?.text ?? ""),
+  target: showNotification,
+});
+
+sample({
+  clock: canceledReceived,
+  fn: () => toInfoToast(CANCELED_MESSAGE?.text ?? ""),
   target: showNotification,
 });
 

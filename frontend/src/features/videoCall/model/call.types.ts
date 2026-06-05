@@ -28,7 +28,7 @@ export type IceServerPayload = {
 
 export type StartCallParams =
   | { studentId: string; peerName: string }
-  | { tutorId: string; peerName: string };
+  | { peerName: string };
 
 export type MediaStatePayload = {
   callId: string;

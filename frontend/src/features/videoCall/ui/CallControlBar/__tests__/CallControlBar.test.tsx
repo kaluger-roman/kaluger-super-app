@@ -52,14 +52,14 @@ describe("CallControlBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("should disable screen share when the peer is already sharing", () => {
+  it("should keep screen share clickable when the peer is already sharing", () => {
     renderBar(
       { micOn: true, cameraOn: true, screenSharing: false },
       { micOn: true, cameraOn: true, screenSharing: true }
     );
     expect(
       screen.getByRole("button", { name: "Демонстрация экрана" })
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 
   it("should dispatch hangUp when the end-call button is clicked", async () => {

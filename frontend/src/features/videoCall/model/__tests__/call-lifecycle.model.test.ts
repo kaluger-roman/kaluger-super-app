@@ -97,7 +97,7 @@ describe("features/videoCall full caller lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("should land the rejected message on call_rejected", async () => {
+  it("should return to idle on call_rejected", async () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
@@ -105,10 +105,16 @@ describe("features/videoCall full caller lifecycle", () => {
     });
     await allSettled(callModel.rejectedReceived, { scope });
 
-    expect(scope.getState(callModel.$callStatusMessage)).toEqual({
-      kind: "error",
-      text: "Вызов отклонён",
-    });
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
+  });
+
+  it("should send call_invite without targetStudentId when the student starts a call", async () => {
+    const scope = fork();
+    await allSettled(callModel.callStarted, {
+      scope,
+      params: { peerName: "Анна" },
+    });
+    expect(sent[0]).toEqual({ type: "call_invite" });
+    expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
   });
 });

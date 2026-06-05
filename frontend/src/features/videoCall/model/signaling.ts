@@ -3,6 +3,7 @@ import {
   callEnded,
   callErrorReceived,
   callRinging,
+  canceledReceived,
   incomingCallReceived,
   noAnswerReceived,
   peerMediaStateChanged,
@@ -45,7 +46,7 @@ export const dispatchCallSignal = (message: CallSignalingOutbound): void => {
       rejectedReceived();
       return;
     case "call_canceled":
-      callEnded();
+      canceledReceived();
       return;
     case "call_ended":
       callEnded();

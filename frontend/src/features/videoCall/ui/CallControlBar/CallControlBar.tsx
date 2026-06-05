@@ -16,15 +16,12 @@ import { callModel } from "../../model";
 
 export const CallControlBar: FC = () => {
   const selfMedia = useUnit(callModel.$selfMediaState);
-  const peerMedia = useUnit(callModel.$peerMediaState);
   const actions = useUnit({
     toggleMic: callModel.toggleMic,
     toggleCamera: callModel.toggleCamera,
     toggleScreen: callModel.toggleScreenShare,
     hangUp: callModel.hangUp,
   });
-
-  const screenShareDisabled = peerMedia.screenSharing && !selfMedia.screenSharing;
 
   return (
     <Styled.BarBox>
@@ -46,7 +43,6 @@ export const CallControlBar: FC = () => {
 
       <Styled.ScreenButton
         $sharing={selfMedia.screenSharing}
-        disabled={screenShareDisabled}
         onClick={() => actions.toggleScreen()}
         aria-label={
           selfMedia.screenSharing

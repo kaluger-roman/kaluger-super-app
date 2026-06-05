@@ -4,7 +4,7 @@ import type { CallPeer, CallStatusMessage, StartCallParams } from "./call.types"
 export const toOutgoingPeer = (params: StartCallParams): CallPeer =>
   "studentId" in params
     ? { id: params.studentId, name: params.peerName, role: "student" }
-    : { id: params.tutorId, name: params.peerName, role: "tutor" };
+    : { id: "", name: params.peerName, role: "tutor" };
 
 export const DEFAULT_SELF_MEDIA_STATE: CallMediaState = {
   micOn: true,
@@ -41,6 +41,11 @@ export const NO_ANSWER_MESSAGE: CallStatusMessage = {
 export const REJECTED_MESSAGE: CallStatusMessage = {
   kind: "error",
   text: "Вызов отклонён",
+};
+
+export const CANCELED_MESSAGE: CallStatusMessage = {
+  kind: "info",
+  text: "Вызов отменён",
 };
 
 export const MEDIA_DENIED_MESSAGE: CallStatusMessage = {

@@ -46,6 +46,7 @@ export const createFakePeerConnection = (): RTCPeerConnection => {
   const senders: FakeSender[] = [];
   const pc = {
     connectionState: "new" as RTCPeerConnectionState,
+    signalingState: "stable" as RTCSignalingState,
     onicecandidate: null,
     ontrack: null,
     onconnectionstatechange: null,
@@ -63,8 +64,13 @@ export const createFakePeerConnection = (): RTCPeerConnection => {
     getSenders: vi.fn(() => senders),
     createOffer: vi.fn(async () => ({ type: "offer", sdp: "fake-offer" })),
     createAnswer: vi.fn(async () => ({ type: "answer", sdp: "fake-answer" })),
-    setLocalDescription: vi.fn(async () => undefined),
-    setRemoteDescription: vi.fn(async () => undefined),
+    setLocalDescription: vi.fn(async (desc?: RTCSessionDescriptionInit) => {
+      if (desc?.type === "offer") pc.signalingState = "have-local-offer";
+      else pc.signalingState = "stable";
+    }),
+    setRemoteDescription: vi.fn(async (desc?: RTCSessionDescriptionInit) => {
+      pc.signalingState = desc?.type === "offer" ? "have-remote-offer" : "stable";
+    }),
     addIceCandidate: vi.fn(async () => undefined),
   };
   return pc as unknown as RTCPeerConnection;

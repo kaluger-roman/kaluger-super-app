@@ -29,7 +29,6 @@ const queryRecords = async (
     include: callRecordWithPeer.include,
     orderBy: [{ startedAt: "desc" }, { id: "desc" }],
     take,
-    ...(query.cursor ? { skip: 1, cursor: { id: query.cursor } } : {}),
   });
 };
 

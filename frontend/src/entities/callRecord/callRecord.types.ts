@@ -1,3 +1,5 @@
+export type CallHistoryPrincipal = "tutor" | "student";
+
 export type CallHistoryDirection = "outgoing" | "incoming";
 
 export type CallHistoryStatus =
@@ -18,5 +20,4 @@ export type CallHistoryRecord = {
 
 export type CallHistoryResponse = {
   items: CallHistoryRecord[];
-  nextCursor: string | null;
 };

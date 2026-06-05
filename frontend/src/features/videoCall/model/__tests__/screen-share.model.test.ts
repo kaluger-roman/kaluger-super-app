@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Mock } from "vitest";
+
+import { showNotification } from "@shared";
 
 import {
   callModel,
@@ -20,14 +23,14 @@ const startCallerSession = async (callId: string): Promise<void> => {
 describe("features/videoCall/model screen share", () => {
   let sent: Array<{ type: string; [key: string]: unknown }>;
   let displayStream: MediaStream;
+  let getDisplayMedia: Mock<() => Promise<MediaStream>>;
 
   beforeEach(() => {
     sent = [];
     displayStream = createFakeStream(["video"]);
+    getDisplayMedia = vi.fn(async () => displayStream);
     setCallTransport((message) => sent.push(message));
-    setWebRtcAdapter(
-      createFakeAdapter({ getDisplayMedia: vi.fn(async () => displayStream) })
-    );
+    setWebRtcAdapter(createFakeAdapter({ getDisplayMedia }));
   });
 
   afterEach(() => {
@@ -68,7 +71,7 @@ describe("features/videoCall/model screen share", () => {
     });
   });
 
-  it("should block sharing with an info message when the peer is already sharing", async () => {
+  it("should block sharing with an info toast when the peer is already sharing", async () => {
     await startCallerSession("call-3");
     callModel.peerMediaStateChanged({
       micOn: true,
@@ -76,10 +79,21 @@ describe("features/videoCall/model screen share", () => {
       screenSharing: true,
     });
     sent = [];
+    getDisplayMedia.mockClear();
+    const toasts: Array<{ message: string; type: string }> = [];
+    const unsubscribe = showNotification.watch((payload) =>
+      toasts.push(payload)
+    );
 
     callModel.toggleScreenShare();
     await settleMicrotasks();
+    unsubscribe();
 
+    expect(toasts).toContainEqual({
+      message: "Собеседник уже демонстрирует экран",
+      type: "info",
+    });
+    expect(getDisplayMedia).not.toHaveBeenCalled();
     expect(callModel.$selfMediaState.getState().screenSharing).toBe(false);
     expect(sent.find((m) => m.type === "call_media_state")).toBeUndefined();
   });

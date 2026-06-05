@@ -20,8 +20,7 @@ export const StudentCabinetLayout: FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const tutorName = session?.tutor?.name ?? "Репетитор";
-  const handleCall = () =>
-    callStarted({ tutorId: "tutor", peerName: tutorName });
+  const handleCall = () => callStarted({ peerName: tutorName });
 
   return (
     <Styled.RootBox>

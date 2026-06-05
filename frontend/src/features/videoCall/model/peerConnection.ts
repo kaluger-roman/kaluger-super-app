@@ -26,7 +26,8 @@ export const iceServersByCall = new Map<string, IceServerPayload[]>();
 
 export const attachPeerConnection = (
   callId: string,
-  iceServers: IceServerPayload[]
+  iceServers: IceServerPayload[],
+  polite: boolean
 ): RTCPeerConnection => {
   const existing = getSession(callId);
   if (existing) return existing.pc;
@@ -70,6 +71,8 @@ export const attachPeerConnection = (
     screenStream: null,
     remoteDescriptionSet: false,
     pendingIce: [],
+    polite,
+    makingOffer: false,
   });
   return pc;
 };
@@ -97,11 +100,13 @@ export const addLocalMediaFx = createEffect(
   async ({
     callId,
     iceServers,
+    polite,
   }: {
     callId: string;
     iceServers: IceServerPayload[];
+    polite: boolean;
   }): Promise<void> => {
-    const pc = attachPeerConnection(callId, iceServers);
+    const pc = attachPeerConnection(callId, iceServers, polite);
     if (getSession(callId)?.localStream) return;
     const { stream, cameraOn } = await acquireLocalMedia();
     const session = getSession(callId);
@@ -119,9 +124,14 @@ export const addLocalMediaFx = createEffect(
 export const sendOfferFx = createEffect(async (callId: string): Promise<void> => {
   const session = getSession(callId);
   if (!session) return;
-  const offer = await session.pc.createOffer();
-  await session.pc.setLocalDescription(offer);
-  sendOverTransport({ type: "webrtc_offer", callId, sdp: offer });
+  session.makingOffer = true;
+  try {
+    const offer = await session.pc.createOffer();
+    await session.pc.setLocalDescription(offer);
+    sendOverTransport({ type: "webrtc_offer", callId, sdp: offer });
+  } finally {
+    session.makingOffer = false;
+  }
 });
 
 export const sendAnswerFx = createEffect(
@@ -134,6 +144,14 @@ export const sendAnswerFx = createEffect(
   }): Promise<void> => {
     const session = getSession(callId);
     if (!session) return;
+
+    const offerCollides =
+      session.makingOffer || session.pc.signalingState !== "stable";
+    if (offerCollides) {
+      if (!session.polite) return;
+      await session.pc.setLocalDescription({ type: "rollback" });
+    }
+
     await session.pc.setRemoteDescription(sdp);
     await markRemoteDescriptionSet(session);
     const answer = await session.pc.createAnswer();

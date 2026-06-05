@@ -45,10 +45,3 @@ export class CallPeerBusyError extends Error {
     this.name = "CallPeerBusyError";
   }
 }
-
-export class CallNotFoundError extends Error {
-  constructor(message = "Звонок не найден") {
-    super(message);
-    this.name = "CallNotFoundError";
-  }
-}

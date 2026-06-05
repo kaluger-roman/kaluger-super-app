@@ -43,6 +43,8 @@ export type CallSession = {
   screenStream: MediaStream | null;
   remoteDescriptionSet: boolean;
   pendingIce: RTCIceCandidateInit[];
+  polite: boolean;
+  makingOffer: boolean;
 };
 
 const sessions = new Map<string, CallSession>();

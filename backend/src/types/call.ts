@@ -15,10 +15,6 @@ export type IceServer = {
   credential?: string;
 };
 
-export type IceServersConfig = {
-  iceServers: IceServer[];
-};
-
 export type CallSignalingInbound =
   | { type: "call_invite"; targetStudentId?: string }
   | { type: "call_accept"; callId: string }
@@ -75,5 +71,4 @@ export type CallHistoryItem = {
 
 export type CallHistoryResponse = {
   items: CallHistoryItem[];
-  nextCursor: string | null;
 };
