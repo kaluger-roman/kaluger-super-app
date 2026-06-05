@@ -17,34 +17,19 @@ const filtersSource = {
   paymentDateTo: filtersModel.$paymentDateTo,
 };
 
-sample({
-  clock: lessonModel.loadUpcomingLessonsFx.doneData,
-  source: filtersSource,
-  filter: (_filters, { pagination }) => isPageBeyondLastPage(pagination),
-  fn: (filters, { pagination }) => createLastPageParams(filters, pagination),
-  target: lessonModel.loadUpcomingLessonsFx,
-});
+const pagedLoadEffects = [
+  lessonModel.loadUpcomingLessonsFx,
+  lessonModel.loadCompletedLessonsFx,
+  lessonModel.loadCancelledLessonsFx,
+  lessonModel.loadAllLessonsFx,
+];
 
-sample({
-  clock: lessonModel.loadCompletedLessonsFx.doneData,
-  source: filtersSource,
-  filter: (_filters, { pagination }) => isPageBeyondLastPage(pagination),
-  fn: (filters, { pagination }) => createLastPageParams(filters, pagination),
-  target: lessonModel.loadCompletedLessonsFx,
-});
-
-sample({
-  clock: lessonModel.loadCancelledLessonsFx.doneData,
-  source: filtersSource,
-  filter: (_filters, { pagination }) => isPageBeyondLastPage(pagination),
-  fn: (filters, { pagination }) => createLastPageParams(filters, pagination),
-  target: lessonModel.loadCancelledLessonsFx,
-});
-
-sample({
-  clock: lessonModel.loadAllLessonsFx.doneData,
-  source: filtersSource,
-  filter: (_filters, { pagination }) => isPageBeyondLastPage(pagination),
-  fn: (filters, { pagination }) => createLastPageParams(filters, pagination),
-  target: lessonModel.loadAllLessonsFx,
+pagedLoadEffects.forEach((loadFx) => {
+  sample({
+    clock: loadFx.doneData,
+    source: filtersSource,
+    filter: (_filters, { pagination }) => isPageBeyondLastPage(pagination),
+    fn: (filters, { pagination }) => createLastPageParams(filters, pagination),
+    target: loadFx,
+  });
 });

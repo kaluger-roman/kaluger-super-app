@@ -25,6 +25,8 @@ import { statisticsModel } from "@pages/ReportsPage";
 export const $isBlocking = combine(
   {
     loadCompletedLessons: lessonModel.loadCompletedLessonsFx.pending,
+    loadCancelledLessons: lessonModel.loadCancelledLessonsFx.pending,
+    loadAllLessons: lessonModel.loadAllLessonsFx.pending,
     loadLesson: lessonModel.loadLessonFx.pending,
     loadUpcomingLessons: lessonModel.loadUpcomingLessonsFx.pending,
     addLesson: lessonModel.addLessonFx.pending,

@@ -2,7 +2,7 @@ import { sample } from "effector";
 
 import { lessonModel } from "@entities";
 
-import { toLocalStartOfDay, toLocalEndOfDay } from "./lessons-filters.helpers";
+import { buildLessonFilterParams, buildPagedLessonParams } from "./lessons-filters.helpers";
 import * as filtersModel from "./lessons-filters.model";
 import { getScheduleDateRange } from "./lessons-reload.helpers";
 import { CANCELLED_TAB_INDEX, COMPLETED_TAB_INDEX, UPCOMING_TAB_INDEX } from "./lessons-tabs.constants";
@@ -18,14 +18,12 @@ sample({
     paymentDateFrom: filtersModel.$paymentDateFrom,
     paymentDateTo: filtersModel.$paymentDateTo,
   },
-  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: pagination.page,
-    limit: pagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      pagination.page,
+      pagination.limit
+    ),
   target: lessonModel.loadUpcomingLessonsFx,
 });
 
@@ -41,11 +39,8 @@ sample({
   },
   filter: ({ lessonsViewMode }) => lessonsViewMode === "weekly",
   fn: ({ currentWeek, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    weekStart: currentWeek.toISOString() || "",
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
+    weekStart: currentWeek.toISOString(),
+    ...buildLessonFilterParams({ onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }),
   }),
   target: lessonModel.loadWeeklyLessonsFx,
 });
@@ -71,14 +66,12 @@ sample({
   },
   filter: ({ lessonsViewMode, currentTab }) =>
     lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
-  fn: ({ upcomingPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: upcomingPagination.page,
-    limit: upcomingPagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ upcomingPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      upcomingPagination.page,
+      upcomingPagination.limit
+    ),
   target: lessonModel.loadUpcomingLessonsFx,
 });
 
@@ -95,14 +88,12 @@ sample({
   },
   filter: ({ lessonsViewMode, currentTab }) =>
     lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
-  fn: ({ completedPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: completedPagination.page,
-    limit: completedPagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ completedPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      completedPagination.page,
+      completedPagination.limit
+    ),
   target: lessonModel.loadCompletedLessonsFx,
 });
 
@@ -119,14 +110,12 @@ sample({
   },
   filter: ({ lessonsViewMode, currentTab }) =>
     lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
-  fn: ({ cancelledPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: cancelledPagination.page,
-    limit: cancelledPagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ cancelledPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      cancelledPagination.page,
+      cancelledPagination.limit
+    ),
   target: lessonModel.loadCancelledLessonsFx,
 });
 
@@ -142,14 +131,12 @@ sample({
   },
   filter: ({ lessonsViewMode, paymentDateFrom, paymentDateTo }) =>
     lessonsViewMode === "paged" && (paymentDateFrom !== null || paymentDateTo !== null),
-  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: allPagination.page,
-    limit: allPagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      allPagination.page,
+      allPagination.limit
+    ),
   target: lessonModel.loadAllLessonsFx,
 });
 
@@ -166,14 +153,12 @@ sample({
   },
   filter: ({ lessonsViewMode, currentTab }) =>
     lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
-  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: pagination.page,
-    limit: pagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ pagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      pagination.page,
+      pagination.limit
+    ),
   target: lessonModel.loadUpcomingLessonsFx,
 });
 
@@ -189,14 +174,11 @@ sample({
   },
   filter: ({ lessonsViewMode, paymentDateFrom, paymentDateTo }) =>
     lessonsViewMode === "paged" && (paymentDateFrom !== null || paymentDateTo !== null),
-  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) => ({
-    page: allPagination.page,
-    limit: allPagination.limit,
-    onlyUnpaid,
-    onlyWithoutHomework,
-    ...(paymentDateFrom && { paymentDateFrom: toLocalStartOfDay(paymentDateFrom) }),
-    ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
-  }),
+  fn: ({ allPagination, onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo }) =>
+    buildPagedLessonParams(
+      { onlyUnpaid, onlyWithoutHomework, paymentDateFrom, paymentDateTo },
+      allPagination.page,
+      allPagination.limit
+    ),
   target: lessonModel.loadAllLessonsFx,
 });
-
