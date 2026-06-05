@@ -2,6 +2,7 @@ import "./negotiation";
 import "./mediaControls";
 import "./screenShare";
 import "./call.toasts";
+import "./callSounds";
 
 export * as callModel from "./call.model";
 export { dispatchCallSignal } from "./signaling";
@@ -22,3 +23,8 @@ export {
   stopAllSessions,
 } from "./webrtc";
 export type { WebRtcAdapter } from "./webrtc";
+export {
+  setCallSoundsAdapter,
+  resetCallSoundsAdapter,
+} from "./callSounds";
+export type { CallSoundsAdapter } from "./callSounds";
