@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-05
+
+### Changed
+- `/code-review-local` — added 3 recall angles ported from the `/code-review` (max effort) protocol: removed-behavior auditor, cross-file tracer, and wrapper/proxy correctness (5 → 8 parallel reviewer agents). Finding JSON schema unchanged, so the `/auto-feature` code-review loop stays compatible (frontmatter model also aligned to opus to match the body)
+
 ## 2026-05-31
 
 ### Changed
