@@ -13,6 +13,7 @@ import {
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
+import { getLessonDisplayName } from "@shared";
 
 import * as homeworkSentStatusModel from "./homework-sent-status.model";
 import * as Styled from "./HomeworkSentStatus.styled";
@@ -112,7 +113,7 @@ export const HomeworkSentStatus: FC<HomeworkSentStatusProps> = ({
               <strong>{pendingStatus ? "отправленное" : "неотправленное"}</strong>?
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Урок: <strong>{lesson.student?.name}</strong>
+              Урок: <strong>{getLessonDisplayName(lesson)}</strong>
             </Typography>
           </Box>
         </DialogContent>

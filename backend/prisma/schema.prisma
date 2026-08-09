@@ -175,8 +175,12 @@ model Lesson {
   tutorId String
   tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
 
-  studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  prospectName          String? // Имя потенциального ученика (пробный урок без ученика)
+  prospectPhone         String?
+  prospectContactMethod ContactMethod?
 
   scheduledReminders ScheduledReminder[]
 
@@ -189,6 +193,7 @@ model Lesson {
 enum ContactMethod {
   WHATSAPP
   TELEGRAM
+  MAX
 }
 
 enum LessonStatus {

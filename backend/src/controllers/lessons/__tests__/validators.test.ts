@@ -12,6 +12,10 @@ type CreateLessonDto = {
   endTime?: string | Date;
   studentId?: string;
   price?: number;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: string;
+  isRecurring?: boolean;
 };
 
 describe("validateLessonData", () => {
@@ -20,7 +24,7 @@ describe("validateLessonData", () => {
     const res = validateLessonData(data as any);
     expect(res.isValid).toBe(false);
     expect(res.error).toBe(
-      "Предмет, тип урока, время начала, время окончания и ID студента обязательны"
+      "Предмет, тип урока, время начала и время окончания обязательны"
     );
   });
 
@@ -90,6 +94,78 @@ describe("validateLessonData", () => {
 
     const withoutPrice = validateLessonData(base as any);
     expect(withoutPrice.isValid).toBe(true);
+  });
+
+  describe("prospect (trial lesson without student)", () => {
+    const base = {
+      subject: "MATHEMATICS",
+      lessonType: "EGE",
+      startTime: new Date("2025-01-01T10:00:00Z").toISOString(),
+      endTime: new Date("2025-01-01T11:00:00Z").toISOString(),
+    };
+
+    it("returns error when neither studentId nor prospectName is given", () => {
+      const res = validateLessonData(base as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe(
+        "Укажите ученика или имя для пробного урока без ученика"
+      );
+    });
+
+    it("returns error when prospect fields are combined with studentId", () => {
+      const res = validateLessonData({
+        ...base,
+        studentId: "s1",
+        prospectName: "Иван",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe(
+        "Данные пробного ученика нельзя указывать вместе с учеником"
+      );
+    });
+
+    it("returns error when prospectName is blank", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "   ",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Имя ученика для пробного урока обязательно");
+    });
+
+    it("returns error when prospect lesson is recurring", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        isRecurring: true,
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe(
+        "Пробный урок без ученика не может быть повторяющимся"
+      );
+    });
+
+    it("returns error when prospectContactMethod is not in allowed list", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        prospectContactMethod: "VIBER",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe(
+        "Недопустимый способ связи (WhatsApp, Telegram или MAX)"
+      );
+    });
+
+    it("returns valid for prospect lesson with name and MAX contact", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        prospectPhone: "+79991234567",
+        prospectContactMethod: "MAX",
+      } as any);
+      expect(res.isValid).toBe(true);
+    });
   });
 });
 

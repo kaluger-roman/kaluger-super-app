@@ -411,6 +411,33 @@ describe("getStatistics controller", () => {
       });
   });
 
+  it("counts prospect lessons without student in trialLessonsCount", async () => {
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Иван (пробный)",
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: false,
+        price: 0,
+        status: "COMPLETED",
+      },
+    });
+
+    await request(app)
+      .get(`/api/statistics`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.trialLessonsCount).toBe(1);
+        expect(res.body.earnings).toBe(0);
+      });
+  });
+
   it("respects startDate and endDate filters", async () => {
     // create an old lesson (outside range) and a today lesson (inside range)
     const oldStart = new Date("2020-01-01T10:00:00Z");

@@ -251,6 +251,32 @@ describe("GET /api/lessons/:id/cancellation-info", () => {
     expect(response.body.cancellationInfo).toBeNull();
   });
 
+  it("should return null for paid prospect lesson without student", async () => {
+    const prospectLesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+        price: 500,
+        isRecurring: false,
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Иван (пробный)",
+        status: "SCHEDULED" as const,
+        isPaid: true,
+        paymentDate: new Date(),
+      },
+    });
+
+    const response = await request(app)
+      .get(`/api/lessons/${prospectLesson.id}/cancellation-info`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(response.body.cancellationInfo).toBeNull();
+  });
+
   it("handles database errors gracefully", async () => {
     const lesson = await prisma.lesson.create({
       data: {

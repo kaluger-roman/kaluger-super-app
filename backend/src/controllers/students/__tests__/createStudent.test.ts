@@ -43,6 +43,32 @@ describe("createStudent integration tests", () => {
       });
   });
 
+  it("should create student with contactMethod MAX for student and parent", async () => {
+    const payload = {
+      name: "Max Student",
+      contactMethod: "MAX",
+      phone: "+79990002233",
+      parentName: "Max Parent",
+      parentPhone: "+79990002234",
+      parentContactMethod: "MAX",
+    };
+
+    await request(app)
+      .post("/api/students")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send(payload)
+      .expect(201)
+      .then(async (res) => {
+        expect(res.body.student.contactMethod).toBe("MAX");
+        expect(res.body.student.parentContactMethod).toBe("MAX");
+        const created = await prisma.student.findUnique({
+          where: { id: res.body.student.id },
+        });
+        expect(created?.contactMethod).toBe("MAX");
+        expect(created?.parentContactMethod).toBe("MAX");
+      });
+  });
+
   it("creates student and returns 201 with student", async () => {
     const payload = {
       name: "Test Student",
@@ -108,7 +134,7 @@ describe("createStudent integration tests", () => {
       .expect(400)
       .then((res) => {
         expect(res.body.error).toBe(
-          "Не выбран способ связи (WhatsApp или Telegram)"
+          "Не выбран способ связи (WhatsApp, Telegram или MAX)"
         );
       });
   });

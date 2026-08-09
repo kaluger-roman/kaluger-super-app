@@ -12,7 +12,11 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
       startTime: new Date(lesson.startTime),
       endTime: new Date(lesson.endTime),
       price: lesson.price?.toString() || "",
-      studentId: lesson.studentId,
+      studentId: lesson.studentId ?? "",
+      withoutStudent: !lesson.studentId,
+      prospectName: lesson.prospectName ?? "",
+      prospectPhone: lesson.prospectPhone ?? "",
+      prospectContactMethod: lesson.prospectContactMethod ?? "",
       homework: lesson.homework || "",
       notes: lesson.notes || "",
       isRecurring: lesson.isRecurring || false,
@@ -33,6 +37,10 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
     endTime,
     price: "",
     studentId: "",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
     homework: "",
     notes: "",
     isRecurring: false,
@@ -47,7 +55,11 @@ export const validateFormData = (
 ): { isValid: boolean; errors: Record<string, string> } => {
   const errors: Record<string, string> = {};
 
-  if (!formData.studentId) {
+  if (formData.withoutStudent) {
+    if (!formData.prospectName.trim()) {
+      errors.prospectName = "Укажите имя ученика";
+    }
+  } else if (!formData.studentId) {
     errors.studentId = "Выберите ученика";
   }
 
@@ -65,6 +77,34 @@ export const validateFormData = (
   };
 };
 
+export const canSubmitLessonForm = (formData: LessonFormData): boolean =>
+  formData.withoutStudent
+    ? Boolean(formData.prospectName.trim())
+    : Boolean(formData.studentId);
+
+export const applyWithoutStudentRules = (
+  formData: LessonFormData,
+  field: string,
+  editingLesson?: Lesson
+): LessonFormData => {
+  if (field !== "withoutStudent") return formData;
+
+  if (formData.withoutStudent) {
+    return { ...formData, studentId: "", isRecurring: false, price: "0" };
+  }
+
+  return {
+    ...formData,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    // При редактировании существующего пробного урока цена сохраняется —
+    // иначе автозаполнение ставкой ученика молча подменит цену при привязке.
+    price:
+      !editingLesson && formData.price === "0" ? "" : formData.price,
+  };
+};
+
 export const prepareSubmitData = (
   formData: LessonFormData
 ): CreateLessonDto & Partial<UpdateLessonDto> => ({
@@ -74,10 +114,15 @@ export const prepareSubmitData = (
   startTime: formData.startTime.toISOString(),
   endTime: formData.endTime.toISOString(),
   price: formData.price ? Number(formData.price) : undefined,
-  studentId: formData.studentId,
+  ...(formData.withoutStudent
+    ? {
+        prospectName: formData.prospectName.trim(),
+        prospectPhone: formData.prospectPhone.trim() || undefined,
+        prospectContactMethod: formData.prospectContactMethod || undefined,
+      }
+    : { studentId: formData.studentId, isRecurring: formData.isRecurring || undefined }),
   homework: formData.homework || undefined,
   notes: formData.notes || undefined,
-  isRecurring: formData.isRecurring || undefined,
   isPaid: formData.isPaid,
   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
   paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,

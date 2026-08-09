@@ -159,7 +159,7 @@ export const processScheduledReminders = async () => {
         body: formatReminderBody(
           lesson.subject,
           lesson.lessonType,
-          lesson.student.name,
+          lesson.student?.name ?? lesson.prospectName ?? "",
           lesson.startTime,
           lesson.endTime,
           safeTimezone

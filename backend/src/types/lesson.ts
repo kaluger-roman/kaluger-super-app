@@ -1,3 +1,5 @@
+import type { ContactMethod } from "./student";
+
 export type CreateLessonDto = {
   subject: "MATHEMATICS" | "PHYSICS";
   lessonType: "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
@@ -5,7 +7,10 @@ export type CreateLessonDto = {
   startTime: Date;
   endTime: Date;
   price?: number;
-  studentId: string;
+  studentId?: string;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: ContactMethod;
   homework?: string;
   notes?: string;
   isRecurring?: boolean; // Регулярное занятие

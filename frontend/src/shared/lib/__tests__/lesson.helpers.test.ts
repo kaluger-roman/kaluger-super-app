@@ -2,12 +2,14 @@ import { describe, it, expect } from "vitest";
 
 import type { Lesson } from "../../types";
 import {
+  getLessonDisplayName,
   getStatusLabel,
   getStatusColor,
   formatLessonTime,
   formatTimeForCell,
   formatTimeFromString,
   formatDateTimeLong,
+  isProspectLesson,
 } from "../lesson.helpers";
 
 describe("lesson.helpers", () => {
@@ -123,6 +125,37 @@ describe("lesson.helpers", () => {
     it("should include weekday in format", () => {
       const result = formatDateTimeLong("2024-03-15T14:30:00");
       expect(result.length).toBeGreaterThan(20);
+    });
+  });
+
+  describe("getLessonDisplayName", () => {
+    it("should return student name when student is present", () => {
+      expect(
+        getLessonDisplayName({
+          student: { name: "Иван Иванов" } as Lesson["student"],
+          prospectName: null,
+        })
+      ).toBe("Иван Иванов");
+    });
+
+    it("should return prospect name when student is absent", () => {
+      expect(
+        getLessonDisplayName({ student: undefined, prospectName: "Пётр (пробный)" })
+      ).toBe("Пётр (пробный)");
+    });
+
+    it("should return empty string when neither student nor prospect name present", () => {
+      expect(getLessonDisplayName({ student: undefined, prospectName: null })).toBe("");
+    });
+  });
+
+  describe("isProspectLesson", () => {
+    it("should return true when studentId is null", () => {
+      expect(isProspectLesson({ studentId: null })).toBe(true);
+    });
+
+    it("should return false when studentId is set", () => {
+      expect(isProspectLesson({ studentId: "student-1" })).toBe(false);
     });
   });
 });

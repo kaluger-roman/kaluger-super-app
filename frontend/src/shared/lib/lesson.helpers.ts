@@ -1,5 +1,12 @@
 import type { Lesson } from "../types";
 
+export const isProspectLesson = (lesson: Pick<Lesson, "studentId">): boolean =>
+  !lesson.studentId;
+
+export const getLessonDisplayName = (
+  lesson: Pick<Lesson, "student" | "prospectName">
+): string => lesson.student?.name ?? lesson.prospectName ?? "";
+
 export const getStatusLabel = (status: Lesson["status"]): string => {
   switch (status) {
     case "SCHEDULED":

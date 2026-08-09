@@ -27,8 +27,8 @@ test.describe(
       const editDialog = page.getByRole("dialog");
       await expect(editDialog).toBeVisible();
 
-      await editDialog.getByLabel("Имя студента").clear();
-      await editDialog.getByLabel("Имя студента").fill("Иван Новый");
+      await editDialog.getByLabel("Имя ученика").clear();
+      await editDialog.getByLabel("Имя ученика").fill("Иван Новый");
       await editDialog.getByLabel("Ставка").clear();
       await editDialog.getByLabel("Ставка").fill("2500");
 

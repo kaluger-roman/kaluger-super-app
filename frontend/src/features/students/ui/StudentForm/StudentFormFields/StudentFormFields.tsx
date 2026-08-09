@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 
-import { useDisableNumberScroll } from "@shared";
+import { CONTACT_METHOD_LABELS, useDisableNumberScroll } from "@shared";
 
 import type { StudentFormFieldsProps } from "../types";
 
@@ -48,16 +48,18 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
       />
 
       <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel>Способ связи</InputLabel>
+        <InputLabel id="student-contact-method-label">Способ связи</InputLabel>
         <Select
+          labelId="student-contact-method-label"
           value={formData.contactMethod || "WHATSAPP"}
           onChange={(e: SelectChangeEvent<string>) =>
             onChange("contactMethod")({ target: { value: e.target.value } })
           }
           label="Способ связи"
         >
-          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
-          <MenuItem value="TELEGRAM">Telegram</MenuItem>
+          <MenuItem value="WHATSAPP">{CONTACT_METHOD_LABELS.WHATSAPP}</MenuItem>
+          <MenuItem value="TELEGRAM">{CONTACT_METHOD_LABELS.TELEGRAM}</MenuItem>
+          <MenuItem value="MAX">{CONTACT_METHOD_LABELS.MAX}</MenuItem>
         </Select>
       </FormControl>
 
@@ -91,16 +93,20 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
       />
 
       <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel>Способ связи (родители)</InputLabel>
+        <InputLabel id="parent-contact-method-label">
+          Способ связи (родители)
+        </InputLabel>
         <Select
+          labelId="parent-contact-method-label"
           value={formData.parentContactMethod || "WHATSAPP"}
           onChange={(e: SelectChangeEvent<string>) =>
             onChange("parentContactMethod")({ target: { value: e.target.value } })
           }
           label="Способ связи (родители)"
         >
-          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
-          <MenuItem value="TELEGRAM">Telegram</MenuItem>
+          <MenuItem value="WHATSAPP">{CONTACT_METHOD_LABELS.WHATSAPP}</MenuItem>
+          <MenuItem value="TELEGRAM">{CONTACT_METHOD_LABELS.TELEGRAM}</MenuItem>
+          <MenuItem value="MAX">{CONTACT_METHOD_LABELS.MAX}</MenuItem>
         </Select>
       </FormControl>
 

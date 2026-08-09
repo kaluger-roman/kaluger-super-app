@@ -644,4 +644,53 @@ describe("reminderProcessor service", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
+
+  it("should send reminder with prospect name and not crash when lesson has no student", async () => {
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    const prospectLesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        status: "SCHEDULED",
+        price: 0,
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Тест Проспект",
+        prospectPhone: "+79991234567",
+        prospectContactMethod: "MAX",
+      },
+    });
+
+    await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: prospectLesson.id,
+        userId,
+        status: "PENDING",
+      },
+    });
+
+    await processScheduledReminders();
+
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+    const payloadJson = (webpush.sendNotification as jest.Mock).mock
+      .calls[0][1] as string;
+    expect(payloadJson).toContain("Тест Проспект");
+
+    const reminder = await prisma.scheduledReminder.findFirst({
+      where: { lessonId: prospectLesson.id },
+    });
+    expect(reminder!.status).toBe("SENT");
+  });
 });

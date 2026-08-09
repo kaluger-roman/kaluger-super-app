@@ -1,4 +1,10 @@
-import type { Subject, LessonType } from "./types";
+import type { ContactMethod, Subject, LessonType } from "./types";
+
+export const CONTACT_METHOD_LABELS: Record<ContactMethod, string> = {
+  WHATSAPP: "WhatsApp",
+  TELEGRAM: "Telegram",
+  MAX: "MAX",
+};
 
 export const SUBJECT_LABELS: Record<Subject, string> = {
   MATHEMATICS: "Математика",
