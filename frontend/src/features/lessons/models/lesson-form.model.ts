@@ -6,6 +6,8 @@ import type { Lesson, CreateLessonDto, UpdateLessonDto } from "@shared";
 
 import {
   applyHourlyRateAutofill,
+  applyWithoutStudentRules,
+  canSubmitLessonForm,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -28,6 +30,10 @@ export const $formData = createStore<LessonFormData>({
   endTime: new Date(Date.now() + 60 * 60 * 1000),
   price: "",
   studentId: "",
+  withoutStudent: false,
+  prospectName: "",
+  prospectPhone: "",
+  prospectContactMethod: "",
   homework: "",
   notes: "",
   isRecurring: false,
@@ -37,6 +43,8 @@ export const $formData = createStore<LessonFormData>({
 });
 
 export const $errors = createStore<Record<string, string>>({});
+
+export const $canSubmit = $formData.map(canSubmitLessonForm);
 
 export const $confirmDialog = createStore<ConfirmDialogData>({
   open: false,
@@ -89,10 +97,15 @@ sample({
     formData: $formData,
     students: studentModel.$students,
     archivedStudents: studentModel.$archivedStudents,
+    editingLesson: $editingLesson,
   },
-  fn: ({ formData, students, archivedStudents }, { field, value }) =>
+  fn: ({ formData, students, archivedStudents, editingLesson }, { field, value }) =>
     applyHourlyRateAutofill(
-      updateFormField(formData, field, value),
+      applyWithoutStudentRules(
+        updateFormField(formData, field, value),
+        field,
+        editingLesson
+      ),
       students,
       archivedStudents
     ),

@@ -288,4 +288,107 @@ describe("lesson-form.model", () => {
       expect(confirmDialog.open).toBe(false);
     });
   });
+
+  describe("withoutStudent toggle", () => {
+    it("should clear studentId, disable recurring and set price 0 when toggled on", async () => {
+      const scope = fork();
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "studentId", value: "student-1" } });
+      await allSettled(fieldChanged, { scope, params: { field: "isRecurring", value: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: true } });
+
+      const formData = scope.getState($formData);
+      expect(formData.withoutStudent).toBe(true);
+      expect(formData.studentId).toBe("");
+      expect(formData.isRecurring).toBe(false);
+      expect(formData.price).toBe("0");
+    });
+
+    it("should clear prospect fields when toggled off", async () => {
+      const scope = fork();
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "prospectName", value: "Пётр" } });
+      await allSettled(fieldChanged, {
+        scope,
+        params: { field: "prospectContactMethod", value: "MAX" },
+      });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: false } });
+
+      const formData = scope.getState($formData);
+      expect(formData.prospectName).toBe("");
+      expect(formData.prospectPhone).toBe("");
+      expect(formData.prospectContactMethod).toBe("");
+      expect(formData.price).toBe("");
+    });
+  });
+
+  describe("prospect lesson submit", () => {
+    it("should create lesson with prospect fields and without studentId", async () => {
+      const scope = fork();
+      vi.mocked(lessonsApi.create).mockResolvedValueOnce(
+        createMockLesson({ id: "lesson-prospect", studentId: null })
+      );
+
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: true } });
+      await allSettled(fieldChanged, {
+        scope,
+        params: { field: "prospectName", value: "Пётр (пробный)" },
+      });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.create).toHaveBeenCalledTimes(1);
+      const payload = vi.mocked(lessonsApi.create).mock.calls[0][0];
+      expect(payload.prospectName).toBe("Пётр (пробный)");
+      expect(payload.studentId).toBeUndefined();
+      expect(payload.isRecurring).toBeUndefined();
+      expect(payload.price).toBe(0);
+    });
+
+    it("should show error and skip API call when prospect name is blank", async () => {
+      const scope = fork();
+
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "prospectName", value: "   " } });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.create).not.toHaveBeenCalled();
+      expect(scope.getState($errors).prospectName).toBe("Укажите имя ученика");
+    });
+  });
+
+  describe("linking prospect lesson to student", () => {
+    it("should update lesson with studentId and without prospect fields after toggle off", async () => {
+      const prospectLesson = createMockLesson({
+        id: "lesson-prospect",
+        studentId: null,
+        student: undefined,
+        prospectName: "Пётр (пробный)",
+        prospectPhone: "+79990000000",
+        prospectContactMethod: "MAX",
+        price: 0,
+      });
+      const scope = fork();
+      vi.mocked(lessonsApi.update).mockResolvedValueOnce(
+        createMockLesson({ id: "lesson-prospect", studentId: "student-1" })
+      );
+
+      await allSettled(formOpened, { scope, params: { lesson: prospectLesson, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "withoutStudent", value: false } });
+      await allSettled(fieldChanged, { scope, params: { field: "studentId", value: "student-1" } });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.update).toHaveBeenCalledTimes(1);
+      const [id, payload] = vi.mocked(lessonsApi.update).mock.calls[0];
+      expect(id).toBe("lesson-prospect");
+      expect(payload.studentId).toBe("student-1");
+      expect(payload.prospectName).toBeUndefined();
+      expect(payload.prospectPhone).toBeUndefined();
+      expect(payload.prospectContactMethod).toBeUndefined();
+      // Регрессия mqa 2026-08-09 #1: цена 0 не должна подменяться ставкой ученика
+      expect(payload.price).toBe(0);
+    });
+  });
 });

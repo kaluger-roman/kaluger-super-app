@@ -7,9 +7,9 @@ import type { Lesson } from "@shared";
 
 import { DateTimeSelector } from "./DateTimeSelector";
 import * as Styled from "./LessonFormContent.styled";
+import { LessonStudentSection } from "./LessonStudentSection";
 import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
-import { StudentSelector } from "./StudentSelector";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
 import { HomeworkSentStatus } from "../../HomeworkSentStatus";
 import { PaymentStatus } from "../../PaymentStatus";
@@ -40,7 +40,7 @@ export const LessonFormContent = ({
     <Styled.StyledDialogContent $isMobile={isMobile}>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Styled.FormContainer $isMobile={isMobile}>
-          <StudentSelector
+          <LessonStudentSection
             formData={formData}
             errors={errors}
             isLoading={isLoading}
@@ -134,7 +134,7 @@ export const LessonFormContent = ({
               />
             )}
           </Styled.CheckboxContainer>
-          {!lesson && (
+          {!lesson && !formData.withoutStudent && (
             <FormControlLabel
               control={
                 <Checkbox

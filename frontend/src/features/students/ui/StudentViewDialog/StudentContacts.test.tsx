@@ -57,6 +57,24 @@ describe("StudentContacts", () => {
     expect(screen.getByText(/Telegram \(ivan\)/)).toBeInTheDocument();
   });
 
+  it("should render MAX contact method", () => {
+    const studentWithMax = {
+      ...mockStudent,
+      contactMethod: "MAX" as const,
+    };
+    renderWithTheme(<StudentContacts student={studentWithMax} />);
+    expect(screen.getByText("MAX")).toBeInTheDocument();
+  });
+
+  it("should render MAX parent contact method", () => {
+    const studentWithMaxParent = {
+      ...mockStudent,
+      parentContactMethod: "MAX" as const,
+    };
+    renderWithTheme(<StudentContacts student={studentWithMaxParent} />);
+    expect(screen.getByText(/Родители:.*MAX/)).toBeInTheDocument();
+  });
+
   it("should render parent phone when provided", () => {
     renderWithTheme(<StudentContacts student={mockStudent} />);
     expect(screen.getByText(/\+79997654321/)).toBeInTheDocument();

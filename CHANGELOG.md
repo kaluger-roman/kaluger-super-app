@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 2026-06-05
+## 2026-08-09
+
+### Added
+- MAX messenger is now available alongside WhatsApp and Telegram everywhere a contact method is chosen or shown — student and parent contact in the add/edit student form, the student card, and the student view dialog. Existing students are unaffected; the default for new students stays WhatsApp.
+- Trial lessons without a student: the lesson form has a new "Пробный урок" toggle (with an info tooltip explaining it) that records a lesson for a prospective student by name only — no student card required. Optional phone and messenger, price defaults to 0 ₽, and the weekly-recurring option is hidden. Such lessons show in the calendar and list marked "Пробный", count toward the trial-lessons statistic while staying out of income, and can later be linked to a real student — linking clears the prospect data and preserves the lesson's original date, price and status.
+
+### Fixed
+- Opening the sidebar drawer no longer logs a React "unrecognized `$drawerWidth` prop" console error — the styled Drawer now filters transient `$`-props (found during manual QA of this feature).
 
 ### Changed
 - `/code-review-local` — added 3 recall angles ported from the `/code-review` (max effort) protocol: removed-behavior auditor, cross-file tracer, and wrapper/proxy correctness (5 → 8 parallel reviewer agents). Finding JSON schema unchanged, so the `/auto-feature` code-review loop stays compatible (frontmatter model also aligned to opus to match the body)

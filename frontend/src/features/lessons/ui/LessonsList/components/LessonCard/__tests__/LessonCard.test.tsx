@@ -35,6 +35,23 @@ const mockLesson: Lesson = {
 
 describe("LessonCard", () => {
   describe("Rendering", () => {
+    it("should render prospect name with trial badge for lesson without student", () => {
+      const prospectLesson: Lesson = {
+        ...mockLesson,
+        studentId: null,
+        student: undefined,
+        prospectName: "Пётр (пробный)",
+        prospectPhone: "+79990000000",
+        prospectContactMethod: "MAX",
+        price: 0,
+      };
+      renderWithTheme(<LessonCard lesson={prospectLesson} />);
+
+      expect(screen.getByText("Пётр (пробный)")).toBeInTheDocument();
+      expect(screen.getByText("Пробный")).toBeInTheDocument();
+      expect(screen.getByText(/Бесплатно/)).toBeInTheDocument();
+    });
+
     it("should render lesson details", () => {
       renderWithTheme(<LessonCard lesson={mockLesson} />);
 

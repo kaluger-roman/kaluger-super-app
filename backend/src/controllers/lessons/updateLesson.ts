@@ -19,6 +19,7 @@ import {
 } from "../../utils";
 import { truncateToMinute } from "../../utils/time";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
+import { CONTACT_METHODS } from "./validators";
 import type { ShiftResult } from "../../types";
 
 const validateUpdateData = (
@@ -57,6 +58,50 @@ const validateUpdateData = (
     return { isValid: false, error: "Оценка должна быть от 1 до 5" };
   }
 
+  if ("studentId" in updateData && !updateData.studentId) {
+    return { isValid: false, error: "Нельзя отвязать ученика от урока" };
+  }
+
+  const hasProspectFields =
+    "prospectName" in updateData ||
+    "prospectPhone" in updateData ||
+    "prospectContactMethod" in updateData;
+
+  if (hasProspectFields && (existingLesson.studentId || updateData.studentId)) {
+    return {
+      isValid: false,
+      error: "Данные пробного ученика нельзя указывать вместе с учеником",
+    };
+  }
+
+  if ("prospectName" in updateData && !updateData.prospectName?.trim()) {
+    return {
+      isValid: false,
+      error: "Имя ученика для пробного урока обязательно",
+    };
+  }
+
+  if (
+    updateData.prospectContactMethod !== undefined &&
+    !CONTACT_METHODS.includes(updateData.prospectContactMethod)
+  ) {
+    return {
+      isValid: false,
+      error: "Недопустимый способ связи (WhatsApp, Telegram или MAX)",
+    };
+  }
+
+  if (
+    updateData.isRecurring &&
+    !existingLesson.studentId &&
+    !updateData.studentId
+  ) {
+    return {
+      isValid: false,
+      error: "Пробный урок без ученика не может быть повторяющимся",
+    };
+  }
+
   return { isValid: true };
 };
 
@@ -82,6 +127,17 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       const statusCode = validation.statusCode || 400;
       return res.status(statusCode).json({ error: validation.error });
     }
+
+    if (updateData.studentId) {
+      const student = await prisma.student.findFirst({
+        where: { id: updateData.studentId, tutorId: userId },
+      });
+      if (!student) {
+        return res.status(404).json({ error: "Ученик не найден" });
+      }
+    }
+    const isLinkingStudent =
+      !!updateData.studentId && !existingLesson.studentId;
 
     const now = truncateToMinute(new Date());
 
@@ -113,6 +169,12 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       ...(updateData.startTime ? { startTime: start } : {}),
       ...(updateData.endTime ? { endTime: end } : {}),
       ...(computedStatus ? { status: computedStatus } : {}),
+      ...(updateData.prospectName !== undefined
+        ? { prospectName: updateData.prospectName.trim() }
+        : {}),
+      ...(isLinkingStudent
+        ? { prospectName: null, prospectPhone: null, prospectContactMethod: null }
+        : {}),
     };
 
     let nextLessonForTransfer: Awaited<ReturnType<typeof findNextUnpaidLesson>> = null;
@@ -121,7 +183,11 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       existingLesson.isPaid &&
       existingLesson.paymentDate
     ) {
-      nextLessonForTransfer = await findNextUnpaidLesson(userId!, existingLesson);
+      // Перенос оплаты возможен только для урока с учеником — у пробного
+      // урока без ученика очереди уроков нет, но сброс оплаты нужен всегда.
+      if (existingLesson.studentId) {
+        nextLessonForTransfer = await findNextUnpaidLesson(userId!, existingLesson);
+      }
       dataToUpdate.isPaid = false;
       // Prisma treats `undefined` as "do not update this field". Use explicit
       // `null` so paymentDate is actually cleared on the cancelled lesson —

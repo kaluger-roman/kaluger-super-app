@@ -13,7 +13,11 @@ export type {
   ResetPasswordDto,
   UpdateProfileDto,
 } from "./auth";
-export type { CreateStudentDto, UpdateStudentDto } from "./student";
+export type {
+  ContactMethod,
+  CreateStudentDto,
+  UpdateStudentDto,
+} from "./student";
 export type {
   CreateLessonDto,
   UpdateLessonDto,

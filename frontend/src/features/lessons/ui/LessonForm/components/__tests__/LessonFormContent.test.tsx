@@ -10,6 +10,10 @@ import type { LessonFormData } from "../../types";
 import { LessonFormContent } from "../LessonFormContent";
 
 const mockFormData: LessonFormData = {
+  withoutStudent: false,
+  prospectName: "",
+  prospectPhone: "",
+  prospectContactMethod: "",
   studentId: "s1",
   subject: "MATHEMATICS",
   lessonType: "SCHOOL",

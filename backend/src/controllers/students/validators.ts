@@ -8,7 +8,7 @@ export const validateCreateStudentDto = (data: CreateStudentDto) => {
   }
 
   if (!data.contactMethod) {
-    errors.push("Не выбран способ связи (WhatsApp или Telegram)");
+    errors.push("Не выбран способ связи (WhatsApp, Telegram или MAX)");
   }
 
   if (data.hourlyRate && data.hourlyRate < 0) {
@@ -30,7 +30,7 @@ export const validateUpdateStudentDto = (data: UpdateStudentDto) => {
   const errors: string[] = [];
 
   if ("contactMethod" in data && !data.contactMethod) {
-    errors.push("Не выбран способ связи (WhatsApp или Telegram)");
+    errors.push("Не выбран способ связи (WhatsApp, Telegram или MAX)");
   }
 
   if (data.hourlyRate && data.hourlyRate < 0) {

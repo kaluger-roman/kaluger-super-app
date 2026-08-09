@@ -18,7 +18,7 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
 
     const studentStats = await prisma.lesson.groupBy({
       by: ["studentId"],
-      where,
+      where: { ...where, studentId: { not: null } },
       _count: {
         id: true,
       },
@@ -28,7 +28,9 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
     });
 
     // Получаем информацию о учениках
-    const studentIds = studentStats.map((stat) => stat.studentId);
+    const studentIds = studentStats
+      .map((stat) => stat.studentId)
+      .filter((id): id is string => id !== null);
     const students = await prisma.student.findMany({
       where: {
         id: { in: studentIds },

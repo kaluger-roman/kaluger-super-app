@@ -1,4 +1,4 @@
-import type { Student } from "./student";
+import type { ContactMethod, Student } from "./student";
 
 export type LessonStatus =
   | "SCHEDULED"
@@ -29,7 +29,10 @@ export type Lesson = {
   isRecurring?: boolean;
   createdAt: string;
   updatedAt: string;
-  studentId: string;
+  studentId: string | null;
+  prospectName?: string | null;
+  prospectPhone?: string | null;
+  prospectContactMethod?: ContactMethod | null;
   student?: Pick<
     Student,
     | "id"
@@ -52,7 +55,10 @@ export type CreateLessonDto = {
   startTime: string;
   endTime: string;
   price?: number;
-  studentId: string;
+  studentId?: string;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: ContactMethod;
   homework?: string;
   notes?: string;
   isRecurring?: boolean;

@@ -7,7 +7,7 @@ import {
 describe("students validators unit tests", () => {
   it("validateUpdateStudentDto should return error when contactMethod provided empty", () => {
     const errors = validateUpdateStudentDto({ contactMethod: "" as any });
-    expect(errors).toContain("Не выбран способ связи (WhatsApp или Telegram)");
+    expect(errors).toContain("Не выбран способ связи (WhatsApp, Telegram или MAX)");
   });
 
   it("validateUpdateStudentDto should return error when hourlyRate negative", () => {
@@ -90,7 +90,7 @@ describe("students validators unit tests", () => {
     it("returns error when contactMethod missing", () => {
       const errors = validateCreateStudentDto({ name: "A" } as any);
       expect(errors).toContain(
-        "Не выбран способ связи (WhatsApp или Telegram)"
+        "Не выбран способ связи (WhatsApp, Telegram или MAX)"
       );
     });
 

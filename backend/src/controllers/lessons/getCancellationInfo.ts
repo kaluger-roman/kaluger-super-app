@@ -40,7 +40,7 @@ export const getLessonCancellationInfo = async (
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    if (!lesson.isPaid || !lesson.paymentDate) {
+    if (!lesson.studentId || !lesson.isPaid || !lesson.paymentDate) {
       return res.json({ cancellationInfo: null });
     }
 

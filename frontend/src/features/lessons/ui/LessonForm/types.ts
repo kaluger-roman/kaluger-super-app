@@ -1,4 +1,4 @@
-import type { Lesson } from "@shared";
+import type { ContactMethod, Lesson } from "@shared";
 
 export type LessonFormData = {
   subject: string;
@@ -8,6 +8,10 @@ export type LessonFormData = {
   endTime: Date;
   price: string;
   studentId: string;
+  withoutStudent: boolean;
+  prospectName: string;
+  prospectPhone: string;
+  prospectContactMethod: ContactMethod | "";
   homework: string;
   notes: string;
   isRecurring: boolean;

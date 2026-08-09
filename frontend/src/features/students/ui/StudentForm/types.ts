@@ -1,11 +1,11 @@
-import type { Student } from "@shared";
+import type { ContactMethod, Student } from "@shared";
 
 export type StudentFormData = {
   name: string;
-  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  contactMethod?: ContactMethod;
   parentPhone?: string;
   parentName?: string;
-  parentContactMethod?: "WHATSAPP" | "TELEGRAM";
+  parentContactMethod?: ContactMethod;
   telegramNick?: string;
   parentTelegramNick?: string;
   phone: string;

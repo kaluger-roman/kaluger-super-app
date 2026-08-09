@@ -25,7 +25,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    if (deleteAllFuture && existingLesson.isRecurring) {
+    if (deleteAllFuture && existingLesson.isRecurring && existingLesson.studentId) {
       const baseKey = getRecurringLessonKey(existingLesson);
 
       const futureLessons = await prisma.lesson.findMany({

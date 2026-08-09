@@ -28,12 +28,14 @@ export {
 export { extractAxiosError } from "./error.helpers";
 export { setNavigate, navigate } from "./navigation";
 export {
+  getLessonDisplayName,
   getStatusLabel,
   getStatusColor,
   formatLessonTime,
   formatTimeForCell,
   formatDateTimeLong,
   formatTimeFromString,
+  isProspectLesson,
 } from "./lesson.helpers";
 export { useNotifications } from "./notifications.hooks";
 export { useDisableNumberScroll } from "./disable-number-scroll.hooks";

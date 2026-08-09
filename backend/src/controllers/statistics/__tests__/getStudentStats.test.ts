@@ -301,6 +301,33 @@ describe("getStudentStatistics integration tests", () => {
     });
   });
 
+  it("should not create a group for prospect lessons without student", async () => {
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Иван (пробный)",
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        price: 0,
+        status: "COMPLETED",
+      },
+    });
+
+    await request(app)
+      .get(`/api/statistics/by-student`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200)
+      .then((res) => {
+        const nullGroup = res.body.studentStatistics.find(
+          (s: any) => s.studentId === null
+        );
+        expect(nullGroup).toBeUndefined();
+      });
+  });
+
   it("handles database errors gracefully", async () => {
     const originalGroupBy = prisma.lesson.groupBy;
     prisma.lesson.groupBy = jest

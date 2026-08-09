@@ -1,15 +1,15 @@
 import { Button } from "@mui/material";
+import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonFormActions.styled";
-import type { LessonFormData } from "../types";
+import { lessonFormModel } from "../../../models";
 
 type LessonFormActionsProps = {
   lesson?: Lesson;
   isLoading: boolean;
   isMobile: boolean;
-  formData: LessonFormData;
   onClose: () => void;
   onCancelLesson: () => void;
   onSubmit: () => void;
@@ -19,11 +19,12 @@ export const LessonFormActions = ({
   lesson,
   isLoading,
   isMobile,
-  formData,
   onClose,
   onCancelLesson,
   onSubmit,
 }: LessonFormActionsProps) => {
+  const canSubmit = useUnit(lessonFormModel.$canSubmit);
+
   const handleClose = () => {
     if (!isLoading) {
       onClose();
@@ -59,7 +60,7 @@ export const LessonFormActions = ({
           <Button
             onClick={onSubmit}
             variant="contained"
-            disabled={isLoading || !formData.studentId}
+            disabled={isLoading || !canSubmit}
             fullWidth={isMobile}
           >
             {isLoading

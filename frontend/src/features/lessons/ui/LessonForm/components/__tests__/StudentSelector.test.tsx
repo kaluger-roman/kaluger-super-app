@@ -25,6 +25,10 @@ const makeStudent = (over: Partial<Student> = {}): Student => ({
 });
 
 const baseFormData: LessonFormData = {
+  withoutStudent: false,
+  prospectName: "",
+  prospectPhone: "",
+  prospectContactMethod: "",
   studentId: "",
   subject: "MATHEMATICS",
   lessonType: "EGE",

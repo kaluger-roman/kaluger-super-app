@@ -1,3 +1,5 @@
+export type ContactMethod = "WHATSAPP" | "TELEGRAM" | "MAX";
+
 export type ArchiveReason =
   | "COMPLETED_STUDIES"
   | "FOUND_ANOTHER_TUTOR"
@@ -8,10 +10,10 @@ export type ArchiveReason =
 export type Student = {
   id: string;
   name: string;
-  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  contactMethod?: ContactMethod;
   parentPhone?: string | null;
   parentName?: string | null;
-  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  parentContactMethod?: ContactMethod | null;
   telegramNick?: string | null;
   parentTelegramNick?: string | null;
   phone?: string | null;
@@ -29,10 +31,10 @@ export type Student = {
 
 export type CreateStudentDto = {
   name: string;
-  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  contactMethod?: ContactMethod;
   parentPhone?: string | null;
   parentName?: string | null;
-  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  parentContactMethod?: ContactMethod | null;
   telegramNick?: string | null;
   parentTelegramNick?: string | null;
   phone?: string | null;
