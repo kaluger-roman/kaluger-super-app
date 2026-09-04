@@ -2,7 +2,7 @@ import type { FC, ReactNode } from "react";
 
 import { Box, Chip, Typography } from "@mui/material";
 
-import { Student } from "../../types";
+import type { Student } from "../../types";
 
 type StudentNameProps = {
   student?: Pick<Student, "name" | "archived"> | null;

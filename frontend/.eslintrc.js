@@ -6,7 +6,6 @@ module.exports = {
         sourceType: "module",
         project: ["./tsconfig.json"],
     },
-    plugins: ["@typescript-eslint", "import", "unused-imports"],
     plugins: ["@typescript-eslint", "import", "unused-imports", "testing-library"],
     extends: [
         "react-app",
@@ -154,6 +153,28 @@ module.exports = {
         ],
         "testing-library/no-node-access": "off",
         "testing-library/no-container": "off",
+        "import/no-default-export": "error",
+        "func-style": ["error", "expression"],
+        "@typescript-eslint/consistent-type-definitions": ["error", "type"],
+        "@typescript-eslint/consistent-type-imports": ["error", { disallowTypeAnnotations: false }],
+        "no-restricted-syntax": [
+            "error",
+            {
+                selector: "TSEnumDeclaration",
+                message: "Use string literal union types instead of enums.",
+            },
+        ],
+        "react/forbid-elements": [
+            "error",
+            {
+                forbid: [
+                    {
+                        element: "form",
+                        message: "No <form> tags — use explicit onClick handlers on buttons.",
+                    },
+                ],
+            },
+        ],
     },
     overrides: [
         {

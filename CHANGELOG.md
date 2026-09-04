@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Lesson notes are now visible directly on the lesson card in the list — no need to open each lesson dialog to read them. A non-empty note shows as a compact 2-line snippet; if the text is truncated, a "Развернуть"/"Свернуть" control expands and collapses the full note in place (line breaks preserved) without opening the lesson view. Expand state is independent per card, the control has a touch-friendly hit area on mobile, long unbroken words/links wrap without breaking layout, and cards for lessons without a note look unchanged (no empty block). Works across all list views that use the lesson card, including the weekly list view.
 
+### Changed
+- Frontend ESLint now enforces six conventions previously left to review: named exports only (`import/no-default-export`), function expressions only (`func-style`), `type` over `interface` (`consistent-type-definitions`), `import type` for type-only imports (`consistent-type-imports`; `disallowTypeAnnotations: false` keeps the `vi.importActual<typeof import()>` test mocks working), string-literal unions instead of TS enums, and no `<form>` elements (`react/forbid-elements`). Autofixed 7 files to `import type` and removed a dead duplicate `plugins` key. Added `docs/lint-roadmap.md` tracking the staged adoption of the remaining lintable conventions.
+
 ## 2026-08-09
 
 ### Added

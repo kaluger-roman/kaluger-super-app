@@ -1,6 +1,7 @@
 import type { FC } from "react";
 
-import { TextField as MuiTextField, TextFieldProps as MuiTextFieldProps } from "@mui/material";
+import type { TextFieldProps as MuiTextFieldProps } from "@mui/material";
+import { TextField as MuiTextField } from "@mui/material";
 
 export type TextFieldProps = MuiTextFieldProps;
 
