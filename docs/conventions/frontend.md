@@ -74,7 +74,7 @@ feature/models/
 
 ### Styles
 
-- **No inline styles** — no `style={{}}`, no `sx={{}}`
+- **No inline styles** — no `style={{}}`, no `sx={{}}` (ESLint enforced: `react/forbid-component-props`, `react/forbid-dom-props`)
 
 - **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering:
 
@@ -160,6 +160,8 @@ feature/models/
 - Side effects in `fn` — `fn` must be a pure function (no API calls, no mutations, no model events calls, no model effects calls)
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
 - `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
+
+`.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced (`eslint-plugin-effector`), including in tests — observe units in tests via `createWatch({ unit, fn, scope })`. The rest of the list is review-checked.
 
 **useUnit pattern:**
 

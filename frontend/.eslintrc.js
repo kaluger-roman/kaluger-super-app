@@ -6,7 +6,7 @@ module.exports = {
         sourceType: "module",
         project: ["./tsconfig.json"],
     },
-    plugins: ["@typescript-eslint", "import", "unused-imports", "testing-library"],
+    plugins: ["@typescript-eslint", "import", "unused-imports", "testing-library", "effector"],
     extends: [
         "react-app",
         "react-app/jest",
@@ -162,6 +162,40 @@ module.exports = {
             {
                 selector: "TSEnumDeclaration",
                 message: "Use string literal union types instead of enums.",
+            },
+        ],
+        "effector/enforce-store-naming-convention": "error",
+        "effector/enforce-effect-naming-convention": "error",
+        "effector/enforce-gate-naming-convention": "error",
+        "effector/no-watch": "error",
+        "effector/no-getState": "error",
+        "effector/no-forward": "error",
+        "effector/no-guard": "error",
+        "effector/prefer-useUnit": "error",
+        "react/forbid-component-props": [
+            "error",
+            {
+                forbid: [
+                    {
+                        propName: "sx",
+                        message: "No inline styles — use styled-components from @shared.",
+                    },
+                    {
+                        propName: "style",
+                        message: "No inline styles — use styled-components from @shared.",
+                    },
+                ],
+            },
+        ],
+        "react/forbid-dom-props": [
+            "error",
+            {
+                forbid: [
+                    {
+                        propName: "style",
+                        message: "No inline styles — use styled-components from @shared.",
+                    },
+                ],
             },
         ],
         "react/forbid-elements": [
