@@ -19,6 +19,7 @@ import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonCard.styled";
 import { LessonStatusIcons } from "../../../LessonStatusIcons";
+import { LessonNotes, hasVisibleNotes } from "../LessonNotes";
 
 type LessonCardProps = {
   lesson: Lesson;
@@ -86,6 +87,10 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
 
               <LessonStatusIcons lesson={lesson} />
             </Styled.BottomRow>
+
+            {hasVisibleNotes(lesson.notes) && (
+              <LessonNotes notes={lesson.notes} />
+            )}
           </Styled.ContentColumn>
 
           {onMenuClick && (
