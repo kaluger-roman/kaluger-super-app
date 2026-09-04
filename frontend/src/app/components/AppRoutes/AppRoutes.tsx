@@ -1,12 +1,12 @@
 import { type FC, lazy, Suspense } from "react";
 
-import { CircularProgress } from "@mui/material";
+import { useGate } from "effector-react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
 
-import * as Styled from "./AppRoutes.styled";
+import { blockingModel } from "../../model";
 import { AuthLayout } from "../AuthLayout";
 import { AuthRoute } from "../AuthRoute";
 import { ProtectedRoute } from "../ProtectedRoute";
@@ -69,11 +69,14 @@ const StudentVerifyEmailPage = lazy(() =>
   })),
 );
 
-const RouteFallback: FC = () => (
-  <Styled.FallbackBackdrop open>
-    <CircularProgress color="inherit" />
-  </Styled.FallbackBackdrop>
-);
+// Renders nothing itself — mounting it raises RouteChunkGate, and the single
+// blocking overlay in App covers the chunk load (a second Backdrop here
+// stacked dim layers when a request ran while a chunk was loading).
+const RouteFallback: FC = () => {
+  useGate(blockingModel.RouteChunkGate);
+
+  return null;
+};
 
 type AppRoutesProps = {
   isLoggedIn: boolean;

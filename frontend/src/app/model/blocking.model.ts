@@ -1,4 +1,6 @@
-import { combine } from "effector";
+import { combine, createStore, sample } from "effector";
+import { createGate } from "effector-react";
+import { debounce } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
@@ -22,8 +24,16 @@ import { tutorStudentInvitationModel } from "@features/tutorStudentInvitation";
 import { financesModel, profileModel } from "@pages/profile";
 import { statisticsModel } from "@pages/ReportsPage";
 
+import { BLOCKING_OVERLAY_DELAY_MS } from "./blocking.constants";
+
+// Mounted by the Suspense route fallback, so a lazy-chunk load goes through
+// the same single overlay as API requests — a second Backdrop instance would
+// stack its dim layer on top of this one.
+export const RouteChunkGate = createGate();
+
 export const $isBlocking = combine(
   {
+    routeChunkLoading: RouteChunkGate.status,
     loadCompletedLessons: lessonModel.loadCompletedLessonsFx.pending,
     loadCancelledLessons: lessonModel.loadCancelledLessonsFx.pending,
     loadAllLessons: lessonModel.loadAllLessonsFx.pending,
@@ -77,3 +87,27 @@ export const $isBlocking = combine(
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );
+
+// Overlay shows only when blocking stays continuously on past the threshold —
+// requests faster than this must not flash a full-screen spinner. `debounce`
+// (not `delay`): its timer resets on every $isBlocking change, so a timer
+// scheduled by a finished fast request can never reveal the overlay early
+// for the next one.
+export const $isBlockingVisible = createStore(false);
+
+const blockingSettled = debounce({
+  source: $isBlocking.updates,
+  timeout: BLOCKING_OVERLAY_DELAY_MS,
+});
+
+sample({
+  clock: blockingSettled,
+  filter: Boolean,
+  target: $isBlockingVisible,
+});
+
+sample({
+  clock: $isBlocking.updates,
+  filter: (isBlocking) => !isBlocking,
+  target: $isBlockingVisible,
+});
