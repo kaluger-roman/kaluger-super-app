@@ -5,6 +5,8 @@ import type { Lesson, Student } from "@shared";
 import type { LessonFormData } from "../../ui/LessonForm/types";
 import {
   applyHourlyRateAutofill,
+  applyWithoutStudentRules,
+  canSubmitLessonForm,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -106,6 +108,10 @@ describe("validateFormData", () => {
     endTime: new Date("2026-01-15T11:00:00.000Z"),
     price: "1500",
     studentId: "student-1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
     homework: "",
     notes: "",
     isRecurring: false,
@@ -208,6 +214,10 @@ describe("prepareSubmitData", () => {
     endTime: new Date("2026-01-15T11:00:00.000Z"),
     price: "1500",
     studentId: "student-1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
     homework: "Do exercises",
     notes: "Some notes",
     isRecurring: true,
@@ -235,7 +245,7 @@ describe("prepareSubmitData", () => {
     expect(typeof result.endTime).toBe("string");
   });
 
-  it("should convert empty strings to undefined", () => {
+  it("should convert empty text fields to null so the server actually clears them", () => {
     const formData = createValidFormData({
       description: "",
       homework: "",
@@ -245,10 +255,24 @@ describe("prepareSubmitData", () => {
 
     const result = prepareSubmitData(formData);
 
-    expect(result.description).toBeUndefined();
-    expect(result.homework).toBeUndefined();
-    expect(result.notes).toBeUndefined();
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
     expect(result.price).toBeUndefined();
+  });
+
+  it("should convert whitespace-only text fields to null", () => {
+    const formData = createValidFormData({
+      description: "   ",
+      homework: "\n\t",
+      notes: "  \n  ",
+    });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
   });
 
   it("should convert price string to number", () => {
@@ -685,5 +709,234 @@ describe("applyHourlyRateAutofill", () => {
     );
 
     expect(result.price).toBe("");
+  });
+});
+
+describe("validateFormData (prospect mode)", () => {
+  const createProspectFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "0",
+    studentId: "",
+    withoutStudent: true,
+    prospectName: "Пётр (пробный)",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
+    ...overrides,
+  });
+
+  it("should be valid without studentId when prospect name is filled", () => {
+    const result = validateFormData(createProspectFormData());
+    expect(result.isValid).toBe(true);
+  });
+
+  it("should require prospect name when withoutStudent is enabled", () => {
+    const result = validateFormData(createProspectFormData({ prospectName: "   " }));
+    expect(result.isValid).toBe(false);
+    expect(result.errors.prospectName).toBe("Укажите имя ученика");
+  });
+
+  it("should not require studentId when withoutStudent is enabled", () => {
+    const result = validateFormData(createProspectFormData({ studentId: "" }));
+    expect(result.errors.studentId).toBeUndefined();
+  });
+});
+
+describe("canSubmitLessonForm", () => {
+  const base: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "",
+    studentId: "",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
+  };
+
+  it("should require studentId in student mode", () => {
+    expect(canSubmitLessonForm(base)).toBe(false);
+    expect(canSubmitLessonForm({ ...base, studentId: "s1" })).toBe(true);
+  });
+
+  it("should require non-blank prospect name in prospect mode", () => {
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true })).toBe(false);
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: " " })).toBe(false);
+    expect(
+      canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: "Пётр" })
+    ).toBe(true);
+  });
+});
+
+describe("applyWithoutStudentRules", () => {
+  const base: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "",
+    studentId: "s1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: true,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
+  };
+
+  it("should clear studentId, disable recurring and set price 0 when toggled on", () => {
+    const result = applyWithoutStudentRules({ ...base, withoutStudent: true }, "withoutStudent");
+    expect(result.studentId).toBe("");
+    expect(result.isRecurring).toBe(false);
+    expect(result.price).toBe("0");
+  });
+
+  it("should clear prospect fields and reset zero price when toggled off", () => {
+    const prospect: LessonFormData = {
+      ...base,
+      studentId: "",
+      withoutStudent: false,
+      prospectName: "Пётр",
+      prospectPhone: "+79990000000",
+      prospectContactMethod: "MAX",
+      price: "0",
+    };
+    const result = applyWithoutStudentRules(prospect, "withoutStudent");
+    expect(result.prospectName).toBe("");
+    expect(result.prospectPhone).toBe("");
+    expect(result.prospectContactMethod).toBe("");
+    expect(result.price).toBe("");
+  });
+
+  it("should not change form data for other fields", () => {
+    const result = applyWithoutStudentRules(base, "price");
+    expect(result).toEqual(base);
+  });
+
+  it("should preserve zero price when toggled off while editing an existing lesson", () => {
+    const editingLesson = {
+      id: "lesson-prospect",
+      studentId: null,
+      prospectName: "Пётр",
+      price: 0,
+    } as unknown as Lesson;
+    const prospect: LessonFormData = {
+      ...base,
+      studentId: "",
+      withoutStudent: false,
+      prospectName: "Пётр",
+      price: "0",
+    };
+
+    const result = applyWithoutStudentRules(prospect, "withoutStudent", editingLesson);
+
+    expect(result.price).toBe("0");
+  });
+});
+
+describe("prepareSubmitData (prospect mode)", () => {
+  const prospectFormData: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "0",
+    studentId: "",
+    withoutStudent: true,
+    prospectName: "  Пётр (пробный)  ",
+    prospectPhone: "+79990000000",
+    prospectContactMethod: "MAX",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
+  };
+
+  it("should send trimmed prospect fields without studentId in prospect mode", () => {
+    const result = prepareSubmitData(prospectFormData);
+    expect(result.studentId).toBeUndefined();
+    expect(result.prospectName).toBe("Пётр (пробный)");
+    expect(result.prospectPhone).toBe("+79990000000");
+    expect(result.prospectContactMethod).toBe("MAX");
+    expect(result.isRecurring).toBeUndefined();
+  });
+
+  it("should omit empty optional prospect contact fields", () => {
+    const result = prepareSubmitData({
+      ...prospectFormData,
+      prospectPhone: "",
+      prospectContactMethod: "",
+    });
+    expect(result.prospectPhone).toBeUndefined();
+    expect(result.prospectContactMethod).toBeUndefined();
+  });
+
+  it("should send studentId without prospect fields in student mode", () => {
+    const result = prepareSubmitData({
+      ...prospectFormData,
+      withoutStudent: false,
+      studentId: "s1",
+      prospectName: "",
+      prospectPhone: "",
+      prospectContactMethod: "",
+    });
+    expect(result.studentId).toBe("s1");
+    expect(result.prospectName).toBeUndefined();
+    expect(result.prospectPhone).toBeUndefined();
+    expect(result.prospectContactMethod).toBeUndefined();
+  });
+});
+
+describe("prepareFormData (prospect lesson)", () => {
+  it("should enable withoutStudent mode and fill prospect fields from lesson", () => {
+    const lesson = {
+      id: "lesson-1",
+      subject: "PHYSICS",
+      lessonType: "EGE",
+      startTime: "2026-01-15T10:00:00.000Z",
+      endTime: "2026-01-15T11:00:00.000Z",
+      status: "SCHEDULED",
+      isPaid: false,
+      studentId: null,
+      prospectName: "Пётр (пробный)",
+      prospectPhone: "+79990000000",
+      prospectContactMethod: "MAX",
+      price: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    } as Lesson;
+
+    const result = prepareFormData(lesson);
+    expect(result.withoutStudent).toBe(true);
+    expect(result.studentId).toBe("");
+    expect(result.prospectName).toBe("Пётр (пробный)");
+    expect(result.prospectPhone).toBe("+79990000000");
+    expect(result.prospectContactMethod).toBe("MAX");
   });
 });

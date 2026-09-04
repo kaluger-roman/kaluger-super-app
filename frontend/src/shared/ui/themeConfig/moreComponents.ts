@@ -1,5 +1,27 @@
 export const moreComponentOverrides = {
+  // disableScrollLock on all modal surfaces: MUI's scroll lock sets overflow:hidden
+  // and a scrollbar-width padding-right on <body> while a modal/menu/drawer is open,
+  // which reflows the page layout every time a popup opens. We don't need to lock
+  // background scroll, so turn it off everywhere to keep the layout stable.
+  MuiModal: {
+    defaultProps: {
+      disableScrollLock: true,
+    },
+  },
+  MuiPopover: {
+    defaultProps: {
+      disableScrollLock: true,
+    },
+  },
+  MuiMenu: {
+    defaultProps: {
+      disableScrollLock: true,
+    },
+  },
   MuiDrawer: {
+    defaultProps: {
+      disableScrollLock: true,
+    },
     styleOverrides: {
       paper: {
         borderRight: "1px solid #E8F5E8",
@@ -50,6 +72,9 @@ export const moreComponentOverrides = {
     },
   },
   MuiDialog: {
+    defaultProps: {
+      disableScrollLock: true,
+    },
     styleOverrides: {
       paper: {
         "@media (max-width: 600px)": {

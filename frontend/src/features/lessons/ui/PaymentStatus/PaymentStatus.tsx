@@ -14,6 +14,7 @@ import {
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
+import { getLessonDisplayName } from "@shared";
 
 import * as paymentStatusModel from "./payment-status.model";
 import { usePaymentDate } from "./PaymentStatus.hooks";
@@ -111,7 +112,7 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
               <strong>{pendingPaymentStatus ? "оплаченный" : "неоплаченный"}</strong>?
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+              Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
             </Typography>
             {pendingPaymentStatus && (
               <TextField

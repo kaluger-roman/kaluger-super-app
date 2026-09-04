@@ -8,16 +8,18 @@ import {
   SUBJECT_LABELS,
   LESSON_TYPE_LABELS,
   formatTimeFromString,
+  getLessonDisplayName,
   getStatusColor,
   getStatusLabel,
   formatDate,
   RecurringLessonBadge,
-  StudentName,
+  LessonStudentName,
 } from "@shared";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonCard.styled";
 import { LessonStatusIcons } from "../../../LessonStatusIcons";
+import { LessonNotes, hasVisibleNotes } from "../LessonNotes";
 
 type LessonCardProps = {
   lesson: Lesson;
@@ -46,11 +48,13 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
         <Styled.HeaderRow>
           <Styled.ContentColumn>
             <Styled.TitleRow>
-              <StudentName
-                student={lesson.student}
+              <LessonStudentName
+                lesson={lesson}
                 variant="h6"
                 component={
-                  <Styled.StudentName variant="h6">{lesson.student?.name}</Styled.StudentName>
+                  <Styled.StudentName variant="h6">
+                    {getLessonDisplayName(lesson)}
+                  </Styled.StudentName>
                 }
               />
               <Chip
@@ -83,6 +87,10 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
 
               <LessonStatusIcons lesson={lesson} />
             </Styled.BottomRow>
+
+            {hasVisibleNotes(lesson.notes) && (
+              <LessonNotes notes={lesson.notes} />
+            )}
           </Styled.ContentColumn>
 
           {onMenuClick && (

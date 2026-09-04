@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "branch": "032-lesson-notes-in-card",
+  "feature_id": "032-lesson-notes-in-card",
+  "spec_path": "specs/032-lesson-notes-in-card/spec.md",
+  "base_url": "http://localhost:3005",
+  "run_at": "2026-09-04T18:32:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-09-04-032-lesson-notes-in-card.md",
+  "readiness": "green",
+  "coverage": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "warned": 0,
+    "scenarios": [
+      { "id": "US1.1", "title": "Короткая заметка видна в карточке целиком", "priority": "P1", "status": "pass" },
+      { "id": "US1.2", "title": "Урок без заметки — карточка без блока заметки", "priority": "P1", "status": "pass" },
+      { "id": "US1.3", "title": "Длинная заметка обрезана, видно что можно раскрыть", "priority": "P1", "status": "pass" },
+      { "id": "US1.4", "title": "Клик по телу карточки открывает попап урока", "priority": "P1", "status": "pass" },
+      { "id": "US1.5", "title": "Заметка из одних пробелов — блок не отображается", "priority": "P1", "status": "pass" },
+      { "id": "US2.1", "title": "Развернуть раскрывает полный текст в карточке", "priority": "P2", "status": "pass" },
+      { "id": "US2.2", "title": "Свернуть возвращает к компактному виду", "priority": "P2", "status": "pass" },
+      { "id": "US2.3", "title": "Тоггл НЕ открывает попап урока (stopPropagation)", "priority": "P2", "status": "pass" },
+      { "id": "US2.4", "title": "Короткая заметка — тоггла нет", "priority": "P2", "status": "pass" },
+      { "id": "US2.5", "title": "Независимое состояние разворота для каждой карточки", "priority": "P2", "status": "pass" },
+      { "id": "US3.1", "title": "Мобильная ширина: заметка компактна, вёрстка цела", "priority": "P3", "status": "pass" },
+      { "id": "US3.2", "title": "Мобильная: касание тоггла раскрывает, попап не открывается", "priority": "P3", "status": "pass" },
+      { "id": "US3.3", "title": "Мобильная: касание сворачивает", "priority": "P3", "status": "pass" },
+      { "id": "EC.longword", "title": "Длинный URL без пробелов не растягивает вёрстку", "priority": "edge", "status": "pass" },
+      { "id": "EC.weekly", "title": "Недельный вид списка использует ту же карточку", "priority": "edge", "status": "pass" },
+      { "id": "EC.dialog", "title": "Полный просмотр заметки в попапе не изменился", "priority": "edge", "status": "pass" }
+    ]
+  },
+  "summary": {
+    "total_findings": 0,
+    "by_severity": { "critical": 0, "high": 0, "medium": 0, "low": 0 },
+    "by_category": { "spec-mismatch": 0, "bug": 0, "ux": 0, "improvement": 0 },
+    "unambiguous_fix_count": 0
+  },
+  "findings": []
+}

@@ -375,6 +375,64 @@ describe("updateLesson controller", () => {
       });
   });
 
+  it("clears notes, homework and description when explicit null is sent (regression: cleared note survived the update)", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 48 * 3600 * 1000),
+        endTime: new Date(Date.now() + 48 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        notes: "старая заметка",
+        homework: "старое дз",
+        description: "старое описание",
+      },
+    });
+
+    await request(app)
+      .put(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ notes: null, homework: null, description: null })
+      .expect(200);
+
+    const updated = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    expect(updated?.notes).toBeNull();
+    expect(updated?.homework).toBeNull();
+    expect(updated?.description).toBeNull();
+  });
+
+  it("keeps notes, homework and description when the fields are omitted from the update", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 72 * 3600 * 1000),
+        endTime: new Date(Date.now() + 72 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        notes: "заметка",
+        homework: "дз",
+        description: "описание",
+      },
+    });
+
+    await request(app)
+      .put(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ isPaid: true })
+      .expect(200);
+
+    const updated = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    expect(updated?.notes).toBe("заметка");
+    expect(updated?.homework).toBe("дз");
+    expect(updated?.description).toBe("описание");
+  });
+
   it("does not call shift or price updater when status is RESCHEDULED", async () => {
     const shiftSpy = jest
       .spyOn(recurringHelpers, "previewShiftFutureRecurringLessons")

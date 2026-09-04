@@ -31,6 +31,29 @@ describe("updateStudent integration tests", () => {
     await prisma.$disconnect();
   });
 
+  it("should update contactMethod from WHATSAPP to MAX", async () => {
+    const student = await prisma.student.create({
+      data: {
+        name: "ToMax",
+        contactMethod: "WHATSAPP",
+        phone: "+79990007777",
+        tutorId: userId,
+      },
+    });
+
+    await request(app)
+      .put(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ contactMethod: "MAX" })
+      .expect(200)
+      .then(async () => {
+        const updated = await prisma.student.findUnique({
+          where: { id: student.id },
+        });
+        expect(updated?.contactMethod).toBe("MAX");
+      });
+  });
+
   it("returns 400 when validation fails (invalid hourlyRate)", async () => {
     const student = await prisma.student.create({
       data: {

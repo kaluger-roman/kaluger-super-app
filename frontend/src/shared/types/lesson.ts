@@ -1,4 +1,4 @@
-import type { Student } from "./student";
+import type { ContactMethod, Student } from "./student";
 
 export type LessonStatus =
   | "SCHEDULED"
@@ -29,7 +29,10 @@ export type Lesson = {
   isRecurring?: boolean;
   createdAt: string;
   updatedAt: string;
-  studentId: string;
+  studentId: string | null;
+  prospectName?: string | null;
+  prospectPhone?: string | null;
+  prospectContactMethod?: ContactMethod | null;
   student?: Pick<
     Student,
     | "id"
@@ -52,13 +55,25 @@ export type CreateLessonDto = {
   startTime: string;
   endTime: string;
   price?: number;
-  studentId: string;
+  studentId?: string;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: ContactMethod;
   homework?: string;
   notes?: string;
   isRecurring?: boolean;
 };
 
-export type UpdateLessonDto = Partial<CreateLessonDto> & {
+export type UpdateLessonDto = Omit<
+  Partial<CreateLessonDto>,
+  "description" | "homework" | "notes"
+> & {
+  // Explicit null clears a text field on the server: `undefined` is dropped
+  // during JSON serialization, and Prisma treats a missing field as "no
+  // change" — a cleared note would silently survive the update.
+  description?: string | null;
+  homework?: string | null;
+  notes?: string | null;
   isPaid?: boolean;
   paymentDate?: string;
   isHomeworkSentByTeacher?: boolean;

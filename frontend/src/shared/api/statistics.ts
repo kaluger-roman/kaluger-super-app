@@ -1,4 +1,4 @@
-import { Statistics } from "../types";
+import type { Statistics } from "../types";
 import { api } from "./base";
 import type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics.types";
 

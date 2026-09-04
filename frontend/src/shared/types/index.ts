@@ -11,6 +11,7 @@ export type {
   CreateStudentDto,
   UpdateStudentDto,
   ArchiveReason,
+  ContactMethod,
 } from "./student";
 export type {
   Lesson,

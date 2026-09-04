@@ -4,6 +4,8 @@ import {
   toLocalStartOfDay,
   toLocalEndOfDay,
   calculatePresetDates,
+  buildLessonFilterParams,
+  buildPagedLessonParams,
 } from "../lessons-filters.helpers";
 
 describe("toLocalStartOfDay", () => {
@@ -92,5 +94,44 @@ describe("calculatePresetDates", () => {
 
     const toDay = to.getDay();
     expect(toDay).toBe(0); // Sunday
+  });
+});
+
+describe("buildLessonFilterParams", () => {
+  it("should pass through filter flags and omit null payment dates", () => {
+    expect(
+      buildLessonFilterParams({
+        onlyUnpaid: true,
+        onlyWithoutHomework: false,
+        paymentDateFrom: null,
+        paymentDateTo: null,
+      })
+    ).toEqual({ onlyUnpaid: true, onlyWithoutHomework: false });
+  });
+
+  it("should convert payment dates to start/end-of-day ISO strings when provided", () => {
+    const result = buildLessonFilterParams({
+      onlyUnpaid: false,
+      onlyWithoutHomework: false,
+      paymentDateFrom: new Date(2026, 2, 15, 14, 30),
+      paymentDateTo: new Date(2026, 2, 20, 8, 0),
+    });
+
+    expect(result.paymentDateFrom).toBeDefined();
+    expect(result.paymentDateTo).toBeDefined();
+    expect(new Date(String(result.paymentDateFrom)).getHours()).toBe(0);
+    expect(new Date(String(result.paymentDateTo)).getHours()).toBe(23);
+  });
+});
+
+describe("buildPagedLessonParams", () => {
+  it("should add page and limit to the filter params", () => {
+    expect(
+      buildPagedLessonParams(
+        { onlyUnpaid: false, onlyWithoutHomework: true, paymentDateFrom: null, paymentDateTo: null },
+        3,
+        10
+      )
+    ).toEqual({ page: 3, limit: 10, onlyUnpaid: false, onlyWithoutHomework: true });
   });
 });

@@ -7,7 +7,7 @@ import {
   LESSON_TYPE_LABELS,
   formatDateTimeLong,
   formatDate,
-  StudentName,
+  LessonStudentName,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -25,7 +25,7 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
       <Box>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Typography variant="h6">👤</Typography>
-          <StudentName student={lesson.student} variant="h6" />
+          <LessonStudentName lesson={lesson} variant="h6" />
         </Box>
         <Typography variant="body1" color="text.secondary" gutterBottom>
           📚 {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}

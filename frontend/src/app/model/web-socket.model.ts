@@ -2,7 +2,7 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel } from "@entities/lesson";
 import { resolveWsUrl } from "@shared";
-import { LessonStatus } from "@shared/types";
+import type { LessonStatus } from "@shared/types";
 
 // Events
 export const connectWebSocket = createEvent();

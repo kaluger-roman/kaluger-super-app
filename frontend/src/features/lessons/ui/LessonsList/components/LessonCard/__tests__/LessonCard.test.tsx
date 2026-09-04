@@ -35,6 +35,23 @@ const mockLesson: Lesson = {
 
 describe("LessonCard", () => {
   describe("Rendering", () => {
+    it("should render prospect name with trial badge for lesson without student", () => {
+      const prospectLesson: Lesson = {
+        ...mockLesson,
+        studentId: null,
+        student: undefined,
+        prospectName: "Пётр (пробный)",
+        prospectPhone: "+79990000000",
+        prospectContactMethod: "MAX",
+        price: 0,
+      };
+      renderWithTheme(<LessonCard lesson={prospectLesson} />);
+
+      expect(screen.getByText("Пётр (пробный)")).toBeInTheDocument();
+      expect(screen.getByText("Пробный")).toBeInTheDocument();
+      expect(screen.getByText(/Бесплатно/)).toBeInTheDocument();
+    });
+
     it("should render lesson details", () => {
       renderWithTheme(<LessonCard lesson={mockLesson} />);
 
@@ -199,6 +216,30 @@ describe("LessonCard", () => {
       const secondChild = screen.getByText("Иван Иванов");
       expect(secondChild).toBe(firstChild);
       expect(renderSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe("Notes", () => {
+    it("should render the notes block when the lesson has a non-empty note", () => {
+      const lessonWithNotes = { ...mockLesson, notes: "Разобрать домашнее задание" };
+
+      renderWithTheme(<LessonCard lesson={lessonWithNotes} />);
+
+      expect(screen.getByText(/Разобрать домашнее задание/)).toBeInTheDocument();
+    });
+
+    it("should not render the notes block when the lesson has no note", () => {
+      renderWithTheme(<LessonCard lesson={mockLesson} />);
+
+      expect(screen.queryByText(/📝/)).not.toBeInTheDocument();
+    });
+
+    it("should not render the notes block when the note is whitespace-only", () => {
+      const lessonWithBlankNotes = { ...mockLesson, notes: "   \n\t  " };
+
+      renderWithTheme(<LessonCard lesson={lessonWithBlankNotes} />);
+
+      expect(screen.queryByText(/📝/)).not.toBeInTheDocument();
     });
   });
 

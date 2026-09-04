@@ -76,6 +76,15 @@ describe("StudentCard", () => {
     expect(screen.getByText(/Telegram \(@ivan\)/)).toBeInTheDocument();
   });
 
+  it("should render MAX contact method", () => {
+    const studentWithMax = {
+      ...mockStudent,
+      contactMethod: "MAX" as const,
+    };
+    renderWithTheme(<StudentCard student={studentWithMax} />);
+    expect(screen.getByText("MAX")).toBeInTheDocument();
+  });
+
   it("should render hourly rate when provided", () => {
     renderWithTheme(<StudentCard student={mockStudent} />);
     expect(screen.getByText("💰 1500 ₽/урок")).toBeInTheDocument();

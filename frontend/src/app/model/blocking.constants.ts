@@ -1,0 +1,1 @@
+export const BLOCKING_OVERLAY_DELAY_MS = 300;

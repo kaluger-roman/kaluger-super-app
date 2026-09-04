@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 2026-06-06
+## 2026-09-05
 
 ### Added
 - Isolated per-branch Docker QA stacks for `/qa-roam` and `/manual-qa`: `scripts/qa-stack.sh` (`up`/`port`/`status`/`exec-backend`/`psql`/`down`/`down-all`) brings up a `qa-<branch>` stack (nginx-served prod build + backend + Postgres) on an ephemeral port. Several `/qa-roam` and `/manual-qa` runs on different branches/worktrees now work in parallel without fighting over ports 3000/3001 or sharing the developer's local database (`docker-compose.qa.yml`, `backend/Dockerfile.qa`, `frontend/Dockerfile.qa`, `frontend/nginx.qa.conf`, `docs/qa-docker.md`)
@@ -16,10 +16,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - WebSocket URLs were hardcoded to `ws://localhost:3001` — extracted `resolveWsUrl` (`@shared`, same-origin and scheme-aware ws/wss) so realtime works behind the QA stack's nginx and any reverse proxy. Behaviour-neutral for the real (https) production deploy
 
+## 2026-09-04
+
+### Fixed
+- Clearing the notes, homework or description field in the lesson edit form now actually deletes the text. Previously an emptied field was silently dropped from the update request and the old value stayed in the database — the note reappeared on the card after saving. Whitespace-only values are treated as empty too.
+- The full-screen loading overlay no longer flashes during fast requests — it now appears only when a request stays pending longer than 300ms, and still disappears the moment the request finishes (6817840)
+- Opening the app no longer stacks several dimmed loading screens on top of each other (dim getting darker, doubled spinners). Two causes fixed: the startup overlay was dropped before the boot data (students, upcoming lessons) actually loaded, and the lazy route chunk loader rendered its own second full-screen Backdrop on top of the request-blocking one. The app now waits for boot data before leaving the startup screen, and chunk loading goes through the same single overlay as API requests
+
+### Added
+- Lesson notes are now visible directly on the lesson card in the list — no need to open each lesson dialog to read them. A non-empty note shows as a compact 2-line snippet; if the text is truncated, a "Развернуть"/"Свернуть" control expands and collapses the full note in place (line breaks preserved) without opening the lesson view. Expand state is independent per card, the control has a touch-friendly hit area on mobile, long unbroken words/links wrap without breaking layout, and cards for lessons without a note look unchanged (no empty block). Works across all list views that use the lesson card, including the weekly list view.
+
+### Changed
+- Frontend ESLint now enforces six conventions previously left to review: named exports only (`import/no-default-export`), function expressions only (`func-style`), `type` over `interface` (`consistent-type-definitions`), `import type` for type-only imports (`consistent-type-imports`; `disallowTypeAnnotations: false` keeps the `vi.importActual<typeof import()>` test mocks working), string-literal unions instead of TS enums, and no `<form>` elements (`react/forbid-elements`). Autofixed 7 files to `import type` and removed a dead duplicate `plugins` key. Added `docs/lint-roadmap.md` tracking the staged adoption of the remaining lintable conventions.
+
+## 2026-08-09
+
+### Added
+- MAX messenger is now available alongside WhatsApp and Telegram everywhere a contact method is chosen or shown — student and parent contact in the add/edit student form, the student card, and the student view dialog. Existing students are unaffected; the default for new students stays WhatsApp.
+- Trial lessons without a student: the lesson form has a new "Пробный урок" toggle (with an info tooltip explaining it) that records a lesson for a prospective student by name only — no student card required. Optional phone and messenger, price defaults to 0 ₽, and the weekly-recurring option is hidden. Such lessons show in the calendar and list marked "Пробный", count toward the trial-lessons statistic while staying out of income, and can later be linked to a real student — linking clears the prospect data and preserves the lesson's original date, price and status.
+
+### Fixed
+- Opening the sidebar drawer no longer logs a React "unrecognized `$drawerWidth` prop" console error — the styled Drawer now filters transient `$`-props (found during manual QA of this feature).
+
 ## 2026-06-05
 
 ### Changed
 - `/code-review-local` — added 3 recall angles ported from the `/code-review` (max effort) protocol: removed-behavior auditor, cross-file tracer, and wrapper/proxy correctness (5 → 8 parallel reviewer agents). Finding JSON schema unchanged, so the `/auto-feature` code-review loop stays compatible (frontmatter model also aligned to opus to match the body)
+
+### Fixed
+- Lessons page no longer strands you on an empty page after the last item leaves the current page (e.g. marking the only unsent homework on the last page as sent, marking the last unpaid lesson as paid, or deleting the last lesson on a page). The list now falls back to the last page that still has items instead of showing an empty "nothing left" state with the pagination control hidden. Applies to all paged tabs.
+- Opening the user menu, the sidebar drawer, or a dialog no longer shifts or breaks the page layout. Removed MUI's modal scroll-lock, which mutated `<body>` (overflow + scrollbar-width padding) on every popup and reflowed the content.
+- Unified the loading indicator: the lazy-route loader now uses the same full-screen overlay as the global blocking spinner, so startup no longer shows two different spinners at once.
 
 ## 2026-05-31
 

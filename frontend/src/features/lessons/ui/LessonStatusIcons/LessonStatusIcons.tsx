@@ -4,7 +4,7 @@ import { IconButton, Tooltip, Typography, TextField, Box } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
-import { ConfirmStatusDialog } from "@shared";
+import { ConfirmStatusDialog, getLessonDisplayName } from "@shared";
 
 import * as lessonStatusIconsModel from "./lesson-status-icons.model";
 import { usePaymentDate } from "./LessonStatusIcons.hooks";
@@ -73,7 +73,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                 <strong>{lesson.isPaid ? "неоплаченный" : "оплаченный"}</strong>?
                 <Styled.DialogContent>
                   <Typography variant="body2" color="text.secondary">
-                    Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+                    Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
                   </Typography>
                 </Styled.DialogContent>
               </>
@@ -134,7 +134,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                 Вы уверены, что хотите изменить статус домашнего задания для урока?
                 <Styled.DialogContent>
                   <Typography variant="body2" color="text.secondary">
-                    Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+                    Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
                   </Typography>
                 </Styled.DialogContent>
               </>

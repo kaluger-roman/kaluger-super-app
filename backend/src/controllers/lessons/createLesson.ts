@@ -16,7 +16,7 @@ import type { LessonStatus, Prisma } from "@prisma/client";
 const createSingleLesson = async (
   userId: string,
   data: CreateLessonDto,
-  student: Student,
+  student: Student | null,
   res: Response,
 ): Promise<Response | void> => {
   const {
@@ -29,6 +29,9 @@ const createSingleLesson = async (
     homework,
     notes,
     studentId,
+    prospectName,
+    prospectPhone,
+    prospectContactMethod,
   } = data;
 
   const start = truncateToMinute(new Date(startTime));
@@ -45,7 +48,7 @@ const createSingleLesson = async (
     computedStatus = "IN_PROGRESS";
   }
 
-  const lessonPrice = price ?? student.hourlyRate;
+  const lessonPrice = student ? (price ?? student.hourlyRate) : (price ?? 0);
 
   let lesson;
   try {
@@ -69,7 +72,10 @@ const createSingleLesson = async (
           ...(computedStatus ? { status: computedStatus } : {}),
           isRecurring: false,
           tutorId: userId,
-          studentId,
+          studentId: studentId ?? null,
+          prospectName: prospectName?.trim() ?? null,
+          prospectPhone: prospectPhone ?? null,
+          prospectContactMethod: prospectContactMethod ?? null,
         },
         include: { student: true },
       });
@@ -238,18 +244,21 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validation.error });
     }
 
-    const student = await prisma.student.findFirst({
-      where: {
-        id: data.studentId,
-        tutorId: userId,
-      },
-    });
+    let student: Student | null = null;
+    if (data.studentId) {
+      student = await prisma.student.findFirst({
+        where: {
+          id: data.studentId,
+          tutorId: userId,
+        },
+      });
 
-    if (!student) {
-      return res.status(404).json({ error: "Ученик не найден" });
+      if (!student) {
+        return res.status(404).json({ error: "Ученик не найден" });
+      }
     }
 
-    if (data.isRecurring) {
+    if (data.isRecurring && student) {
       await createRecurringLessons(userId!, data, student, res);
     } else {
       await createSingleLesson(userId!, data, student, res);

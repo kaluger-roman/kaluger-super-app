@@ -311,6 +311,20 @@ describe("StudentFormFields", () => {
 
     expect(screen.getByRole("option", { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /telegram/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "MAX" })).toBeInTheDocument();
+  });
+
+  it("should hide telegram nick field when contactMethod is MAX", () => {
+    renderWithTheme(
+      <StudentFormFields
+        formData={{ ...mockFormData, contactMethod: "MAX" }}
+        isMobile={false}
+        onChange={mockOnChange}
+        onGradeChange={mockOnGradeChange}
+      />
+    );
+
+    expect(screen.queryByLabelText(/telegram ник/i)).not.toBeInTheDocument();
   });
 
   it("should render parent contact method select with WHATSAPP and TELEGRAM options", async () => {
@@ -330,6 +344,7 @@ describe("StudentFormFields", () => {
 
     expect(screen.getByRole("option", { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /telegram/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "MAX" })).toBeInTheDocument();
   });
 
   it("should render grade select with all grade options", async () => {
