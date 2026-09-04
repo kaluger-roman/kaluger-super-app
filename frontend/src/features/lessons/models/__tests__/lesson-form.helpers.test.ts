@@ -245,7 +245,7 @@ describe("prepareSubmitData", () => {
     expect(typeof result.endTime).toBe("string");
   });
 
-  it("should convert empty strings to undefined", () => {
+  it("should convert empty text fields to null so the server actually clears them", () => {
     const formData = createValidFormData({
       description: "",
       homework: "",
@@ -255,10 +255,24 @@ describe("prepareSubmitData", () => {
 
     const result = prepareSubmitData(formData);
 
-    expect(result.description).toBeUndefined();
-    expect(result.homework).toBeUndefined();
-    expect(result.notes).toBeUndefined();
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
     expect(result.price).toBeUndefined();
+  });
+
+  it("should convert whitespace-only text fields to null", () => {
+    const formData = createValidFormData({
+      description: "   ",
+      homework: "\n\t",
+      notes: "  \n  ",
+    });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
   });
 
   it("should convert price string to number", () => {

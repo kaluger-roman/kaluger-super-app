@@ -107,10 +107,12 @@ export const applyWithoutStudentRules = (
 
 export const prepareSubmitData = (
   formData: LessonFormData
-): CreateLessonDto & Partial<UpdateLessonDto> => ({
+): Omit<CreateLessonDto, "description" | "homework" | "notes"> & UpdateLessonDto => ({
   subject: formData.subject as CreateLessonDto["subject"],
   lessonType: formData.lessonType as CreateLessonDto["lessonType"],
-  description: formData.description || undefined,
+  // null, not undefined: undefined is dropped from JSON and the server keeps
+  // the old value — clearing a field in the edit form would not persist.
+  description: formData.description.trim() ? formData.description : null,
   startTime: formData.startTime.toISOString(),
   endTime: formData.endTime.toISOString(),
   price: formData.price ? Number(formData.price) : undefined,
@@ -121,8 +123,8 @@ export const prepareSubmitData = (
         prospectContactMethod: formData.prospectContactMethod || undefined,
       }
     : { studentId: formData.studentId, isRecurring: formData.isRecurring || undefined }),
-  homework: formData.homework || undefined,
-  notes: formData.notes || undefined,
+  homework: formData.homework.trim() ? formData.homework : null,
+  notes: formData.notes.trim() ? formData.notes : null,
   isPaid: formData.isPaid,
   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
   paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,
