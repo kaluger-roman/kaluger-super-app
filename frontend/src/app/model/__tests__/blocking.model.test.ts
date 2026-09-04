@@ -4,7 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { studentUserModel } from "@entities/studentUser";
 
 import { BLOCKING_OVERLAY_DELAY_MS } from "../blocking.constants";
-import { $isBlocking, $isBlockingVisible } from "../blocking.model";
+import {
+  $isBlocking,
+  $isBlockingVisible,
+  RouteChunkGate,
+} from "../blocking.model";
 
 describe("app/model/blocking.model — $isBlocking", () => {
   it("blocks while studentUserModel.getCurrentStudentFx is pending (regression: профиль ученика грузился без global overlay)", async () => {
@@ -120,6 +124,26 @@ describe("app/model/blocking.model — $isBlockingVisible (300ms delayed overlay
     expect(scope.getState($isBlockingVisible)).toBe(true);
 
     resolveRequest();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(scope.getState($isBlocking)).toBe(false);
+    expect(scope.getState($isBlockingVisible)).toBe(false);
+  });
+
+  it("treats a lazy route chunk load like any blocking request (regression: route fallback rendered a second Backdrop that stacked dim layers)", async () => {
+    const scope = fork();
+
+    void allSettled(RouteChunkGate.open, { scope, params: {} });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(scope.getState($isBlocking)).toBe(true);
+    expect(scope.getState($isBlockingVisible)).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(BLOCKING_OVERLAY_DELAY_MS + 50);
+
+    expect(scope.getState($isBlockingVisible)).toBe(true);
+
+    void allSettled(RouteChunkGate.close, { scope, params: {} });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(scope.getState($isBlocking)).toBe(false);

@@ -17,11 +17,16 @@ export const initializeApp = createEvent<InitializeAppParams>();
 export const appBootedUnauthenticated = createEvent();
 
 // Effects
+// Awaits the effects themselves, not the loadStudents/loadUpcomingLessons
+// events: an event call resolves instantly, which flipped $appInitialized
+// before the data landed and stacked the route-chunk and $isBlocking
+// backdrops on top of each other at startup.
 export const initializeAppFx = createEffect(
   async ({ onlyUnpaid = false, onlyWithoutHomework = false }: InitializeAppParams) =>
     Promise.all([
-      studentModel.loadStudents(),
-      lessonModel.loadUpcomingLessons({ onlyUnpaid, onlyWithoutHomework }),
+      studentModel.loadActiveStudentsFx(),
+      studentModel.loadArchivedStudentsFx(),
+      lessonModel.loadUpcomingLessonsFx({ onlyUnpaid, onlyWithoutHomework }),
     ])
 );
 
@@ -76,9 +81,11 @@ sample({
   target: $appInitialized,
 });
 
-// Register service worker on app init
+// Register service worker on app init. `finally`, not `doneData`: now that
+// initializeAppFx really awaits boot requests it can fail, and a failed
+// lessons/students fetch must not skip SW registration or the news check.
 sample({
-  clock: initializeAppFx.doneData,
+  clock: initializeAppFx.finally,
   target: registerServiceWorkerFx,
 });
 
@@ -98,7 +105,7 @@ sample({
 
 // Check unread news only for authenticated users
 sample({
-  clock: initializeAppFx.doneData,
+  clock: initializeAppFx.finally,
   source: userModel.$isAuthenticated,
   filter: (isAuthenticated) => isAuthenticated,
   target: newsModel.checkUnread,

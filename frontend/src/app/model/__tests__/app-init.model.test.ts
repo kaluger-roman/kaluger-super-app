@@ -9,6 +9,7 @@ import {
   $appInitialized,
   appBootedUnauthenticated,
   initializeAppFx,
+  registerServiceWorkerFx,
 } from "../app-init.model";
 
 vi.mock("@shared", async () => {
@@ -106,6 +107,53 @@ describe("app/model/app-init.model", () => {
 
       expect(studentsApi.getAll).toHaveBeenCalled();
       expect(lessonsApi.getUpcoming).toHaveBeenCalled();
+    });
+
+    it("keeps $appInitialized false until boot data actually loads (regression: init overlay dropped too early and loading screens stacked at startup)", async () => {
+      const bootDataResolvers: Array<() => void> = [];
+
+      vi.mocked(studentsApi.getAll).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            bootDataResolvers.push(() => resolve([]));
+          })
+      );
+      vi.mocked(lessonsApi.getUpcoming).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            bootDataResolvers.push(() =>
+              resolve({
+                lessons: [],
+                pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+              })
+            );
+          })
+      );
+
+      const scope = fork();
+
+      const settled = allSettled(initializeAppFx, { scope, params: {} });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scope.getState($appInitialized)).toBe(false);
+
+      bootDataResolvers.forEach((resolve) => resolve());
+      await settled;
+
+      expect(scope.getState($appInitialized)).toBe(true);
+    });
+
+    it("still registers the service worker when boot data fails (regression: failed boot request must not skip push/news setup)", async () => {
+      vi.mocked(studentsApi.getAll).mockRejectedValue(new Error("Сеть недоступна"));
+      vi.mocked(lessonsApi.getUpcoming).mockRejectedValue(new Error("Сеть недоступна"));
+      const swHandler = vi.fn().mockResolvedValue(null);
+
+      const scope = fork({ handlers: [[registerServiceWorkerFx, swHandler]] });
+
+      await allSettled(initializeAppFx, { scope, params: {} });
+
+      expect(scope.getState($appInitialized)).toBe(true);
+      expect(swHandler).toHaveBeenCalled();
     });
   });
 

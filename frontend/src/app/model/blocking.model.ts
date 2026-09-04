@@ -1,4 +1,5 @@
 import { combine, createStore, sample } from "effector";
+import { createGate } from "effector-react";
 import { debounce } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
@@ -25,8 +26,14 @@ import { statisticsModel } from "@pages/ReportsPage";
 
 import { BLOCKING_OVERLAY_DELAY_MS } from "./blocking.constants";
 
+// Mounted by the Suspense route fallback, so a lazy-chunk load goes through
+// the same single overlay as API requests — a second Backdrop instance would
+// stack its dim layer on top of this one.
+export const RouteChunkGate = createGate();
+
 export const $isBlocking = combine(
   {
+    routeChunkLoading: RouteChunkGate.status,
     loadCompletedLessons: lessonModel.loadCompletedLessonsFx.pending,
     loadCancelledLessons: lessonModel.loadCancelledLessonsFx.pending,
     loadAllLessons: lessonModel.loadAllLessonsFx.pending,
