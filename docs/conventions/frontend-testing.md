@@ -8,6 +8,7 @@ Stack: Vitest + React Testing Library + MSW + Playwright
 - **Pure functions** — test in isolation
 - **Components** — test with RTL, wrap in theme provider
 - **Effector stores** — test in isolation with fork
+- **No `.watch()` in tests** (ESLint `effector/no-watch`) — observe events/effects with `createWatch({ unit, fn, scope })` from `effector`; it is scope-bound, so watchers don't leak between tests
 - **E2E** — see `docs/conventions/e2e-testing.md`. Two modes: functional user-journey tests (default) and visual regression (`@visual` tag).
 - **Mock**: APIs, timers, localStorage
 - **Real**: Effector stores, utils, simple components

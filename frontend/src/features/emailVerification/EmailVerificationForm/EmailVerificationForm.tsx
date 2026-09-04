@@ -1,7 +1,7 @@
 import type { FC, KeyboardEvent, ClipboardEvent } from "react";
 import { useRef } from "react";
 
-import { Typography, Alert, useMediaQuery, useTheme } from "@mui/material";
+import { Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { verificationModel, userModel } from "@entities";
@@ -108,11 +108,7 @@ export const EmailVerificationForm: FC = () => {
           ))}
         </Styled.CodeInputContainer>
 
-        {authError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {authError}
-          </Alert>
-        )}
+        {authError && <Styled.ErrorAlert severity="error">{authError}</Styled.ErrorAlert>}
 
         <Styled.ActionsBox>
           <Button

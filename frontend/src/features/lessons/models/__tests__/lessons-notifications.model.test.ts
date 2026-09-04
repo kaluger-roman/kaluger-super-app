@@ -1,4 +1,4 @@
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { describe, it, expect, vi } from "vitest";
 
 import { lessonModel } from "@entities";
@@ -16,7 +16,7 @@ describe("lessons-notifications.model", () => {
         handlers: [[lessonModel.addLessonFx, () => mockLesson]],
       });
 
-      notificationsModel.showSuccessEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
       await allSettled(lessonModel.addLessonFx, { scope, params: {} as never });
 
       expect(fn).toHaveBeenCalledWith("Урок создан");
@@ -28,7 +28,7 @@ describe("lessons-notifications.model", () => {
         handlers: [[lessonModel.updateLessonFx, () => mockLesson]],
       });
 
-      notificationsModel.showSuccessEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
       await allSettled(lessonModel.updateLessonFx, {
         scope,
         params: { id: "1", data: {} as never },
@@ -43,7 +43,7 @@ describe("lessons-notifications.model", () => {
         handlers: [[lessonModel.removeLessonFx, () => "1"]],
       });
 
-      notificationsModel.showSuccessEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
       await allSettled(lessonModel.removeLessonFx, {
         scope,
         params: { id: "1" },
@@ -58,11 +58,16 @@ describe("lessons-notifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
-          [lessonModel.addLessonFx, () => { throw new Error("test"); }],
+          [
+            lessonModel.addLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
         ],
       });
 
-      notificationsModel.showErrorEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
       await allSettled(lessonModel.addLessonFx, { scope, params: {} as never });
 
       expect(fn).toHaveBeenCalledWith("Ошибка при создании урока");
@@ -72,11 +77,16 @@ describe("lessons-notifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
-          [lessonModel.updateLessonFx, () => { throw new Error("test"); }],
+          [
+            lessonModel.updateLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
         ],
       });
 
-      notificationsModel.showErrorEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
       await allSettled(lessonModel.updateLessonFx, {
         scope,
         params: { id: "1", data: {} as never },
@@ -89,11 +99,16 @@ describe("lessons-notifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
-          [lessonModel.removeLessonFx, () => { throw new Error("test"); }],
+          [
+            lessonModel.removeLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
         ],
       });
 
-      notificationsModel.showErrorEvent.watch(fn);
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
       await allSettled(lessonModel.removeLessonFx, {
         scope,
         params: { id: "1" },
