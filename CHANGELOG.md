@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-04
+
+### Added
+- Lesson notes are now visible directly on the lesson card in the list — no need to open each lesson dialog to read them. A non-empty note shows as a compact 2-line snippet; if the text is truncated, a "Развернуть"/"Свернуть" control expands and collapses the full note in place (line breaks preserved) without opening the lesson view. Expand state is independent per card, the control has a touch-friendly hit area on mobile, long unbroken words/links wrap without breaking layout, and cards for lessons without a note look unchanged (no empty block). Works across all list views that use the lesson card, including the weekly list view.
+
 ## 2026-08-09
 
 ### Added

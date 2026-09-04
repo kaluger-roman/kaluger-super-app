@@ -219,6 +219,30 @@ describe("LessonCard", () => {
     });
   });
 
+  describe("Notes", () => {
+    it("should render the notes block when the lesson has a non-empty note", () => {
+      const lessonWithNotes = { ...mockLesson, notes: "Разобрать домашнее задание" };
+
+      renderWithTheme(<LessonCard lesson={lessonWithNotes} />);
+
+      expect(screen.getByText(/Разобрать домашнее задание/)).toBeInTheDocument();
+    });
+
+    it("should not render the notes block when the lesson has no note", () => {
+      renderWithTheme(<LessonCard lesson={mockLesson} />);
+
+      expect(screen.queryByText(/📝/)).not.toBeInTheDocument();
+    });
+
+    it("should not render the notes block when the note is whitespace-only", () => {
+      const lessonWithBlankNotes = { ...mockLesson, notes: "   \n\t  " };
+
+      renderWithTheme(<LessonCard lesson={lessonWithBlankNotes} />);
+
+      expect(screen.queryByText(/📝/)).not.toBeInTheDocument();
+    });
+  });
+
   describe("Student archived", () => {
     it("should render archived badge for archived student", () => {
       if (!mockLesson.student) return;
