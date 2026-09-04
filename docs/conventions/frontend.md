@@ -281,7 +281,7 @@ export const $isBlocking = combine(
 );
 ```
 
-`$isBlocking` is the raw "any request pending" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has lasted `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `delay` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
+`$isBlocking` is the raw "any request pending" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has stayed continuously on for `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `debounce` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
 
 ## Timezone Handling
 

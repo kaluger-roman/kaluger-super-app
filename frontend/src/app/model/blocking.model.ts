@@ -1,5 +1,5 @@
 import { combine, createStore, sample } from "effector";
-import { delay } from "patronum";
+import { debounce } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
@@ -81,33 +81,26 @@ export const $isBlocking = combine(
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );
 
-// Overlay shows only when a request stays pending past the threshold —
-// requests faster than this must not flash a full-screen spinner.
+// Overlay shows only when blocking stays continuously on past the threshold —
+// requests faster than this must not flash a full-screen spinner. `debounce`
+// (not `delay`): its timer resets on every $isBlocking change, so a timer
+// scheduled by a finished fast request can never reveal the overlay early
+// for the next one.
 export const $isBlockingVisible = createStore(false);
 
-const blockingStarted = sample({
-  clock: $isBlocking.updates,
-  filter: Boolean,
-});
-
-const blockingStopped = sample({
-  clock: $isBlocking.updates,
-  filter: (isBlocking) => !isBlocking,
-});
-
-const blockingPersisted = delay({
-  source: blockingStarted,
+const blockingSettled = debounce({
+  source: $isBlocking.updates,
   timeout: BLOCKING_OVERLAY_DELAY_MS,
 });
 
 sample({
-  clock: blockingPersisted,
-  source: $isBlocking,
+  clock: blockingSettled,
   filter: Boolean,
   target: $isBlockingVisible,
 });
 
 sample({
-  clock: blockingStopped,
+  clock: $isBlocking.updates,
+  filter: (isBlocking) => !isBlocking,
   target: $isBlockingVisible,
 });

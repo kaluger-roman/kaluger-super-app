@@ -67,7 +67,7 @@ describe("app/model/blocking.model — $isBlockingVisible (300ms delayed overlay
 
     expect(scope.getState($isBlocking)).toBe(false);
 
-    // Run well past the threshold — the already-scheduled delay must not reveal it.
+    // Run well past the threshold — a finished request must not reveal it later.
     await vi.advanceTimersByTimeAsync(BLOCKING_OVERLAY_DELAY_MS);
 
     expect(scope.getState($isBlockingVisible)).toBe(false);
@@ -84,6 +84,31 @@ describe("app/model/blocking.model — $isBlockingVisible (300ms delayed overlay
     expect(scope.getState($isBlockingVisible)).toBe(false);
 
     await vi.advanceTimersByTimeAsync(100);
+
+    expect(scope.getState($isBlockingVisible)).toBe(true);
+  });
+
+  it("does not reveal the overlay from a timer scheduled by a previous fast request (regression: back-to-back requests flashed the overlay early)", async () => {
+    const { scope, resolveRequest } = forkBlockingScope();
+    await vi.advanceTimersByTimeAsync(BLOCKING_OVERLAY_DELAY_MS - 50);
+
+    resolveRequest();
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(scope.getState($isBlocking)).toBe(false);
+
+    void allSettled(studentUserModel.studentLogoutFx, { scope });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(scope.getState($isBlocking)).toBe(true);
+
+    // 100ms after the second request started — the first request's timer
+    // has expired by now and must not have fired the overlay.
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(scope.getState($isBlockingVisible)).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(BLOCKING_OVERLAY_DELAY_MS);
 
     expect(scope.getState($isBlockingVisible)).toBe(true);
   });
