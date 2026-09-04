@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-05
+
+### Changed
+- Effector conventions are now actually ESLint-enforced via `eslint-plugin-effector` (pinned to 0.16.0 — newer versions require TypeScript 5): `$store`/`effectFx`/`Gate` naming plus bans on `.watch()`, `getState()`, `forward()`, `guard()` and `useStore` (`prefer-useUnit`). Production code had zero violations; 13 `unit.watch(fn)` calls in tests were rewritten to scope-bound `createWatch({ unit, fn, scope })`, which also stops watchers leaking between tests (eeca0d6)
+- Inline styles are now ESLint-enforced too: `sx`/`style` props are banned (`react/forbid-component-props`, `react/forbid-dom-props`); the 4 existing `sx` usages (`EmailVerificationForm`, `LessonStatusIcons`, `StudentName`, `StudentArchivedInfo`) moved into styled components. Conventions docs and `docs/lint-roadmap.md` updated to match (eeca0d6)
+
 ## 2026-09-04
 
 ### Added
