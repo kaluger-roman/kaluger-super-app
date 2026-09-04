@@ -64,7 +64,16 @@ export type CreateLessonDto = {
   isRecurring?: boolean;
 };
 
-export type UpdateLessonDto = Partial<CreateLessonDto> & {
+export type UpdateLessonDto = Omit<
+  Partial<CreateLessonDto>,
+  "description" | "homework" | "notes"
+> & {
+  // Explicit null clears a text field on the server: `undefined` is dropped
+  // during JSON serialization, and Prisma treats a missing field as "no
+  // change" — a cleared note would silently survive the update.
+  description?: string | null;
+  homework?: string | null;
+  notes?: string | null;
   isPaid?: boolean;
   paymentDate?: string;
   isHomeworkSentByTeacher?: boolean;
