@@ -1,6 +1,6 @@
 import type { FC } from "react";
 
-import { IconButton, Tooltip, Typography, TextField, Box } from "@mui/material";
+import { IconButton, Tooltip, Typography, TextField } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
@@ -83,7 +83,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
             onConfirm={handlePaymentConfirm}
           >
             {!lesson.isPaid && (
-              <Box sx={{ mt: 2 }}>
+              <Styled.PaymentDateBox>
                 <TextField
                   autoFocus
                   margin="dense"
@@ -94,7 +94,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                   onChange={(e) => setPaymentDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
-              </Box>
+              </Styled.PaymentDateBox>
             )}
           </ConfirmStatusDialog>
         </>

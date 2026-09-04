@@ -3,6 +3,7 @@ import type { FC } from "react";
 import { Box, Typography } from "@mui/material";
 
 import { ARCHIVE_REASON_LABELS } from "./StudentArchivedInfo.constants";
+import * as Styled from "./StudentArchivedInfo.styled";
 import { formatDateLong } from "../../lib";
 import type { ArchiveReason } from "../../types";
 
@@ -39,11 +40,9 @@ export const StudentArchivedInfo: FC<StudentArchivedInfoProps> = ({
         </Typography>
       )}
       {archiveComment && (
-        <>
-          <Typography variant="body2" color="warning.main" sx={{ fontStyle: "italic" }}>
-            {archiveComment}
-          </Typography>
-        </>
+        <Styled.ArchiveComment variant="body2" color="warning.main">
+          {archiveComment}
+        </Styled.ArchiveComment>
       )}
     </Box>
   );

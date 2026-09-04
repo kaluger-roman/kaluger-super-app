@@ -1,4 +1,4 @@
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { userModel } from "@entities/user";
@@ -177,20 +177,16 @@ describe("notifications.model", () => {
       const updatedSettings = { enabled: true, intervals: [30], muteWhenInLesson: false };
       const messages: Array<{ message: string; type: string }> = [];
 
-      const unwatch = showNotification.watch((payload) => messages.push(payload));
-
       const scope = fork({
-        handlers: [
-          [notificationsModel.updateSettingsFx, () => updatedSettings],
-        ],
+        handlers: [[notificationsModel.updateSettingsFx, () => updatedSettings]],
       });
+
+      createWatch({ unit: showNotification, fn: (payload) => messages.push(payload), scope });
 
       await allSettled(notificationsModel.settingsUpdated, {
         scope,
         params: { enabled: true },
       });
-
-      unwatch();
 
       expect(messages).toContainEqual({
         message: "Настройки обновлены",
@@ -201,20 +197,23 @@ describe("notifications.model", () => {
     it("should show error toast on subscribe failure", async () => {
       const messages: Array<{ message: string; type: string }> = [];
 
-      const unwatch = showNotification.watch((payload) => messages.push(payload));
-
       const scope = fork({
         handlers: [
-          [notificationsModel.subscribePushFx, () => { throw new Error("denied"); }],
+          [
+            notificationsModel.subscribePushFx,
+            () => {
+              throw new Error("denied");
+            },
+          ],
         ],
       });
+
+      createWatch({ unit: showNotification, fn: (payload) => messages.push(payload), scope });
 
       await allSettled(notificationsModel.subscribePushFx, {
         scope,
         params: { vapidKey: "key", registration: {} as ServiceWorkerRegistration },
       });
-
-      unwatch();
 
       expect(messages).toContainEqual({
         message: "Не удалось подписаться на уведомления",
@@ -240,13 +239,19 @@ describe("notifications.model", () => {
           [notificationsModel.$vapidKey, "k"],
         ],
         handlers: [
-          [notificationsModel.unsubscribePushFx, () => {
-            throw new Error("sw gone");
-          }],
-          [notificationsModel.subscribePushFx, () => ({
-            subscription: {} as PushSubscription,
-            serverResponse: {} as never,
-          })],
+          [
+            notificationsModel.unsubscribePushFx,
+            () => {
+              throw new Error("sw gone");
+            },
+          ],
+          [
+            notificationsModel.subscribePushFx,
+            () => ({
+              subscription: {} as PushSubscription,
+              serverResponse: {} as never,
+            }),
+          ],
         ],
       });
 
@@ -346,20 +351,23 @@ describe("notifications.model", () => {
       // bypass the real handler (which is what calls notificationsApi.updateSettings)
       // and the assertion below would pass even if the bug were reintroduced.
       const messages: Array<{ message: string; type: string }> = [];
-      const unwatch = showNotification.watch((payload) => messages.push(payload));
-
       const scope = fork({
         handlers: [
-          [notificationsModel.unsubscribePushFx, () => { throw new Error("sw gone"); }],
+          [
+            notificationsModel.unsubscribePushFx,
+            () => {
+              throw new Error("sw gone");
+            },
+          ],
         ],
       });
+
+      createWatch({ unit: showNotification, fn: (payload) => messages.push(payload), scope });
 
       await allSettled(notificationsModel.unsubscribePushFx, {
         scope,
         params: {} as ServiceWorkerRegistration,
       });
-
-      unwatch();
 
       expect(vi.mocked(notificationsApi.updateSettings)).not.toHaveBeenCalled();
       expect(messages).toContainEqual({
@@ -368,5 +376,4 @@ describe("notifications.model", () => {
       });
     });
   });
-
 });
