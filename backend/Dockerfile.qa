@@ -1,0 +1,26 @@
+# QA-only backend image. Builds TypeScript, runs migrations on startup, serves the API.
+# Not used in production (prod runs via PM2 from a host build — see ecosystem.config.js).
+FROM node:20-slim
+
+WORKDIR /app
+
+# Prisma's query engine needs OpenSSL; curl powers the compose healthcheck.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl curl \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY . .
+RUN npm run build
+
+ENV NODE_ENV=production
+ENV PORT=3001
+EXPOSE 3001
+
+# Apply migrations to the (fresh) database, then start the compiled server.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

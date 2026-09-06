@@ -1,6 +1,7 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 
 import { lessonModel } from "@entities/lesson";
+import { resolveWsUrl } from "@shared";
 import type { LessonStatus } from "@shared/types";
 
 // Events
@@ -17,12 +18,7 @@ export const connectWebSocketFx = createEffect(() => {
   const token = localStorage.getItem("authToken");
   if (!token) return;
 
-  const wsUrl =
-    process.env.NODE_ENV === "production"
-      ? `wss://${window.location.host}/ws`
-      : "ws://localhost:3001/ws";
-
-  const ws = new WebSocket(`${wsUrl}?token=${token}`);
+  const ws = new WebSocket(`${resolveWsUrl("/ws")}?token=${token}`);
 
   ws.onopen = () => {
     console.log("WebSocket connected");

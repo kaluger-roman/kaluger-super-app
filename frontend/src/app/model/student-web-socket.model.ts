@@ -7,7 +7,7 @@ import {
 
 import { studentScheduleModel } from "@features/studentSchedule";
 import type { StudentLessonWsEvent } from "@shared";
-import { getStudentToken } from "@shared";
+import { getStudentToken, resolveWsUrl } from "@shared";
 
 // Connection lifecycle is bound to the **session**, not to any individual page.
 // Future cabinet features (calls, push, etc.) just subscribe to incoming events
@@ -23,11 +23,6 @@ export const setStudentWebSocketConnection = createEvent<WebSocket | null>();
 export const $studentWebSocketConnection = createStore<WebSocket | null>(null);
 export const $isStudentWebSocketEnabled = createStore(false);
 export const $isStudentWebSocketConnected = createStore(false);
-
-const getWsUrl = (): string =>
-  process.env.NODE_ENV === "production"
-    ? `wss://${window.location.host}/ws/student`
-    : "ws://localhost:3001/ws/student";
 
 // Dispatcher for inbound messages — keep it dumb: parse, route to the relevant
 // feature event. Adding a new event type later (video_call_incoming, push_*,
@@ -58,7 +53,7 @@ export const connectStudentWebSocketFx = createEffect(
     if (!token) return null;
 
     const ws = new WebSocket(
-      `${getWsUrl()}?token=${encodeURIComponent(token)}`
+      `${resolveWsUrl("/ws/student")}?token=${encodeURIComponent(token)}`
     );
 
     ws.onopen = () => {
