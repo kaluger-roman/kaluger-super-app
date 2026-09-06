@@ -63,28 +63,28 @@ bash scripts/qa-stack.sh down-all      # снести все qa-* стеки н�
 - Тестовый админ стека: `admin@qa.local` / `QaAdmin!2026`. RESEND заглушён (письма не уходят) —
   коды верификации читать прямо из БД. VAPID-ключи валидные (push-подписка работает).
 
-## Токен-бюджет для /qa-roam
+## Бюджет для /qa-roam
 
-`/qa-roam --budget <N|N%>` снимает потолок «2–3 роута»: агент крутит всё новые сценарии и после
-каждого сверяется с расходом токенов за текущее 5-часовое окно подписки.
+`/qa-roam --budget <N%>` снимает потолок «2–3 роута»: агент крутит всё новые сценарии, пока прогон
+не съест N% реального 5-часового окна подписки. Только проценты, абсолютных токен-бюджетов нет.
 
 ```bash
-node scripts/qa-token-usage.mjs --since <RUN_START_ISO> --budget 20%
+node scripts/qa-budget.mjs start --budget 20%   # на старте прогона: baseline
+node scripts/qa-budget.mjs check                # после каждого сценария: verdict
 ```
 
-- Считает usage по транскриптам `~/.claude/projects/**/*.jsonl` (все проекты — лимит общий на
-  аккаунт). Печатает JSON со `spent` / `budgetTokens` / `percentOfBudgetUsed` / `verdict`
-  (`continue` | `stop`).
-- `--budget` — абсолют (`200000`, `150k`) или процент (`20%`). Для процента нужен знаменатель —
-  **авто-детект**: максимальный 5-часовой блок в истории. Переопределить: `--limit <N>` или
-  `QA_SESSION_TOKEN_LIMIT`.
-- Метрика по умолчанию `billed` = input+output+cache_creation (без дешёвых cache-read, иначе число
-  раздувается в 100+ раз). Альтернативы: `--metric total` (всё), `--metric io`.
-- Полный скан истории кешируется (TTL 6 ч в `~/.claude/.qa-token-usage-limit.json`); «потрачено с
-  старта» считается только по свежим файлам — проверка после каждого сценария дешёвая.
+- Источник — настоящие лимиты подписки: Claude Code передаёт статуслайну
+  `rate_limits.five_hour.used_percentage` / `resets_at`, statusline-скрипт дампит stdin в
+  `/tmp/statusline-debug.json` (переопределяется env `QA_STATUSLINE_DUMP` / флагом `--source`).
+  **Требование:** первая строка statusline-скрипта должна писать дамп — `echo "$input" > /tmp/statusline-debug.json`.
+- `start` запоминает baseline-процент и `resets_at` в `.qa/qa-budget.json` (свой на worktree);
+  `check` печатает `spentPct` / `budgetPct` / `remainingPct` / `verdict` (`continue` | `stop`).
+  Сброс окна посреди прогона учитывается: накопленный расход переносится, baseline обнуляется.
+- Защита от мусорных данных: нет дампа / нет `rate_limits` / дамп старше 15 минут → `verdict: stop`
+  с причиной в `reason` (exit-код всегда 0, вызывающий читает JSON).
 
-Оговорка: usage **текущего** хода ещё не на диске → лёгкая недооценка, поэтому стоп срабатывает с
-небольшим запасом (не перерасходует).
+Оговорка: `used_percentage` — целые проценты (бюджеты <5% грубые), и значение обновляется после
+ответов API — стоп срабатывает с небольшим запасом (не перерасходует).
 
 ## Escape hatch и edge-cases
 

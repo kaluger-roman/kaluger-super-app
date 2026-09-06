@@ -27,6 +27,15 @@ describe("resolveWsUrl", () => {
     expect(resolveWsUrl("/ws/student")).toBe("ws://localhost:3001/ws/student");
   });
 
+  it("should derive the dev WS port from REACT_APP_API_URL (dev-stack branch ports)", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("REACT_APP_API_URL", "http://localhost:3011/api");
+    setLocation("http:", "localhost:3010");
+
+    expect(resolveWsUrl("/ws")).toBe("ws://localhost:3011/ws");
+    expect(resolveWsUrl("/ws/student")).toBe("ws://localhost:3011/ws/student");
+  });
+
   it("should use same-origin wss over https in production", () => {
     vi.stubEnv("NODE_ENV", "production");
     setLocation("https:", "tutor.kaluger.ru");
