@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { isValidTimezone } from "../utils/time";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
 import type { PushNotificationPayload } from "../types";

@@ -16,7 +16,7 @@ const NEUTRAL_FORGOT_PASSWORD_MESSAGE =
   "Если адрес зарегистрирован, мы отправили на него письмо со ссылкой для сброса пароля";
 
 export const forgotPassword = async (
-  req: Request<{}, {}, ForgotPasswordDto>,
+  req: Request<Record<string, never>, unknown, ForgotPasswordDto>,
   res: Response,
 ) => {
   try {
@@ -41,7 +41,7 @@ export const forgotPassword = async (
 };
 
 export const verifyResetToken = async (
-  req: Request<{}, {}, VerifyResetTokenDto>,
+  req: Request<Record<string, never>, unknown, VerifyResetTokenDto>,
   res: Response,
 ) => {
   try {
@@ -61,7 +61,7 @@ export const verifyResetToken = async (
 };
 
 export const resetPassword = async (
-  req: Request<{}, {}, ResetPasswordDto>,
+  req: Request<Record<string, never>, unknown, ResetPasswordDto>,
   res: Response,
 ) => {
   try {

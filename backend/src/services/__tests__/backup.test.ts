@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   getTotalSizeMb,
   cleanupOldBackups,

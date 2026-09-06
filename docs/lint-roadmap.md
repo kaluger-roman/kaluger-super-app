@@ -17,15 +17,15 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `no-explicit-any` | lint + `tsc --noEmit` |
-| **backend** | **none** — no config, no eslint dep, no `lint` script | only `tsc` build |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `no-explicit-any` | lint + `tsc --noEmit` |
+| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) | lint + `tsc` build |
 | landing | flat config | lint + tsc + test |
 
 Three biggest gaps driving this work:
 
-1. **Backend is not linted at all** — `backend.md` says "run lint", but there is nothing to run.
-2. **Effector rules are marked "ESLint enforced" but are not** — `eslint-plugin-effector` is not installed.
-3. **No pre-commit hook** — lint runs only in CI, so violations are caught late. "Catch reliably" needs `lint-staged` + backend lint in CI.
+1. ~~**Backend is not linted at all**~~ — closed by PR3 (`eslint.config.mjs` + `lint` script + CI step).
+2. ~~**Effector rules are marked "ESLint enforced" but are not**~~ — closed by PR2 (`eslint-plugin-effector@0.16.0`).
+3. **No pre-commit hook** — lint runs only in CI, so violations are caught late. "Catch reliably" needs `lint-staged` (Milestone 6).
 
 ---
 
@@ -33,7 +33,7 @@ Three biggest gaps driving this work:
 
 | # | Task | Scope | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 0.1 | Scaffold ESLint (flat config + `typescript-eslint`) + `lint` script + CI step | backend | TODO | unblocks all backend rules |
+| 0.1 | Scaffold ESLint (flat config + `typescript-eslint`) + `lint` script + CI step | backend | ✅ PR3 | eslint 9 + `typescript-eslint` 8 + `eslint-plugin-import`; non-type-aware (no `project`) so CI lint needs no `prisma generate` |
 | 0.2 | Remove duplicate `plugins` key (`.eslintrc.js` lines 9–10) | frontend | ✅ PR1 | first line was dead |
 | 0.3 | `husky` + `lint-staged` on commit | repo | TODO | do after core rules adopted |
 | 0.4 | tsconfig: `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch` | both | TODO | compiler-level guarantees |
@@ -91,12 +91,20 @@ Notes:
 
 | # | Rule | Convention | Status | Violations |
 | --- | --- | --- | --- | --- |
-| 12 | `@typescript-eslint/no-explicit-any` | No `any` | TODO | _TBD_ |
-| 13 | `import/no-default-export` | Named exports only | TODO | _TBD_ |
-| 14 | `func-style: ["error","expression"]` | Function expressions only | TODO | _TBD_ |
-| 15 | `consistent-type-definitions` + `consistent-type-imports` | `type` / `import type` | TODO | _TBD_ |
-| 16 | `no-restricted-syntax` → `TSEnumDeclaration` | String literals, not enums | TODO | _TBD_ |
-| 17 | `max-lines` (`controllers/**` 150) | Controllers < 150 lines | TODO | _TBD_ |
+| 12 | `@typescript-eslint/no-explicit-any` | No `any` | ✅ PR3 | **125**: 6 in prod code (fixed), 119 in tests (rule `off` in `__tests__` — see notes) |
+| 13 | `import/no-default-export` | Named exports only | ✅ PR3 | **1** (`lib/prisma.ts` default export) — converted to named, 99 importers updated |
+| 14 | `func-style: ["error","expression"]` | Function expressions only | ✅ PR3 | **0** |
+| 15 | `consistent-type-definitions` + `consistent-type-imports` | `type` / `import type` | ✅ PR3 | **0** + **46** (autofixed) |
+| 16 | `no-restricted-syntax` → `TSEnumDeclaration` | String literals, not enums | ✅ PR3 | **0** |
+| 17 | `max-lines` (`controllers/**` 150, tests excluded) | Controllers < 150 lines | WARN | **5** legacy controllers grandfathered as `warn` (`auth.ts`, `lessons/{createLesson,getLessons,updateLesson}.ts`, `statistics/getStatistics.ts`) |
+
+**PR3 (branch `chore/lint-backend`): 0.1, #12–17.**
+
+Notes:
+- **#12** — tests keep `any` (`off` in `__tests__`): supertest's `res.body` and hand-rolled ws/jest mocks are typed `any` upstream; banning it would force churn without safety. Revisit if a typed supertest wrapper appears.
+- **#13** — the one violation was `lib/prisma.ts` (`export default prisma`); converted to `export const prisma`, all 98 importers + 1 `jest.mock` factory updated mechanically.
+- **#17** — `max-lines` counts only controllers, `__tests__` excluded (the convention limits controller size, not test size). The 5 legacy files are listed in `eslint.config.mjs` with `warn`; shrink opportunistically (extract to services), then remove from the grandfather list. New controllers get `error`.
+- Bonus from `typescript-eslint` recommended: fixed 20 × `no-empty-object-type` (`Request<{}, {}, Dto>` → `Request<Record<string, never>, unknown, Dto>`), 16 × `no-unsafe-function-type` (`Function` → typed handler alias in ws tests), 13 × unused vars in tests, 3 × `@ts-ignore` (stale jest fake-timers workarounds — removed, typings are fine now).
 
 ---
 

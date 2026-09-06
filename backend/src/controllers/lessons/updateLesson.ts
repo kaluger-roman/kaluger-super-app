@@ -4,7 +4,7 @@ import type { Lesson } from "@prisma/client";
 import type { UpdateLessonDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   applyShiftFutureRecurringLessons,
   broadcastStudentLessonUpdated,

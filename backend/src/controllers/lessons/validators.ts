@@ -1,4 +1,4 @@
-import { CreateLessonDto, ContactMethod } from "../../types";
+import type { CreateLessonDto, ContactMethod } from "../../types";
 import { truncateToMinute } from "../../utils/time";
 import type { PrismaClient, Prisma } from "@prisma/client";
 

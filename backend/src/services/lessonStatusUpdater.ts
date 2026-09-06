@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
 import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";

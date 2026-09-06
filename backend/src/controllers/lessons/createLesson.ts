@@ -2,7 +2,7 @@ import type { Response } from "express";
 import type { CreateLessonDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { getWebSocketManager } from "../../lib/wsManager";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { validateLessonData, checkSchedulingConflicts } from "./validators";
 import { SchedulingConflictError } from "../../utils";
 import { truncateToMinute } from "../../utils/time";

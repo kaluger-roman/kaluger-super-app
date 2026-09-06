@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashPassword, comparePassword } from "../../utils/auth";
 import { changePassword } from "../changePassword";
 

@@ -113,7 +113,7 @@ describe("isValidTimezone", () => {
 
 describe("getLastMonthBounds", () => {
   it("should return UTC boundaries for previous month when no timezone", () => {
-    const { gte, lte } = getLastMonthBounds();
+    const { gte } = getLastMonthBounds();
     const now = new Date();
     const expectedMonth = now.getUTCMonth() === 0 ? 11 : now.getUTCMonth() - 1;
 

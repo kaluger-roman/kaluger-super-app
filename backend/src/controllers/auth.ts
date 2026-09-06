@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   hashPassword,
   comparePassword,
@@ -9,13 +9,13 @@ import {
   getVerificationCodeExpiry,
   normalizeEmail,
 } from "../utils";
-import { CreateUserDto, LoginDto } from "../types";
-import prisma from "../lib/prisma";
-import { AuthRequest } from "../middleware/auth";
+import type { CreateUserDto, LoginDto } from "../types";
+import { prisma } from "../lib/prisma";
+import type { AuthRequest } from "../middleware/auth";
 import { sendVerificationEmail } from "../services";
 
 export const register = async (
-  req: Request<{}, {}, CreateUserDto>,
+  req: Request<Record<string, never>, unknown, CreateUserDto>,
   res: Response,
 ) => {
   try {
@@ -93,7 +93,7 @@ export const register = async (
   }
 };
 
-export const login = async (req: Request<{}, {}, LoginDto>, res: Response) => {
+export const login = async (req: Request<Record<string, never>, unknown, LoginDto>, res: Response) => {
   try {
     const { email: rawEmail, password } = req.body;
 

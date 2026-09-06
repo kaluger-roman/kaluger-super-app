@@ -1,4 +1,6 @@
-import { CreateStudentDto, UpdateStudentDto } from "../../types";
+import type { Prisma } from "@prisma/client";
+
+import type { CreateStudentDto, UpdateStudentDto } from "../../types";
 
 export const validateCreateStudentDto = (data: CreateStudentDto) => {
   const errors: string[] = [];
@@ -41,7 +43,7 @@ export const validateUpdateStudentDto = (data: UpdateStudentDto) => {
 };
 
 export const prepareUpdateData = (updateData: UpdateStudentDto) => {
-  const preparedData: any = { ...updateData };
+  const preparedData: Prisma.StudentUpdateInput = { ...updateData };
   if ("contactMethod" in updateData) {
     preparedData.contactMethod = updateData.contactMethod || undefined;
   }

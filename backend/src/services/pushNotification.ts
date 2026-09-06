@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import type { PushNotificationPayload } from "../types";
 
 let vapidConfigured = false;

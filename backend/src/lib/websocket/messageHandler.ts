@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { AuthenticatedWebSocket } from "./types";
+import type { AuthenticatedWebSocket } from "./types";
 
 export const handleMessage = (
   ws: AuthenticatedWebSocket,

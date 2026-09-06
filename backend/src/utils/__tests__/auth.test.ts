@@ -7,7 +7,7 @@ import {
   validatePassword,
 } from "../auth";
 
-import { JwtPayload } from "../../types";
+import type { JwtPayload } from "../../types";
 
 describe("auth utils", () => {
   const testPassword = "Str0ngPass";

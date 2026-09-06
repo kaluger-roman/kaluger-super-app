@@ -134,6 +134,9 @@ jobs:
       - name: Install dependencies
         run: cd backend && npm ci
 
+      - name: Lint
+        run: cd backend && npm run lint
+
       - name: Cache Prisma generated client
         uses: actions/cache@v4
         with:

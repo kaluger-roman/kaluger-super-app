@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Prisma } from "@prisma/client";
 import type { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const getReminderSettings = async (req: AuthRequest, res: Response) => {
   try {

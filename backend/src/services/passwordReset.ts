@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { invalidateCachedTokenVersion } from "../lib/tokenVersionCache";
 import {
   RESET_REQUEST_COOLDOWN_SECONDS,

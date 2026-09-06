@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import webpush from "web-push";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "../services/pushNotification";
 
 jest.mock("web-push", () => ({

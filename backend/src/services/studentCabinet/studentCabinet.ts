@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import type { StudentLessonsByWeekResponse } from "../../types";
 import { addDays, parseWeekStart } from "../../utils/time";
 import { toStudentLessonResponse } from "./studentCabinet.helpers";

@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
 import type { Prisma, LessonStatus } from "@prisma/client";
 

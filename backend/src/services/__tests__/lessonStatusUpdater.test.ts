@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { getWebSocketManager } from "../../lib/wsManager";
 import { updateLessonStatuses } from "../lessonStatusUpdater";
 import { truncateToMinute } from "../../utils/time";
@@ -339,7 +339,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    const result = await updateLessonStatuses();
+    await updateLessonStatuses();
 
     // completedLessons and startedLessons should not count these
     const updatedCancelled = await prisma.lesson.findUnique({
@@ -476,7 +476,7 @@ describe("updateLessonStatuses", () => {
     // Simulate no WS manager
     mockedGetWs.mockReturnValue(undefined as any);
 
-    const result = await updateLessonStatuses();
+    await updateLessonStatuses();
 
     const updated = await prisma.lesson.findUnique({
       where: { id: lesson.id },

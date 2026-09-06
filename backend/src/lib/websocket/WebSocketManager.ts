@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { Server, IncomingMessage } from "http";
-import { Socket } from "net";
+import type { Server, IncomingMessage } from "http";
+import type { Socket } from "net";
 import type {
   AuthenticatedStudentWebSocket,
   AuthenticatedWebSocket,
@@ -59,7 +59,10 @@ export class WebSocketManager {
     socket.destroy();
   }
 
-  private async handleConnection(ws: AuthenticatedWebSocket, request: any) {
+  private async handleConnection(
+    ws: AuthenticatedWebSocket,
+    request: IncomingMessage
+  ) {
     const decoded = await authenticateWebSocket(ws, request);
     if (!decoded) return;
 
@@ -124,7 +127,7 @@ export class WebSocketManager {
 
   private async handleStudentConnection(
     ws: AuthenticatedStudentWebSocket,
-    request: any
+    request: IncomingMessage
   ) {
     const decoded = await authenticateStudentWebSocket(ws, request);
     if (!decoded) return;
@@ -231,7 +234,7 @@ export class WebSocketManager {
   }
 
   // Method to send message to specific user
-  public sendToUser(userId: string, message: any) {
+  public sendToUser(userId: string, message: unknown) {
     const client = this.clients.get(userId);
     if (client && client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(message));
@@ -240,7 +243,7 @@ export class WebSocketManager {
     return false;
   }
 
-  public sendToStudent(studentUserId: string, message: any): boolean {
+  public sendToStudent(studentUserId: string, message: unknown): boolean {
     const client = this.studentClients.get(studentUserId);
     if (client && client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(message));

@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
 
@@ -179,7 +179,7 @@ describe("deleteLesson controller", () => {
         expect(typeof res.body.deleted).toBe("number");
       });
 
-    const f1 = await prisma.lesson.findUnique({ where: { id: s1.id } });
+    await prisma.lesson.findUnique({ where: { id: s1.id } });
     const f2 = await prisma.lesson.findUnique({ where: { id: s2.id } });
     const f3 = await prisma.lesson.findUnique({ where: { id: s3.id } });
 

@@ -2,7 +2,7 @@ import request from "supertest";
 import express from "express";
 import { faker } from "@faker-js/faker";
 
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   generateAdminToken,
   generateToken,

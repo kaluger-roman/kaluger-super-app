@@ -1,6 +1,7 @@
-import { Router, Request, Response } from "express";
+import type { Request, Response } from "express";
+import { Router } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { generateAdminToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
 import {

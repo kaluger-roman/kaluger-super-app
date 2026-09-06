@@ -17,7 +17,7 @@ import type {
 } from "../types";
 
 export const studentRegister = async (
-  req: Request<{}, {}, StudentRegisterByInviteDto>,
+  req: Request<Record<string, never>, unknown, StudentRegisterByInviteDto>,
   res: Response
 ) => {
   try {
@@ -33,7 +33,7 @@ export const studentRegister = async (
 };
 
 export const studentLogin = async (
-  req: Request<{}, {}, StudentLoginDto>,
+  req: Request<Record<string, never>, unknown, StudentLoginDto>,
   res: Response
 ) => {
   try {
@@ -49,7 +49,7 @@ export const studentLogin = async (
 };
 
 export const studentVerifyEmail = async (
-  req: StudentRequest & Request<{}, {}, StudentVerifyEmailDto>,
+  req: StudentRequest & Request<Record<string, never>, unknown, StudentVerifyEmailDto>,
   res: Response
 ) => {
   try {
