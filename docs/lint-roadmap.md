@@ -53,7 +53,7 @@ Measured on `origin/main` baseline (eslint `--rule` dry-run over `src/**/*.{ts,t
 | 3 | `@typescript-eslint/consistent-type-definitions: ["error","type"]` | `type`, not `interface` | yes | ✅ PR1 | **0** |
 | 4 | `@typescript-eslint/consistent-type-imports: [error,{disallowTypeAnnotations:false}]` | `import type` for types | yes | ✅ PR1 | **7** autofixed (24 were `import()` annotations in tests → allowed) |
 | 5 | `no-restricted-syntax` → `TSEnumDeclaration` | String literals, not enums | no | ✅ PR1 | **0** |
-| 6 | `react/forbid-component-props: { forbid: ["sx","style"] }` (+ `forbid-dom-props` style) | No inline styles | no | DECIDE | **4** (4 files, all `sx`) |
+| 6 | `react/forbid-component-props: { forbid: ["sx","style"] }` (+ `forbid-dom-props` style) | No inline styles | no | ✅ PR2 | **4** (4 files, all `sx`) — moved to styled components |
 | 7 | `react/forbid-elements: { forbid: ["form"] }` | No `<form>` tags | no | ✅ PR1 | **0** |
 | 8 | `jsx-a11y` recommended → `error` (alt-text, label-has-associated-control, no-static-element-interactions, …) | a11y section | no | DECIDE | **~18** msgs / ~9 spots / 4 files (sampled subset) |
 | 9 | `max-lines` overrides (`*.tsx` 150, `*.model.ts` 200) | size limits | no | DECIDE | **9** `*.tsx` >150, **4** `*.model.ts` >200 |
@@ -64,7 +64,7 @@ Notes:
 - **#4** — default `disallowTypeAnnotations: true` rejects the `vi.importActual<typeof import("…")>()` mock pattern (24 tests, not autofixable). Set `false`: keeps `import type` for top-level, allows `import()` annotations. Real top-level fixes = 7 files.
 - **#7** — dropped the `onSubmit` ban: `onSubmit` is a legit custom prop name in 38 spots and there are no `<form>` elements, so forbidding the `form` element already covers the convention.
 
-**Still to do:** #6 (4, manual), #8 (~9 spots, manual), #9 (refactor 9+4 files _or_ set threshold + grandfather).
+**Still to do:** #8 (~9 spots, manual), #9 (refactor 9+4 files _or_ set threshold + grandfather).
 
 ---
 
@@ -74,8 +74,16 @@ Fixes the false "ESLint enforced" claim in `frontend.md`.
 
 | # | Rule | Convention | Status | Violations |
 | --- | --- | --- | --- | --- |
-| 10 | `effector/enforce-store-naming-convention`, `enforce-effect-naming-convention`, `enforce-gate-naming-convention` | `$store` / `eventFx` / `Gate` naming | TODO | _TBD_ |
-| 11 | `effector/no-watch`, `no-getState`, `no-forward`, `no-guard`, `no-useStore` | Forbidden Effector APIs | TODO | _TBD_ |
+| 10 | `effector/enforce-store-naming-convention`, `enforce-effect-naming-convention`, `enforce-gate-naming-convention` | `$store` / `eventFx` / `Gate` naming | ✅ PR2 | **0** |
+| 11 | `effector/no-watch`, `no-getState`, `no-forward`, `no-guard`, `prefer-useUnit` | Forbidden Effector APIs | ✅ PR2 | **13** (`no-watch`, all in tests) — rewritten to `createWatch({ unit, fn, scope })` |
+
+**PR2 (branch `chore/lint-effector`):** #6, #10, #11.
+
+Notes:
+- Pinned `eslint-plugin-effector@0.16.0` — 0.17+ requires `typescript >= 5`, frontend is on 4.9.5 (CRA). Revisit on TS upgrade.
+- The plugin has no `no-useStore` rule; `prefer-useUnit` covers it (flags `useStore`/`useStoreMap`/`useEvent` from `effector-react`).
+- `.on()` has no plugin rule — candidate for a Tier B `no-restricted-syntax` selector (Milestone 4).
+- The `createWatch` rewrite also fixed a latent test smell: `unit.watch(fn)` watchers are not scope-bound and leaked between tests.
 
 ---
 

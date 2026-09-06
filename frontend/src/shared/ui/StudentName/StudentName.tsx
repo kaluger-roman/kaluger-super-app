@@ -2,6 +2,7 @@ import type { FC, ReactNode } from "react";
 
 import { Box, Chip, Typography } from "@mui/material";
 
+import * as Styled from "./StudentName.styled";
 import type { Student } from "../../types";
 
 type StudentNameProps = {
@@ -24,7 +25,7 @@ export const StudentName: FC<StudentNameProps> = ({
       <>
         {component}
         {showArchived && student.archived && (
-          <Chip label="Архив" size="small" color="default" sx={{ ml: 1 }} />
+          <Styled.ArchivedChip label="Архив" size="small" color="default" />
         )}
       </>
     );

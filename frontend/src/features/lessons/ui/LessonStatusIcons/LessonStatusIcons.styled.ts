@@ -23,3 +23,7 @@ export const HomeworkIcon = styled(MenuBookIcon)<{ $isSent: boolean }>(({ theme,
 export const DialogContent = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
+
+export const PaymentDateBox = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+}));

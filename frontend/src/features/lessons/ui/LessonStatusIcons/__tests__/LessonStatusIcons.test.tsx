@@ -1,7 +1,7 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -263,8 +263,12 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: false });
 
       let capturedPayload = null;
-      lessonPaymentChanged.watch((payload) => {
-        capturedPayload = payload;
+      createWatch({
+        unit: lessonPaymentChanged,
+        scope,
+        fn: (payload) => {
+          capturedPayload = payload;
+        },
       });
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
@@ -290,8 +294,12 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: true });
 
       let capturedPayload = null;
-      lessonPaymentChanged.watch((payload) => {
-        capturedPayload = payload;
+      createWatch({
+        unit: lessonPaymentChanged,
+        scope,
+        fn: (payload) => {
+          capturedPayload = payload;
+        },
       });
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
@@ -400,8 +408,12 @@ describe("LessonStatusIcons", () => {
       });
 
       let capturedPayload = null;
-      lessonHomeworkSentChanged.watch((payload) => {
-        capturedPayload = payload;
+      createWatch({
+        unit: lessonHomeworkSentChanged,
+        scope,
+        fn: (payload) => {
+          capturedPayload = payload;
+        },
       });
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
@@ -422,8 +434,12 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ homework: "Some homework", isHomeworkSentByTeacher: true });
 
       let capturedPayload = null;
-      lessonHomeworkSentChanged.watch((payload) => {
-        capturedPayload = payload;
+      createWatch({
+        unit: lessonHomeworkSentChanged,
+        scope,
+        fn: (payload) => {
+          capturedPayload = payload;
+        },
       });
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
