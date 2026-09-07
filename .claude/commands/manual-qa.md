@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(git:*), Bash(curl:*), Bash(npx:*), Bash(node:*), Bash(cd:*), Read, Write, Edit, Glob, Grep, Agent, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_resize, mcp__playwright__browser_close, mcp__playwright__browser_tabs, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_file_upload
+allowed-tools: Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(git:*), Bash(curl:*), Bash(npx:*), Bash(node:*), Bash(cd:*), Bash(docker:*), Bash(bash scripts/qa-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_resize, mcp__playwright__browser_close, mcp__playwright__browser_tabs, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_file_upload
 description: Ручное QA-тестирование фичи текущей ветки через Playwright MCP с проверкой соответствия спеке. Отчёт со скриншотами в docs/manual-qa-reports/. С аргументом --fix чинит однозначные баги сразу.
 ---
 
@@ -8,8 +8,7 @@ description: Ручное QA-тестирование фичи текущей в
 - Сегодня: !`date +%Y-%m-%d`
 - Текущая ветка: !`git branch --show-current`
 - Спека ветки: !`BR=$(git branch --show-current); ls specs/$BR/ 2>/dev/null | head -10 || echo "(specs/$BR/ не найден — попытайся подобрать по префиксу)"`
-- Frontend (3000): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "down"`
-- Backend (3001): !`curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api 2>/dev/null || echo "down"`
+- QA-стек ветки: !`bash scripts/qa-stack.sh port 2>/dev/null || echo "не поднят — поднимется на Этапе 2"`
 - Существующие отчёты: !`ls -t docs/manual-qa-reports/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
 
 ## Задача
@@ -20,14 +19,17 @@ description: Ручное QA-тестирование фичи текущей в
 
 - содержит `--fix` → **режим автофикса**: после написания отчёта чини все находки, помеченные как «однозначные» (см. Этап 6). Архитектурные/спорные изменения — не трогать.
 - содержит идентификатор фичи (формат `NNN-something`) → использовать как override для спеки (`specs/<id>/`), а не текущую ветку.
-- содержит URL (`http://...`) → использовать как base URL вместо `http://localhost:3000`.
-- иначе → дефолт: спека = ветка, base URL = `http://localhost:3000`, без автофикса.
+- содержит URL (`http://...`) → использовать как base URL напрямую (Docker-стек не поднимать).
+- содержит `--host` → не поднимать Docker; тестировать уже запущенные dev-серверы на `http://localhost:3000` (старое поведение).
+- содержит `--teardown` → после отчёта снести QA-стек (`bash scripts/qa-stack.sh down`). По умолчанию стек остаётся поднятым для ручной до-проверки.
+- иначе → дефолт: спека = ветка, base URL = **изолированный Docker-стек ветки** (поднимается на Этапе 2), без автофикса.
 
 Примеры:
-- `/manual-qa` — прогон фичи текущей ветки, без автофикса.
+- `/manual-qa` — поднять изолированный стек ветки и прогнать фичу, без автофикса.
 - `/manual-qa --fix` — прогон + автофикс однозначных багов.
 - `/manual-qa 028-forgot-password` — прогон фичи `028-forgot-password` (даже если ты на другой ветке).
-- `/manual-qa --fix http://localhost:3002` — прогон с автофиксом на нестандартном порту.
+- `/manual-qa --host` — прогон по уже запущенным dev-серверам (3000/3001), без Docker.
+- `/manual-qa --fix --teardown` — прогон с автофиксом, в конце снести стек.
 
 ---
 
@@ -50,33 +52,31 @@ description: Ручное QA-тестирование фичи текущей в
 
 ## Этап 2. Подготовка окружения
 
-1. **Проверить, что dev-серверы подняты.** Если frontend (3000) или backend (3001) недоступен — НЕ запускать самостоятельно через background-Bash (риск конфликта с уже запущенными сессиями пользователя), а вывести инструкцию пользователю:
+1. **Поднять изолированный QA-стек ветки.** (Пропустить при `--host` — тогда base URL = `http://localhost:3000`, как раньше; или при URL-override в `$ARGUMENTS`.)
 
-   ```
-   Dev-серверы не подняты. Запусти в двух отдельных терминалах:
-     ! cd backend && npm run dev
-     ! cd frontend && npm start
-   и снова вызови /manual-qa.
-   ```
-
-   и завершить выполнение. Префикс `!` в Claude Code выполнит команду интерактивно в текущей сессии.
-
-2. **Проверить тестовые данные** (читая БД через `npx tsx` со скриптом-однострочником, **без** изменений на этом шаге). Если для прогона нужны сущности, которых нет (например, преподаватель с не подтверждённым email, ученик без зарегистрированного аккаунта, уроки на текущей неделе) — на этапе прогона их можно создать **напрямую через Prisma** (см. ниже). Не использовать `db:seed` — он перезаписывает локальные данные пользователя.
-
-   Пример короткого read-запроса:
    ```bash
-   cd backend && npx tsx -e "
-   import { PrismaClient } from '@prisma/client';
-   const p = new PrismaClient();
-   console.log(JSON.stringify(await p.user.findMany({ take: 3, select: { id: true, email: true, name: true } }), null, 2));
-   await p.\$disconnect();
-   "
+   bash scripts/qa-stack.sh up
    ```
 
-3. **Создание недостающих тестовых сущностей разрешено через прямые Prisma-вставки** для ускорения. Правила:
-   - Все имена/email содержат маркер `[mqa <YYYY-MM-DD-HHMM>]`, чтобы потом легко найти.
-   - Минимально необходимый набор — никаких массовых сидов.
-   - Если возможно, в конце прогона удалить созданные сущности тем же способом (для тех, что в полной мере поддерживают удаление). Если удаление рискованно — оставить и зафиксировать список в отчёте в секции «Артефакты прогона».
+   Собирает и поднимает отдельный Docker-стек (web + backend + postgres) под именем `qa-<branch>` на **эфемерном порту** и печатает JSON: `{"url":"http://localhost:<port>","adminEmail":"admin@qa.local","adminPassword":"QaAdmin!2026",...}`. Распарсить `url` — это **base URL** всего прогона. Стек изолирован (своя свежая БД, отдельный порт), поэтому manual-qa/qa-roam можно гонять параллельно на разных ветках. Первая сборка — 2–4 мин, дальше из кэша.
+
+   Если вернулся `{"error":...}` или Docker не запущен — сообщить пользователю «Запусти Docker Desktop и повтори /manual-qa» и завершить. Детали и тимдаун — `docs/qa-docker.md`.
+
+2. **Подготовить тестовые данные.** БД стека **свежая и пустая** (накатаны только миграции) — данные надо создать. Все обращения к БД идут **внутрь контейнера** через `exec-backend` (на хосте `npx tsx` смотрел бы в личную БД разработчика, не в стек). Поскольку БД изолированная, `npm run db:seed` здесь **безопасен** (можно поднять базовый набор одной командой):
+
+   ```bash
+   bash scripts/qa-stack.sh exec-backend 'npm run db:seed'
+   ```
+
+   Пример read-запроса (Prisma-клиент уже сгенерирован в контейнере, CommonJS):
+   ```bash
+   bash scripts/qa-stack.sh exec-backend 'node -e "const {PrismaClient}=require(\"@prisma/client\"); const p=new PrismaClient(); p.user.findMany({take:3,select:{id:true,email:true,name:true}}).then(r=>console.log(JSON.stringify(r,null,2))).finally(()=>p.\$disconnect())"'
+   ```
+   Быстрый SQL-просмотр — `bash scripts/qa-stack.sh psql "select email from users limit 5;"`. Админ-логин для стека: `admin@qa.local` / `QaAdmin!2026` (печатается в выводе `up`).
+
+3. **Создание недостающих сущностей** — через `db:seed` или точечные `exec-backend`-вставки. Правила:
+   - Для точечных сущностей — маркер `[mqa <YYYY-MM-DD-HHMM>]` в именах/email, чтобы отличать в отчёте.
+   - Чистить за собой не нужно: весь стек (вместе с БД-томом) сносится одной командой `bash scripts/qa-stack.sh down`. Зафиксировать использованные аккаунты в секции «Артефакты прогона».
 
 4. **Открыть Playwright** через `mcp__playwright__browser_navigate` на base URL. Проверить, что страница реально отрисовалась (`browser_snapshot`). Если фронт упал в рантайме — это уже находка `Severity: Critical`.
 
@@ -126,11 +126,11 @@ description: Ручное QA-тестирование фичи текущей в
 - Для realtime — `browser_tabs` (новая вкладка под учеником), действие на первой вкладке, `browser_wait_for` на второй с ожиданием изменения текста / появления карточки.
 - При обнаружении модалок и подтверждений — `browser_handle_dialog`.
 - Респонсив: на 1–2 ключевых экранах сделать `browser_resize` (например, 375×812) и скриншот — отметить очевидные ломки.
-- Не пытаться обходить email-верификацию через UI (там ходит реальный код): для тестового аккаунта проще вытащить код напрямую из БД через `npx tsx` (поле `verificationCode` в нужной таблице).
+- Не пытаться обходить email-верификацию через UI (реальный код не уходит — RESEND в стеке заглушён): вытащить код напрямую из БД через `bash scripts/qa-stack.sh exec-backend '...'` (поле `verificationCode` в нужной таблице).
 
 **Что писать в `Bash`-вставках:**
-- Чтение данных и подготовка тестовых сущностей — `cd backend && npx tsx -e "..."`. Только короткие однострочники / однофайловые скрипты. Никаких массовых апдейтов.
-- Очистка артефактов в конце прогона — там же.
+- Чтение данных и подготовка тестовых сущностей — `bash scripts/qa-stack.sh exec-backend '...'` (внутри контейнера, против БД стека). Только короткие однострочники. Никаких массовых апдейтов.
+- Чистить артефакты не обязательно — стек сносится целиком на Этапе 7 (`down`) при `--teardown`.
 
 ---
 
@@ -213,7 +213,7 @@ description: Ручное QA-тестирование фичи текущей в
 **Feature:** <id> — <название из spec.md>
 **Spec:** [`specs/<id>/spec.md`](../../specs/<id>/spec.md)
 **Quickstart:** [`specs/<id>/quickstart.md`](../../specs/<id>/quickstart.md)
-**Base URL:** http://localhost:3000
+**Base URL:** http://localhost:<port> (изолированный QA-стек; при `--host` — http://localhost:3000)
 **Прогон выполнен:** YYYY-MM-DD HH:MM
 **Автофикс:** включён / выключен
 
@@ -314,7 +314,7 @@ description: Ручное QA-тестирование фичи текущей в
   "branch": "029-student-cabinet",
   "feature_id": "029-student-cabinet",
   "spec_path": "specs/029-student-cabinet/spec.md",
-  "base_url": "http://localhost:3000",
+  "base_url": "http://localhost:54312",
   "run_at": "2026-05-24T15:32:00Z",
   "autofix_enabled": true,
   "report_path": "docs/manual-qa-reports/2026-05-24-029-student-cabinet.md",
@@ -408,8 +408,8 @@ JSON: docs/manual-qa-reports/YYYY-MM-DD-<branch>.findings.json
 
 ## Ограничения
 
-- **Не запускать dev-серверы самостоятельно.** Если они не подняты — попросить пользователя через подсказку `! cd ... && npm run ...` и завершить.
-- **Не использовать `db:seed`.** Подготовка данных — только точечные Prisma-вставки с маркером `[mqa <YYYY-MM-DD-HHMM>]`.
+- **Поднимать изолированный Docker-стек** через `bash scripts/qa-stack.sh up` (кроме `--host`/URL-override). Не трогать личные dev-серверы и личную БД пользователя — стек полностью отдельный. Если Docker не запущен — попросить запустить Docker Desktop и завершить.
+- **БД стека изолированная** — `db:seed` и точечные `exec-backend`-вставки безопасны. Личную БД не сидить (она не используется). По умолчанию стек **остаётся поднятым** после прогона; снести — `bash scripts/qa-stack.sh down` (или флаг `--teardown`).
 - **Никаких git-операций.** Не делать `commit`, `push`, `branch`. Автофикс остаётся в working tree — пользователь сам решит, что коммитить.
 - **Не править прод-код без `--fix`.** Без флага команда строго read-only по отношению к исходникам.
 - **Не менять `package.json`, `prisma/schema.prisma`, миграции.** Никогда — даже с `--fix`.

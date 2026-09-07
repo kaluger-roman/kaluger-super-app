@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и manual-qa с автофиксом — с двумя human checkpoint'ами (после спеки и после макетов).
 ---
 
@@ -277,11 +277,12 @@ Steps:
    - Use the project's existing UI kit (frontend/src/shared/ui/...) wherever possible — do not invent new primitives at this stage.
    - DO NOT write Effector models, DO NOT touch backend, DO NOT write tests yet.
 
-3. **Start dev server.** Use Bash with `run_in_background: true`:
+3. **Start dev server on the BRANCH ports** (parallel auto-features must not fight over :3000). Get the branch's port slot, then start CRA via the dev-stack wrapper with `run_in_background: true`:
    ```
-   cd frontend && npm start
+   bash scripts/dev-stack.sh ports          # → JSON with webUrl (e.g. http://localhost:3010)
+   bash scripts/dev-stack.sh run-frontend   # run_in_background; CRA on the branch's web port
    ```
-   Then poll `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` until 200 (max ~60 seconds). If npm start fails — return error JSON immediately.
+   Then poll `curl -s -o /dev/null -w "%{http_code}" <webUrl>` until 200 (max ~120 seconds). Use `<webUrl>` as the base URL for all Playwright navigation below. Mockups use mocks (no API), so neither backend nor Docker is needed at this phase. If the server fails — return error JSON immediately.
 
 4. **Screenshots via Playwright MCP.** For EACH screen and EACH important state, do this sequence:
    a. `mcp__playwright__browser_navigate` to the route.
@@ -292,7 +293,7 @@ Steps:
       - Take desktop + mobile screenshots.
    e. Save all screenshots to `docs/mockups/<branch>/screenshots/`.
 
-5. **Stop dev server** when done: find PID via `lsof -i :3000` and kill, or use the run_in_background's KillShell.
+5. **Stop dev server** when done: find PID via `lsof -i :<web port>` and kill, or use the run_in_background's KillShell.
 
 6. **Write index file** `docs/mockups/<branch>/index.md` with a list of all screenshots and a brief description of each.
 
@@ -531,16 +532,14 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 Operate at MAXIMUM reasoning effort. Single task: invoke /manual-qa skill with argument `--fix` and let it do the full run.
 
 Pre-checks:
-- Ensure backend dev server is running on :3001 and frontend on :3000.
-  Probe with curl. If either is down, START them in background:
-    cd backend && npm run dev   (run_in_background)
-    cd frontend && npm start    (run_in_background)
-  Wait until both respond. If they don't come up in 90s — abort and report.
+- Ensure Docker is running (`docker info`). /manual-qa boots its own isolated per-branch QA stack
+  (`bash scripts/qa-stack.sh up`) — do NOT start dev servers on :3000/:3001 for it.
+  If Docker is down — abort and report (the user must start Docker Desktop).
 
 After /manual-qa completes:
 - It writes both an MD report and a findings.json next to it.
 - Read the findings.json.
-- Stop the dev servers if you started them (kill the background processes).
+- Leave the QA stack up (default /manual-qa behaviour) — the user may want to re-check by hand.
 
 Return JSON ONLY:
 

@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор починки бага. Создаёт worktree, воспроизводит баг и находит root cause (✋ checkpoint), фиксит с обязательным регрессионным тестом, гонит code-review-loop с порогом 50 и верифицирует фикс по шагам воспроизведения.
 ---
 
@@ -177,7 +177,13 @@ Steps:
 1. **Locate the code.** Grep/read the relevant modules (frontend and/or backend) implicated by the description. Trace the data flow end to end.
 
 2. **Reproduce.**
-   - UI bug: start dev servers if needed (backend `cd backend && npm run dev`, frontend `cd frontend && npm start`, both run_in_background; poll :3001 and :3000 with curl until up, max 90s). Reproduce via Playwright MCP, capture a "before" screenshot to docs/bug-fixes/<slug>/screenshots/before-01.png. Stop servers you started when done.
+   - UI bug: start the dev servers on the BRANCH ports (never :3000/:3001 — parallel worktrees must not fight over them). Requires Docker running:
+     ```
+     bash scripts/dev-stack.sh up             # branch Postgres + migrations → JSON with webUrl/apiUrl/databaseUrl
+     bash scripts/dev-stack.sh run-backend    # run_in_background; backend on the branch api port
+     bash scripts/dev-stack.sh run-frontend   # run_in_background; CRA on the branch web port
+     ```
+     Poll `<apiUrl>/health` and `<webUrl>` with curl until up (max 120s). The branch DB is fresh — if the repro needs data, seed it: `cd backend && DATABASE_URL=<databaseUrl> npm run db:seed`. Use `<webUrl>` as the Playwright base URL. Reproduce via Playwright MCP, capture a "before" screenshot to docs/bug-fixes/<slug>/screenshots/before-01.png. Stop servers you started when done (leave the branch Postgres up).
    - Backend/logic bug: reproduce with a minimal failing test snippet or by tracing the code path; if a quick throwaway check helps, run existing tests around the area (`cd backend && npm test -- --testPathPatterns=<path>` / `cd frontend && npm run test -- <path>`).
    - If you CANNOT reproduce — say so explicitly with what you tried; do not fake it.
 
@@ -361,7 +367,7 @@ Diagnosis repro steps:
 Steps:
 
 1. Run the regression test: <path> — must pass.
-2. If repro_kind is "ui-playwright": start dev servers (backend :3001, frontend :3000, run_in_background, curl-poll до готовности, max 90s), re-run the EXACT repro steps via Playwright MCP, confirm the buggy behavior is gone. Capture "after" screenshots to docs/bug-fixes/<slug>/screenshots/after-NN.png. Also sanity-check 1-2 adjacent scenarios of the same screen (no new breakage). Stop servers you started.
+2. If repro_kind is "ui-playwright": start the dev servers on the branch ports (`bash scripts/dev-stack.sh up`, then `run-backend` + `run-frontend`, both run_in_background, curl-poll `<apiUrl>`/`<webUrl>` до готовности, max 120s; seed the branch DB if the repro needs data), re-run the EXACT repro steps via Playwright MCP, confirm the buggy behavior is gone. Capture "after" screenshots to docs/bug-fixes/<slug>/screenshots/after-NN.png. Also sanity-check 1-2 adjacent scenarios of the same screen (no new breakage). Stop servers you started.
 3. If repro_kind is "test" or "code-trace": run the full test suite of the touched area (not just the regression test).
 
 Return JSON ONLY:
