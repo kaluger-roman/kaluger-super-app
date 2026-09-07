@@ -1,0 +1,61 @@
+# Isolated, throwaway QA stack for /qa-roam and /manual-qa.
+# Always launched via scripts/qa-stack.sh, which sets a per-branch project name
+# (`-p qa-<branch>`) and an --env-file with generated secrets. Per-project naming
+# isolates containers, network and the db volume so several branches run at once.
+# Only `web` publishes a port (ephemeral) — backend and db stay on the internal net.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-qa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qa}
+      POSTGRES_DB: ${POSTGRES_DB:-tutor_app}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qa} -d ${POSTGRES_DB:-tutor_app}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.qa
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      STUDENT_JWT_SECRET: ${STUDENT_JWT_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      NODE_ENV: production
+      PORT: "3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3001/health"]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.qa
+    ports:
+      - "80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db-data:

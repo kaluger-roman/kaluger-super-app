@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-07
+
+### Added
+- Isolated per-branch Docker QA stacks for `/qa-roam` and `/manual-qa`: `scripts/qa-stack.sh` (`up`/`port`/`status`/`exec-backend`/`psql`/`down`/`down-all`) brings up a `qa-<branch>` stack (nginx-served prod build + backend + Postgres) on an ephemeral port. Several `/qa-roam` and `/manual-qa` runs on different branches/worktrees now work in parallel without fighting over ports 3000/3001 or sharing the developer's local database (`docker-compose.qa.yml`, `backend/Dockerfile.qa`, `frontend/Dockerfile.qa`, `frontend/nginx.qa.conf`, `docs/qa-docker.md`)
+- Budget mode for `/qa-roam` (`--budget 20%`, percent only): instead of a fixed 2–3 routes, the agent keeps roaming new scenarios until the run has consumed the given share of the real 5-hour subscription window. `scripts/qa-budget.mjs start/check` reads `rate_limits.five_hour` from the statusline stdin dump (`/tmp/statusline-debug.json`, overridable via `QA_STATUSLINE_DUMP`), baselines at run start and handles a window reset mid-run; missing/stale data yields a safe `stop` verdict
+- Per-branch dev environment for parallel branch/worktree development: `scripts/dev-stack.sh` gives each branch a stable port slot (registry in the shared git dir; `web 3000+idx*10`, `api 3001+idx*10`, `db 15432+idx`) and its own Docker Postgres with `tutor_app` + `tutor_app_test` databases (`docker-compose.dev.yml`, `scripts/dev-db-init.sql`, `docs/dev-stack.md`). Wrapper commands (`run-backend`, `run-frontend`, `run-backend-e2e`, `test-backend`, `e2e`, `migrate`, `psql`) export `PORT`/`DATABASE_URL`/`FRONTEND_URL`/`REACT_APP_API_URL` over the personal `.env` (dotenv never overrides exported vars), so several branches run dev servers, jest and Playwright e2e side by side with fully isolated databases. `/auto-feature` mockup screenshots now use the branch's port instead of hardcoded :3000
+
+### Changed
+- `/qa-roam` and `/manual-qa` now boot an isolated Docker stack themselves instead of requiring manually-started dev servers; test-data prep runs inside the backend container (`qa-stack.sh exec-backend`) against the stack's fresh DB, so `db:seed` is safe again. New `--host` flag keeps the old behaviour (reuse running dev servers on `localhost:3000`), `--teardown` removes the stack after the run
+- `frontend/playwright.config.ts` honours `E2E_BASE_URL`/`PORT` (defaults unchanged: `http://localhost:3000`), so e2e can target a branch's dev-stack ports
+
+### Fixed
+- WebSocket URLs were hardcoded to `ws://localhost:3001` — extracted `resolveWsUrl` (`@shared`, same-origin and scheme-aware ws/wss in production builds; dev URL derived from `REACT_APP_API_URL`) so realtime works behind the QA stack's nginx and against per-branch dev backends. Behaviour-neutral for the real (https) production deploy
+
 ## 2026-09-05
 
 ### Changed
