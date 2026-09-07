@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - WebSocket URLs were hardcoded to `ws://localhost:3001` — extracted `resolveWsUrl` (`@shared`, same-origin and scheme-aware ws/wss in production builds; dev URL derived from `REACT_APP_API_URL`) so realtime works behind the QA stack's nginx and against per-branch dev backends. Behaviour-neutral for the real (https) production deploy
 
+### Infrastructure
+- Added the `/auto-bug-fix` command — an end-to-end bug-fixing orchestrator adapted from `/auto-feature`: creates a worktree, reproduces the bug and finds the root cause (single human checkpoint), applies a minimal fix with a mandatory red-to-green regression test, runs the code-review loop (threshold 50, cap 3) and verifies the fix against the original reproduction steps. UI reproduction/verification runs on the branch's dev-stack ports (`scripts/dev-stack.sh`) instead of hardcoded :3000/:3001, so it works in parallel worktrees (1642d5a)
+
 ## 2026-09-05
 
 ### Changed
