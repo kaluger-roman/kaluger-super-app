@@ -96,14 +96,14 @@ Notes:
 | 14 | `func-style: ["error","expression"]` | Function expressions only | ✅ PR3 | **0** |
 | 15 | `consistent-type-definitions` + `consistent-type-imports` | `type` / `import type` | ✅ PR3 | **0** + **46** (autofixed) |
 | 16 | `no-restricted-syntax` → `TSEnumDeclaration` | String literals, not enums | ✅ PR3 | **0** |
-| 17 | `max-lines` (`controllers/**` 150, tests excluded) | Controllers < 150 lines | WARN | **5** legacy controllers grandfathered as `warn` (`auth.ts`, `lessons/{createLesson,getLessons,updateLesson}.ts`, `statistics/getStatistics.ts`) |
+| 17 | `max-lines` (`controllers/**` 150, tests excluded) | Controllers < 150 lines | ✅ PR3 | **5** (`auth.ts` 196, `lessons/createLesson.ts` 242, `lessons/getLessons.ts` 166, `lessons/updateLesson.ts` 335, `statistics/getStatistics.ts` 194) — business logic extracted into `services/{auth,lessonCreation,lessonsQuery,lessonUpdate,statistics}` |
 
 **PR3 (branch `chore/lint-backend`): 0.1, #12–17.**
 
 Notes:
 - **#12** — tests keep `any` (`off` in `__tests__`): supertest's `res.body` and hand-rolled ws/jest mocks are typed `any` upstream; banning it would force churn without safety. Revisit if a typed supertest wrapper appears.
 - **#13** — the one violation was `lib/prisma.ts` (`export default prisma`); converted to `export const prisma`, all 98 importers + 1 `jest.mock` factory updated mechanically.
-- **#17** — `max-lines` counts only controllers, `__tests__` excluded (the convention limits controller size, not test size). The 5 legacy files are listed in `eslint.config.mjs` with `warn`; shrink opportunistically (extract to services), then remove from the grandfather list. New controllers get `error`.
+- **#17** — `max-lines` counts only controllers, `__tests__` excluded (the convention limits controller size, not test size). The 5 oversized controllers were refactored rather than grandfathered: DB/transaction logic moved to new service folders (`services/auth`, `lessonCreation`, `lessonsQuery`, `lessonUpdate`, `statistics`, each split into `*.ts` / `*.helpers.ts` / `*.types.ts`), `validateUpdateData` moved to `controllers/lessons/updateLesson.validators.ts`, auth flow errors became `utils/errors.ts` classes (`UserAlreadyExistsError`, `InvalidCredentialsError`, `EmailNotVerifiedError`, `TaxPeriodsRequiredError`). Controllers are now 32–119 lines; pure helpers got unit tests, DB-bound services are covered by the existing controller integration tests plus `services/__tests__/auth.test.ts`.
 - Bonus from `typescript-eslint` recommended: fixed 20 × `no-empty-object-type` (`Request<{}, {}, Dto>` → `Request<Record<string, never>, unknown, Dto>`), 16 × `no-unsafe-function-type` (`Function` → typed handler alias in ws tests), 13 × unused vars in tests, 3 × `@ts-ignore` (stale jest fake-timers workarounds — removed, typings are fine now).
 
 ---

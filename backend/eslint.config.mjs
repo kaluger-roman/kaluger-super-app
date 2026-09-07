@@ -51,23 +51,6 @@ export default tseslint.config(
     },
   },
   {
-    // Grandfathered: over the 150-line limit before the rule landed.
-    // Shrink opportunistically (extract to services), then remove from here.
-    files: [
-      "src/controllers/auth.ts",
-      "src/controllers/lessons/createLesson.ts",
-      "src/controllers/lessons/getLessons.ts",
-      "src/controllers/lessons/updateLesson.ts",
-      "src/controllers/statistics/getStatistics.ts",
-    ],
-    rules: {
-      "max-lines": [
-        "warn",
-        { max: 150, skipBlankLines: true, skipComments: true },
-      ],
-    },
-  },
-  {
     // supertest's res.body and hand-rolled ws/jest mocks are typed `any`
     // upstream — banning `any` in tests would force churn without safety.
     files: ["src/**/__tests__/**/*.ts", "src/**/*.test.ts"],

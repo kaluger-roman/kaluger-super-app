@@ -66,9 +66,8 @@ import { createStudent } from "./controllers/students/createStudent";
 ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `any`
 (prod code; allowed in tests — supertest's `res.body` and hand-rolled mocks are typed
 `any` upstream), named exports only, function expressions only, `type` + `import type`,
-no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded; a few legacy
-controllers are grandfathered as warnings — shrink opportunistically). The rest of this
-doc is review-checked.
+no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded). The rest of
+this doc is review-checked.
 
 ### Structure
 

@@ -1,8 +1,5 @@
 import type { CreateLessonDto, ContactMethod } from "../../types";
 import { truncateToMinute } from "../../utils/time";
-import type { PrismaClient, Prisma } from "@prisma/client";
-
-type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
 export const CONTACT_METHODS: ContactMethod[] = ["WHATSAPP", "TELEGRAM", "MAX"];
 
@@ -77,30 +74,4 @@ export const validateLessonData = (data: CreateLessonDto) => {
   }
 
   return { isValid: true };
-};
-
-export const checkSchedulingConflicts = async (
-  userId: string,
-  startTime: Date,
-  endTime: Date,
-  prisma: PrismaLike
-) => {
-  return prisma.lesson.findMany({
-    where: {
-      tutorId: userId,
-      status: {
-        not: "CANCELLED",
-      },
-      OR: [
-        {
-          startTime: {
-            lt: endTime,
-          },
-          endTime: {
-            gt: startTime,
-          },
-        },
-      ],
-    },
-  });
 };

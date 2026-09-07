@@ -1,18 +1,21 @@
 import type { Request, Response } from "express";
 import {
-  hashPassword,
-  comparePassword,
-  generateToken,
+  EmailNotVerifiedError,
+  InvalidCredentialsError,
+  normalizeEmail,
+  TaxPeriodsRequiredError,
+  UserAlreadyExistsError,
   validateEmail,
   validatePassword,
-  generateVerificationCode,
-  getVerificationCodeExpiry,
-  normalizeEmail,
 } from "../utils";
 import type { CreateUserDto, LoginDto } from "../types";
-import { prisma } from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
-import { sendVerificationEmail } from "../services";
+import {
+  getUserProfile,
+  loginUser,
+  registerUser,
+  updateUserProfile,
+} from "../services";
 
 export const register = async (
   req: Request<Record<string, never>, unknown, CreateUserDto>,
@@ -21,7 +24,6 @@ export const register = async (
   try {
     const { email: rawEmail, password, name } = req.body;
 
-    // Validation
     if (!rawEmail || !password || !name) {
       return res
         .status(400)
@@ -39,115 +41,52 @@ export const register = async (
       });
     }
 
-    const email = normalizeEmail(rawEmail);
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const user = await registerUser({
+      email: normalizeEmail(rawEmail),
+      password,
+      name,
     });
-
-    if (existingUser) {
-      return res.status(409).json({ error: "Пользователь уже существует" });
-    }
-
-    // Create user
-    const hashedPassword = await hashPassword(password);
-    const verificationCode = generateVerificationCode();
-    const verificationCodeExpiry = getVerificationCodeExpiry();
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        verificationCode,
-        verificationCodeExpiry,
-        verificationCodeSentAt: new Date(),
-        verificationAttempts: 0,
-        isEmailVerified: false,
-      },
-    });
-
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, verificationCode);
-    } catch (emailError) {
-      console.error("Error sending verification email:", emailError);
-      // Продолжаем даже если письмо не отправилось
-    }
 
     res.status(201).json({
       message:
         "Пользователь успешно создан. Проверьте email для подтверждения регистрации",
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        isEmailVerified: user.isEmailVerified,
-        taxEnabled: user.taxEnabled,
-      },
+      user,
     });
   } catch (error) {
+    if (error instanceof UserAlreadyExistsError) {
+      return res.status(409).json({ error: error.message });
+    }
     console.error("Registration error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
-export const login = async (req: Request<Record<string, never>, unknown, LoginDto>, res: Response) => {
+export const login = async (
+  req: Request<Record<string, never>, unknown, LoginDto>,
+  res: Response,
+) => {
   try {
     const { email: rawEmail, password } = req.body;
 
-    // Validation
     if (!rawEmail || !password) {
       return res
         .status(400)
         .json({ error: "Email и пароль обязательны для заполнения" });
     }
 
-    const email = normalizeEmail(rawEmail);
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const { token, user } = await loginUser({
+      email: normalizeEmail(rawEmail),
+      password,
     });
 
-    if (!user) {
-      return res.status(401).json({ error: "Неверные учетные данные" });
-    }
-
-    // Check password
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Неверные учетные данные" });
-    }
-
-    // Check email verification
-    if (!user.isEmailVerified) {
-      return res.status(403).json({
-        error:
-          "Email не подтвержден. Проверьте почту или запросите новый код подтверждения",
-      });
-    }
-
-    // Generate token (include tokenVersion for revocation on password/email change)
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      tokenVersion: user.tokenVersion,
-    });
-
-    res.json({
-      message: "Вход выполнен успешно",
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        isEmailVerified: user.isEmailVerified,
-        taxEnabled: user.taxEnabled,
-      },
-    });
+    res.json({ message: "Вход выполнен успешно", token, user });
   } catch (error) {
+    if (error instanceof InvalidCredentialsError) {
+      return res.status(401).json({ error: error.message });
+    }
+    if (error instanceof EmailNotVerifiedError) {
+      return res.status(403).json({ error: error.message });
+    }
     console.error("Login error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
@@ -155,19 +94,7 @@ export const login = async (req: Request<Record<string, never>, unknown, LoginDt
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        isEmailVerified: true,
-        taxEnabled: true,
-      },
-    });
+    const user = await getUserProfile(req.user!.userId);
 
     if (!user) {
       return res.status(404).json({ error: "Пользователь не найден" });
@@ -182,7 +109,6 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
     const { name, taxEnabled } = req.body;
 
     if (name !== undefined && (!name || name.trim().length === 0)) {
@@ -195,43 +121,16 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         .json({ error: "Поле taxEnabled должно быть булевым" });
     }
 
-    const data: { name?: string; taxEnabled?: boolean } = {};
-    if (name !== undefined) data.name = name.trim();
-    if (taxEnabled !== undefined) data.taxEnabled = taxEnabled;
-
-    const result = await prisma.$transaction(async (tx) => {
-      if (taxEnabled === true) {
-        const periodsCount = await tx.taxRatePeriod.count({
-          where: { userId },
-        });
-        if (periodsCount === 0) {
-          return {
-            error: "Чтобы включить учёт налога, добавьте хотя бы один период",
-          };
-        }
-      }
-
-      const user = await tx.user.update({
-        where: { id: userId },
-        data,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          createdAt: true,
-          isEmailVerified: true,
-          taxEnabled: true,
-        },
-      });
-      return { user };
+    const user = await updateUserProfile(req.user!.userId, {
+      ...(name !== undefined ? { name: name.trim() } : {}),
+      ...(taxEnabled !== undefined ? { taxEnabled } : {}),
     });
 
-    if ("error" in result) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    res.json({ message: "Профиль успешно обновлен", user: result.user });
+    res.json({ message: "Профиль успешно обновлен", user });
   } catch (error) {
+    if (error instanceof TaxPeriodsRequiredError) {
+      return res.status(400).json({ error: error.message });
+    }
     console.error("Update profile error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }

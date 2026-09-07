@@ -16,3 +16,8 @@ export * from "./studentEmailVerification";
 export * from "./studentInvitation";
 export * from "./studentCabinet";
 export * from "./studentLessonBroadcast";
+export * from "./auth";
+export * from "./lessonCreation";
+export * from "./lessonsQuery";
+export * from "./lessonUpdate";
+export * from "./statistics";
