@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-11
 
+### Changed
+- Frontend a11y and size limits are now ESLint-enforced (closes Milestone 1 of `docs/lint-roadmap.md`): `plugin:jsx-a11y/recommended` runs as errors (`no-autofocus` is off — every hit was the first field of a form/dialog; the static-element interaction rules are off only under `__tests__`, where `<div onClick>` wrappers probe event propagation), and `max-lines` caps `*.tsx` at 150 and `*.model.ts` at 200 code lines (blank lines/comments not counted, tests excluded). The 5 components over the limit were split rather than grandfathered: `AppRoutes` → `AppRoutes.constants` + `RouteFallback`, `LessonFormContent` → `LessonStatusSection` + `RecurringCheckbox`, `StudentFormFields` → `ContactMethodSelect`, `InvitationManager` → `InvitationActions`, `FinancialStatistics` → `IncomeCards` + `DebtCard`, each with its own tests. The copy-link icon button in the invitation manager also gained an `aria-label`. `docs/conventions/frontend.md` marks the rules as ESLint-enforced (5506a29)
+
 ### Fixed
 - Backend test `getStatistics › aggregates payments by paymentDate within selected range` failed deterministically in the first hour after local midnight (expected 4777, received 2277): the "paid earlier today" fixture used `now - 1h`, which lands on yesterday and drops out of the today-range. The payment date is now clamped to the start of today, so the test is time-of-day independent (verified red→green with `TZ=Asia/Magadan` at 00:48 local)
 
