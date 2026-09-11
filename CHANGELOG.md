@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-11
+
+### Fixed
+- Backend test `getStatistics › aggregates payments by paymentDate within selected range` failed deterministically in the first hour after local midnight (expected 4777, received 2277): the "paid earlier today" fixture used `now - 1h`, which lands on yesterday and drops out of the today-range. The payment date is now clamped to the start of today, so the test is time-of-day independent (verified red→green with `TZ=Asia/Magadan` at 00:48 local)
+
 ## 2026-09-07
 
 ### Added
