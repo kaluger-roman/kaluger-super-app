@@ -67,6 +67,10 @@ expect "denies via --head even from a good checkout" deny "$tmp/wt-with" "gh pr 
 expect "falls back to HEAD for an unknown --head ref" allow "$tmp/wt-with" "gh pr create --head no-such-branch"
 expect "ignores commands that are not gh pr create" allow "$tmp/wt-without" "gh run list --branch without-changelog"
 expect "ignores an empty payload" allow "$tmp/wt-without" ""
+expect "denies gh pr ready without CHANGELOG" deny "$tmp/wt-without" "gh pr ready"
+expect "allows gh pr ready with CHANGELOG" allow "$tmp/wt-with" "gh pr ready 73"
+expect "resolves the worktree for gh pr ready from a leading cd" allow "$tmp/wt-without" "cd $tmp/wt-with && gh pr ready"
+expect "ignores the start-of-task draft PR script" allow "$tmp/wt-without" "node scripts/start-task-pr.mjs --title x"
 
 if [ "$failures" -ne 0 ]; then
   printf '%s failure(s)\n' "$failures"

@@ -14,10 +14,13 @@ set -euo pipefail
 input="$(cat)"
 command="$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null || true)"
 
-# The settings `if` filter should already narrow to `gh pr create`, but it
-# has matched unrelated compound `gh` commands — gate only the real thing.
+# The settings `if` filters should already narrow to `gh pr create` /
+# `gh pr ready`, but they have matched unrelated compound commands — gate
+# only the real thing. `gh pr ready` is gated because PRs are opened as
+# drafts at task start (scripts/start-task-pr.mjs, not gated) and the
+# changelog check moves to marking them ready.
 case "$command" in
-  *"gh pr create"*) ;;
+  *"gh pr create"* | *"gh pr ready"*) ;;
   *) exit 0 ;;
 esac
 
@@ -60,7 +63,7 @@ if [ "$head_ref" = "HEAD" ]; then
 fi
 
 # Block — emit JSON for the new-style PreToolUse output.
-jq -n --arg reason "CHANGELOG.md не обновлён в ветке ${branch_label} относительно main. Перед \`gh pr create\` обязательно: 1) запусти /changelog (обновит CHANGELOG.md из git history), 2) запусти /news (создаст пользовательскую запись в backend/prisma/news/), 3) закоммить и пушни. Это требование CLAUDE.md проекта. Если PR действительно не требует changelog (чисто внутренний рефактор/документация) — добавь пустую строку в CHANGELOG.md или временно отключи hook через /hooks." '{
+jq -n --arg reason "CHANGELOG.md не обновлён в ветке ${branch_label} относительно main. Перед \`gh pr create\` / \`gh pr ready\` обязательно: 1) запусти /changelog (обновит CHANGELOG.md из git history), 2) запусти /news (создаст пользовательскую запись в backend/prisma/news/), 3) закоммить и пушни. Это требование CLAUDE.md проекта. Если PR действительно не требует changelog (чисто внутренний рефактор/документация) — добавь пустую строку в CHANGELOG.md или временно отключи hook через /hooks." '{
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
