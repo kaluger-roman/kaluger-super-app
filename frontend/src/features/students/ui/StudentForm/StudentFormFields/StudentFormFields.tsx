@@ -10,10 +10,10 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material";
 
-import { CONTACT_METHOD_LABELS, useDisableNumberScroll } from "@shared";
+import { useDisableNumberScroll } from "@shared";
 
+import { ContactMethodSelect } from "../ContactMethodSelect";
 import type { StudentFormFieldsProps } from "../types";
 
 export const StudentFormFields: FC<StudentFormFieldsProps> = ({
@@ -47,21 +47,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         size={isMobile ? "small" : "medium"}
       />
 
-      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel id="student-contact-method-label">Способ связи</InputLabel>
-        <Select
-          labelId="student-contact-method-label"
-          value={formData.contactMethod || "WHATSAPP"}
-          onChange={(e: SelectChangeEvent<string>) =>
-            onChange("contactMethod")({ target: { value: e.target.value } })
-          }
-          label="Способ связи"
-        >
-          <MenuItem value="WHATSAPP">{CONTACT_METHOD_LABELS.WHATSAPP}</MenuItem>
-          <MenuItem value="TELEGRAM">{CONTACT_METHOD_LABELS.TELEGRAM}</MenuItem>
-          <MenuItem value="MAX">{CONTACT_METHOD_LABELS.MAX}</MenuItem>
-        </Select>
-      </FormControl>
+      <ContactMethodSelect
+        id="student-contact-method-label"
+        label="Способ связи"
+        value={formData.contactMethod}
+        isMobile={isMobile}
+        onChange={(value) => onChange("contactMethod")({ target: { value } })}
+      />
 
       {formData.contactMethod === "TELEGRAM" && (
         <TextField
@@ -92,23 +84,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         size={isMobile ? "small" : "medium"}
       />
 
-      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel id="parent-contact-method-label">
-          Способ связи (родители)
-        </InputLabel>
-        <Select
-          labelId="parent-contact-method-label"
-          value={formData.parentContactMethod || "WHATSAPP"}
-          onChange={(e: SelectChangeEvent<string>) =>
-            onChange("parentContactMethod")({ target: { value: e.target.value } })
-          }
-          label="Способ связи (родители)"
-        >
-          <MenuItem value="WHATSAPP">{CONTACT_METHOD_LABELS.WHATSAPP}</MenuItem>
-          <MenuItem value="TELEGRAM">{CONTACT_METHOD_LABELS.TELEGRAM}</MenuItem>
-          <MenuItem value="MAX">{CONTACT_METHOD_LABELS.MAX}</MenuItem>
-        </Select>
-      </FormControl>
+      <ContactMethodSelect
+        id="parent-contact-method-label"
+        label="Способ связи (родители)"
+        value={formData.parentContactMethod}
+        isMobile={isMobile}
+        onChange={(value) => onChange("parentContactMethod")({ target: { value } })}
+      />
 
       {formData.parentContactMethod === "TELEGRAM" && (
         <TextField

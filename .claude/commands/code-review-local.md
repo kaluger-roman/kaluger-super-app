@@ -8,7 +8,7 @@ description: Локальный code-review (8 параллельных opus rev
 - Сегодня: !`date -u +%Y-%m-%dT%H:%M:%SZ`
 - Текущая ветка: !`git branch --show-current`
 - Diff stats vs main: !`git diff --shortstat main...HEAD 2>/dev/null || echo "(нет diff'а — base ref не main? см. --base-ref)"`
-- Существующие отчёты: !`ls -t docs/code-reviews/$(git branch --show-current)/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
+- Папки отчётов по веткам (найди папку текущей ветки; в worktree-сессии `git` внутри `$(...)` блокируется, поэтому ветка не подставляется): !`ls -t docs/code-reviews/ 2>/dev/null | head -10 || echo "(папка ещё не создана)"`
 
 ## Задача
 

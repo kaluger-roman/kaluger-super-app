@@ -1,4 +1,4 @@
-import { TextField, FormControlLabel, Checkbox } from "@mui/material";
+import { TextField } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
@@ -7,12 +7,12 @@ import type { Lesson } from "@shared";
 
 import { DateTimeSelector } from "./DateTimeSelector";
 import * as Styled from "./LessonFormContent.styled";
+import { LessonStatusSection } from "./LessonStatusSection";
 import { LessonStudentSection } from "./LessonStudentSection";
 import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
+import { RecurringCheckbox } from "./RecurringCheckbox";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
-import { HomeworkSentStatus } from "../../HomeworkSentStatus";
-import { PaymentStatus } from "../../PaymentStatus";
 import type { LessonFormData } from "../types";
 
 type LessonFormContentProps = {
@@ -106,49 +106,12 @@ export const LessonFormContent = ({
             </Styled.DateFieldWrapper>
           )}
 
-          <Styled.CheckboxContainer>
-            {lesson && (
-              <PaymentStatus
-                lesson={{
-                  ...lesson,
-                  isPaid: formData.isPaid,
-                  paymentDate: formData.paymentDate,
-                }}
-                onPaymentChange={(_lessonId: string, isPaid: boolean, paymentDate?: string) =>
-                  setFormData((prev) => ({ ...prev, isPaid, paymentDate }))
-                }
-              />
-            )}
-            {lesson && (
-              <HomeworkSentStatus
-                lesson={{
-                  ...lesson,
-                  isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
-                }}
-                onHomeworkSentChange={(_lessonId: string, isSent: boolean) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isHomeworkSentByTeacher: isSent,
-                  }))
-                }
-              />
-            )}
-          </Styled.CheckboxContainer>
+          <LessonStatusSection lesson={lesson} formData={formData} setFormData={setFormData} />
           {!lesson && !formData.withoutStudent && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.isRecurring}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isRecurring: e.target.checked,
-                    }))
-                  }
-                  disabled={isLoading}
-                />
-              }
-              label="Регулярное занятие (еженедельно)"
+            <RecurringCheckbox
+              checked={formData.isRecurring}
+              disabled={isLoading}
+              onChange={(isRecurring) => setFormData((prev) => ({ ...prev, isRecurring }))}
             />
           )}
 

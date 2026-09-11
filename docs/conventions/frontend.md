@@ -61,7 +61,7 @@ feature/models/
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file. Никаких `const X = ...` или вспомогательных функций в файле компонента — только сам компонент и его props-тип. Всё остальное → `*.constants.ts(x)` / `*.helpers.ts` / `*.types.ts` рядом
 - **Shared types split by domain.** Один большой `shared/types/index.ts` не масштабируется — разнеси по `types/auth.ts`, `types/student.ts`, `types/lesson.ts`, …, а `index.ts` оставь barrel'ом из `export type`
-- **Components < 150 lines** — split if larger
+- **Components < 150 lines** — split if larger (ESLint enforced: `max-lines` on `*.tsx`, blank lines and comments not counted, tests excluded)
 - **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
 
 ### Types
@@ -97,6 +97,8 @@ feature/models/
 - **No `<form>` tags** — use explicit `onClick` handlers on buttons instead of `onSubmit`
 
 ### Accessibility (a11y)
+
+`plugin:jsx-a11y/recommended` is ESLint enforced (`alt-text`, `label-has-associated-control`, `no-static-element-interactions`, `click-events-have-key-events`, …). Two deliberate exceptions: `jsx-a11y/no-autofocus` is off (`autoFocus` on the first field of a form/dialog is the intended focus management), and the static-element interaction rules are off inside `__tests__` (a `<div onClick>` wrapper is the standard event-propagation probe). The `aria-label` rule below is **not** covered by the plugin — it is review-checked.
 
 - **Icon-only buttons must have `aria-label`** — every `IconButton` (or styled `IconButton`) whose only visible content is an icon must include a Russian `aria-label` describing its action. `<Tooltip>` does NOT replace this — it sets `title`, which screen readers (notably VoiceOver) ignore on interactive elements.
   ```tsx
@@ -200,7 +202,7 @@ sample({ clock: tick, target: cooldownTick });
 
 **Atomic stores:** Avoid large object stores. Instead of `$uiState: { isOpen, selected, anchor }` use separate `$isOpen`, `$selected`, `$anchor`.
 
-**Models < 200 lines** — split into smaller models if larger.
+**Models < 200 lines** — split into smaller models if larger (ESLint enforced: `max-lines` on `*.model.ts`, blank lines and comments not counted).
 
 **Split models by domain** — separate models by logical responsibility (e.g., `list.model.ts`, `form.model.ts`, `dialogs.model.ts`).
 

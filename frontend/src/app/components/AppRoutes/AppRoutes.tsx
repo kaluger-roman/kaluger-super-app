@@ -1,82 +1,31 @@
-import { type FC, lazy, Suspense } from "react";
+import { type FC, Suspense } from "react";
 
-import { useGate } from "effector-react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
 
-import { blockingModel } from "../../model";
+import {
+  AdminPage,
+  DashboardPage,
+  ForgotPasswordPage,
+  LessonsPage,
+  NewsPage,
+  ProfilePage,
+  ReportsPage,
+  ResetPasswordPage,
+  StudentCabinetLayout,
+  StudentInvitePage,
+  StudentSchedulePage,
+  StudentSettingsPage,
+  StudentsPage,
+  StudentVerifyEmailPage,
+} from "./AppRoutes.constants";
 import { AuthLayout } from "../AuthLayout";
 import { AuthRoute } from "../AuthRoute";
 import { ProtectedRoute } from "../ProtectedRoute";
+import { RouteFallback } from "../RouteFallback";
 import { StudentProtectedRoute } from "../StudentProtectedRoute";
-
-const AdminPage = lazy(() =>
-  import("@pages/AdminPage").then((m) => ({ default: m.AdminPage })),
-);
-const ReportsPage = lazy(() =>
-  import("@pages/ReportsPage").then((m) => ({ default: m.ReportsPage })),
-);
-const ProfilePage = lazy(() =>
-  import("@pages/profile").then((m) => ({ default: m.ProfilePage })),
-);
-const NewsPage = lazy(() =>
-  import("@pages/news").then((m) => ({ default: m.NewsPage })),
-);
-const ForgotPasswordPage = lazy(() =>
-  import("@pages/forgotPassword").then((m) => ({
-    default: m.ForgotPasswordPage,
-  })),
-);
-const ResetPasswordPage = lazy(() =>
-  import("@pages/resetPassword").then((m) => ({
-    default: m.ResetPasswordPage,
-  })),
-);
-const DashboardPage = lazy(() =>
-  import("@pages/dashboard").then((m) => ({ default: m.DashboardPage })),
-);
-const LessonsPage = lazy(() =>
-  import("@pages/lessons").then((m) => ({ default: m.LessonsPage })),
-);
-const StudentsPage = lazy(() =>
-  import("@pages/students").then((m) => ({ default: m.StudentsPage })),
-);
-const StudentCabinetLayout = lazy(() =>
-  import("@pages/studentCabinet").then((m) => ({
-    default: m.StudentCabinetLayout,
-  })),
-);
-const StudentInvitePage = lazy(() =>
-  import("@pages/studentInvite").then((m) => ({
-    default: m.StudentInvitePage,
-  })),
-);
-const StudentSchedulePage = lazy(() =>
-  import("@pages/studentSchedule").then((m) => ({
-    default: m.StudentSchedulePage,
-  })),
-);
-const StudentSettingsPage = lazy(() =>
-  import("@pages/studentSettings").then((m) => ({
-    default: m.StudentSettingsPage,
-  })),
-);
-const StudentVerifyEmailPage = lazy(() =>
-  import("@pages/studentVerifyEmail").then((m) => ({
-    default: m.StudentVerifyEmailPage,
-  })),
-);
-
-// Renders nothing itself — mounting it raises RouteChunkGate, and the single
-// blocking overlay in App covers the chunk load (a second Backdrop here
-// stacked dim layers when a request ran while a chunk was loading).
-const RouteFallback: FC = () => {
-  useGate(blockingModel.RouteChunkGate);
-
-  return null;
-};
 
 type AppRoutesProps = {
   isLoggedIn: boolean;

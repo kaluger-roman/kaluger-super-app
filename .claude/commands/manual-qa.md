@@ -7,7 +7,7 @@ description: Ручное QA-тестирование фичи текущей в
 
 - Сегодня: !`date +%Y-%m-%d`
 - Текущая ветка: !`git branch --show-current`
-- Спека ветки: !`BR=$(git branch --show-current); ls specs/$BR/ 2>/dev/null | head -10 || echo "(specs/$BR/ не найден — попытайся подобрать по префиксу)"`
+- Папки спек (подбери `specs/<id>/` по текущей ветке или её префиксу `NNN-`; в worktree-сессии `git` внутри `$(...)` блокируется, поэтому ветка не подставляется): !`ls specs/ 2>/dev/null | tail -15 || echo "(specs/ не найден)"`
 - QA-стек ветки: !`bash scripts/qa-stack.sh port 2>/dev/null || echo "не поднят — поднимется на Этапе 2"`
 - Существующие отчёты: !`ls -t docs/manual-qa-reports/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
 
