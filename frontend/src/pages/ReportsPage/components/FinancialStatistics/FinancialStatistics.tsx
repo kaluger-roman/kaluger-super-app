@@ -1,14 +1,15 @@
 import type { FC } from "react";
 
-import { AttachMoney, Payments } from "@mui/icons-material";
-import { Typography, CardContent, Box } from "@mui/material";
+import { Typography, CardContent } from "@mui/material";
 
 import { TaxRateInfoTooltip } from "@features";
 import { formatCurrency } from "@shared";
 import type { Statistics } from "@shared";
 
+import { DebtCard } from "./DebtCard";
 import { getTaxLabel, shouldShowTaxInfoIcon } from "./FinancialStatistics.helpers";
 import * as Styled from "./FinancialStatistics.styled";
+import { IncomeCards } from "./IncomeCards";
 import { calculateAveragePrice } from "../../ReportsPage.helpers";
 
 type FinancialStatisticsProps = {
@@ -23,58 +24,8 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
   const showInfoIcon = shouldShowTaxInfoIcon(breakdown);
   return (
     <Styled.StatsContainer>
-      <Styled.StatBox>
-        <Styled.GreenCard>
-          <Styled.GreenCardContent>
-            <Styled.GreenTitle variant="h6">
-              <AttachMoney className="icon" />
-              Заработок
-            </Styled.GreenTitle>
-            <Styled.GreenAmount variant="h4">
-              {formatCurrency(statistics.earnings)}
-            </Styled.GreenAmount>
-            <Typography variant="body2" color="textSecondary">
-              Сумма за проведённые уроки в периоде (по дате урока)
-            </Typography>
-          </Styled.GreenCardContent>
-        </Styled.GreenCard>
-      </Styled.StatBox>
+      <IncomeCards statistics={statistics} />
 
-      <Styled.StatBox>
-        <Styled.BlueCard>
-          <Styled.BlueCardContent>
-            <Styled.BlueTitle variant="h6">
-              <AttachMoney className="icon" />
-              Предоплата
-            </Styled.BlueTitle>
-            <Styled.BlueAmount variant="h4">
-              {formatCurrency(statistics.prepaidIncome || 0)}
-            </Styled.BlueAmount>
-            <Typography variant="body2" color="textSecondary">
-              Дохoд от всех предоплаченных уроков (остаток)
-            </Typography>
-          </Styled.BlueCardContent>
-        </Styled.BlueCard>
-      </Styled.StatBox>
-
-      <Styled.StatBox>
-        <Styled.TealCard>
-          <Styled.TealCardContent>
-            <Styled.TealTitle variant="h6">
-              <Payments className="icon" />
-              Поступления за период
-            </Styled.TealTitle>
-            <Styled.TealAmount variant="h4">
-              {formatCurrency(statistics.paymentsInRangeSum || 0)}
-            </Styled.TealAmount>
-            <Typography variant="body2" color="textSecondary">
-              Фактические поступления ({statistics.paymentsInRangeCount || 0} оплат по дате платежа)
-            </Typography>
-          </Styled.TealCardContent>
-        </Styled.TealCard>
-      </Styled.StatBox>
-
-      {/* Average lesson */}
       <Styled.StatBox flex="1" minWidth={220}>
         <Styled.YellowCard>
           <CardContent>
@@ -93,7 +44,6 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
         </Styled.YellowCard>
       </Styled.StatBox>
 
-      {/* Lost earnings */}
       <Styled.StatBox flex="1" minWidth={220}>
         <Styled.RedCard>
           <CardContent>
@@ -132,7 +82,6 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
         </Styled.StatBox>
       ) : null}
 
-      {/* Potential income */}
       <Styled.StatBox flex="1" minWidth={220}>
         <Styled.LightGreenCard>
           <CardContent>
@@ -153,38 +102,8 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
         </Styled.LightGreenCard>
       </Styled.StatBox>
 
-      {/* Unpaid debt */}
       <Styled.StatBox>
-        <Styled.YellowDebtCard>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Задолженность
-            </Typography>
-            <Box display="flex" flexDirection="column" gap={1}>
-              <Styled.DebtRow>
-                <Typography variant="body2">Итого (проведено, не оплачено):</Typography>
-                <Styled.DebtAmount variant="body2" color="error">
-                  {formatCurrency(statistics.unpaidDebtSum || 0)}
-                </Styled.DebtAmount>
-              </Styled.DebtRow>
-              <Styled.DebtRow>
-                <Typography variant="body2">Количество уроков:</Typography>
-                <Styled.DebtAmount variant="body2" color="error">
-                  {statistics.unpaidDebtCount || 0}
-                </Styled.DebtAmount>
-              </Styled.DebtRow>
-              <Styled.DebtRow>
-                <Typography variant="body2" color="textSecondary">
-                  Не оплачено более 24 часов:
-                </Typography>
-                <Styled.DebtAmount variant="body2" color="error">
-                  {formatCurrency(statistics.unpaidDebtOver24hSum || 0)} (
-                  {statistics.unpaidDebtOver24hCount || 0} уроков)
-                </Styled.DebtAmount>
-              </Styled.DebtRow>
-            </Box>
-          </CardContent>
-        </Styled.YellowDebtCard>
+        <DebtCard statistics={statistics} />
       </Styled.StatBox>
 
       <Styled.StatBox flex="0" minWidth={180}>

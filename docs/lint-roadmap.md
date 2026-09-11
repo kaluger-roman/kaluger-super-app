@@ -17,7 +17,7 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `no-explicit-any` | lint + `tsc --noEmit` |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9) | lint + `tsc --noEmit` |
 | **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) | lint + `tsc` build |
 | landing | flat config | lint + tsc + test |
 
@@ -55,8 +55,8 @@ Measured on `origin/main` baseline (eslint `--rule` dry-run over `src/**/*.{ts,t
 | 5 | `no-restricted-syntax` → `TSEnumDeclaration` | String literals, not enums | no | ✅ PR1 | **0** |
 | 6 | `react/forbid-component-props: { forbid: ["sx","style"] }` (+ `forbid-dom-props` style) | No inline styles | no | ✅ PR2 | **4** (4 files, all `sx`) — moved to styled components |
 | 7 | `react/forbid-elements: { forbid: ["form"] }` | No `<form>` tags | no | ✅ PR1 | **0** |
-| 8 | `jsx-a11y` recommended → `error` (alt-text, label-has-associated-control, no-static-element-interactions, …) | a11y section | no | DECIDE | **~18** msgs / ~9 spots / 4 files (sampled subset) |
-| 9 | `max-lines` overrides (`*.tsx` 150, `*.model.ts` 200) | size limits | no | DECIDE | **9** `*.tsx` >150, **4** `*.model.ts` >200 |
+| 8 | `jsx-a11y` recommended → `error` (alt-text, label-has-associated-control, no-static-element-interactions, …) | a11y section | no | ✅ PR4 | **29**: 9 `no-autofocus` (prod, rule turned `off`), 20 `no-static-element-interactions` + `click-events-have-key-events` (all in tests, `off` for `__tests__`) |
+| 9 | `max-lines` overrides (`*.tsx` 150, `*.model.ts` 200; `skipBlankLines` + `skipComments`, tests excluded) | size limits | no | ✅ PR4 | **5** `*.tsx` (177/168/151/166/194), **0** `*.model.ts` — all 5 split |
 
 **PR1 (branch `chore/lint-conventions`) — landed locally, verified (lint + tsc + 1716 tests):** #1, #2, #3, #4, #5, #7 + dedup `plugins` key (0.2). 8 files, +32/−11.
 
@@ -64,7 +64,11 @@ Notes:
 - **#4** — default `disallowTypeAnnotations: true` rejects the `vi.importActual<typeof import("…")>()` mock pattern (24 tests, not autofixable). Set `false`: keeps `import type` for top-level, allows `import()` annotations. Real top-level fixes = 7 files.
 - **#7** — dropped the `onSubmit` ban: `onSubmit` is a legit custom prop name in 38 spots and there are no `<form>` elements, so forbidding the `form` element already covers the convention.
 
-**Still to do:** #8 (~9 spots, manual), #9 (refactor 9+4 files _or_ set threshold + grandfather).
+**PR4 (branch `worktree-chore-lint-frontend-m1`): #8, #9.** Milestone 1 closed.
+
+Notes:
+- **#8** — `no-autofocus` is `off`: all 9 hits were `autoFocus` on the first `TextField` of a login/register/reset form or a freshly opened dialog, which is the expected focus-management behaviour there, not a defect. `no-static-element-interactions` / `click-events-have-key-events` are `off` only under `__tests__` / `*.test.tsx`: every hit was a `<div onClick>` wrapper used as an event-propagation probe. Everything else in `jsx-a11y/recommended` is `error` with 0 violations. Note the plugin does **not** cover the "icon-only `IconButton` needs `aria-label`" rule — that stays review-checked.
+- **#9** — counted with `skipBlankLines: true, skipComments: true` (the convention limits code, not whitespace); `__tests__` / `*.test.tsx` excluded. The earlier "9 + 4" estimate counted raw lines. The 5 oversized components were split instead of grandfathered: `AppRoutes` (lazy pages → `AppRoutes.constants.ts`, `RouteFallback` → own component), `LessonFormContent` (→ `LessonStatusSection`, `RecurringCheckbox`), `StudentFormFields` (duplicated contact-method select → `ContactMethodSelect`), `InvitationManager` (duplicated issue/revoke row → `InvitationActions`), `FinancialStatistics` (→ `IncomeCards`, `DebtCard`). Each new component has its own tests.
 
 ---
 

@@ -40,9 +40,3 @@ export const ReadonlyField = styled(TextField)({
   flex: 1,
   "& input": { fontFamily: "monospace", fontSize: "0.85rem" },
 });
-
-export const ButtonsRow = styled(Box)({
-  display: "flex",
-  gap: "8px",
-  flexWrap: "wrap",
-});

@@ -13,6 +13,7 @@ module.exports = {
         "plugin:@typescript-eslint/recommended",
         "plugin:import/errors",
         "plugin:import/warnings",
+        "plugin:jsx-a11y/recommended",
     ],
     settings: {
         "import/parsers": {
@@ -198,6 +199,7 @@ module.exports = {
                 ],
             },
         ],
+        "jsx-a11y/no-autofocus": "off",
         "react/forbid-elements": [
             "error",
             {
@@ -216,6 +218,26 @@ module.exports = {
             rules: {
                 "@typescript-eslint/no-explicit-any": "error",
                 "@typescript-eslint/explicit-module-boundary-types": "off",
+            },
+        },
+        {
+            files: ["src/**/*.tsx"],
+            excludedFiles: ["**/__tests__/**", "**/*.test.tsx"],
+            rules: {
+                "max-lines": ["error", { max: 150, skipBlankLines: true, skipComments: true }],
+            },
+        },
+        {
+            files: ["src/**/*.model.ts"],
+            rules: {
+                "max-lines": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
+            },
+        },
+        {
+            files: ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+            rules: {
+                "jsx-a11y/click-events-have-key-events": "off",
+                "jsx-a11y/no-static-element-interactions": "off",
             },
         },
     ],
