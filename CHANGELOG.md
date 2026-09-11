@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-11
+
+### Infrastructure
+- The `check-changelog-before-pr` hook now resolves the PR branch from the `gh pr create` command itself (`cd <worktree> && …` prefix and/or `--head <branch>`) instead of the session's checked-out branch — it produced false denials whenever the PR was submitted from another worktree. It also ignores non-`gh pr create` commands that slipped through the settings filter. Scenario tests in `.claude/hooks/__tests__/check-changelog-before-pr.test.sh`
+
 ## 2026-09-07
 
 ### Added
