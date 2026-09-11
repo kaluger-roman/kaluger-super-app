@@ -28,7 +28,7 @@ backend/
 | ---------- | ------------------------- | ----------------------- |
 | Routes     | `[domain].ts`             | `routes/`               |
 | Controller | `[domain]/index.ts`       | `controllers/`          |
-| Validators | `validators.ts`           | `controllers/[domain]/` |
+| Validators | `validators.ts` or `[action].validators.ts` | `controllers/[domain]/` |
 | Services   | `[domain]/index.ts`       | `services/`             |
 | Service constants | `[domain].constants.ts` | `services/[domain]/` |
 | Service helpers | `[domain].helpers.ts`   | `services/[domain]/` |
@@ -168,7 +168,7 @@ type AuthRequest = Request & { user?: JwtPayload };
 
 1. Define types in `src/types/index.ts`
 2. Create controller in `src/controllers/[feature]/`
-3. Add validators in `controllers/[feature]/validators.ts`
+3. Add validators in `controllers/[feature]/validators.ts` (or `[action].validators.ts` when one action's validation is large enough to stand alone)
 4. Define routes in `src/routes/[feature].ts`
 5. Register routes in `src/index.ts`
 6. Add service if complex logic needed

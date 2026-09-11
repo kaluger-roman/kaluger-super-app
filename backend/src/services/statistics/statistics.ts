@@ -1,29 +1,16 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
-import { computeTaxSummary, decimalToNumber } from "./statistics.helpers";
+import { ACTIVE_STATUSES, DAY_MS } from "./statistics.constants";
+import {
+  computeTaxSummary,
+  decimalToNumber,
+  paidInRangeWhere,
+} from "./statistics.helpers";
 import type {
-  DateRange,
   LessonStatistics,
   LessonStatisticsInput,
 } from "./statistics.types";
-
-const ACTIVE_STATUSES = ["SCHEDULED", "RESCHEDULED", "IN_PROGRESS"] as const;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// Lessons that contributed money in the filter window. Primary signal
-// is `paymentDate`, but legacy/imported lessons may be marked as paid
-// without one — for those we fall back to `startTime` so the income
-// still surfaces in the period it was earned.
-const paidInRangeWhere = (
-  userId: string,
-  range: DateRange,
-): Prisma.LessonWhereInput => ({
-  tutorId: userId,
-  isPaid: true,
-  price: { gt: 0 },
-  OR: [{ paymentDate: range }, { paymentDate: null, startTime: range }],
-});
 
 export const collectLessonStatistics = async ({
   userId,

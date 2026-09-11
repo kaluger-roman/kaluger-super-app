@@ -19,6 +19,7 @@ import {
   scheduleRemindersForLesson,
 } from "../reminderScheduler";
 import { broadcastStudentLessonUpdated } from "../studentLessonBroadcast";
+import { MAX_TX_RETRIES } from "./lessonUpdate.constants";
 import {
   isTimeChanging,
   shouldPropagateRecurringPrice,
@@ -36,8 +37,6 @@ import type {
 // overlapping requests both pass the conflict-check `findFirst` and both
 // commit overlapping lessons — moving the check inside `$transaction`
 // alone is not enough.
-const MAX_TX_RETRIES = 3;
-
 const runLessonUpdateTransaction = ({
   id,
   userId,
