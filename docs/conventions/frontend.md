@@ -198,6 +198,8 @@ sample({ clock: tick, target: cooldownTick });
 
 Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
+Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/__tests__/web-socket.model.test.ts`.
+
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
 **Atomic stores:** Avoid large object stores. Instead of `$uiState: { isOpen, selected, anchor }` use separate `$isOpen`, `$selected`, `$anchor`.

@@ -1,13 +1,13 @@
 import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { WS_RECONNECT_DELAY_MS } from "../web-socket.constants";
 import {
   connectWebSocket,
   connectWebSocketFx,
   disconnectWebSocket,
   webSocketClosed,
   $isWebSocketEnabled,
-  WS_RECONNECT_DELAY_MS,
 } from "../web-socket.model";
 
 // The reconnect delay lives in patronum's `delay`, whose internal effect stays
@@ -96,6 +96,45 @@ describe("app/model/web-socket.model — reconnect", () => {
     expect(vi.getTimerCount()).toBe(1);
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await secondClose;
+
+    expect(connectHandler).toHaveBeenCalledTimes(3);
+  });
+
+  it("does NOT open a second socket when logout + login happen inside the reconnect delay (regression: stale delay after re-login)", async () => {
+    const { scope, connectHandler } = createScope();
+
+    await allSettled(connectWebSocket, { scope });
+
+    const runs = [
+      allSettled(webSocketClosed, { scope }),
+      allSettled(disconnectWebSocket, { scope }),
+      allSettled(connectWebSocket, { scope }),
+    ];
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await Promise.all(runs);
+
+    expect(scope.getState($isWebSocketEnabled)).toBe(true);
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("still reconnects after a close that follows re-login while a stale delay is pending (regression: stale delay swallowing the next reconnect)", async () => {
+    const { scope, connectHandler } = createScope();
+
+    await allSettled(connectWebSocket, { scope });
+
+    const runs = [
+      allSettled(webSocketClosed, { scope }),
+      allSettled(disconnectWebSocket, { scope }),
+      allSettled(connectWebSocket, { scope }),
+      allSettled(webSocketClosed, { scope }),
+    ];
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(2);
+
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await Promise.all(runs);
 
     expect(connectHandler).toHaveBeenCalledTimes(3);
   });

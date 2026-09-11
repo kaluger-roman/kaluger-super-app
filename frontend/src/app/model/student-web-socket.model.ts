@@ -5,6 +5,8 @@ import { studentScheduleModel } from "@features/studentSchedule";
 import type { StudentLessonWsEvent } from "@shared";
 import { getStudentToken, resolveWsUrl } from "@shared";
 
+import { STUDENT_WS_RECONNECT_DELAY_MS } from "./student-web-socket.constants";
+
 // Connection lifecycle is bound to the **session**, not to any individual page.
 // Future cabinet features (calls, push, etc.) just subscribe to incoming events
 // via this dispatcher — no extra sockets required.
@@ -19,6 +21,13 @@ export const setStudentWebSocketConnection = createEvent<WebSocket | null>();
 export const $studentWebSocketConnection = createStore<WebSocket | null>(null);
 export const $isStudentWebSocketEnabled = createStore(false);
 export const $isStudentWebSocketConnected = createStore(false);
+
+const $isReconnectScheduled = createStore(false);
+// patronum `delay` cannot be cancelled. Every explicit connect/disconnect bumps
+// the generation, and a fired reconnect is honored only if its generation is
+// still current — otherwise leaving and re-entering the cabinet inside the
+// delay opens a second socket.
+const $reconnectGeneration = createStore(0);
 
 // Dispatcher for inbound messages — keep it dumb: parse, route to the relevant
 // feature event. Adding a new event type later (video_call_incoming, push_*,
@@ -125,18 +134,28 @@ sample({
 
 // Auto-reconnect after STUDENT_WS_RECONNECT_DELAY_MS while the session is
 // still enabled. Close events during a scheduled reconnect are collapsed.
-export const STUDENT_WS_RECONNECT_DELAY_MS = 5000;
+sample({
+  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
+  source: $reconnectGeneration,
+  fn: (generation) => generation + 1,
+  target: $reconnectGeneration,
+});
 
-const $isReconnectScheduled = createStore(false);
+sample({
+  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
+  fn: () => false,
+  target: $isReconnectScheduled,
+});
 
 const reconnectScheduled = sample({
   clock: studentWebSocketClosed,
   source: {
     isEnabled: $isStudentWebSocketEnabled,
     isScheduled: $isReconnectScheduled,
+    generation: $reconnectGeneration,
   },
   filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
-  fn: () => undefined,
+  fn: ({ generation }) => generation,
 });
 
 sample({
@@ -152,14 +171,9 @@ const reconnectDelayPassed = delay({
 
 sample({
   clock: reconnectDelayPassed,
-  fn: () => false,
-  target: $isReconnectScheduled,
-});
-
-sample({
-  clock: reconnectDelayPassed,
-  source: $isStudentWebSocketEnabled,
-  filter: (isEnabled) => isEnabled,
+  source: { isEnabled: $isStudentWebSocketEnabled, generation: $reconnectGeneration },
+  filter: ({ isEnabled, generation }, scheduledGeneration) =>
+    isEnabled && generation === scheduledGeneration,
   fn: () => undefined,
   target: connectStudentWebSocket,
 });

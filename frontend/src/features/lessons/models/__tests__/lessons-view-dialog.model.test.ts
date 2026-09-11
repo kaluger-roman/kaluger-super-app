@@ -4,9 +4,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 
+import { $confirmDialog, confirmDialogClosed } from "../lessons-confirm-dialog.model";
 import {
   $isViewDialogOpen,
   $viewingLesson,
+  openCancelConfirmForLesson,
   viewDialogOpened,
 } from "../lessons-view-dialog.model";
 
@@ -98,5 +100,24 @@ describe("lessons-view-dialog.model", () => {
 
     expect(scope.getState($isViewDialogOpen)).toBe(true);
     expect(scope.getState($viewingLesson)).toEqual(lesson);
+  });
+
+  it("should keep confirm dialog title and message after close so the closing animation is not blank (regression: duplicate $confirmDialog reset)", async () => {
+    const scope = fork();
+
+    await allSettled(openCancelConfirmForLesson, { scope, params: createLesson() });
+    expect(scope.getState($confirmDialog)).toMatchObject({
+      open: true,
+      title: "Отменить урок",
+    });
+
+    await allSettled(confirmDialogClosed, { scope });
+
+    expect(scope.getState($confirmDialog)).toMatchObject({
+      open: false,
+      title: "Отменить урок",
+      message: "Вы уверены, что хотите отменить этот урок?",
+      severity: "warning",
+    });
   });
 });

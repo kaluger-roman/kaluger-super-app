@@ -28,7 +28,7 @@ const emptyFileRules = [
     { selector: "Program[body.length=0]", message: "Empty file — delete it instead." },
     {
         selector:
-            "Program > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
+            "Program[body.length=1] > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
         message: "Stub `export {}` — delete the file instead.",
     },
 ];
@@ -278,9 +278,10 @@ module.exports = {
         },
         {
             // CRA's react-app-env.d.ts is a bare `/// <reference>` — empty body by design.
+            // Only the empty-file rules are lifted; enums etc. stay banned.
             files: ["**/*.d.ts"],
             rules: {
-                "no-restricted-syntax": "off",
+                "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, modelNamedImportRule],
             },
         },
         {

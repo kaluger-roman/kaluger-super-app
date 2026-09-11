@@ -132,23 +132,7 @@ sample({
   target: lessonsDeleteDialogModel.$deleteDialogOpen,
 });
 
-// Logic - Confirm Dialog
-sample({
-  clock: lessonsConfirmDialogModel.confirmDialogOpened,
-  target: lessonsConfirmDialogModel.$confirmDialog,
-});
-
-sample({
-  clock: lessonsConfirmDialogModel.confirmDialogClosed,
-  fn: () => ({
-    open: false,
-    title: "",
-    message: "",
-    action: () => undefined,
-  }),
-  target: lessonsConfirmDialogModel.$confirmDialog,
-});
-
+// Logic - Confirm Dialog ($confirmDialog open/close is owned by lessons-confirm-dialog.model)
 sample({
   clock: openCancelConfirmForLesson,
   fn: (lesson): ConfirmDialogState => ({

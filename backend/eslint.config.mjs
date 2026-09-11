@@ -10,7 +10,7 @@ const emptyFileRules = [
   { selector: "Program[body.length=0]", message: "Empty file — delete it instead." },
   {
     selector:
-      "Program > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
+      "Program[body.length=1] > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
     message: "Stub `export {}` — delete the file instead.",
   },
 ];

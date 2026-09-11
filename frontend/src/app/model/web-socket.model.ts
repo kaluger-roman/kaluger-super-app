@@ -5,6 +5,8 @@ import { lessonModel } from "@entities/lesson";
 import { resolveWsUrl } from "@shared";
 import type { LessonStatus } from "@shared/types";
 
+import { WS_RECONNECT_DELAY_MS } from "./web-socket.constants";
+
 // Events
 export const connectWebSocket = createEvent();
 export const disconnectWebSocket = createEvent();
@@ -69,6 +71,12 @@ export const $isWebSocketConnected = $webSocketConnection.map(
 
 export const $isWebSocketEnabled = createStore(true);
 
+const $isReconnectScheduled = createStore(false);
+// patronum `delay` cannot be cancelled. Every explicit connect/disconnect bumps
+// the generation, and a fired reconnect is honored only if its generation is
+// still current — otherwise logout + login inside the delay opens a second socket.
+const $reconnectGeneration = createStore(0);
+
 // Store setters
 export const setWebSocketConnection = createEvent<WebSocket | null>();
 
@@ -115,15 +123,28 @@ sample({
 
 // Reconnect after WS_RECONNECT_DELAY_MS if WebSocket is still enabled.
 // Close events arriving while a reconnect is already scheduled are collapsed.
-export const WS_RECONNECT_DELAY_MS = 5000;
+sample({
+  clock: [connectWebSocket, disconnectWebSocket],
+  source: $reconnectGeneration,
+  fn: (generation) => generation + 1,
+  target: $reconnectGeneration,
+});
 
-const $isReconnectScheduled = createStore(false);
+sample({
+  clock: [connectWebSocket, disconnectWebSocket],
+  fn: () => false,
+  target: $isReconnectScheduled,
+});
 
 const reconnectScheduled = sample({
   clock: webSocketClosed,
-  source: { isEnabled: $isWebSocketEnabled, isScheduled: $isReconnectScheduled },
+  source: {
+    isEnabled: $isWebSocketEnabled,
+    isScheduled: $isReconnectScheduled,
+    generation: $reconnectGeneration,
+  },
   filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
-  fn: () => undefined,
+  fn: ({ generation }) => generation,
 });
 
 sample({
@@ -136,14 +157,9 @@ const reconnectDelayPassed = delay({ source: reconnectScheduled, timeout: WS_REC
 
 sample({
   clock: reconnectDelayPassed,
-  fn: () => false,
-  target: $isReconnectScheduled,
-});
-
-sample({
-  clock: reconnectDelayPassed,
-  source: $isWebSocketEnabled,
-  filter: (isEnabled) => isEnabled,
+  source: { isEnabled: $isWebSocketEnabled, generation: $reconnectGeneration },
+  filter: ({ isEnabled, generation }, scheduledGeneration) =>
+    isEnabled && generation === scheduledGeneration,
   fn: () => undefined,
   target: connectWebSocket,
 });
