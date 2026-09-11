@@ -579,8 +579,13 @@ describe("getStatistics controller", () => {
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
 
-    // lesson whose startTime is far in the past but payment came today — must be counted
+    // lesson whose startTime is far in the past but payment came today — must be counted.
+    // "An hour ago" is clamped to the start of today: in the first hour after
+    // local midnight it would otherwise land on yesterday and fall out of range.
     const oldStart = new Date(today.getFullYear() - 2, 0, 1, 10, 0, 0);
+    const paidEarlierToday = new Date(
+      Math.max(startOfToday.getTime(), today.getTime() - 60 * 60 * 1000)
+    );
     await prisma.lesson.create({
       data: {
         tutorId: userId,
@@ -592,7 +597,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 2500,
-        paymentDate: new Date(today.getTime() - 60 * 60 * 1000),
+        paymentDate: paidEarlierToday,
         status: "COMPLETED",
       },
     });
