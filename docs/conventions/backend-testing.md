@@ -4,7 +4,7 @@ Stack: Jest + Supertest + Faker + test database
 
 ## Rules
 
-- **Do NOT mock Prisma** — use separate test database
+- **Do NOT mock Prisma** — use separate test database (ESLint enforced: `no-restricted-syntax` rejects `jest.mock("…prisma…")`)
 - **Clean up after tests** — delete created records
 - **Tests must be independent** — no shared state between tests
 - **Always async/await** — never callbacks

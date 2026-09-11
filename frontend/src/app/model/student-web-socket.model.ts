@@ -1,9 +1,5 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
+import { delay } from "patronum";
 
 import { studentScheduleModel } from "@features/studentSchedule";
 import type { StudentLessonWsEvent } from "@shared";
@@ -47,51 +43,45 @@ const dispatchMessage = (raw: string): void => {
   }
 };
 
-export const connectStudentWebSocketFx = createEffect(
-  (): WebSocket | null => {
-    const token = getStudentToken();
-    if (!token) return null;
+export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
+  const token = getStudentToken();
+  if (!token) return null;
 
-    const ws = new WebSocket(
-      `${resolveWsUrl("/ws/student")}?token=${encodeURIComponent(token)}`
-    );
+  const ws = new WebSocket(`${resolveWsUrl("/ws/student")}?token=${encodeURIComponent(token)}`);
 
-    ws.onopen = () => {
-      console.log("Student WS connected");
-      studentWebSocketOpened();
-    };
+  ws.onopen = () => {
+    console.log("Student WS connected");
+    studentWebSocketOpened();
+  };
 
-    ws.onmessage = (event) => {
-      dispatchMessage(event.data);
-    };
+  ws.onmessage = (event) => {
+    dispatchMessage(event.data);
+  };
 
-    ws.onclose = () => {
-      console.log("Student WS disconnected");
-      setStudentWebSocketConnection(null);
-      studentWebSocketClosed();
-    };
+  ws.onclose = () => {
+    console.log("Student WS disconnected");
+    setStudentWebSocketConnection(null);
+    studentWebSocketClosed();
+  };
 
-    ws.onerror = (error) => {
-      console.error("Student WS error:", error);
-    };
+  ws.onerror = (error) => {
+    console.error("Student WS error:", error);
+  };
 
-    // Сохраняем connection синхронно — ДО возвращения из эффекта. Иначе если
-    // disconnectStudentWebSocket срабатывает между созданием WebSocket и
-    // onopen (быстрый logout/нав), стор остаётся null и handshake продолжится
-    // без шанса быть закрытым (orphaned socket).
-    setStudentWebSocketConnection(ws);
+  // Сохраняем connection синхронно — ДО возвращения из эффекта. Иначе если
+  // disconnectStudentWebSocket срабатывает между созданием WebSocket и
+  // onopen (быстрый logout/нав), стор остаётся null и handshake продолжится
+  // без шанса быть закрытым (orphaned socket).
+  setStudentWebSocketConnection(ws);
 
-    return ws;
+  return ws;
+});
+
+export const disconnectStudentWebSocketFx = createEffect((ws: WebSocket | null) => {
+  if (ws) {
+    ws.close();
   }
-);
-
-export const disconnectStudentWebSocketFx = createEffect(
-  (ws: WebSocket | null) => {
-    if (ws) {
-      ws.close();
-    }
-  }
-);
+});
 
 sample({
   clock: setStudentWebSocketConnection,
@@ -133,28 +123,41 @@ sample({
   target: disconnectStudentWebSocketFx,
 });
 
-// Auto-reconnect with backoff (exported so tests can override via fork's
-// handlers map).
-export const studentWebSocketReconnectTimeoutFx = createEffect(
-  () =>
-    new Promise<void>((resolve) => {
-      setTimeout(() => resolve(), 5000);
-    })
-);
+// Auto-reconnect after STUDENT_WS_RECONNECT_DELAY_MS while the session is
+// still enabled. Close events during a scheduled reconnect are collapsed.
+export const STUDENT_WS_RECONNECT_DELAY_MS = 5000;
 
-sample({
+const $isReconnectScheduled = createStore(false);
+
+const reconnectScheduled = sample({
   clock: studentWebSocketClosed,
   source: {
     isEnabled: $isStudentWebSocketEnabled,
-    pending: studentWebSocketReconnectTimeoutFx.pending,
+    isScheduled: $isReconnectScheduled,
   },
-  filter: ({ isEnabled, pending }) => isEnabled && !pending,
+  filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
   fn: () => undefined,
-  target: studentWebSocketReconnectTimeoutFx,
 });
 
 sample({
-  clock: studentWebSocketReconnectTimeoutFx.doneData,
+  clock: reconnectScheduled,
+  fn: () => true,
+  target: $isReconnectScheduled,
+});
+
+const reconnectDelayPassed = delay({
+  source: reconnectScheduled,
+  timeout: STUDENT_WS_RECONNECT_DELAY_MS,
+});
+
+sample({
+  clock: reconnectDelayPassed,
+  fn: () => false,
+  target: $isReconnectScheduled,
+});
+
+sample({
+  clock: reconnectDelayPassed,
   source: $isStudentWebSocketEnabled,
   filter: (isEnabled) => isEnabled,
   fn: () => undefined,

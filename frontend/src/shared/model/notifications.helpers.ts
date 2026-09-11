@@ -1,9 +1,13 @@
-import { showNotification } from "./notifications.model";
+import * as notificationsModel from "./notifications.model";
 
-export const showSuccess = (message: string) => showNotification({ message, type: "success" });
+export const showSuccess = (message: string) =>
+  notificationsModel.showNotification({ message, type: "success" });
 
-export const showError = (message: string) => showNotification({ message, type: "error" });
+export const showError = (message: string) =>
+  notificationsModel.showNotification({ message, type: "error" });
 
-export const showWarning = (message: string) => showNotification({ message, type: "warning" });
+export const showWarning = (message: string) =>
+  notificationsModel.showNotification({ message, type: "warning" });
 
-export const showInfo = (message: string) => showNotification({ message, type: "info" });
+export const showInfo = (message: string) =>
+  notificationsModel.showNotification({ message, type: "info" });

@@ -9,7 +9,7 @@ import { ConfirmStatusDialog, getLessonDisplayName } from "@shared";
 import * as lessonStatusIconsModel from "./lesson-status-icons.model";
 import { usePaymentDate } from "./LessonStatusIcons.hooks";
 import * as Styled from "./LessonStatusIcons.styled";
-import { lessonPaymentChanged, lessonHomeworkSentChanged } from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lesson-actions.model";
 
 type Props = {
   lesson: Lesson;
@@ -19,7 +19,10 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
   const openPaymentDialogFor = useUnit(lessonStatusIconsModel.$openPaymentDialogFor);
   const openHomeworkDialogFor = useUnit(lessonStatusIconsModel.$openHomeworkDialogFor);
 
-  const actions = useUnit({ lessonPaymentChanged, lessonHomeworkSentChanged });
+  const actions = useUnit({
+    lessonPaymentChanged: lessonActionsModel.lessonPaymentChanged,
+    lessonHomeworkSentChanged: lessonActionsModel.lessonHomeworkSentChanged,
+  });
 
   const paymentDialogOpen = openPaymentDialogFor === lesson.id;
   const homeworkDialogOpen = openHomeworkDialogFor === lesson.id;

@@ -2,6 +2,28 @@ import eslint from "@eslint/js";
 import importPlugin from "eslint-plugin-import";
 import tseslint from "typescript-eslint";
 
+const enumRule = {
+  selector: "TSEnumDeclaration",
+  message: "Use string literal union types instead of enums.",
+};
+const emptyFileRules = [
+  { selector: "Program[body.length=0]", message: "Empty file — delete it instead." },
+  {
+    selector:
+      "Program > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
+    message: "Stub `export {}` — delete the file instead.",
+  },
+];
+const errorClassRule = {
+  selector: 'ClassDeclaration[superClass.name="Error"], ClassExpression[superClass.name="Error"]',
+  message: "Custom Error classes live in src/utils/errors.ts.",
+};
+const prismaMockRule = {
+  selector:
+    'CallExpression[callee.object.name="jest"][callee.property.name=/^(mock|doMock|unstable_mockModule)$/][arguments.0.value=/prisma/i]',
+  message: "Do NOT mock Prisma — run against the test database.",
+};
+
 export default tseslint.config(
   {
     ignores: ["dist/**", "coverage/**", "node_modules/**", "eslint.config.mjs"],
@@ -33,10 +55,22 @@ export default tseslint.config(
       "func-style": ["error", "expression"],
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "TSEnumDeclaration",
-          message: "Use string literal union types instead of enums.",
-        },
+        enumRule,
+        ...emptyFileRules,
+        errorClassRule,
+        prismaMockRule,
+      ],
+    },
+  },
+  {
+    // The one file allowed to declare `class X extends Error`.
+    files: ["src/utils/errors.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        enumRule,
+        ...emptyFileRules,
+        prismaMockRule,
       ],
     },
   },

@@ -4,7 +4,7 @@ import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 import { formatDateLong, formatTime, lessonsApi } from "@shared";
 
-import { confirmDialogOpened } from "./lessons-confirm-dialog.model";
+import * as lessonsConfirmDialogModel from "./lessons-confirm-dialog.model";
 
 export type CancellationInfo = {
   nextLessonId: string;
@@ -25,14 +25,16 @@ sample({
   target: $cancellingLesson,
 });
 
-export const getCancellationInfoFx = createEffect(async (lessonId: string): Promise<CancellationInfo> => {
-  try {
-    return await lessonsApi.getCancellationInfo(lessonId);
-  } catch (error) {
-    console.error("Failed to get cancellation info:", error);
-    return null;
+export const getCancellationInfoFx = createEffect(
+  async (lessonId: string): Promise<CancellationInfo> => {
+    try {
+      return await lessonsApi.getCancellationInfo(lessonId);
+    } catch (error) {
+      console.error("Failed to get cancellation info:", error);
+      return null;
+    }
   }
-});
+);
 
 sample({
   clock: lessonCancelRequested,
@@ -79,7 +81,7 @@ sample({
       severity: "warning" as const,
     };
   },
-  target: confirmDialogOpened,
+  target: lessonsConfirmDialogModel.confirmDialogOpened,
 });
 
 sample({
@@ -101,7 +103,7 @@ sample({
       cancellingLesson &&
         lesson &&
         cancellingLesson.id === lesson.id &&
-        lesson.status === "CANCELLED",
+        lesson.status === "CANCELLED"
     ),
   fn: () => null,
   target: [$cancellingLesson, $cancellationInfo],

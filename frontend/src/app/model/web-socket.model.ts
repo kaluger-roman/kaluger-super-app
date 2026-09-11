@@ -1,4 +1,5 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
+import { delay } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
 import { resolveWsUrl } from "@shared";
@@ -112,25 +113,35 @@ sample({
   target: lessonModel.updateLesson,
 });
 
-// Reconnect after 5 seconds if WebSocket is enabled.
-// Exported so tests can override its handler via `fork({ handlers: ... })`
-// without dealing with the global setTimeout / WebSocket mock plumbing.
-export const reconnectTimeoutFx = createEffect(() => {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => resolve(), 5000);
-  });
-});
+// Reconnect after WS_RECONNECT_DELAY_MS if WebSocket is still enabled.
+// Close events arriving while a reconnect is already scheduled are collapsed.
+export const WS_RECONNECT_DELAY_MS = 5000;
 
-sample({
+const $isReconnectScheduled = createStore(false);
+
+const reconnectScheduled = sample({
   clock: webSocketClosed,
-  source: { isEnabled: $isWebSocketEnabled, pending: reconnectTimeoutFx.pending },
-  filter: ({ isEnabled, pending }) => isEnabled && !pending,
+  source: { isEnabled: $isWebSocketEnabled, isScheduled: $isReconnectScheduled },
+  filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
   fn: () => undefined,
-  target: reconnectTimeoutFx,
 });
 
 sample({
-  clock: reconnectTimeoutFx.doneData,
+  clock: reconnectScheduled,
+  fn: () => true,
+  target: $isReconnectScheduled,
+});
+
+const reconnectDelayPassed = delay({ source: reconnectScheduled, timeout: WS_RECONNECT_DELAY_MS });
+
+sample({
+  clock: reconnectDelayPassed,
+  fn: () => false,
+  target: $isReconnectScheduled,
+});
+
+sample({
+  clock: reconnectDelayPassed,
   source: $isWebSocketEnabled,
   filter: (isEnabled) => isEnabled,
   fn: () => undefined,

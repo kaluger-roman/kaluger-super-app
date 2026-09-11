@@ -62,7 +62,7 @@ feature/models/
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file. Никаких `const X = ...` или вспомогательных функций в файле компонента — только сам компонент и его props-тип. Всё остальное → `*.constants.ts(x)` / `*.helpers.ts` / `*.types.ts` рядом
 - **Shared types split by domain.** Один большой `shared/types/index.ts` не масштабируется — разнеси по `types/auth.ts`, `types/student.ts`, `types/lesson.ts`, …, а `index.ts` оставь barrel'ом из `export type`
 - **Components < 150 lines** — split if larger (ESLint enforced: `max-lines` on `*.tsx`, blank lines and comments not counted, tests excluded)
-- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
+- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}` (ESLint enforced: `no-restricted-syntax`, `*.d.ts` excluded)
 
 ### Types
 
@@ -76,7 +76,7 @@ feature/models/
 
 - **No inline styles** — no `style={{}}`, no `sx={{}}` (ESLint enforced: `react/forbid-component-props`, `react/forbid-dom-props`)
 
-- **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering:
+- **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering (ESLint enforced: `no-restricted-imports` bans `styled` from `@mui/material`, `@mui/material/styles`, `@mui/system`, `@emotion/styled`, `styled-components`; inside `shared` import it relatively from `shared/lib`):
 
   ```typescript
   import { styled } from "@shared";
@@ -163,7 +163,7 @@ feature/models/
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
 - `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
 
-`.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced (`eslint-plugin-effector`), including in tests — observe units in tests via `createWatch({ unit, fn, scope })`. The rest of the list is review-checked.
+`.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced (`eslint-plugin-effector`), including in tests — observe units in tests via `createWatch({ unit, fn, scope })`. `useUnit([...])` and raw `setTimeout` / `setInterval` inside `*.model.ts` are ESLint-enforced via `no-restricted-syntax` (timers are allowed in tests). The rest of the list is review-checked.
 
 **useUnit pattern:**
 
@@ -231,7 +231,7 @@ sample({
 });
 ```
 
-**Export and import models as namespace:**
+**Export and import models as namespace** (ESLint enforced: `no-restricted-syntax` bans named value imports from `*.model` files in prod code; `import type { … }` is fine, tests may import model internals directly):
 
 ```typescript
 // ✅ Export in index.ts

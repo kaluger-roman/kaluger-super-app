@@ -1,4 +1,6 @@
-import { Container, Box, Typography, Paper, Fab, styled } from "@mui/material";
+import { Container, Box, Typography, Paper, Fab } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const StyledContainer = styled(Container)({
   paddingTop: "32px",

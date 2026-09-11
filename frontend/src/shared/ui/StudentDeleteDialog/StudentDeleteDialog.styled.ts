@@ -1,4 +1,6 @@
-import { styled, Alert, Typography } from "@mui/material";
+import { Alert, Typography } from "@mui/material";
+
+import { styled } from "../../lib/styled.helpers";
 
 export const StyledAlert = styled(Alert)(({ theme }) => ({
   marginBottom: theme.spacing(2),

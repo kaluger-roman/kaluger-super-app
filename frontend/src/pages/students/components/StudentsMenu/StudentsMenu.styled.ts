@@ -1,4 +1,6 @@
-import { MenuItem, styled } from "@mui/material";
+import { MenuItem } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const StyledMenuItem = styled(MenuItem)({
   "& .MuiSvgIcon-root": {
