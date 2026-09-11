@@ -1,5 +1,6 @@
 import request from "supertest";
-import express, { Response } from "express";
+import type { Response } from "express";
+import express from "express";
 
 // Mock verifyToken from utils/auth
 jest.mock("../../utils/auth", () => ({
@@ -8,8 +9,7 @@ jest.mock("../../utils/auth", () => ({
 
 // Mock prisma so we can assert on user.update calls
 jest.mock("../../lib/prisma", () => ({
-  __esModule: true,
-  default: {
+  prisma: {
     user: {
       update: jest.fn(() => Promise.resolve()),
       findUnique: jest.fn(() => Promise.resolve({ tokenVersion: 0 })),
@@ -18,9 +18,10 @@ jest.mock("../../lib/prisma", () => ({
 }));
 
 import { verifyToken } from "../../utils/auth";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { __clearTokenVersionCacheForTests } from "../../lib/tokenVersionCache";
-import { authenticateToken, AuthRequest } from "../auth";
+import type { AuthRequest } from "../auth";
+import { authenticateToken } from "../auth";
 
 const app = express();
 

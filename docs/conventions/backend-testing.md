@@ -28,8 +28,8 @@ it("test validation", async () => {});
 ```typescript
 import request from "supertest";
 import { faker } from "@faker-js/faker";
-import app from "../../../app";
-import prisma from "../../../lib/prisma";
+import { app } from "../../../index";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 
 describe("POST /api/students", () => {

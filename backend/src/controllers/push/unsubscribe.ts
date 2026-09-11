@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { PushUnsubscribeDto } from "../../types";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const unsubscribe = async (req: AuthRequest, res: Response) => {
   try {

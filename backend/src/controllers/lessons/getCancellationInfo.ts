@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
-import { Lesson } from "@prisma/client";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
+import type { Lesson } from "@prisma/client";
 
 export const findNextUnpaidLesson = async (
   tutorId: string,

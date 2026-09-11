@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { Response } from "express";
+import type { Response } from "express";
 
 export const handlePrismaError = (error: unknown, res: Response): boolean => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

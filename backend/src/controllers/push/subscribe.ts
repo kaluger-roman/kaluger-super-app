@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { PushSubscriptionDto } from "../../types";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 const validateSubscriptionData = (data: PushSubscriptionDto) => {
   if (!data.subscription?.endpoint) {

@@ -1,4 +1,6 @@
-import { Server } from "http";
+import type { Server } from "http";
+
+type Handler = (...args: unknown[]) => void;
 
 const makeFakeServer = (): Server =>
   ({ on: jest.fn() }) as unknown as Server;
@@ -6,14 +8,14 @@ const makeFakeServer = (): Server =>
 // Mocks for dependencies: ws, auth, and messageHandler
 jest.mock("ws", () => {
   class MockWSServer {
-    public handlers: Record<string, Function> = {};
+    public handlers: Record<string, Handler> = {};
     public options: any;
     constructor(options: any) {
       this.options = options;
       // register instance for tests
       (MockWSServer.instances as any).push(this);
     }
-    on(event: string, fn: Function) {
+    on(event: string, fn: Handler) {
       this.handlers[event] = fn;
     }
     simulateConnection(ws: any, request: any) {
@@ -80,11 +82,11 @@ describe("WebSocketManager", () => {
     const wssInstance = (WebSocketServer as any).instances[0];
 
     // create ws mock that supports on and triggering events
-    const messageHandlers: Record<string, Function> = {};
+    const messageHandlers: Record<string, Handler> = {};
     const ws: any = {
       send: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (event: string, fn: Function) => {
+      on: (event: string, fn: Handler) => {
         messageHandlers[event] = fn;
       },
     };
@@ -124,11 +126,11 @@ describe("WebSocketManager", () => {
     const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
-    const ws1Handlers: Record<string, Function> = {};
+    const ws1Handlers: Record<string, Handler> = {};
     const ws1: any = {
       send: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (e: string, fn: Function) => (ws1Handlers[e] = fn),
+      on: (e: string, fn: Handler) => (ws1Handlers[e] = fn),
     };
 
     // connect first client
@@ -142,11 +144,11 @@ describe("WebSocketManager", () => {
       userId: "u2",
       email: "b",
     });
-    const ws2Handlers: Record<string, Function> = {};
+    const ws2Handlers: Record<string, Handler> = {};
     const ws2: any = {
       send: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (e: string, fn: Function) => (ws2Handlers[e] = fn),
+      on: (e: string, fn: Handler) => (ws2Handlers[e] = fn),
     };
     wssInstance.simulateConnection(ws2, { url: "/?token=ok2" });
 
@@ -166,12 +168,12 @@ describe("WebSocketManager", () => {
     const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
-    const oldHandlers: Record<string, Function> = {};
+    const oldHandlers: Record<string, Handler> = {};
     const oldWs: any = {
       send: jest.fn(),
       close: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (event: string, fn: Function) => {
+      on: (event: string, fn: Handler) => {
         oldHandlers[event] = fn;
       },
     };
@@ -179,12 +181,12 @@ describe("WebSocketManager", () => {
     await new Promise((r) => setImmediate(r));
 
     // Simulate reconnect with the same userId
-    const newHandlers: Record<string, Function> = {};
+    const newHandlers: Record<string, Handler> = {};
     const newWs: any = {
       send: jest.fn(),
       close: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (event: string, fn: Function) => {
+      on: (event: string, fn: Handler) => {
         newHandlers[event] = fn;
       },
     };
@@ -219,12 +221,12 @@ describe("WebSocketManager", () => {
     const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
-    const handlers: Record<string, Function> = {};
+    const handlers: Record<string, Handler> = {};
     const ws: any = {
       send: jest.fn(),
       close: jest.fn(),
       readyState: (WebSocket as any).OPEN,
-      on: (event: string, fn: Function) => {
+      on: (event: string, fn: Handler) => {
         handlers[event] = fn;
       },
     };
@@ -248,12 +250,12 @@ describe("WebSocketManager", () => {
     const manager = new WebSocketManager(makeFakeServer());
     const wssInstance = (WebSocketServer as any).instances[0];
 
-    const handlers: Record<string, Function> = {};
+    const handlers: Record<string, Handler> = {};
     const ws: any = {
       send: jest.fn(),
       close: jest.fn(),
       readyState: (WebSocket as any).CLOSED ?? 3,
-      on: (event: string, fn: Function) => {
+      on: (event: string, fn: Handler) => {
         handlers[event] = fn;
       },
     };

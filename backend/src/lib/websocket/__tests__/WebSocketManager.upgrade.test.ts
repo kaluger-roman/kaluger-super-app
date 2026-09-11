@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { AddressInfo } from "net";
+import type { AddressInfo } from "net";
 import { WebSocket } from "ws";
 
 jest.mock("../auth", () => ({

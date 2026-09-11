@@ -1,10 +1,11 @@
 import { parse } from "url";
+import type { IncomingMessage } from "http";
 import { verifyToken } from "../../utils/auth";
-import { AuthenticatedWebSocket } from "./types";
+import type { AuthenticatedWebSocket } from "./types";
 
 export const authenticateWebSocket = async (
   ws: AuthenticatedWebSocket,
-  request: any
+  request: IncomingMessage
 ): Promise<{ userId: string; email: string } | null> => {
   try {
     // Extract token from query parameters

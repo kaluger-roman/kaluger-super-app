@@ -27,6 +27,8 @@ npm run find-cycle       # Circular dependency check (madge)
 ```bash
 npm run dev              # Dev server (nodemon)
 npm run build            # TypeScript compile
+npm run lint             # ESLint (flat config)
+npm run lint:fix         # ESLint autofix
 npm test                 # All tests (jest)
 npm test -- --testPathPattern=path  # Single test file
 npm run db:migrate       # Prisma migrate dev
@@ -102,7 +104,7 @@ Do NOT skip this step. These files contain critical project-specific patterns (E
 Before committing code, you MUST verify:
 
 1. **Tests pass** — `npm test` in the relevant directory (frontend/backend)
-2. **ESLint clean** — `npm run lint` in `frontend/`
+2. **ESLint clean** — `npm run lint` in `frontend/` and `backend/`
 3. **TypeScript clean** — `npm run build` in `backend/`
 4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
 

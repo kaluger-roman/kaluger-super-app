@@ -8,7 +8,7 @@ import {
   normalizeEmail,
 } from "../utils";
 import type { VerifyEmailDto, ResendVerificationDto } from "../types";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { sendVerificationEmail } from "../services";
 
 // Generic error returned for verification failures that, if differentiated,
@@ -16,7 +16,7 @@ import { sendVerificationEmail } from "../services";
 const INVALID_CODE_ERROR = "Неверный код подтверждения";
 
 export const verifyEmail = async (
-  req: Request<{}, {}, VerifyEmailDto>,
+  req: Request<Record<string, never>, unknown, VerifyEmailDto>,
   res: Response,
 ) => {
   try {
@@ -114,7 +114,7 @@ const RESEND_NEUTRAL_RESPONSE = {
 };
 
 export const resendVerification = async (
-  req: Request<{}, {}, ResendVerificationDto>,
+  req: Request<Record<string, never>, unknown, ResendVerificationDto>,
   res: Response,
 ) => {
   try {

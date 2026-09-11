@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cron from "node-cron";
 import { createServer } from "http";
-import prisma from "./lib/prisma";
+import { prisma } from "./lib/prisma";
 import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";

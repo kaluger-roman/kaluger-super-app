@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
 
@@ -415,7 +415,7 @@ describe("getLessons controller", () => {
 
   it("orders ascending when upcoming=true", async () => {
     const now = new Date();
-    const t1 = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -427,7 +427,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const t2 = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -601,7 +601,7 @@ describe("getLessons controller", () => {
 
   it("non-weekly non-upcoming returns descending order by default", async () => {
     // create three lessons with different times
-    const a = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -613,7 +613,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const b = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -625,7 +625,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const c = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -655,7 +655,7 @@ describe("getLessons controller", () => {
   it("upcoming=true without currentTime is ignored and behaves as status filter absent", async () => {
     // ensure upcoming=true without currentTime does nothing special
     const now = new Date();
-    const fut = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
