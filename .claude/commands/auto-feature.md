@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и manual-qa с автофиксом — с двумя human checkpoint'ами (после спеки и после макетов).
 ---
 
@@ -36,7 +36,7 @@ description: Сквозной оркестратор разработки фич
         ✋ stop: пользователь решает что делать дальше (фиксить, коммитить, PR)
 ```
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 5 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Все git/PR операции — **только по команде пользователя в Фазе 7**, никаких commit/push автоматически.
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 5 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Все git/PR операции — **только по команде пользователя в Фазе 7**, никаких commit/push автоматически. Единственное исключение — стартовый draft PR в Фазе 1 (`scripts/start-task-pr.mjs`).
 
 ---
 
@@ -137,7 +137,7 @@ description: Сквозной оркестратор разработки фич
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, текущее состояние (релевантный кусок state.json), ожидаемый формат ответа (JSON или короткий текст).
 4. **Возврат от sub-agent — структурированный.** Каждая фаза описывает свой контракт. Текстовые отчёты — короткие, чтобы не съедать контекст Main.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
-6. **Никаких автоматических git-операций** (commit / push / branch создание вручную). Worktree-создание делается через `EnterWorktree`, ветку для фичи делает `/speckit.specify` своим скриптом.
+6. **Никаких автоматических git-операций** (commit / push / branch создание вручную). Worktree-создание делается через `EnterWorktree`, ветку для фичи делает `/speckit.specify` своим скриптом. Исключение — стартовый draft PR сразу после создания ветки (Фаза 1, `node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт.
 7. **При ошибке любой фазы** — записать `phases[i].status = "blocked"`, в `notes` положить причину, прервать pipeline, вывести пользователю сообщение и ждать решений.
 
 ---
@@ -228,8 +228,9 @@ Do NOT invent. If something failed, return:
 
 1. Если в ответе `error` — записать в state.json (`phases.spec.status="blocked"`, `notes=error`), вывести пользователю, остановить pipeline.
 2. **Переименовать state-директорию** (см. примечание про worktree в Фазе 0): `mv .claude/auto-feature/<временный>/ .claude/auto-feature/<branch>/`. Обновить state.json (`feature_slug`, `branch`, `phases.spec`).
-3. Записать в `phases.spec` фактические артефакты.
-4. **Human checkpoint** через `AskUserQuestion`:
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»), если sub-agent его ещё не открыл: `node scripts/start-task-pr.mjs --title "feat: <короткое название фичи>" --summary "<1–2 предложения из описания>"`. Скрипт идемпотентен (при уже открытом PR только допишет сессию), сам делает пустой стартовый коммит и push. `url` из JSON-ответа записать в state.json (`pr_url`) и показать пользователю одной строкой. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+4. Записать в `phases.spec` фактические артефакты.
+5. **Human checkpoint** через `AskUserQuestion`:
 
    ```
    Вопрос: "Спека готова: specs/<branch>/spec.md (M user stories, K acceptance, L edge cases, J вопросов NEEDS_CLARIFICATION). Что дальше?"
@@ -618,7 +619,7 @@ Main делает:
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Фикс остатков: дать мне инструкцию какие пункты выше править
 - Коммит: `/commit-commands:commit` (внутри worktree)
-- PR: `/commit-commands:commit-push-pr`
+- PR: draft уже открыт (<pr_url>). Довести: push, `/changelog` + `/news`, `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
 - Очистка mockup-кода: если фаза 2 запускалась, убедись что нет оставшихся `TODO(auto-feature)` (проверь grep — у меня в state.implement.todo_markers_remaining = X)
 - State: .claude/auto-feature/<slug>/state.json
 
@@ -648,12 +649,13 @@ Main делает:
    - Если фаза `blocked` — показать `notes` ошибки и спросить "Попробовать снова или пропустить?".
    - Если все фазы `completed` — показать финальный отчёт ещё раз.
 3. Перед резумом — проверить, что мы в правильном worktree (`pwd` vs `worktree_path`). Если нет — `EnterWorktree` с `path: <worktree_path>`.
+4. Если ветка уже `NNN-name` (Фаза 1 пройдена) — `node scripts/start-task-pr.mjs --title "feat: <название>"`: откроет PR, если его нет, или допишет текущую сессию в существующий.
 
 ---
 
 ## Ограничения
 
-- **Не запускать `git commit`, `git push`, `gh pr create`.** Эти действия только по явной команде пользователя в Фазе 7 или после.
+- **Не запускать `git commit`, `git push`, `gh pr create`.** Эти действия только по явной команде пользователя в Фазе 7 или после. Исключение — `node scripts/start-task-pr.mjs` (стартовый draft PR, Фаза 1 и Resume).
 - **Не запускать `/news`.** Его делает пользователь перед PR (т.к. /news пишет в БД и это побочный эффект, который должен быть осознанным).
 - **Не запускать deploy** (`/deploy`, GH Actions trigger).
 - **Не удалять worktree.** Это решение пользователя после мержа.

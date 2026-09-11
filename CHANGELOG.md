@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Backend test `getStatistics › aggregates payments by paymentDate within selected range` failed deterministically in the first hour after local midnight (expected 4777, received 2277): the "paid earlier today" fixture used `now - 1h`, which lands on yesterday and drops out of the today-range. The payment date is now clamped to the start of today, so the test is time-of-day independent (verified red→green with `TZ=Asia/Magadan` at 00:48 local)
 
+### Infrastructure
+- The `check-changelog-before-pr` hook now resolves the PR branch from the `gh pr create` command itself (`cd <worktree> && …` prefix and/or `--head <branch>`) instead of the session's checked-out branch — it produced false denials whenever the PR was submitted from another worktree. It also ignores non-`gh pr create` commands that slipped through the settings filter. Scenario tests in `.claude/hooks/__tests__/check-changelog-before-pr.test.sh`
+- Draft PR at task start: `scripts/start-task-pr.mjs` opens a draft PR as soon as a task branch/worktree exists (empty start commit if needed, HTTPS push via gh), recording the Claude Code session in the PR body — local id, `cd <launch dir> && claude --resume <id>`, web link. Re-running it from a later session comments that session on the existing PR. Made mandatory in `CLAUDE.md` and wired into `/auto-feature` (after the feature branch is created), `/auto-bug-fix` (Phase 0) and `/speckit.specify`; both orchestrators now finish with `gh pr edit` + `gh pr ready` instead of creating the PR
+- The changelog hook now also gates `gh pr ready` (the draft PR from `scripts/start-task-pr.mjs` is not gated, so the changelog check moves to marking the PR ready)
+- `/code-review-local` picks committed mode only when the committed diff is non-empty, so an empty start commit keeps `/auto-feature` and `/auto-bug-fix` reviews in working-tree mode
+
 ## 2026-09-07
 
 ### Added
