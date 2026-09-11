@@ -1,5 +1,5 @@
 import type { Lesson, Prisma, PrismaClient } from "@prisma/client";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import type { ShiftResult } from "../types";
 import { truncateToMinute } from "../utils/time";
 

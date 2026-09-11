@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export const getOverviewData = async () => {
   const [usersCount, studentsCount, lessonsCount] = await Promise.all([

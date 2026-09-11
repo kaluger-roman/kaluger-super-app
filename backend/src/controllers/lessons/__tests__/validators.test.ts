@@ -1,9 +1,5 @@
-import {
-  validateLessonData,
-  checkSchedulingConflicts,
-} from "../../lessons/validators";
+import { validateLessonData } from "../../lessons/validators";
 import { truncateToMinute } from "../../../utils/time";
-import type { PrismaClient } from "@prisma/client";
 
 type CreateLessonDto = {
   subject?: string;
@@ -166,72 +162,5 @@ describe("validateLessonData", () => {
       } as any);
       expect(res.isValid).toBe(true);
     });
-  });
-});
-
-describe("checkSchedulingConflicts", () => {
-  let mockPrisma: Partial<PrismaClient> & {
-    lesson: { findMany: jest.Mock };
-  };
-
-  beforeEach(() => {
-    mockPrisma = {
-      lesson: {
-        findMany: jest.fn(),
-      },
-    } as any;
-  });
-
-  it("calls prisma.findMany with correct where clause and returns results", async () => {
-    const userId = "tutor-1";
-    const startTime = new Date("2025-01-01T10:00:00Z");
-    const endTime = new Date("2025-01-01T11:00:00Z");
-
-    const expectedResults = [
-      { id: "l1", tutorId: userId, startTime, endTime, status: "SCHEDULED" },
-    ];
-
-    mockPrisma.lesson.findMany.mockResolvedValue(expectedResults);
-
-    const res = await checkSchedulingConflicts(
-      userId,
-      startTime,
-      endTime,
-      mockPrisma as unknown as PrismaClient
-    );
-
-    expect(mockPrisma.lesson.findMany).toHaveBeenCalledTimes(1);
-
-    const calledWith = mockPrisma.lesson.findMany.mock.calls[0][0];
-    expect(calledWith).toHaveProperty("where");
-    const where = calledWith.where;
-    expect(where.tutorId).toBe(userId);
-    expect(where.status).toEqual({ not: "CANCELLED" });
-    expect(where.OR).toBeInstanceOf(Array);
-
-    // Validate the OR clause shape
-    expect(where.OR[0]).toHaveProperty("startTime");
-    expect(where.OR[0]).toHaveProperty("endTime");
-    expect(where.OR[0].startTime).toEqual({ lt: endTime });
-    expect(where.OR[0].endTime).toEqual({ gt: startTime });
-
-    expect(res).toBe(expectedResults);
-  });
-
-  it("returns empty array when there are no conflicts", async () => {
-    const userId = "tutor-2";
-    const startTime = new Date("2025-01-05T10:00:00Z");
-    const endTime = new Date("2025-01-05T11:00:00Z");
-
-    mockPrisma.lesson.findMany.mockResolvedValue([]);
-
-    const res = await checkSchedulingConflicts(
-      userId,
-      startTime,
-      endTime,
-      mockPrisma as unknown as PrismaClient
-    );
-    expect(mockPrisma.lesson.findMany).toHaveBeenCalledTimes(1);
-    expect(res).toEqual([]);
   });
 });

@@ -7,14 +7,11 @@ import {
 describe("statistics utils", () => {
   beforeAll(() => {
     const fixed = new Date("2025-12-15T12:34:56.789Z");
-    // @ts-ignore
-    jest.useFakeTimers("modern");
-    // @ts-ignore
+    jest.useFakeTimers();
     jest.setSystemTime(fixed);
   });
 
   afterAll(() => {
-    // @ts-ignore
     jest.useRealTimers();
   });
 

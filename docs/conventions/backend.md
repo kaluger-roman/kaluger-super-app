@@ -28,7 +28,7 @@ backend/
 | ---------- | ------------------------- | ----------------------- |
 | Routes     | `[domain].ts`             | `routes/`               |
 | Controller | `[domain]/index.ts`       | `controllers/`          |
-| Validators | `validators.ts`           | `controllers/[domain]/` |
+| Validators | `validators.ts` or `[action].validators.ts` | `controllers/[domain]/` |
 | Services   | `[domain]/index.ts`       | `services/`             |
 | Service constants | `[domain].constants.ts` | `services/[domain]/` |
 | Service helpers | `[domain].helpers.ts`   | `services/[domain]/` |
@@ -63,9 +63,15 @@ import { createStudent } from "./controllers/students/createStudent";
 
 ## Strict Rules
 
+ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `any`
+(prod code; allowed in tests — supertest's `res.body` and hand-rolled mocks are typed
+`any` upstream), named exports only, function expressions only, `type` + `import type`,
+no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded). The rest of
+this doc is review-checked.
+
 ### Structure
 
-- **Controllers < 150 lines** — extract to services
+- **Controllers < 150 lines** — extract to services (ESLint `max-lines`)
 - **Complex actions (50+ lines)** — separate file
 
 ### Types
@@ -162,7 +168,7 @@ type AuthRequest = Request & { user?: JwtPayload };
 
 1. Define types in `src/types/index.ts`
 2. Create controller in `src/controllers/[feature]/`
-3. Add validators in `controllers/[feature]/validators.ts`
+3. Add validators in `controllers/[feature]/validators.ts` (or `[action].validators.ts` when one action's validation is large enough to stand alone)
 4. Define routes in `src/routes/[feature].ts`
 5. Register routes in `src/index.ts`
 6. Add service if complex logic needed

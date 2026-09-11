@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from "express";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import {
   getCachedStudentTokenVersion,
   setCachedStudentTokenVersion,

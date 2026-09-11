@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { processRecurringLessons } from "../recurringLessons";
 import { truncateToMinute } from "../../utils/time";
 import { faker } from "@faker-js/faker";
@@ -31,7 +31,6 @@ describe("processRecurringLessons", () => {
 
   const createdTutorIds: string[] = [];
   const createdStudentIds: string[] = [];
-  const createdLessonIds: string[] = [];
 
   // Track created tutor/student in helper
   const createTutorAndStudentTracked = async () => {

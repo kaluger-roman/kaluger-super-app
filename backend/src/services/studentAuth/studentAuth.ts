@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { setCachedStudentTokenVersion } from "../../lib/studentTokenVersionCache";
 import type {
   StudentLoginDto,

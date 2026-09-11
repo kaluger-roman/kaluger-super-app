@@ -8,7 +8,7 @@ jest.mock("../../services/email", () => ({
 }));
 
 import { app } from "../../index";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { createResetToken, hashPassword, comparePassword } from "../../utils";
 import { sendPasswordResetEmail } from "../../services/email";
 

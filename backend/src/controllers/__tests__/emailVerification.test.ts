@@ -1,5 +1,5 @@
 import request from "supertest";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { app } from "../../index";
 import { faker } from "@faker-js/faker";
 import * as emailService from "../../services/email";

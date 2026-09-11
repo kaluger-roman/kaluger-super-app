@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import prisma from "../../prisma";
+import { prisma } from "../../prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import { generateStudentToken } from "../../../utils/studentAuth";
 import { authenticateStudentWebSocket } from "../studentAuth";

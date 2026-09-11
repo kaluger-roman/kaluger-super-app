@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { faker } from "@faker-js/faker";
 
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils";
 import { issueInvitation } from "../studentInvitation";
 import {

@@ -1,6 +1,6 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
 
@@ -150,7 +150,7 @@ describe("createLesson integration tests", () => {
 
   it("returns 400 when scheduling conflict exists", async () => {
     // create an existing lesson
-    const exist = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,

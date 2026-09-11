@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import * as backupService from "../../../services/backup";
 

@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { UpdateStudentDto } from "../../types";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { UpdateStudentDto } from "../../types";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
 import { handlePrismaError } from "../../utils/prismaErrorHandler";
 import { validateUpdateStudentDto, prepareUpdateData } from "./validators";
 

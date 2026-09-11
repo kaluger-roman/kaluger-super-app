@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { groupRecurringLessonsByPattern } from "./recurringHelpers";
 import type { LessonSlot } from "../types";
 import { truncateToMinute } from "../utils/time";

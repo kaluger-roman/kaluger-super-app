@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   MAX_VERIFICATION_ATTEMPTS,
   RESEND_COOLDOWN_SECONDS,

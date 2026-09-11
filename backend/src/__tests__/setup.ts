@@ -14,7 +14,7 @@ process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_dummy";
 
 jest.setTimeout(10000);
 
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { __clearStudentTokenVersionCacheForTests } from "../lib/studentTokenVersionCache";
 import { __clearTokenVersionCacheForTests } from "../lib/tokenVersionCache";
 
