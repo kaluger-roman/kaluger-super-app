@@ -16,10 +16,10 @@ import {
 } from "./lessons-tabs.constants";
 import * as lessonsTabsModel from "./lessons-tabs.model";
 import * as lessonsViewModeModel from "./lessons-view-mode.model";
-import { LessonsPageGate } from "./lessons.model";
+import * as lessonsMainModel from "./lessons.model";
 
 const pagedTabClock = [
-  LessonsPageGate.open,
+  lessonsMainModel.LessonsPageGate.open,
   lessonsTabsModel.$currentTab,
   lessonsViewModeModel.$lessonsViewMode,
   lessonsFiltersModel.$onlyUnpaid,
@@ -37,7 +37,7 @@ const pagedTabSource = {
 
 sample({
   clock: [
-    LessonsPageGate.open,
+    lessonsMainModel.LessonsPageGate.open,
     lessonsViewModeModel.$lessonsViewMode,
     lessonsViewModeModel.$currentWeek,
     lessonsFiltersModel.$onlyUnpaid,
@@ -59,7 +59,7 @@ sample({
 });
 
 sample({
-  clock: [LessonsPageGate.open, lessonsViewModeModel.$lessonsViewMode],
+  clock: [lessonsMainModel.LessonsPageGate.open, lessonsViewModeModel.$lessonsViewMode],
   source: lessonsViewModeModel.$lessonsViewMode,
   filter: (lessonsViewMode) => lessonsViewMode === "schedule",
   fn: getScheduleDateRangeParams,
@@ -71,7 +71,8 @@ sample({
 sample({
   clock: pagedTabClock,
   source: pagedTabSource,
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === UPCOMING_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadUpcomingLessonsFx,
 });
@@ -79,7 +80,8 @@ sample({
 sample({
   clock: pagedTabClock,
   source: pagedTabSource,
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === COMPLETED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCompletedLessonsFx,
 });
@@ -87,7 +89,8 @@ sample({
 sample({
   clock: pagedTabClock,
   source: pagedTabSource,
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === CANCELLED_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadCancelledLessonsFx,
 });
@@ -100,7 +103,8 @@ sample({
     lessonsFiltersModel.$paymentDateTo,
   ],
   source: pagedTabSource,
-  filter: ({ lessonsViewMode, currentTab }) => lessonsViewMode === "paged" && currentTab === ALL_TAB_INDEX,
+  filter: ({ lessonsViewMode, currentTab }) =>
+    lessonsViewMode === "paged" && currentTab === ALL_TAB_INDEX,
   fn: createPagedLessonParams,
   target: lessonModel.loadAllLessonsFx,
 });

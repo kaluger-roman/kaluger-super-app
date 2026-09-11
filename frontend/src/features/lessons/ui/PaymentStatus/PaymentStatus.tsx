@@ -19,7 +19,7 @@ import { getLessonDisplayName } from "@shared";
 import * as paymentStatusModel from "./payment-status.model";
 import { usePaymentDate } from "./PaymentStatus.hooks";
 import * as Styled from "./PaymentStatus.styled";
-import { lessonPaymentChanged } from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lesson-actions.model";
 
 type PaymentStatusProps = {
   lesson: Lesson;
@@ -37,7 +37,7 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
   const confirmDialogOpen = useUnit(paymentStatusModel.$isOpen);
   const pendingPaymentStatus = useUnit(paymentStatusModel.$pendingStatus);
 
-  const actions = useUnit({ lessonPaymentChanged });
+  const actions = useUnit({ lessonPaymentChanged: lessonActionsModel.lessonPaymentChanged });
 
   const { paymentDate, setPaymentDate } = usePaymentDate(lesson, confirmDialogOpen);
 

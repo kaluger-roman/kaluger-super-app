@@ -4,18 +4,9 @@ import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 import { lessonDeleteDialogModel } from "@shared/ui";
 
-import {
-  confirmDialogClosed,
-  confirmDialogOpened,
-  $confirmDialog,
-} from "./lessons-confirm-dialog.model";
-import {
-  $isRescheduleDialogOpen,
-  $reschedulingLesson,
-  $deleteDialogOpen,
-  $selectedLesson,
-} from "./lessons-delete-dialog.model";
-import { $isDialogOpen, $editingLesson } from "./lessons-edit-dialog.model";
+import * as lessonsConfirmDialogModel from "./lessons-confirm-dialog.model";
+import * as lessonsDeleteDialogModel from "./lessons-delete-dialog.model";
+import * as lessonsEditDialogModel from "./lessons-edit-dialog.model";
 import type { ConfirmDialogState } from "../ui/LessonViewDialog/LessonViewDialog.types";
 
 // Events
@@ -72,7 +63,7 @@ sample({
   clock: editFromViewRequested,
   source: $viewingLesson,
   filter: Boolean,
-  target: $editingLesson,
+  target: lessonsEditDialogModel.$editingLesson,
 });
 
 sample({
@@ -80,7 +71,7 @@ sample({
   source: $viewingLesson,
   filter: Boolean,
   fn: () => true,
-  target: $isDialogOpen,
+  target: lessonsEditDialogModel.$isDialogOpen,
 });
 
 // Logic - View Dialog Actions -> Close
@@ -114,14 +105,14 @@ sample({
   source: $viewingLesson,
   filter: Boolean,
   fn: () => true,
-  target: $isRescheduleDialogOpen,
+  target: lessonsDeleteDialogModel.$isRescheduleDialogOpen,
 });
 
 sample({
   clock: rescheduleFromViewRequested,
   source: $viewingLesson,
   filter: Boolean,
-  target: $reschedulingLesson,
+  target: lessonsDeleteDialogModel.$reschedulingLesson,
 });
 
 // Logic - View Dialog Actions -> Delete Dialog
@@ -138,26 +129,10 @@ sample({
   source: $viewingLesson,
   filter: Boolean,
   fn: () => true,
-  target: $deleteDialogOpen,
+  target: lessonsDeleteDialogModel.$deleteDialogOpen,
 });
 
-// Logic - Confirm Dialog
-sample({
-  clock: confirmDialogOpened,
-  target: $confirmDialog,
-});
-
-sample({
-  clock: confirmDialogClosed,
-  fn: () => ({
-    open: false,
-    title: "",
-    message: "",
-    action: () => undefined,
-  }),
-  target: $confirmDialog,
-});
-
+// Logic - Confirm Dialog ($confirmDialog open/close is owned by lessons-confirm-dialog.model)
 sample({
   clock: openCancelConfirmForLesson,
   fn: (lesson): ConfirmDialogState => ({
@@ -172,7 +147,7 @@ sample({
     },
     severity: "warning",
   }),
-  target: confirmDialogOpened,
+  target: lessonsConfirmDialogModel.confirmDialogOpened,
 });
 
 sample({
@@ -189,7 +164,7 @@ sample({
     },
     severity: "info",
   }),
-  target: confirmDialogOpened,
+  target: lessonsConfirmDialogModel.confirmDialogOpened,
 });
 
 sample({
@@ -201,7 +176,7 @@ sample({
     action: () => lessonDeleteDialogModel.lessonDeleteDialogOpened(lesson),
     severity: "error",
   }),
-  target: confirmDialogOpened,
+  target: lessonsConfirmDialogModel.confirmDialogOpened,
 });
 
 sample({
@@ -209,7 +184,7 @@ sample({
   source: $viewingLesson,
   filter: Boolean,
   fn: (lesson) => lesson || null,
-  target: $selectedLesson,
+  target: lessonsDeleteDialogModel.$selectedLesson,
 });
 
 sample({

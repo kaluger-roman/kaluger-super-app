@@ -95,7 +95,9 @@ Custom `Error` subclasses used for `instanceof` flow control (e.g. mapping a
 domain exception to an HTTP status) **must** live in `src/utils/errors.ts`
 and be re-exported via `src/utils/index.ts`. Do **not** declare them locally
 inside controllers/services — local declarations duplicate types and make
-the error surface invisible to other modules.
+the error surface invisible to other modules. ESLint enforced: `no-restricted-syntax`
+rejects `class X extends Error` anywhere except `src/utils/errors.ts`. The same
+rule also rejects empty files and `export {}` stubs — delete the file instead.
 
 ```typescript
 // ❌ Bad — local declaration inside the controller

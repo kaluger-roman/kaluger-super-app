@@ -1,29 +1,6 @@
 import { sample } from "effector";
 
-import {
-  $completedLessons,
-  $cancelledLessons,
-  $allLessons,
-  $upcomingLessons,
-  $weeklyLessons,
-  $scheduleLessons,
-  $currentLesson,
-  $completedPagination,
-  $cancelledPagination,
-  $allPagination,
-  $upcomingPagination,
-  $paymentsSummary,
-  loadCompletedLessonsFx,
-  loadCancelledLessonsFx,
-  loadAllLessonsFx,
-  loadLessonFx,
-  loadUpcomingLessonsFx,
-  loadWeeklyLessonsFx,
-  loadScheduleLessonsFx,
-  addLessonFx,
-  updateLessonFx,
-  removeLessonFx,
-} from "./api.model";
+import * as apiModel from "./api.model";
 import {
   groupLessonsByDay,
   addLessonToSchedule,
@@ -32,129 +9,129 @@ import {
 } from "./stores.helpers";
 
 sample({
-  clock: loadCompletedLessonsFx.doneData,
+  clock: apiModel.loadCompletedLessonsFx.doneData,
   fn: ({ lessons }) => lessons,
-  target: $completedLessons,
+  target: apiModel.$completedLessons,
 });
 
 sample({
-  clock: loadCompletedLessonsFx.doneData,
+  clock: apiModel.loadCompletedLessonsFx.doneData,
   fn: ({ pagination }) => pagination,
-  target: $completedPagination,
+  target: apiModel.$completedPagination,
 });
 
 sample({
-  clock: loadCancelledLessonsFx.doneData,
+  clock: apiModel.loadCancelledLessonsFx.doneData,
   fn: ({ lessons }) => lessons,
-  target: $cancelledLessons,
+  target: apiModel.$cancelledLessons,
 });
 
 sample({
-  clock: loadCancelledLessonsFx.doneData,
+  clock: apiModel.loadCancelledLessonsFx.doneData,
   fn: ({ pagination }) => pagination,
-  target: $cancelledPagination,
+  target: apiModel.$cancelledPagination,
 });
 
 sample({
-  clock: loadAllLessonsFx.doneData,
+  clock: apiModel.loadAllLessonsFx.doneData,
   fn: ({ lessons }) => lessons,
-  target: $allLessons,
+  target: apiModel.$allLessons,
 });
 
 sample({
-  clock: loadAllLessonsFx.doneData,
+  clock: apiModel.loadAllLessonsFx.doneData,
   fn: ({ pagination }) => pagination,
-  target: $allPagination,
+  target: apiModel.$allPagination,
 });
 
 sample({
-  clock: loadAllLessonsFx.doneData,
+  clock: apiModel.loadAllLessonsFx.doneData,
   fn: ({ paymentsSummary }) => paymentsSummary ?? null,
-  target: $paymentsSummary,
+  target: apiModel.$paymentsSummary,
 });
 
 sample({
-  clock: loadUpcomingLessonsFx.doneData,
+  clock: apiModel.loadUpcomingLessonsFx.doneData,
   fn: ({ lessons }) => lessons,
-  target: $upcomingLessons,
+  target: apiModel.$upcomingLessons,
 });
 
 sample({
-  clock: loadUpcomingLessonsFx.doneData,
+  clock: apiModel.loadUpcomingLessonsFx.doneData,
   fn: ({ pagination }) => pagination,
-  target: $upcomingPagination,
+  target: apiModel.$upcomingPagination,
 });
 
 sample({
-  clock: addLessonFx.doneData,
-  source: $upcomingLessons,
+  clock: apiModel.addLessonFx.doneData,
+  source: apiModel.$upcomingLessons,
   fn: (lessons, newLesson) => [...lessons, newLesson],
-  target: $upcomingLessons,
+  target: apiModel.$upcomingLessons,
 });
 
 sample({
-  clock: updateLessonFx.doneData,
-  source: $upcomingLessons,
+  clock: apiModel.updateLessonFx.doneData,
+  source: apiModel.$upcomingLessons,
   fn: (lessons, updatedLesson) =>
     lessons.map((lesson) => (lesson.id === updatedLesson.id ? updatedLesson : lesson)),
-  target: $upcomingLessons,
+  target: apiModel.$upcomingLessons,
 });
 
 sample({
-  clock: removeLessonFx.doneData,
-  source: $upcomingLessons,
+  clock: apiModel.removeLessonFx.doneData,
+  source: apiModel.$upcomingLessons,
   fn: (lessons, removedId) => lessons.filter((lesson) => lesson.id !== removedId),
-  target: $upcomingLessons,
+  target: apiModel.$upcomingLessons,
 });
 
 sample({
-  clock: loadWeeklyLessonsFx.doneData,
+  clock: apiModel.loadWeeklyLessonsFx.doneData,
   fn: ({ lessons }) => lessons,
-  target: $weeklyLessons,
+  target: apiModel.$weeklyLessons,
 });
 
 sample({
-  clock: loadScheduleLessonsFx.doneData,
-  source: $scheduleLessons,
+  clock: apiModel.loadScheduleLessonsFx.doneData,
+  source: apiModel.$scheduleLessons,
   fn: (state, { lessons }) => groupLessonsByDay(state, lessons),
-  target: $scheduleLessons,
+  target: apiModel.$scheduleLessons,
 });
 
 sample({
-  clock: addLessonFx.doneData,
-  source: $scheduleLessons,
+  clock: apiModel.addLessonFx.doneData,
+  source: apiModel.$scheduleLessons,
   fn: addLessonToSchedule,
-  target: $scheduleLessons,
+  target: apiModel.$scheduleLessons,
 });
 
 sample({
-  clock: updateLessonFx.doneData,
-  source: $scheduleLessons,
+  clock: apiModel.updateLessonFx.doneData,
+  source: apiModel.$scheduleLessons,
   fn: updateLessonInSchedule,
-  target: $scheduleLessons,
+  target: apiModel.$scheduleLessons,
 });
 
 sample({
-  clock: removeLessonFx.doneData,
-  source: $scheduleLessons,
+  clock: apiModel.removeLessonFx.doneData,
+  source: apiModel.$scheduleLessons,
   fn: removeLessonFromSchedule,
-  target: $scheduleLessons,
+  target: apiModel.$scheduleLessons,
 });
 
 sample({
-  clock: loadLessonFx.doneData,
-  target: $currentLesson,
+  clock: apiModel.loadLessonFx.doneData,
+  target: apiModel.$currentLesson,
 });
 
 sample({
-  clock: updateLessonFx.doneData,
-  source: $currentLesson,
+  clock: apiModel.updateLessonFx.doneData,
+  source: apiModel.$currentLesson,
   fn: (current, updated) => (current?.id === updated.id ? updated : current),
-  target: $currentLesson,
+  target: apiModel.$currentLesson,
 });
 
 sample({
-  clock: removeLessonFx.doneData,
+  clock: apiModel.removeLessonFx.doneData,
   fn: () => null,
-  target: $currentLesson,
+  target: apiModel.$currentLesson,
 });

@@ -4,9 +4,9 @@ import { lessonModel } from "@entities";
 import type { Lesson } from "@shared";
 import { lessonDeleteDialogModel, rescheduleDialogModel } from "@shared/ui";
 
-import { confirmDialogOpened } from "./lessons-confirm-dialog.model";
-import { deleteDialogClosed, rescheduleDialogClosed } from "./lessons-delete-dialog.model";
-import { $viewingLesson, restoreFromViewRequested } from "./lessons-view-dialog.model";
+import * as lessonsConfirmDialogModel from "./lessons-confirm-dialog.model";
+import * as lessonsDeleteDialogModel from "./lessons-delete-dialog.model";
+import * as lessonsViewDialogModel from "./lessons-view-dialog.model";
 
 export const $isLoading = createStore<boolean>(false);
 export const $isRescheduling = createStore<boolean>(false);
@@ -54,7 +54,7 @@ sample({
     },
     severity: "info" as const,
   }),
-  target: confirmDialogOpened,
+  target: lessonsConfirmDialogModel.confirmDialogOpened,
 });
 
 // Reschedule lesson - directly update
@@ -137,15 +137,15 @@ sample({
 
 // Connect view dialog restore action
 sample({
-  clock: restoreFromViewRequested,
-  source: $viewingLesson,
+  clock: lessonsViewDialogModel.restoreFromViewRequested,
+  source: lessonsViewDialogModel.$viewingLesson,
   filter: Boolean,
   target: lessonRestoreRequested,
 });
 
 sample({
   clock: lessonModel.updateLessonFx.doneData,
-  target: rescheduleDialogClosed,
+  target: lessonsDeleteDialogModel.rescheduleDialogClosed,
 });
 
 sample({
@@ -156,7 +156,7 @@ sample({
 
 sample({
   clock: lessonModel.removeLessonFx.doneData,
-  target: deleteDialogClosed,
+  target: lessonsDeleteDialogModel.deleteDialogClosed,
 });
 
 sample({

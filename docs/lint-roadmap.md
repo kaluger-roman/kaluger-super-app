@@ -17,8 +17,8 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9) | lint + `tsc --noEmit` |
-| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) | lint + `tsc` build |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23) | lint + `tsc --noEmit` |
+| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) | lint + `tsc` build |
 | landing | flat config | lint + tsc + test |
 
 Three biggest gaps driving this work:
@@ -116,13 +116,22 @@ Notes:
 
 | # | Rule | Convention | Scope | Status | Violations |
 | --- | --- | --- | --- | --- | --- |
-| 18 | Ban `class X extends Error` outside `utils/errors.ts` | Centralize custom Error classes | backend | TODO | _TBD_ |
-| 19 | Ban `useUnit([...])` (array destructuring) | `useUnit` separate calls for stores | frontend | TODO | _TBD_ |
-| 20 | Ban `styled` import from `@mui/material` / `styled-components` | `styled` from `@shared` | frontend | TODO | _TBD_ |
-| 21 | Ban `setTimeout`/`setInterval` in `*.model.ts` | Timers via patronum | frontend | TODO | _TBD_ |
-| 22 | Ban named imports from `*.model` files | Import models as namespace | frontend | TODO | _TBD_ |
-| 23 | Ban empty / stub `export {}` files | No empty files | both | TODO | _TBD_ |
-| 24 | Ban `jest.mock("…prisma…")` | Do NOT mock Prisma | backend tests | TODO | _TBD_ |
+| 18 | `ClassDeclaration[superClass.name="Error"]` (+ `ClassExpression`) everywhere except `src/utils/errors.ts` | Centralize custom Error classes | backend | ✅ PR5 | **0** (the 7 classes in `errors.ts` are the allowed ones) |
+| 19 | `CallExpression[callee.name="useUnit"][arguments.0.type="ArrayExpression"]` | `useUnit` separate calls for stores | frontend | ✅ PR5 | **0** |
+| 20 | `no-restricted-imports` `paths`: `styled` from `@mui/material`, `@mui/material/styles`, `@mui/system`; any import of `@emotion/styled`, `styled-components` | `styled` from `@shared` | frontend | ✅ PR5 | **11** (all `import { styled } from "@mui/material"`, none used `$` props) — switched to `@shared` / `../../lib/styled.helpers` |
+| 21 | `setTimeout` / `setInterval` (bare, `window.`, `globalThis.`) in `src/**/*.model.ts` | Timers via patronum | frontend | ✅ PR5 | **2** (`web-socket.model.ts`, `student-web-socket.model.ts` reconnect effects) — rewritten with `delay` |
+| 22 | `ImportDeclaration[importKind!="type"][source.value=/\.model$/] > ImportSpecifier[importKind!="type"]` (prod only) | Import models as namespace | frontend | ✅ PR5 | **245** total: 13 import statements in 10 prod files (fixed), the rest in `__tests__` (rule `off` there) |
+| 23 | `Program[body.length=0]` + `Program > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]` (`*.d.ts` excluded) | No empty files | both | ✅ PR5 | **0** (+ `react-app-env.d.ts`, excluded by design) |
+| 24 | `jest.mock(/prisma/i)` (also `doMock`, `unstable_mockModule`) | Do NOT mock Prisma | backend tests | ✅ PR5 | **1** (`middleware/__tests__/auth.test.ts`) — rewritten against the test DB |
+
+**PR5 (branch `worktree-chore-lint-m4-tier-b`): #18–24.** Milestone 4 closed.
+
+Notes:
+- All Tier B rules are `no-restricted-syntax` selectors (plus `no-restricted-imports` `paths` for #20). Both configs now build the selector list from named constants (`enumRule`, `emptyFileRules`, …) so per-file overrides can drop one entry without re-declaring the rest — `no-restricted-syntax` is replaced wholesale per override, not merged.
+- **#20** — only `@mui/material` was actually imported from; the other sources are banned pre-emptively. `src/shared/lib/styled.helpers.ts` is the single file allowed to import MUI's `styled`. Inside `shared`, the three offending dialogs import it relatively (`../../lib/styled.helpers`) because `@shared` is off-limits within the shared layer.
+- **#21** — the two reconnect timers were `createEffect(() => new Promise(r => setTimeout(r, 5000)))`, gated on `.pending` to collapse repeated close events. Rewritten as `sample → delay({ source, timeout })` with an explicit `$isReconnectScheduled` store for the same collapsing. Tests moved from `fork({ handlers })` overrides to `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync(...)`; because patronum's inner effect stays pending until the timer fires, `allSettled` calls that schedule a reconnect are fire-and-forget and awaited after the clock is advanced. The student model gained reconnect tests it did not have.
+- **#22** — `import type { X } from "./x.model"` is allowed (types are not model parts). Tests are `off`: they import stores/events by name in ~30 files and rewriting them buys nothing. Bare `import "./x.model"` side-effect imports (used in `models/index.ts`) and `export * as` re-exports do not match the selector.
+- **#24** — the one violation mocked `lib/prisma` to assert on `user.update` calls; the test now creates a real user, mints real JWTs, and polls the row for the fire-and-forget timezone write. It also gained tokenVersion-mismatch and unknown-user cases that the mock had made untestable.
 
 ---
 

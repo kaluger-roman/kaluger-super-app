@@ -4,46 +4,34 @@ import { userModel } from "@entities/user";
 import { showNotification } from "@shared";
 
 import { toggleInterval } from "./notifications.helpers";
-import {
-  $reminderSettings,
-  $isPushSubscribed,
-  $isPushSupported,
-  $vapidKey,
-  $serviceWorkerRegistration,
-  remindersToggled,
-  intervalToggled,
-  muteToggled,
-  settingsUpdated,
-  subscribePushFx,
-  unsubscribePushFx,
-  updateSettingsFx,
-  loadSettingsFx,
-  loadVapidKeyFx,
-  checkPushSubscriptionFx,
-} from "./notifications.model";
+import * as notificationsModel from "./notifications.model";
 import type { ReminderSettings } from "./notifications.types";
 
 // Срабатывает один раз за сессию — иначе при каждом PWA-resume
-// `loadSettingsFx` повторно тригерит `Notification.requestPermission()`.
+// `notificationsModel.loadSettingsFx` повторно тригерит `Notification.requestPermission()`.
 export const $autoSubscribeAttempted = createStore(false);
 
 sample({
-  clock: [loadSettingsFx.doneData, loadVapidKeyFx.doneData, checkPushSubscriptionFx.doneData],
+  clock: [
+    notificationsModel.loadSettingsFx.doneData,
+    notificationsModel.loadVapidKeyFx.doneData,
+    notificationsModel.checkPushSubscriptionFx.doneData,
+  ],
   source: {
-    settings: $reminderSettings,
-    subscribed: $isPushSubscribed,
-    vapidKey: $vapidKey,
-    reg: $serviceWorkerRegistration,
+    settings: notificationsModel.$reminderSettings,
+    subscribed: notificationsModel.$isPushSubscribed,
+    vapidKey: notificationsModel.$vapidKey,
+    reg: notificationsModel.$serviceWorkerRegistration,
     attempted: $autoSubscribeAttempted,
   },
   filter: ({ settings, subscribed, vapidKey, reg, attempted }) =>
     !attempted && settings.enabled && !subscribed && vapidKey !== null && reg !== null,
   fn: ({ vapidKey, reg }) => ({ vapidKey: vapidKey!, registration: reg! }),
-  target: subscribePushFx,
+  target: notificationsModel.subscribePushFx,
 });
 
 sample({
-  clock: [subscribePushFx.done, subscribePushFx.fail],
+  clock: [notificationsModel.subscribePushFx.done, notificationsModel.subscribePushFx.fail],
   fn: () => true,
   target: $autoSubscribeAttempted,
 });
@@ -56,100 +44,125 @@ sample({
 
 // Interval toggle → compute new intervals and update
 sample({
-  clock: intervalToggled,
-  source: $reminderSettings,
+  clock: notificationsModel.intervalToggled,
+  source: notificationsModel.$reminderSettings,
   fn: toggleInterval,
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
 
 // Mute toggle → flip and update
 sample({
-  clock: muteToggled,
-  source: $reminderSettings,
+  clock: notificationsModel.muteToggled,
+  source: notificationsModel.$reminderSettings,
   fn: (settings) => ({ muteWhenInLesson: !settings.muteWhenInLesson }),
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
 
 // Track whether toggle was manual (for toast feedback, not auto-subscribe)
 const $isManualToggle = createStore(false);
 
-sample({ clock: remindersToggled, fn: () => true, target: $isManualToggle });
-sample({ clock: [updateSettingsFx.finally, subscribePushFx.fail, unsubscribePushFx.fail], fn: () => false, target: $isManualToggle });
+sample({ clock: notificationsModel.remindersToggled, fn: () => true, target: $isManualToggle });
+sample({
+  clock: [
+    notificationsModel.updateSettingsFx.finally,
+    notificationsModel.subscribePushFx.fail,
+    notificationsModel.unsubscribePushFx.fail,
+  ],
+  fn: () => false,
+  target: $isManualToggle,
+});
 
 // Reminders toggle logic — subscribe/unsubscribe then update settings
 const $canSubscribe = combine(
-  $isPushSupported, $vapidKey, $serviceWorkerRegistration,
+  notificationsModel.$isPushSupported,
+  notificationsModel.$vapidKey,
+  notificationsModel.$serviceWorkerRegistration,
   (supported, key, reg) => supported && key !== null && reg !== null
 );
 
 const $needsSubscribeOnEnable = combine(
-  $isPushSubscribed, $canSubscribe,
+  notificationsModel.$isPushSubscribed,
+  $canSubscribe,
   (subscribed, canSub) => !subscribed && canSub
 );
 
 // Enabling + needs subscribe → subscribe first
 sample({
-  clock: remindersToggled,
-  source: { settings: $reminderSettings, needsSub: $needsSubscribeOnEnable, vapidKey: $vapidKey, reg: $serviceWorkerRegistration },
+  clock: notificationsModel.remindersToggled,
+  source: {
+    settings: notificationsModel.$reminderSettings,
+    needsSub: $needsSubscribeOnEnable,
+    vapidKey: notificationsModel.$vapidKey,
+    reg: notificationsModel.$serviceWorkerRegistration,
+  },
   filter: ({ settings, needsSub }) => !settings.enabled && needsSub,
   fn: ({ vapidKey, reg }) => ({ vapidKey: vapidKey!, registration: reg! }),
-  target: subscribePushFx,
+  target: notificationsModel.subscribePushFx,
 });
 
 // Subscribe succeeded via manual toggle → enable on server
 sample({
-  clock: subscribePushFx.done,
+  clock: notificationsModel.subscribePushFx.done,
   source: $isManualToggle,
   filter: (isManual) => isManual,
   fn: () => ({ enabled: true } as Partial<ReminderSettings>),
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
 
 // Enabling + already subscribed → enable directly
 sample({
-  clock: remindersToggled,
-  source: { settings: $reminderSettings, subscribed: $isPushSubscribed, canSub: $canSubscribe },
+  clock: notificationsModel.remindersToggled,
+  source: {
+    settings: notificationsModel.$reminderSettings,
+    subscribed: notificationsModel.$isPushSubscribed,
+    canSub: $canSubscribe,
+  },
   filter: ({ settings, subscribed, canSub }) => !settings.enabled && subscribed && canSub,
   fn: () => ({ enabled: true } as Partial<ReminderSettings>),
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
 
 // Disabling + subscribed → unsubscribe first
 sample({
-  clock: remindersToggled,
-  source: { settings: $reminderSettings, subscribed: $isPushSubscribed, reg: $serviceWorkerRegistration },
+  clock: notificationsModel.remindersToggled,
+  source: {
+    settings: notificationsModel.$reminderSettings,
+    subscribed: notificationsModel.$isPushSubscribed,
+    reg: notificationsModel.$serviceWorkerRegistration,
+  },
   filter: ({ settings, subscribed, reg }) => settings.enabled && subscribed && reg !== null,
   fn: ({ reg }) => reg!,
-  target: unsubscribePushFx,
+  target: notificationsModel.unsubscribePushFx,
 });
 
 // Unsubscribe succeeded → disable on server (only when browser actually
 // unsubscribed; otherwise sever and client would desync — server thinks
 // disabled, browser keeps active subscription).
 sample({
-  clock: unsubscribePushFx.done,
+  clock: notificationsModel.unsubscribePushFx.done,
   fn: () => ({ enabled: false } as Partial<ReminderSettings>),
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
 
 // Unsubscribe failed → notify user; keep server state unchanged so the
 // next attempt can complete the disable cleanly.
 sample({
-  clock: unsubscribePushFx.fail,
-  fn: () =>
-    ({
-      message: "Не удалось отписаться от уведомлений",
-      type: "error" as const,
-    }),
+  clock: notificationsModel.unsubscribePushFx.fail,
+  fn: () => ({
+    message: "Не удалось отписаться от уведомлений",
+    type: "error" as const,
+  }),
   target: showNotification,
 });
 
 // Disabling + not subscribed → disable directly
 sample({
-  clock: remindersToggled,
-  source: { settings: $reminderSettings, subscribed: $isPushSubscribed },
+  clock: notificationsModel.remindersToggled,
+  source: {
+    settings: notificationsModel.$reminderSettings,
+    subscribed: notificationsModel.$isPushSubscribed,
+  },
   filter: ({ settings, subscribed }) => settings.enabled && !subscribed,
   fn: () => ({ enabled: false } as Partial<ReminderSettings>),
-  target: settingsUpdated,
+  target: notificationsModel.settingsUpdated,
 });
-

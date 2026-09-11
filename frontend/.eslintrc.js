@@ -1,3 +1,53 @@
+const restrictedImportPatterns = [
+    "../**/pages/**",
+    "../**/features/**",
+    "../**/app/**",
+    "@shared/*/*",
+    "@features/*/*/*",
+    "@entities/*/*/*",
+];
+
+const styledMessage = "Use `styled` from @shared — it filters `$`-prefixed props.";
+const restrictedImportPaths = [
+    { name: "@mui/material", importNames: ["styled"], message: styledMessage },
+    { name: "@mui/material/styles", importNames: ["styled"], message: styledMessage },
+    { name: "@mui/system", importNames: ["styled"], message: styledMessage },
+    { name: "@emotion/styled", message: styledMessage },
+    { name: "styled-components", message: styledMessage },
+];
+
+const enumRule = {
+    selector: "TSEnumDeclaration",
+    message: "Use string literal union types instead of enums.",
+};
+const useUnitArrayRule = {
+    selector: 'CallExpression[callee.name="useUnit"][arguments.0.type="ArrayExpression"]',
+    message: "No useUnit([...]) — call useUnit per store, or pass an object of events.",
+};
+const emptyFileRules = [
+    { selector: "Program[body.length=0]", message: "Empty file — delete it instead." },
+    {
+        selector:
+            "Program[body.length=1] > ExportNamedDeclaration[declaration=null][specifiers.length=0][source=null]",
+        message: "Stub `export {}` — delete the file instead.",
+    },
+];
+const modelNamedImportRule = {
+    selector:
+        'ImportDeclaration[importKind!="type"][source.value=/\\.model$/] > ImportSpecifier[importKind!="type"]',
+    message: 'Import models as a namespace: import * as fooModel from "./foo.model".',
+};
+const timerMessage = "No raw timers in models — use `delay` / `interval` from patronum.";
+const timerRules = [
+    { selector: "CallExpression[callee.name=/^(setTimeout|setInterval)$/]", message: timerMessage },
+    {
+        selector:
+            "CallExpression[callee.object.name=/^(window|globalThis)$/][callee.property.name=/^(setTimeout|setInterval)$/]",
+        message: timerMessage,
+    },
+];
+const restrictedSyntax = [enumRule, useUnitArrayRule, ...emptyFileRules, modelNamedImportRule];
+
 module.exports = {
     root: true,
     parser: "@typescript-eslint/parser",
@@ -44,16 +94,7 @@ module.exports = {
     rules: {
         "no-restricted-imports": [
             "error",
-            {
-                patterns: [
-                    "../**/pages/**",
-                    "../**/features/**",
-                    "../**/app/**",
-                    "@shared/*/*",
-                    "@features/*/*/*",
-                    "@entities/*/*/*",
-                ],
-            },
+            { patterns: restrictedImportPatterns, paths: restrictedImportPaths },
         ],
 
         "import/no-restricted-paths": [
@@ -158,13 +199,7 @@ module.exports = {
         "func-style": ["error", "expression"],
         "@typescript-eslint/consistent-type-definitions": ["error", "type"],
         "@typescript-eslint/consistent-type-imports": ["error", { disallowTypeAnnotations: false }],
-        "no-restricted-syntax": [
-            "error",
-            {
-                selector: "TSEnumDeclaration",
-                message: "Use string literal union types instead of enums.",
-            },
-        ],
+        "no-restricted-syntax": ["error", ...restrictedSyntax],
         "effector/enforce-store-naming-convention": "error",
         "effector/enforce-effect-naming-convention": "error",
         "effector/enforce-gate-naming-convention": "error",
@@ -231,13 +266,31 @@ module.exports = {
             files: ["src/**/*.model.ts"],
             rules: {
                 "max-lines": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
+                "no-restricted-syntax": ["error", ...restrictedSyntax, ...timerRules],
             },
         },
         {
+            // The one place that wraps MUI's styled; everything else goes through it.
+            files: ["src/shared/lib/styled.helpers.ts"],
+            rules: {
+                "no-restricted-imports": ["error", { patterns: restrictedImportPatterns }],
+            },
+        },
+        {
+            // CRA's react-app-env.d.ts is a bare `/// <reference>` — empty body by design.
+            // Only the empty-file rules are lifted; enums etc. stay banned.
+            files: ["**/*.d.ts"],
+            rules: {
+                "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, modelNamedImportRule],
+            },
+        },
+        {
+            // Tests reach into model internals directly; the namespace-import rule is prod-only.
             files: ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
             rules: {
                 "jsx-a11y/click-events-have-key-events": "off",
                 "jsx-a11y/no-static-element-interactions": "off",
+                "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, ...emptyFileRules],
             },
         },
     ],
