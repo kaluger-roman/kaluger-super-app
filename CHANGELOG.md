@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-11
+
+### Infrastructure
+- Draft PR at task start: `scripts/start-task-pr.mjs` opens a draft PR as soon as a task branch/worktree exists (empty start commit if needed, HTTPS push via gh), recording the Claude Code session in the PR body — local id, `cd <launch dir> && claude --resume <id>`, web link. Re-running it from a later session comments that session on the existing PR. Made mandatory in `CLAUDE.md` and wired into `/auto-feature` (after the feature branch is created), `/auto-bug-fix` (Phase 0) and `/speckit.specify`; both orchestrators now finish with `gh pr edit` + `gh pr ready` instead of creating the PR
+- The changelog hook now also gates `gh pr ready` (the draft PR from `scripts/start-task-pr.mjs` is not gated, so the changelog check moves to marking the PR ready)
+- `/code-review-local` picks committed mode only when the committed diff is non-empty, so an empty start commit keeps `/auto-feature` and `/auto-bug-fix` reviews in working-tree mode
+
 ## 2026-09-07
 
 ### Added

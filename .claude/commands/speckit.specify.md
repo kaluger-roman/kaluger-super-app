@@ -68,6 +68,8 @@ Given that feature description, do this:
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
+   e. **Open a draft PR right away** (project rule, CLAUDE.md "Draft PR at Task Start"): `node scripts/start-task-pr.mjs --title "feat: <short feature title>" --summary "<1-2 sentences from the description>"`. It adds an empty start commit, pushes the new branch and opens a draft PR that records the Claude Code session. If it fails (no network/token), warn in one line and continue.
+
 3. Load `.specify/templates/spec-template.md` to understand required sections.
 
 4. Follow this execution flow:

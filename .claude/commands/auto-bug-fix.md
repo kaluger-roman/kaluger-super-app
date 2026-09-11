@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор починки бага. Создаёт worktree, воспроизводит баг и находит root cause (✋ checkpoint), фиксит с обязательным регрессионным тестом, гонит code-review-loop с порогом 50 и верифицирует фикс по шагам воспроизведения.
 ---
 
@@ -34,7 +34,7 @@ description: Сквозной оркестратор починки бага. С
 
 Отличия от `/auto-feature` (осознанно выкинуто): нет speckit-pipeline (specify/clarify/plan/tasks/implement), нет фазы mockups, один checkpoint вместо двух, cap review-loop 3 вместо 5. Баг — это не фича: вместо спеки — диагноз, вместо макетов — воспроизведение.
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 3 — **в основном потоке**, не в sub-agent. Все git/PR операции — **только по команде пользователя в Фазе 5**, никаких commit/push автоматически.
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 3 — **в основном потоке**, не в sub-agent. Все git/PR операции — **только по команде пользователя в Фазе 5**, никаких commit/push автоматически. Единственное исключение — стартовый draft PR в Фазе 0 (`scripts/start-task-pr.mjs`).
 
 ---
 
@@ -127,7 +127,7 @@ description: Сквозной оркестратор починки бага. С
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, релевантный кусок state.json, ожидаемый формат ответа (JSON).
 4. **Возврат от sub-agent — структурированный JSON.** Текстовые отчёты — короткие.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
-6. **Никаких автоматических git-операций** (commit / push). Worktree создаётся через `EnterWorktree`.
+6. **Никаких автоматических git-операций** (commit / push). Worktree создаётся через `EnterWorktree`. Исключение — стартовый draft PR в Фазе 0 (`node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт.
 7. **При ошибке любой фазы** — записать `phases[i].status = "blocked"`, в `notes` причину, прервать pipeline, сообщить пользователю и ждать решений.
 8. **Регрессионный тест обязателен** (правило проекта): фикс без теста, покрывающего именно сценарий бага, не считается завершённым. Исключение — чисто визуальный баг без логики; тогда обязателен скриншот «после» в Фазе 4 и явная пометка в отчёте.
 
@@ -143,9 +143,10 @@ description: Сквозной оркестратор починки бага. С
 
 1. **Сгенерировать slug** из описания: `fix-` + kebab-case первых ~30 символов сути бага, безопасный для пути. Например «Уроки остаются после удаления ученика» → `fix-lessons-after-delete`.
 2. **Создать worktree** через `EnterWorktree` с `name: "<slug>"`. Worktree создастся в `.claude/worktrees/<slug>/` на новой ветке того же имени.
-3. **Создать state-директорию** `mkdir -p .claude/auto-bug-fix/<slug>/` и записать первичный `state.json` (см. схему; `current_phase: "diagnose"`).
-4. Создать **5 задач** через `TaskCreate`.
-5. Сообщить пользователю одной строкой: `🐞 Auto-bug-fix: started "<описание>". Worktree: <path>. State: .claude/auto-bug-fix/<slug>/state.json.`
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»): `node scripts/start-task-pr.mjs --title "fix: <суть бага>" --summary "<описание бага, 1–2 предложения>"`. Скрипт сам делает пустой стартовый коммит и push. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+4. **Создать state-директорию** `mkdir -p .claude/auto-bug-fix/<slug>/` и записать первичный `state.json` (см. схему; `current_phase: "diagnose"`, плюс `pr_url` из ответа скрипта).
+5. Создать **5 задач** через `TaskCreate`.
+6. Сообщить пользователю одной строкой: `🐞 Auto-bug-fix: started "<описание>". Worktree: <path>. PR: <pr_url>. State: .claude/auto-bug-fix/<slug>/state.json.`
 
 > **Node_modules:** в свежем worktree их нет — сделать симлинки из основного репо (`ln -s <main>/frontend/node_modules <wt>/frontend/node_modules`, аналогично для backend), иначе тесты/линт не запустятся.
 
@@ -420,7 +421,7 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Скриншоты before/after: docs/bug-fixes/<slug>/screenshots/
 - Коммит: `/commit-commands:commit` (внутри worktree)
-- PR: `/commit-commands:commit-push-pr` (перед этим /news — по твоему решению)
+- PR: draft уже открыт (<pr_url>). Довести: push, `/changelog` + `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
 - State: .claude/auto-bug-fix/<slug>/state.json
 
 ✋ Жду твоего следующего хода.
@@ -449,12 +450,13 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
    - фаза `blocked` — показать `notes` и спросить «Попробовать снова или пропустить?».
    - все `completed` — показать финальный отчёт ещё раз.
 3. Перед резумом — проверить, что мы в правильном worktree (`pwd` vs `worktree_path`). Если нет — `EnterWorktree` с `path: <worktree_path>`.
+4. `node scripts/start-task-pr.mjs --title "fix: <суть бага>"` — откроет PR, если его нет, или допишет текущую сессию в существующий.
 
 ---
 
 ## Ограничения
 
-- **Не запускать `git commit`, `git push`, `gh pr create`.** Только по явной команде пользователя в Фазе 5 или после.
+- **Не запускать `git commit`, `git push`, `gh pr create`.** Только по явной команде пользователя в Фазе 5 или после. Исключение — `node scripts/start-task-pr.mjs` (стартовый draft PR, Фаза 0 и Resume).
 - **Не запускать `/news`.** Его делает пользователь перед PR.
 - **Не запускать deploy.**
 - **Не удалять worktree.**

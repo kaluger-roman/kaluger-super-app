@@ -121,9 +121,23 @@ Before committing code, you MUST verify:
 - UI text, error messages — Russian
 - Respond to the user in Russian
 
+## MANDATORY: Draft PR at Task Start
+
+Every task that gets its own branch or worktree opens a draft PR right away, before any real work, so the work and the Claude Code session behind it can always be found again:
+
+```bash
+node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"]
+```
+
+- Run it right after `EnterWorktree` / creating the branch. For `/speckit.specify` and `/auto-feature` — right after the `NNN-name` feature branch is created. No commits needed: if the branch has none on top of `main`, the script adds an empty start commit (same tree, index and working tree untouched), pushes over HTTPS and opens the draft.
+- The PR body gets a "Сессии Claude Code" section: local session id, `cd <launch dir> && claude --resume <id>` (sessions are listed per launch directory, so a worktree session is invisible from the repo root), web link. Keep that section when rewriting the PR description at the end.
+- Continuing a task in another session (or after a resume): run the script again — it comments the new session on the existing PR, or does nothing if the session is already recorded.
+- Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
+- Skip only for read-only tasks that create no branch.
+
 ## Changelog
 
-Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database.
+Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`, `/commit-commands:commit-push-pr`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database. A PreToolUse hook (`.claude/hooks/check-changelog-before-pr.sh`) denies `gh pr create` / `gh pr ready` until CHANGELOG.md is in the branch diff; the start-of-task draft PR from `scripts/start-task-pr.mjs` is not gated.
 
 ## Slash Commands
 

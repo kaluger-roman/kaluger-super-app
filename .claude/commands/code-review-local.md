@@ -14,7 +14,7 @@ description: Локальный code-review (8 параллельных opus rev
 
 Прогнать code-review **на локальные изменения текущей ветки** (а не на PR), используя логику официального plugin'а `code-review:code-review` плюс recall-углы из `/code-review` (max effort) — 8 параллельных opus-агентов + Haiku scoring 0-100, — но с тремя ключевыми отличиями:
 
-1. **Источник diff:** изменения текущей ветки относительно `<base-ref>` (по умолчанию `main`), а не `gh pr diff`. **Автоопределение режима** (см. Этап 0): есть коммиты поверх base → committed-режим `git diff <base-ref>...HEAD`; коммитов нет (типично для `/auto-feature`, который НЕ коммитит до финальной фазы) → working-tree-режим — ревью незакоммиченного рабочего дерева БЕЗ единого коммита.
+1. **Источник diff:** изменения текущей ветки относительно `<base-ref>` (по умолчанию `main`), а не `gh pr diff`. **Автоопределение режима** (см. Этап 0): закоммиченный diff поверх base непустой → committed-режим `git diff <base-ref>...HEAD`; коммитов нет или они пустые (типично для `/auto-feature` и `/auto-bug-fix`: они НЕ коммитят до финальной фазы, на ветке максимум пустой стартовый коммит от `scripts/start-task-pr.mjs`) → working-tree-режим — ревью незакоммиченного рабочего дерева.
 2. **Порог фильтрации настраиваемый:** по умолчанию **50** (а не 80, как в plugin'е). Меняется через `--threshold`.
 3. **Вывод структурирован:** машинно-читаемый JSON в `docs/code-reviews/<branch>/iter-<N>.json` + краткий человекочитаемый stdout.
 
@@ -42,8 +42,8 @@ description: Локальный code-review (8 параллельных opus rev
 1. Убедиться, что есть git и мы в репозитории: `git rev-parse --is-inside-work-tree`. Если нет — ошибка.
 2. Убедиться, что `<base-ref>` существует: `git rev-parse --verify <base-ref>`. Если нет — ошибка с предложением: `--base-ref origin/main` или `--base-ref HEAD~10`.
 3. **Определить режим diff (committed vs working-tree)** — важно для интеграции с `/auto-feature`, который НЕ коммитит до финальной фазы:
-   - Есть коммиты поверх base (`git rev-list --count <base-ref>..HEAD` > 0) → **committed**: дальше `<DIFF-CMD>` = `git diff <base-ref>...HEAD`.
-   - Коммитов нет (== 0) → **working-tree** (ревью незакоммиченных изменений БЕЗ единого коммита): один раз выполнить `git add -N -- .` (пометить untracked как intent-to-add, чтобы новые файлы попали в diff), задать `<DIFF-CMD>` = `git diff <base-ref>` (двухточечный: base ↔ рабочее дерево), и **сразу после снятия патча** восстановить индекс `git reset -q` (рабочие файлы не трогает, коммитов не создаёт).
+   - Закоммиченный diff поверх base непустой (`git diff --quiet <base-ref>...HEAD` завершился с кодом 1) → **committed**: дальше `<DIFF-CMD>` = `git diff <base-ref>...HEAD`.
+   - Закоммиченный diff пустой (код 0: коммитов нет или только пустой стартовый коммит от `scripts/start-task-pr.mjs`) → **working-tree** (ревью незакоммиченных изменений): один раз выполнить `git add -N -- .` (пометить untracked как intent-to-add, чтобы новые файлы попали в diff), задать `<DIFF-CMD>` = `git diff <base-ref>` (двухточечный: base ↔ рабочее дерево), и **сразу после снятия патча** восстановить индекс `git reset -q` (рабочие файлы не трогает, коммитов не создаёт).
    Везде ниже `<DIFF-CMD>` = выбранная команда.
 4. Посчитать размер diff'а: `<DIFF-CMD> --shortstat`. Если **0 изменений** — записать пустой JSON-отчёт и выйти со stdout `"No diff vs <base-ref> — nothing to review."`.
 5. Если diff > **2000 строк** (insertions+deletions) — предупредить пользователя в stdout: `Warning: diff is large (XXXX lines) — review may take 3-5 minutes.` и продолжить.

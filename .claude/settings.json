@@ -10,6 +10,12 @@
             "command": "bash .claude/hooks/check-changelog-before-pr.sh",
             "if": "Bash(gh pr create*)",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/check-changelog-before-pr.sh",
+            "if": "Bash(gh pr ready*)",
+            "timeout": 10
           }
         ]
       }
