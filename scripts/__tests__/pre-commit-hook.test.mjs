@@ -10,6 +10,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -21,6 +22,8 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const HOOK = join(REPO_ROOT, ".githooks", "pre-commit");
 const FAKE_LINT_STAGED = '#!/bin/sh\necho "[$*]" >> "$LINT_STAGED_LOG"\nexit "${LINT_STAGED_EXIT:-0}"\n';
+const lockfile = (prettierVersion) =>
+  JSON.stringify({ packages: { "node_modules/prettier": { version: prettierVersion } } });
 
 let root;
 let repo;
@@ -132,6 +135,45 @@ test("does not require node_modules of a package with nothing staged", () => {
   stage(repo, "backend/src/index.ts");
 
   assert.equal(runHook().status, 0);
+  assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
+});
+
+test("stops the commit when the installed prettier differs from the package's lockfile", () => {
+  // As after pulling the main checkout without reinstalling: node_modules is symlinked from it.
+  const mainFrontend = join(root, "main", "frontend");
+  write(mainFrontend, "node_modules/prettier/package.json", '{ "version": "2.8.8" }\n');
+  rmSync(join(repo, "frontend", "node_modules"), { recursive: true });
+  symlinkSync(join(mainFrontend, "node_modules"), join(repo, "frontend", "node_modules"));
+  write(repo, "frontend/package-lock.json", lockfile("3.9.6"));
+  stage(repo, "frontend/src/app.ts");
+
+  const res = runHook();
+
+  assert.equal(res.status, 1);
+  assert.match(res.stderr, /frontend\/node_modules has prettier 2\.8\.8, frontend\/package-lock\.json has 3\.9\.6/);
+  assert.ok(res.stderr.includes(`run npm install in ${realpathSync(mainFrontend)}\n`), res.stderr);
+  assert.deepEqual(lintStagedCalls(), []);
+});
+
+test("stops the commit when the package's lockfile has prettier but its node_modules does not", () => {
+  write(repo, "backend/package-lock.json", lockfile("3.9.6"));
+  stage(repo, "backend/src/index.ts");
+
+  const res = runHook();
+
+  assert.equal(res.status, 1);
+  assert.match(res.stderr, /backend\/node_modules has no prettier, backend\/package-lock\.json has 3\.9\.6/);
+  assert.deepEqual(lintStagedCalls(), []);
+});
+
+test("runs lint-staged when the installed prettier matches the package's lockfile", () => {
+  write(repo, "frontend/package-lock.json", lockfile("3.9.6"));
+  write(repo, "frontend/node_modules/prettier/package.json", '{ "version": "3.9.6" }\n');
+  stage(repo, "frontend/src/app.ts");
+
+  const res = runHook();
+
+  assert.equal(res.status, 0, res.stderr);
   assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
 });
 

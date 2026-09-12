@@ -7,9 +7,23 @@ staged=$(git diff --cached --name-only --diff-filter=ACMR -- frontend/src backen
 [ -n "$staged" ] || exit 0
 
 for pkg in frontend backend; do
-  if printf '%s\n' "$staged" | grep -q "^$pkg/" && [ ! -d "$pkg/node_modules" ]; then
+  printf '%s\n' "$staged" | grep -q "^$pkg/" || continue
+  if [ ! -d "$pkg/node_modules" ]; then
     echo "pre-commit: $pkg/node_modules is missing — run npm install in $pkg/" >&2
     echo "pre-commit: in a worktree, symlink it from the main checkout instead" >&2
+    exit 1
+  fi
+  # A node_modules symlinked from the main checkout lags behind until that checkout reinstalls,
+  # and a Prettier other than the lockfile's would format the staged files unlike CI.
+  mismatch=$(node -e '
+    const read = (file) => { try { return JSON.parse(require("fs").readFileSync(file, "utf8")); } catch { return {}; } };
+    const pkg = process.argv[1];
+    const want = read(`${pkg}/package-lock.json`).packages?.["node_modules/prettier"]?.version;
+    const have = read(`${pkg}/node_modules/prettier/package.json`).version;
+    if (want && want !== have) console.log(`${have ? `prettier ${have}` : "no prettier"}, ${pkg}/package-lock.json has ${want}`);
+  ' "$pkg")
+  if [ -n "$mismatch" ]; then
+    echo "pre-commit: $pkg/node_modules has $mismatch — run npm install in $(dirname "$(cd -P "$pkg/node_modules" && pwd)")" >&2
     exit 1
   fi
 done
