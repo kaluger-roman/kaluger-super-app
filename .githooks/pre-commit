@@ -1,0 +1,28 @@
+#!/bin/sh
+# ESLint --fix and Prettier on staged files; tasks live in frontend/.lintstagedrc.json and
+# backend/.lintstagedrc.json. Enabled by `npm install` at the repo root
+# (scripts/install-git-hooks.mjs). Skip once with `git commit --no-verify`.
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- frontend/src backend/src)
+[ -n "$staged" ] || exit 0
+
+for pkg in frontend backend; do
+  if printf '%s\n' "$staged" | grep -q "^$pkg/" && [ ! -d "$pkg/node_modules" ]; then
+    echo "pre-commit: $pkg/node_modules is missing — run npm install in $pkg/" >&2
+    echo "pre-commit: in a worktree, symlink it from the main checkout instead" >&2
+    exit 1
+  fi
+done
+
+# A worktree without its own root install borrows the main checkout's.
+lint_staged=node_modules/.bin/lint-staged
+[ -x "$lint_staged" ] || lint_staged="$(dirname "$(git rev-parse --git-common-dir)")/node_modules/.bin/lint-staged"
+if [ ! -x "$lint_staged" ]; then
+  echo "pre-commit: lint-staged is not installed — run npm install at the repo root" >&2
+  exit 1
+fi
+
+# --no-stash: the stash stack is shared by all worktrees and sessions. Partially staged files
+# are still safe: lint-staged hides their unstaged hunks in a patch under the worktree's git
+# dir and re-applies it after the tasks.
+exec "$lint_staged" --no-stash

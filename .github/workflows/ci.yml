@@ -17,6 +17,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       landing: ${{ steps.filter.outputs.landing }}
+      scripts: ${{ steps.filter.outputs.scripts }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -25,10 +26,15 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
+              - '.prettierrc'
             backend:
               - 'backend/**'
+              - '.prettierrc'
             landing:
               - 'landing/**'
+            scripts:
+              - 'scripts/**'
+              - '.githooks/**'
 
   frontend:
     needs: changes
@@ -48,6 +54,9 @@ jobs:
 
       - name: Lint
         run: cd frontend && npm run lint
+
+      - name: Format check
+        run: cd frontend && npm run format:check
 
       - name: Type check
         run: cd frontend && npx tsc --noEmit
@@ -136,6 +145,9 @@ jobs:
 
       - name: Lint
         run: cd backend && npm run lint
+
+      - name: Format check
+        run: cd backend && npm run format:check
 
       - name: Cache Prisma generated client
         uses: actions/cache@v4
@@ -239,3 +251,17 @@ jobs:
 
       - name: Build
         run: cd landing && npm run build
+
+  scripts:
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Tests
+        run: node --test scripts/__tests__/
