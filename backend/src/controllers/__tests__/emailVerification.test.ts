@@ -7,10 +7,9 @@ import * as emailService from "../../services/email";
 jest.mock("../../services/email");
 
 describe("Email Verification Controller", () => {
-  const mockSendVerificationEmail =
-    emailService.sendVerificationEmail as jest.MockedFunction<
-      typeof emailService.sendVerificationEmail
-    >;
+  const mockSendVerificationEmail = emailService.sendVerificationEmail as jest.MockedFunction<
+    typeof emailService.sendVerificationEmail
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -32,9 +31,7 @@ describe("Email Verification Controller", () => {
     });
 
     it("should return 400 when only code is provided", async () => {
-      const res = await request(app)
-        .post("/api/auth/verify-email")
-        .send({ code: "123456" });
+      const res = await request(app).post("/api/auth/verify-email").send({ code: "123456" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Email и код подтверждения обязательны");
@@ -111,9 +108,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "123456" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Срок действия кода истек. Запросите новый код",
-      );
+      expect(res.body.error).toBe("Срок действия кода истек. Запросите новый код");
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -170,9 +165,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "000000" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Превышено количество попыток. Запросите новый код",
-      );
+      expect(res.body.error).toBe("Превышено количество попыток. Запросите новый код");
 
       const updatedUser = await prisma.user.findUnique({
         where: { id: user.id },
@@ -230,9 +223,7 @@ describe("Email Verification Controller", () => {
 
   describe("POST /api/auth/resend-verification", () => {
     it("should return 400 when email is missing", async () => {
-      const res = await request(app)
-        .post("/api/auth/resend-verification")
-        .send({});
+      const res = await request(app).post("/api/auth/resend-verification").send({});
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Email обязателен");
@@ -287,10 +278,7 @@ describe("Email Verification Controller", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toMatch(/Если такой email/);
 
-      expect(mockSendVerificationEmail).toHaveBeenCalledWith(
-        user.email,
-        expect.any(String),
-      );
+      expect(mockSendVerificationEmail).toHaveBeenCalledWith(user.email, expect.any(String));
 
       const updatedUser = await prisma.user.findUnique({
         where: { id: user.id },
@@ -314,9 +302,7 @@ describe("Email Verification Controller", () => {
         },
       });
 
-      mockSendVerificationEmail.mockRejectedValueOnce(
-        new Error("Email service error"),
-      );
+      mockSendVerificationEmail.mockRejectedValueOnce(new Error("Email service error"));
 
       const res = await request(app)
         .post("/api/auth/resend-verification")

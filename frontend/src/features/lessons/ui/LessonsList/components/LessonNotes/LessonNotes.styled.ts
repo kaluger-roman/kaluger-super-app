@@ -10,19 +10,17 @@ export const NotesContainer = styled(Box)(({ theme }) => ({
   borderTop: `1px solid ${theme.palette.divider}`,
 }));
 
-export const NotesText = styled(Typography)<{ $expanded: boolean }>(
-  ({ theme, $expanded }) => ({
-    color: theme.palette.text.secondary,
-    whiteSpace: "pre-wrap",
-    overflowWrap: "anywhere",
-    ...(!$expanded && {
-      display: "-webkit-box",
-      WebkitLineClamp: NOTES_COLLAPSED_LINES,
-      WebkitBoxOrient: "vertical",
-      overflow: "hidden",
-    }),
-  })
-);
+export const NotesText = styled(Typography)<{ $expanded: boolean }>(({ theme, $expanded }) => ({
+  color: theme.palette.text.secondary,
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+  ...(!$expanded && {
+    display: "-webkit-box",
+    WebkitLineClamp: NOTES_COLLAPSED_LINES,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  }),
+}));
 
 export const ToggleButton = styled("button")(({ theme }) => ({
   display: "inline-flex",

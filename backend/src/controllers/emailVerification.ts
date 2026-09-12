@@ -17,15 +17,13 @@ const INVALID_CODE_ERROR = "Неверный код подтверждения";
 
 export const verifyEmail = async (
   req: Request<Record<string, never>, unknown, VerifyEmailDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { email: rawEmail, code } = req.body;
 
     if (!rawEmail || !code) {
-      return res
-        .status(400)
-        .json({ error: "Email и код подтверждения обязательны" });
+      return res.status(400).json({ error: "Email и код подтверждения обязательны" });
     }
 
     const email = normalizeEmail(rawEmail);
@@ -109,13 +107,12 @@ export const verifyEmail = async (
 // Always returned to the unauthenticated /resend-verification caller so the
 // existence (and verification state) of an email cannot be enumerated.
 const RESEND_NEUTRAL_RESPONSE = {
-  message:
-    "Если такой email зарегистрирован и не подтверждён, код отправлен повторно",
+  message: "Если такой email зарегистрирован и не подтверждён, код отправлен повторно",
 };
 
 export const resendVerification = async (
   req: Request<Record<string, never>, unknown, ResendVerificationDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { email: rawEmail } = req.body;
@@ -153,9 +150,7 @@ export const resendVerification = async (
       await sendVerificationEmail(email, verificationCode);
     } catch (emailError) {
       console.error("Error sending verification email:", emailError);
-      return res
-        .status(500)
-        .json({ error: "Ошибка отправки письма. Попробуйте позже" });
+      return res.status(500).json({ error: "Ошибка отправки письма. Попробуйте позже" });
     }
 
     res.json(RESEND_NEUTRAL_RESPONSE);

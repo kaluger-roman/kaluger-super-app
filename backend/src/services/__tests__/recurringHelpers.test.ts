@@ -62,9 +62,7 @@ describe("recurringHelpers", () => {
 
   it("shifts future recurring lessons successfully when no conflicts", async () => {
     // create base recurring lesson and two future instances with same weekday/time
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 2 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 2 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({
@@ -142,9 +140,7 @@ describe("recurringHelpers", () => {
 
   it("detects conflicts and aborts shifts", async () => {
     // create base recurring lesson and a future instance
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 3 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 3 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({
@@ -212,9 +208,7 @@ describe("recurringHelpers", () => {
   });
 
   it("updates price for future recurring lessons", async () => {
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 6 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 6 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({

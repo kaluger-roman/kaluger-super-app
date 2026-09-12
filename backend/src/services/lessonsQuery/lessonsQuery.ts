@@ -4,7 +4,7 @@ import type { LessonsPageOptions, PaymentsSummary } from "./lessonsQuery.types";
 
 export const fetchLessonsPage = async (
   where: Prisma.LessonWhereInput,
-  { orderAsc, pagination, withPaymentsSummary }: LessonsPageOptions,
+  { orderAsc, pagination, withPaymentsSummary }: LessonsPageOptions
 ) => {
   const [lessons, total, paymentsAggregate] = await Promise.all([
     prisma.lesson.findMany({

@@ -32,12 +32,7 @@ export type UpdateLessonDto = Omit<
   paymentDate?: Date | null;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
-  status?:
-    | "SCHEDULED"
-    | "COMPLETED"
-    | "CANCELLED"
-    | "RESCHEDULED"
-    | "IN_PROGRESS";
+  status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
 };
 
 export type ShiftResult = {

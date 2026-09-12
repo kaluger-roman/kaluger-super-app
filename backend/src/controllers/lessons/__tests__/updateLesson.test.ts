@@ -231,10 +231,7 @@ describe("updateLesson controller", () => {
     // Regression for bug-hunt 2026-05-09-3 #3: previously the base lesson
     // committed first and shift conflicts threw → 500 with the base already
     // updated. The fix pre-checks conflicts and returns 409 without DB writes.
-    const previewSpy = jest.spyOn(
-      recurringHelpers,
-      "previewShiftFutureRecurringLessons"
-    );
+    const previewSpy = jest.spyOn(recurringHelpers, "previewShiftFutureRecurringLessons");
     (previewSpy as jest.Mock).mockImplementation(async () => ({
       planned: [],
       conflicts: [{ lessonId: "x", conflictingLessonId: "y" }],
@@ -274,10 +271,7 @@ describe("updateLesson controller", () => {
   });
 
   it("updates price for future recurring lessons and broadcasts websocket on status change", async () => {
-    const updatePriceSpy = jest.spyOn(
-      recurringHelpers,
-      "updatePriceForFutureRecurringLessons"
-    );
+    const updatePriceSpy = jest.spyOn(recurringHelpers, "updatePriceForFutureRecurringLessons");
     (updatePriceSpy as jest.Mock).mockResolvedValue({ updated: 1 });
 
     // mock ws manager
@@ -346,9 +340,7 @@ describe("updateLesson controller", () => {
         startTime: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),
       })
       .expect(400)
-      .then((res) =>
-        expect(res.body.error).toMatch(/Невозможно перенести отменённый урок/)
-      );
+      .then((res) => expect(res.body.error).toMatch(/Невозможно перенести отменённый урок/));
   });
 
   it("keeps status CANCELLED when updating non-time fields without status", async () => {
@@ -459,9 +451,7 @@ describe("updateLesson controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .send({
         startTime: new Date(Date.now() + 9 * 24 * 3600 * 1000).toISOString(),
-        endTime: new Date(
-          Date.now() + 9 * 24 * 3600 * 1000 + 3600000
-        ).toISOString(),
+        endTime: new Date(Date.now() + 9 * 24 * 3600 * 1000 + 3600000).toISOString(),
         status: "RESCHEDULED",
         price: 500,
       })
@@ -504,10 +494,7 @@ describe("updateLesson controller", () => {
   });
 
   it("calls previewShiftFutureRecurringLessons on successful shift and proceeds", async () => {
-    const previewSpy = jest.spyOn(
-      recurringHelpers,
-      "previewShiftFutureRecurringLessons"
-    );
+    const previewSpy = jest.spyOn(recurringHelpers, "previewShiftFutureRecurringLessons");
     (previewSpy as jest.Mock).mockResolvedValue({ planned: [], conflicts: [] });
 
     const r = await prisma.lesson.create({
@@ -528,9 +515,7 @@ describe("updateLesson controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .send({
         startTime: new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString(),
-        endTime: new Date(
-          Date.now() + 6 * 24 * 3600 * 1000 + 3600000
-        ).toISOString(),
+        endTime: new Date(Date.now() + 6 * 24 * 3600 * 1000 + 3600000).toISOString(),
       })
       .expect(200)
       .then((res) => {
@@ -737,12 +722,10 @@ describe("updateLesson controller", () => {
       });
 
     const broadcastEvent = jest.fn();
-    const wsSpy = jest
-      .spyOn(wsManager, "getWebSocketManager")
-      .mockReturnValue({
-        broadcastStudentLessonEvent: broadcastEvent,
-        broadcastLessonStatusUpdate: jest.fn(),
-      } as unknown as ReturnType<typeof wsManager.getWebSocketManager>);
+    const wsSpy = jest.spyOn(wsManager, "getWebSocketManager").mockReturnValue({
+      broadcastStudentLessonEvent: broadcastEvent,
+      broadcastLessonStatusUpdate: jest.fn(),
+    } as unknown as ReturnType<typeof wsManager.getWebSocketManager>);
 
     try {
       await request(app)

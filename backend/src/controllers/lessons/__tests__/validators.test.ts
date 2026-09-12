@@ -19,9 +19,7 @@ describe("validateLessonData", () => {
     const data: CreateLessonDto = {};
     const res = validateLessonData(data as any);
     expect(res.isValid).toBe(false);
-    expect(res.error).toBe(
-      "Предмет, тип урока, время начала и время окончания обязательны"
-    );
+    expect(res.error).toBe("Предмет, тип урока, время начала и время окончания обязательны");
   });
 
   it("returns error when endTime is not after startTime", () => {
@@ -37,9 +35,7 @@ describe("validateLessonData", () => {
     };
 
     // Ensure truncateToMinute behavior assumed
-    expect(truncateToMinute(start).getTime()).toBe(
-      truncateToMinute(end).getTime()
-    );
+    expect(truncateToMinute(start).getTime()).toBe(truncateToMinute(end).getTime());
 
     const res = validateLessonData(data as any);
     expect(res.isValid).toBe(false);
@@ -103,9 +99,7 @@ describe("validateLessonData", () => {
     it("returns error when neither studentId nor prospectName is given", () => {
       const res = validateLessonData(base as any);
       expect(res.isValid).toBe(false);
-      expect(res.error).toBe(
-        "Укажите ученика или имя для пробного урока без ученика"
-      );
+      expect(res.error).toBe("Укажите ученика или имя для пробного урока без ученика");
     });
 
     it("returns error when prospect fields are combined with studentId", () => {
@@ -115,9 +109,7 @@ describe("validateLessonData", () => {
         prospectName: "Иван",
       } as any);
       expect(res.isValid).toBe(false);
-      expect(res.error).toBe(
-        "Данные пробного ученика нельзя указывать вместе с учеником"
-      );
+      expect(res.error).toBe("Данные пробного ученика нельзя указывать вместе с учеником");
     });
 
     it("returns error when prospectName is blank", () => {
@@ -136,9 +128,7 @@ describe("validateLessonData", () => {
         isRecurring: true,
       } as any);
       expect(res.isValid).toBe(false);
-      expect(res.error).toBe(
-        "Пробный урок без ученика не может быть повторяющимся"
-      );
+      expect(res.error).toBe("Пробный урок без ученика не может быть повторяющимся");
     });
 
     it("returns error when prospectContactMethod is not in allowed list", () => {
@@ -148,9 +138,7 @@ describe("validateLessonData", () => {
         prospectContactMethod: "VIBER",
       } as any);
       expect(res.isValid).toBe(false);
-      expect(res.error).toBe(
-        "Недопустимый способ связи (WhatsApp, Telegram или MAX)"
-      );
+      expect(res.error).toBe("Недопустимый способ связи (WhatsApp, Telegram или MAX)");
     });
 
     it("returns valid for prospect lesson with name and MAX contact", () => {

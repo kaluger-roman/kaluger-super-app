@@ -15,26 +15,13 @@ const renderContent = (text: string): ReactNode[] => {
 
     if (!trimmed) return null;
 
-    const withBold = trimmed.replace(
-      /\*\*(.+?)\*\*/g,
-      "<strong>$1</strong>",
-    );
+    const withBold = trimmed.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 
     if (trimmed.startsWith("- ")) {
-      return (
-        <Styled.ListItem
-          key={i}
-          dangerouslySetInnerHTML={{ __html: withBold.slice(2) }}
-        />
-      );
+      return <Styled.ListItem key={i} dangerouslySetInnerHTML={{ __html: withBold.slice(2) }} />;
     }
 
-    return (
-      <Styled.SectionTitle
-        key={i}
-        dangerouslySetInnerHTML={{ __html: withBold }}
-      />
-    );
+    return <Styled.SectionTitle key={i} dangerouslySetInnerHTML={{ __html: withBold }} />;
   });
 };
 
@@ -45,9 +32,7 @@ export const NewsCard: FC<NewsCardProps> = ({ news }) => {
         <Styled.Title variant="h6" component="h2">
           {news.title}
         </Styled.Title>
-        <Styled.DateText variant="body2">
-          {formatDate(new Date(news.publishedAt))}
-        </Styled.DateText>
+        <Styled.DateText variant="body2">{formatDate(new Date(news.publishedAt))}</Styled.DateText>
         <Styled.ContentBox>{renderContent(news.content)}</Styled.ContentBox>
       </Styled.StyledCardContent>
     </Styled.StyledCard>

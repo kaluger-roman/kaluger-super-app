@@ -29,7 +29,7 @@ describe("NewsCard", () => {
 
   it("should render formatted date", () => {
     renderWithTheme(
-      <NewsCard news={createNewsItem({ publishedAt: "2024-06-15T12:00:00.000Z" })} />,
+      <NewsCard news={createNewsItem({ publishedAt: "2024-06-15T12:00:00.000Z" })} />
     );
 
     expect(screen.getByText(/15/)).toBeInTheDocument();
@@ -37,9 +37,7 @@ describe("NewsCard", () => {
   });
 
   it("should render bold text", () => {
-    renderWithTheme(
-      <NewsCard news={createNewsItem({ content: "Some **bold** text" })} />,
-    );
+    renderWithTheme(<NewsCard news={createNewsItem({ content: "Some **bold** text" })} />);
 
     const strong = document.querySelector("strong");
     expect(strong).toBeInTheDocument();
@@ -47,25 +45,21 @@ describe("NewsCard", () => {
   });
 
   it("should render list items for lines starting with -", () => {
-    renderWithTheme(
-      <NewsCard news={createNewsItem({ content: "- First item\n- Second item" })} />,
-    );
+    renderWithTheme(<NewsCard news={createNewsItem({ content: "- First item\n- Second item" })} />);
 
     expect(screen.getByText("First item")).toBeInTheDocument();
     expect(screen.getByText("Second item")).toBeInTheDocument();
   });
 
   it("should render section titles for non-list non-empty lines", () => {
-    renderWithTheme(
-      <NewsCard news={createNewsItem({ content: "Section Header" })} />,
-    );
+    renderWithTheme(<NewsCard news={createNewsItem({ content: "Section Header" })} />);
 
     expect(screen.getByText("Section Header")).toBeInTheDocument();
   });
 
   it("should skip empty lines", () => {
     const { container } = renderWithTheme(
-      <NewsCard news={createNewsItem({ content: "Line 1\n\nLine 2" })} />,
+      <NewsCard news={createNewsItem({ content: "Line 1\n\nLine 2" })} />
     );
 
     const contentBox = container.querySelector(".MuiBox-root");

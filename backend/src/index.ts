@@ -43,7 +43,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  }),
+  })
 );
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
@@ -82,17 +82,10 @@ app.get("/health", async (req, res) => {
 });
 
 // Error handling
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Something went wrong!" });
-  },
-);
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: "Something went wrong!" });
+});
 
 // 404 handler
 app.use("*", (req, res) => {
@@ -115,9 +108,7 @@ if (shouldStartServer) {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
-    console.log(
-      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`,
-    );
+    console.log(`Student WebSocket server available at ws://localhost:${PORT}/ws/student`);
 
     if (!shouldRunCrons) {
       console.log("Cron jobs disabled (test mode)");
@@ -136,7 +127,7 @@ if (shouldStartServer) {
           console.error("Error in recurring lessons cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -148,7 +139,7 @@ if (shouldStartServer) {
           console.error("Error in lesson status update cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -160,7 +151,7 @@ if (shouldStartServer) {
           console.error("Error in reminder processing cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -172,7 +163,7 @@ if (shouldStartServer) {
           console.error("Error in database backup cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     console.log(`Cron jobs scheduled (timezone: ${CRON_TIMEZONE}):`);

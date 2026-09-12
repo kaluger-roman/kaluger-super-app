@@ -68,8 +68,8 @@ export const LessonFormActions = ({
                 ? "Обновление..."
                 : "Создание..."
               : lesson
-              ? "Обновить урок"
-              : "Создать урок"}
+                ? "Обновить урок"
+                : "Создать урок"}
           </Button>
         </Styled.RightColumn>
       </Styled.Container>

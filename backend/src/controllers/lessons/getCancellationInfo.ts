@@ -3,10 +3,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import type { Lesson } from "@prisma/client";
 
-export const findNextUnpaidLesson = async (
-  tutorId: string,
-  cancelledLesson: Lesson
-) =>
+export const findNextUnpaidLesson = async (tutorId: string, cancelledLesson: Lesson) =>
   prisma.lesson.findFirst({
     where: {
       id: { not: cancelledLesson.id },
@@ -21,10 +18,7 @@ export const findNextUnpaidLesson = async (
     include: { student: { select: { name: true } } },
   });
 
-export const getLessonCancellationInfo = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getLessonCancellationInfo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;

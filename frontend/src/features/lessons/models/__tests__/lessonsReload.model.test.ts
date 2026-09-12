@@ -4,13 +4,19 @@ import { describe, it, expect, vi } from "vitest";
 import { lessonModel } from "@entities";
 
 import "../lessonsReload.model";
-import { CANCELLED_TAB_INDEX, COMPLETED_TAB_INDEX, UPCOMING_TAB_INDEX } from "../lessonsTabs.constants";
+import {
+  CANCELLED_TAB_INDEX,
+  COMPLETED_TAB_INDEX,
+  UPCOMING_TAB_INDEX,
+} from "../lessonsTabs.constants";
 import * as tabsModel from "../lessonsTabs.model";
 import * as viewModeModel from "../lessonsViewMode.model";
 
 describe("lessonsReload.model — removeLessonFx reload", () => {
   it("should call loadUpcomingLessonsFx when on UPCOMING tab in paged mode", async () => {
-    const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+    const loadUpcomingFn = vi.fn(() =>
+      Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
+    );
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
 
     const scope = fork({
@@ -33,7 +39,9 @@ describe("lessonsReload.model — removeLessonFx reload", () => {
   });
 
   it("should NOT call loadUpcomingLessonsFx when on COMPLETED tab in paged mode", async () => {
-    const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+    const loadUpcomingFn = vi.fn(() =>
+      Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
+    );
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
 
     const scope = fork({
@@ -56,7 +64,9 @@ describe("lessonsReload.model — removeLessonFx reload", () => {
   });
 
   it("should NOT call loadUpcomingLessonsFx when on CANCELLED tab in paged mode", async () => {
-    const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+    const loadUpcomingFn = vi.fn(() =>
+      Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
+    );
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
 
     const scope = fork({
@@ -79,7 +89,9 @@ describe("lessonsReload.model — removeLessonFx reload", () => {
   });
 
   it("should NOT call loadUpcomingLessonsFx when in weekly mode", async () => {
-    const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+    const loadUpcomingFn = vi.fn(() =>
+      Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
+    );
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
 
     const scope = fork({
@@ -102,7 +114,9 @@ describe("lessonsReload.model — removeLessonFx reload", () => {
   });
 
   it("should NOT call loadUpcomingLessonsFx when in schedule mode", async () => {
-    const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+    const loadUpcomingFn = vi.fn(() =>
+      Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
+    );
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
 
     const scope = fork({

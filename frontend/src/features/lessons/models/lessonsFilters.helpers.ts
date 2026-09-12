@@ -53,7 +53,11 @@ export const buildLessonFilterParams = ({
   ...(paymentDateTo && { paymentDateTo: toLocalEndOfDay(paymentDateTo) }),
 });
 
-export const buildPagedLessonParams = (filters: LessonFilterValues, page: number, limit: number) => ({
+export const buildPagedLessonParams = (
+  filters: LessonFilterValues,
+  page: number,
+  limit: number
+) => ({
   page,
   limit,
   ...buildLessonFilterParams(filters),

@@ -1,9 +1,6 @@
 import type { LessonStatus, Prisma } from "@prisma/client";
 import { truncateToMinute } from "../../utils/time";
-import type {
-  LessonsPagination,
-  LessonsQueryParams,
-} from "./lessonsQuery.types";
+import type { LessonsPagination, LessonsQueryParams } from "./lessonsQuery.types";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_PAGE_SIZE = 100;
@@ -27,9 +24,7 @@ const QUERY_KEYS: Array<keyof LessonsQueryParams> = [
   "paymentDateTo",
 ];
 
-export const parseLessonsQuery = (
-  query: Record<string, unknown>,
-): LessonsQueryParams => {
+export const parseLessonsQuery = (query: Record<string, unknown>): LessonsQueryParams => {
   const params: LessonsQueryParams = {};
   for (const key of QUERY_KEYS) {
     const value = query[key];
@@ -40,19 +35,17 @@ export const parseLessonsQuery = (
   return params;
 };
 
-export const parseLessonsPagination = (
-  params: LessonsQueryParams,
-): LessonsPagination => {
+export const parseLessonsPagination = (params: LessonsQueryParams): LessonsPagination => {
   const page = Math.max(1, parseInt(params.page ?? "", 10) || 1);
   const limit = Math.min(
     MAX_PAGE_SIZE,
-    Math.max(1, parseInt(params.limit ?? "", 10) || DEFAULT_PAGE_SIZE),
+    Math.max(1, parseInt(params.limit ?? "", 10) || DEFAULT_PAGE_SIZE)
   );
   return { page, limit, skip: (page - 1) * limit };
 };
 
 const buildStartTimeFilter = (
-  params: LessonsQueryParams,
+  params: LessonsQueryParams
 ): Prisma.LessonWhereInput["startTime"] | undefined => {
   if (params.weekly === "true" && params.weekStart) {
     const startOfWeek = truncateToMinute(new Date(params.weekStart));
@@ -78,7 +71,7 @@ const buildStartTimeFilter = (
 };
 
 const buildStatusFilter = (
-  params: LessonsQueryParams,
+  params: LessonsQueryParams
 ): Pick<Prisma.LessonWhereInput, "OR" | "status"> => {
   if (params.weekly === "true") {
     return {};
@@ -101,9 +94,7 @@ const buildStatusFilter = (
     return {};
   }
 
-  const statuses = params.status
-    .split(",")
-    .map((s) => s.trim() as LessonStatus);
+  const statuses = params.status.split(",").map((s) => s.trim() as LessonStatus);
   return {
     status: statuses.length > 1 ? { in: statuses } : statuses[0],
   };
@@ -111,7 +102,7 @@ const buildStatusFilter = (
 
 export const buildLessonsWhere = (
   userId: string,
-  params: LessonsQueryParams,
+  params: LessonsQueryParams
 ): Prisma.LessonWhereInput => {
   const where: Prisma.LessonWhereInput = { tutorId: userId };
 
@@ -130,9 +121,7 @@ export const buildLessonsWhere = (
   } else if (params.paymentDateFrom || params.paymentDateTo) {
     where.paymentDate = {
       not: null,
-      ...(params.paymentDateFrom
-        ? { gte: new Date(params.paymentDateFrom) }
-        : {}),
+      ...(params.paymentDateFrom ? { gte: new Date(params.paymentDateFrom) } : {}),
       ...(params.paymentDateTo ? { lte: new Date(params.paymentDateTo) } : {}),
     };
   }

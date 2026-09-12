@@ -21,11 +21,7 @@ export type {
   CreateLessonDto,
   UpdateLessonDto,
 } from "./lesson";
-export type {
-  TaxRatePeriod,
-  CreateTaxRatePeriodDto,
-  TaxBreakdownEntry,
-} from "./taxRate";
+export type { TaxRatePeriod, CreateTaxRatePeriodDto, TaxBreakdownEntry } from "./taxRate";
 export type { Statistics } from "./statistics";
 export type { NewsItem, NewsPagination, NewsListResponse } from "./news";
 export type {

@@ -4,11 +4,7 @@ import type { CreateLessonDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import { SchedulingConflictError } from "../../utils";
-import {
-  createRecurringLessons,
-  createSingleLesson,
-  notifyLessonsCreated,
-} from "../../services";
+import { createRecurringLessons, createSingleLesson, notifyLessonsCreated } from "../../services";
 import { validateLessonData } from "./validators";
 
 export const createLesson = async (req: AuthRequest, res: Response) => {
@@ -33,11 +29,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     }
 
     if (data.isRecurring && student) {
-      const { created, first } = await createRecurringLessons(
-        userId,
-        data,
-        student,
-      );
+      const { created, first } = await createRecurringLessons(userId, data, student);
       res.status(201).json({
         lesson: first,
         message: `Создано ${created.length} регулярных уроков`,

@@ -77,9 +77,7 @@ describe("LessonCell", () => {
   it("should not render orphan '0' for price=0 (regression: zero-price truthiness check)", () => {
     const onClick = vi.fn();
     const freeLesson = { ...mockLesson, price: 0 };
-    const { container } = renderWithTheme(
-      <LessonCell lesson={freeLesson} onClick={onClick} />
-    );
+    const { container } = renderWithTheme(<LessonCell lesson={freeLesson} onClick={onClick} />);
     expect(screen.queryByText(/₽/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/(?<![\d.])0(?![\d.])/);

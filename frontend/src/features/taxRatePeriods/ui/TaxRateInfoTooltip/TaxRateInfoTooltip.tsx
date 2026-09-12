@@ -23,10 +23,7 @@ export const TaxRateInfoTooltip: FC<Props> = ({ breakdown }) => {
   const tooltipContent = (
     <Styled.TooltipList>
       {breakdown.map((entry) => (
-        <Typography
-          key={`${entry.rate}-${entry.isOutsidePeriods ? "out" : "in"}`}
-          variant="body2"
-        >
+        <Typography key={`${entry.rate}-${entry.isOutsidePeriods ? "out" : "in"}`} variant="body2">
           {formatBreakdownLine(entry)}
         </Typography>
       ))}
@@ -35,13 +32,7 @@ export const TaxRateInfoTooltip: FC<Props> = ({ breakdown }) => {
 
   return (
     <ClickAwayListener onClickAway={handleClose}>
-      <Tooltip
-        open={open}
-        title={tooltipContent}
-        arrow
-        placement="top"
-        onClose={handleClose}
-      >
+      <Tooltip open={open} title={tooltipContent} arrow placement="top" onClose={handleClose}>
         <Styled.Container
           role="button"
           aria-label="Подробности расчёта налога"

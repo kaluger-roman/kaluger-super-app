@@ -64,9 +64,7 @@ export const installPromptDismissed = createEvent();
 export const $installPrompt = createStore<BeforeInstallPromptEvent | null>(null);
 export const $showInstallBanner = createStore(false);
 
-export const $showIosInstallHint = createStore(
-  isIos() && !isInStandaloneMode()
-);
+export const $showIosInstallHint = createStore(isIos() && !isInStandaloneMode());
 export const iosInstallHintDismissed = createEvent();
 
 // Connect events

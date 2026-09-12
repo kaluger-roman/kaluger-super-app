@@ -651,7 +651,7 @@ const createMockStudent = (overrides: Partial<Student> = {}): Student =>
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
-  } as unknown as Student);
+  }) as unknown as Student;
 
 describe("applyHourlyRateAutofill", () => {
   const baseFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
@@ -780,9 +780,7 @@ describe("canSubmitLessonForm", () => {
   it("should require non-blank prospect name in prospect mode", () => {
     expect(canSubmitLessonForm({ ...base, withoutStudent: true })).toBe(false);
     expect(canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: " " })).toBe(false);
-    expect(
-      canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: "Пётр" })
-    ).toBe(true);
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: "Пётр" })).toBe(true);
   });
 });
 

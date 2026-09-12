@@ -7,9 +7,7 @@ export const taxPeriodsApi = {
     return response.data;
   },
 
-  replaceAll: async (
-    periods: CreateTaxRatePeriodDto[],
-  ): Promise<TaxRatePeriod[]> => {
+  replaceAll: async (periods: CreateTaxRatePeriodDto[]): Promise<TaxRatePeriod[]> => {
     const response = await api.put("/tax-periods", { periods });
     return response.data;
   },

@@ -1,13 +1,7 @@
 import { useMemo } from "react";
 
 import AddIcon from "@mui/icons-material/Add";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { taxRatePeriodsModalModel, todayIso } from "../../model";
@@ -41,15 +35,12 @@ export const TaxRatePeriodsModal = () => {
       fullWidth
       aria-labelledby="tax-rate-periods-dialog-title"
     >
-      <DialogTitle id="tax-rate-periods-dialog-title">
-        Налоговые ставки
-      </DialogTitle>
+      <DialogTitle id="tax-rate-periods-dialog-title">Налоговые ставки</DialogTitle>
       <DialogContent>
         <Styled.RowsContainer>
           {draft.length === 0 ? (
             <Styled.EmptyMessage variant="body2" color="text.secondary">
-              Нет настроенных периодов. Добавьте хотя бы один, чтобы система могла
-              рассчитать налог.
+              Нет настроенных периодов. Добавьте хотя бы один, чтобы система могла рассчитать налог.
             </Styled.EmptyMessage>
           ) : (
             draft.map((period) => {
@@ -67,20 +58,13 @@ export const TaxRatePeriodsModal = () => {
                       startDate,
                     })
                   }
-                  onRateChange={(rate) =>
-                    actions.rateChanged({ tempId: period.tempId, rate })
-                  }
+                  onRateChange={(rate) => actions.rateChanged({ tempId: period.tempId, rate })}
                   onRemove={() => actions.removed({ tempId: period.tempId })}
                 />
               );
             })
           )}
-          <Button
-            startIcon={<AddIcon />}
-            onClick={actions.added}
-            variant="outlined"
-            size="small"
-          >
+          <Button startIcon={<AddIcon />} onClick={actions.added} variant="outlined" size="small">
             Добавить период
           </Button>
           {error ? (
@@ -92,12 +76,7 @@ export const TaxRatePeriodsModal = () => {
       </DialogContent>
       <DialogActions>
         <Button onClick={actions.closed}>Отмена</Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={actions.save}
-          disabled={!canSave}
-        >
+        <Button variant="contained" color="primary" onClick={actions.save} disabled={!canSave}>
           Сохранить
         </Button>
       </DialogActions>

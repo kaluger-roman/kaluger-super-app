@@ -69,12 +69,8 @@ describe("processRecurringLessons", () => {
 
     // Create a single recurring lesson scheduled one week ago
     const now = new Date();
-    const lastStart = truncateToMinute(
-      new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    );
-    const lastEnd = truncateToMinute(
-      new Date(lastStart.getTime() + 60 * 60 * 1000)
-    );
+    const lastStart = truncateToMinute(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+    const lastEnd = truncateToMinute(new Date(lastStart.getTime() + 60 * 60 * 1000));
 
     await prisma.lesson.create({
       data: {
@@ -108,12 +104,8 @@ describe("processRecurringLessons", () => {
     // immediately and no duplicates appear.
     const { tutor, student } = await createTutorAndStudentTracked();
 
-    const lastStart = truncateToMinute(
-      new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    );
-    const lastEnd = truncateToMinute(
-      new Date(lastStart.getTime() + 60 * 60 * 1000)
-    );
+    const lastStart = truncateToMinute(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000));
+    const lastEnd = truncateToMinute(new Date(lastStart.getTime() + 60 * 60 * 1000));
     await prisma.lesson.create({
       data: {
         subject: "MATHEMATICS",
@@ -127,10 +119,7 @@ describe("processRecurringLessons", () => {
       },
     });
 
-    await Promise.all([
-      processRecurringLessons(),
-      processRecurringLessons(),
-    ]);
+    await Promise.all([processRecurringLessons(), processRecurringLessons()]);
 
     const lessons = await prisma.lesson.findMany({
       where: { tutorId: tutor.id, isRecurring: true },
@@ -165,12 +154,8 @@ describe("processRecurringLessons", () => {
     });
 
     // Create an existing lesson next week that conflicts with where a new one would be
-    const conflictStart = truncateToMinute(
-      new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
-    );
-    const conflictEnd = truncateToMinute(
-      new Date(conflictStart.getTime() + 60 * 60 * 1000)
-    );
+    const conflictStart = truncateToMinute(new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000));
+    const conflictEnd = truncateToMinute(new Date(conflictStart.getTime() + 60 * 60 * 1000));
 
     await prisma.lesson.create({
       data: {

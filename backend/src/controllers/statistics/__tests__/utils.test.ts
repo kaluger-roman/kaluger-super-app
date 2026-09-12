@@ -1,8 +1,4 @@
-import {
-  getDateRange,
-  getLastMonthRange,
-  buildStatisticsWhere,
-} from "../utils";
+import { getDateRange, getLastMonthRange, buildStatisticsWhere } from "../utils";
 
 describe("statistics utils", () => {
   beforeAll(() => {
@@ -71,10 +67,7 @@ describe("statistics utils", () => {
   });
 
   it("getDateRange with both ISO startDate and endDate returns exact boundaries", () => {
-    const { gte, lte } = getDateRange(
-      "2025-01-01T21:00:00.000Z",
-      "2025-01-05T20:59:59.999Z"
-    );
+    const { gte, lte } = getDateRange("2025-01-01T21:00:00.000Z", "2025-01-05T20:59:59.999Z");
 
     expect(gte.getUTCFullYear()).toBe(2025);
     expect(gte.getUTCMonth()).toBe(0);
@@ -143,19 +136,12 @@ describe("statistics utils", () => {
   });
 
   it("buildStatisticsWhere passes timezone to fallback", () => {
-    const where = buildStatisticsWhere(
-      "user-123",
-      undefined,
-      undefined,
-      "Europe/Moscow"
-    );
+    const where = buildStatisticsWhere("user-123", undefined, undefined, "Europe/Moscow");
 
     // Fallback: Dec 2025 in Moscow
     // Start: Dec 1 00:00 Moscow = Nov 30 21:00 UTC
     expect(where.startTime.gte.toISOString()).toBe("2025-11-30T21:00:00.000Z");
     // End: Dec 31 23:59:59.999 Moscow = Dec 31 20:59:59.999 UTC
-    expect(where.startTime.lte.toISOString()).toBe(
-      "2025-12-31T20:59:59.999Z"
-    );
+    expect(where.startTime.lte.toISOString()).toBe("2025-12-31T20:59:59.999Z");
   });
 });

@@ -27,7 +27,9 @@ export const UpcomingLessons = ({ lessons }: UpcomingLessonsProps) => {
           <Styled.LessonCard key={lesson.id} variant="outlined">
             <Styled.LessonCardContent>
               <Box>
-                <Styled.StudentName variant="subtitle2">{getLessonDisplayName(lesson)}</Styled.StudentName>
+                <Styled.StudentName variant="subtitle2">
+                  {getLessonDisplayName(lesson)}
+                </Styled.StudentName>
                 <Typography variant="body2" color="text.secondary">
                   {formatLessonTime(lesson.startTime, lesson.endTime)}
                 </Typography>

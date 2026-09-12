@@ -4,21 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { studentUserModel } from "@entities/studentUser";
 
 import { BLOCKING_OVERLAY_DELAY_MS } from "../blocking.constants";
-import {
-  $isBlocking,
-  $isBlockingVisible,
-  RouteChunkGate,
-} from "../blocking.model";
+import { $isBlocking, $isBlockingVisible, RouteChunkGate } from "../blocking.model";
 
 describe("app/model/blocking.model — $isBlocking", () => {
   it("blocks while studentUserModel.getCurrentStudentFx is pending (regression: профиль ученика грузился без global overlay)", async () => {
     const scope = fork({
-      handlers: [
-        [
-          studentUserModel.getCurrentStudentFx,
-          () => new Promise(() => undefined),
-        ],
-      ],
+      handlers: [[studentUserModel.getCurrentStudentFx, () => new Promise(() => undefined)]],
     });
 
     expect(scope.getState($isBlocking)).toBe(false);

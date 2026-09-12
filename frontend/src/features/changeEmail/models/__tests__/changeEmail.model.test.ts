@@ -130,7 +130,14 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       vi.mocked(authApi.verifyEmailChange).mockResolvedValueOnce({
         message: "Email успешно изменён",
         token: "new-token",
-        user: { id: "1", email: "new@example.com", name: "Test", createdAt: "", isEmailVerified: true, taxEnabled: false },
+        user: {
+          id: "1",
+          email: "new@example.com",
+          name: "Test",
+          createdAt: "",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({
@@ -146,7 +153,14 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       vi.mocked(authApi.verifyEmailChange).mockResolvedValueOnce({
         message: "Email успешно изменён",
         token: "new-jwt-token",
-        user: { id: "1", email: "new@example.com", name: "Test", createdAt: "", isEmailVerified: true, taxEnabled: false },
+        user: {
+          id: "1",
+          email: "new@example.com",
+          name: "Test",
+          createdAt: "",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({
@@ -205,7 +219,14 @@ describe("features/changeEmail/models/changeEmail.model", () => {
       vi.mocked(authApi.verifyEmailChange).mockResolvedValueOnce({
         message: "Email успешно изменён",
         token: "new-token",
-        user: { id: "1", email: "new@example.com", name: "Test", createdAt: "", isEmailVerified: true, taxEnabled: false },
+        user: {
+          id: "1",
+          email: "new@example.com",
+          name: "Test",
+          createdAt: "",
+          isEmailVerified: true,
+          taxEnabled: false,
+        },
       });
 
       const scope = fork({

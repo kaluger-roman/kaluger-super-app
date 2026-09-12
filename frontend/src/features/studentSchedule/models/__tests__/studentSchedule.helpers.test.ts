@@ -96,30 +96,21 @@ describe("studentSchedule.helpers", () => {
     });
 
     it("formats 30 минут duration", () => {
-      expect(
-        formatLessonDuration(
-          "2026-05-04T10:00:00.000Z",
-          "2026-05-04T10:30:00.000Z"
-        )
-      ).toBe("30мин");
+      expect(formatLessonDuration("2026-05-04T10:00:00.000Z", "2026-05-04T10:30:00.000Z")).toBe(
+        "30мин"
+      );
     });
 
     it("formats 90 минут duration", () => {
-      expect(
-        formatLessonDuration(
-          "2026-05-04T10:00:00.000Z",
-          "2026-05-04T11:30:00.000Z"
-        )
-      ).toBe("1ч 30мин");
+      expect(formatLessonDuration("2026-05-04T10:00:00.000Z", "2026-05-04T11:30:00.000Z")).toBe(
+        "1ч 30мин"
+      );
     });
 
     it("formats whole-hour duration", () => {
-      expect(
-        formatLessonDuration(
-          "2026-05-04T10:00:00.000Z",
-          "2026-05-04T12:00:00.000Z"
-        )
-      ).toBe("2ч 0мин");
+      expect(formatLessonDuration("2026-05-04T10:00:00.000Z", "2026-05-04T12:00:00.000Z")).toBe(
+        "2ч 0мин"
+      );
     });
   });
 

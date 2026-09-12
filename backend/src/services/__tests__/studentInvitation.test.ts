@@ -78,9 +78,7 @@ describe("studentInvitation service", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentInvitation
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
+    await prisma.studentInvitation.deleteMany({ where: { tutorId } }).catch(() => undefined);
     await prisma.studentInvitation
       .deleteMany({ where: { tutorId: otherTutorId } })
       .catch(() => undefined);

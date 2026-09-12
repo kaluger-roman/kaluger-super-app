@@ -5,7 +5,11 @@ import { lessonModel } from "@entities";
 import { buildLessonFilterParams, buildPagedLessonParams } from "./lessonsFilters.helpers";
 import * as filtersModel from "./lessonsFilters.model";
 import { getScheduleDateRange } from "./lessonsReload.helpers";
-import { CANCELLED_TAB_INDEX, COMPLETED_TAB_INDEX, UPCOMING_TAB_INDEX } from "./lessonsTabs.constants";
+import {
+  CANCELLED_TAB_INDEX,
+  COMPLETED_TAB_INDEX,
+  UPCOMING_TAB_INDEX,
+} from "./lessonsTabs.constants";
 import * as tabsModel from "./lessonsTabs.model";
 import * as viewModeModel from "./lessonsViewMode.model";
 

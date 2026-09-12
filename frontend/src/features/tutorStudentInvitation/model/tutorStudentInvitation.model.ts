@@ -1,9 +1,4 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
 import type { InvitationStatusResponse } from "@shared";
@@ -26,8 +21,8 @@ export const $ephemeralInviteUrl = createStore<string | null>(null);
 export const $error = createStore<string | null>(null);
 export const $copySuccess = createStore(false);
 
-export const loadStatusFx = createEffect(
-  async (studentId: string) => studentInvitationsApi.getStatus(studentId)
+export const loadStatusFx = createEffect(async (studentId: string) =>
+  studentInvitationsApi.getStatus(studentId)
 );
 
 export const issueInvitationFx = createEffect(async (studentId: string) =>

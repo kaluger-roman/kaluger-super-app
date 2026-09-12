@@ -249,7 +249,9 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    (webpush.sendNotification as jest.Mock).mockRejectedValue(new Error("Push service unavailable"));
+    (webpush.sendNotification as jest.Mock).mockRejectedValue(
+      new Error("Push service unavailable")
+    );
 
     await processScheduledReminders();
 
@@ -684,8 +686,7 @@ describe("reminderProcessor service", () => {
     await processScheduledReminders();
 
     expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
-    const payloadJson = (webpush.sendNotification as jest.Mock).mock
-      .calls[0][1] as string;
+    const payloadJson = (webpush.sendNotification as jest.Mock).mock.calls[0][1] as string;
     expect(payloadJson).toContain("Тест Проспект");
 
     const reminder = await prisma.scheduledReminder.findFirst({

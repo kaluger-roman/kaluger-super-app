@@ -49,9 +49,7 @@ describe("entities/user/user.model", () => {
       vi.mocked(authApi.getProfile).mockResolvedValue(verifiedUser);
 
       const scope = fork({
-        values: [
-          [verificationModel.$verificationEmail, "test@example.com"],
-        ],
+        values: [[verificationModel.$verificationEmail, "test@example.com"]],
       });
 
       await allSettled(getProfileFx, { scope });

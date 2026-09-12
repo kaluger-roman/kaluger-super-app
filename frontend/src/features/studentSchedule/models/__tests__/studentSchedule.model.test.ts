@@ -7,8 +7,7 @@ import { studentCabinetApi } from "@shared";
 import * as model from "../studentSchedule.model";
 
 vi.mock("@shared", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared")>("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     studentCabinetApi: {
@@ -18,9 +17,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-const makeLesson = (
-  overrides: Partial<StudentVisibleLesson> = {}
-): StudentVisibleLesson => ({
+const makeLesson = (overrides: Partial<StudentVisibleLesson> = {}): StudentVisibleLesson => ({
   id: "l-1",
   subject: "MATHEMATICS",
   startTime: "2026-05-04T10:00:00.000Z",
@@ -52,9 +49,7 @@ describe("features/studentSchedule/models/studentSchedule.model", () => {
   });
 
   it("stores error when fetch fails", async () => {
-    vi.mocked(studentCabinetApi.getLessonsByWeek).mockRejectedValueOnce(
-      new Error("network")
-    );
+    vi.mocked(studentCabinetApi.getLessonsByWeek).mockRejectedValueOnce(new Error("network"));
 
     const scope = fork();
     await allSettled(model.weekChanged, {

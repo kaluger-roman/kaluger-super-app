@@ -1,11 +1,7 @@
 export type ContactMethod = "WHATSAPP" | "TELEGRAM" | "MAX";
 
 export type ArchiveReason =
-  | "COMPLETED_STUDIES"
-  | "FOUND_ANOTHER_TUTOR"
-  | "CHANGED_MIND"
-  | "POOR_EFFORT"
-  | "MISSED_LESSONS";
+  "COMPLETED_STUDIES" | "FOUND_ANOTHER_TUTOR" | "CHANGED_MIND" | "POOR_EFFORT" | "MISSED_LESSONS";
 
 export type Student = {
   id: string;

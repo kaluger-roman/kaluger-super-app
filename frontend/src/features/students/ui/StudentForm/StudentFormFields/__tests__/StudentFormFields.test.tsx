@@ -73,8 +73,7 @@ describe("StudentFormFields", () => {
     const onChange = vi.fn((_field: string) => {
       return (
         _event:
-          | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-          | { target: { value: unknown } }
+          React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
       ) => {
         // mock implementation
       };

@@ -44,12 +44,7 @@ describe("finances.model", () => {
       taxEnabled: true,
     });
     const scope = fork({
-      values: [
-        [
-          taxRatePeriodModel.$periods,
-          [{ id: "p1", startDate: "2024-01-01", rate: 6 }],
-        ],
-      ],
+      values: [[taxRatePeriodModel.$periods, [{ id: "p1", startDate: "2024-01-01", rate: 6 }]]],
     });
 
     await allSettled(taxEnabledRequested, { scope, params: true });
@@ -77,10 +72,7 @@ describe("finances.model", () => {
     const scope = fork({
       values: [
         [userModel.$user, mockUser],
-        [
-          taxRatePeriodModel.$periods,
-          [{ id: "p1", startDate: "2024-01-01", rate: 6 }],
-        ],
+        [taxRatePeriodModel.$periods, [{ id: "p1", startDate: "2024-01-01", rate: 6 }]],
       ],
     });
 

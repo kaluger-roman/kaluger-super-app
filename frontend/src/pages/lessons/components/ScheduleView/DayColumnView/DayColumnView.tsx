@@ -61,6 +61,6 @@ export const DayColumnView = memo<DayColumnViewProps>(
         ) : null}
       </Styled.DayColumn>
     );
-  },
+  }
 );
 DayColumnView.displayName = "DayColumnView";

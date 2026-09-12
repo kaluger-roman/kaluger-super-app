@@ -6,12 +6,7 @@ import type { StudentVisibleLesson } from "@shared";
 
 import { statusChipColor } from "./StudentLessonCard.constants";
 import * as Styled from "./StudentLessonCard.styled";
-import {
-  formatLessonDuration,
-  formatLessonTime,
-  statusLabel,
-  subjectLabel,
-} from "../../models";
+import { formatLessonDuration, formatLessonTime, statusLabel, subjectLabel } from "../../models";
 
 type StudentLessonCardProps = {
   lesson: StudentVisibleLesson;
@@ -21,9 +16,7 @@ export const StudentLessonCard: FC<StudentLessonCardProps> = ({ lesson }) => {
   return (
     <Styled.StyledCard variant="outlined" $status={lesson.status}>
       <Styled.HeaderRow>
-        <Styled.SubjectText variant="subtitle1">
-          {subjectLabel(lesson.subject)}
-        </Styled.SubjectText>
+        <Styled.SubjectText variant="subtitle1">{subjectLabel(lesson.subject)}</Styled.SubjectText>
         <Styled.StatusChip
           size="small"
           color={statusChipColor[lesson.status]}

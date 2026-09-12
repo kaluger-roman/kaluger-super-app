@@ -17,7 +17,7 @@ export const listTaxPeriods = async (req: AuthRequest, res: Response) => {
         id: period.id,
         startDate: period.startDate.toISOString(),
         rate: period.rate,
-      })),
+      }))
     );
   } catch (error) {
     console.error("List tax periods error:", error);

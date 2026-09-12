@@ -17,8 +17,7 @@ type FinancialStatisticsProps = {
 };
 
 export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }) => {
-  const showTaxCard =
-    statistics.taxAmount !== null && statistics.taxBreakdown !== null;
+  const showTaxCard = statistics.taxAmount !== null && statistics.taxBreakdown !== null;
   const breakdown = statistics.taxBreakdown ?? [];
   const taxLabel = getTaxLabel(breakdown);
   const showInfoIcon = shouldShowTaxInfoIcon(breakdown);
@@ -67,9 +66,7 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
             <CardContent>
               <Styled.TaxTitle variant="h6" gutterBottom>
                 {taxLabel}
-                {showInfoIcon ? (
-                  <TaxRateInfoTooltip breakdown={breakdown} />
-                ) : null}
+                {showInfoIcon ? <TaxRateInfoTooltip breakdown={breakdown} /> : null}
               </Styled.TaxTitle>
               <Styled.OrangeAmount variant="h4">
                 {formatCurrency(statistics.taxAmount ?? 0)}

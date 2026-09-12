@@ -2,12 +2,7 @@ import { createEffect, createEvent, sample, createStore } from "effector";
 import { createGate } from "effector-react";
 
 import { userModel, verificationModel } from "@entities";
-import {
-  authApi,
-  extractAxiosError,
-  navigate,
-  notificationsModel,
-} from "@shared";
+import { authApi, extractAxiosError, navigate, notificationsModel } from "@shared";
 
 export const RegisterFormGate = createGate();
 

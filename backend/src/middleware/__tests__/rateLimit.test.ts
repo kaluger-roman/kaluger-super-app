@@ -12,10 +12,7 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
   });
 
   const buildApp = (
-    limiterName:
-      | "authRateLimiter"
-      | "adminLoginRateLimiter"
-      | "passwordResetRateLimiter",
+    limiterName: "authRateLimiter" | "adminLoginRateLimiter" | "passwordResetRateLimiter"
   ) => {
     process.env.NODE_ENV = "production";
     jest.resetModules();
@@ -23,9 +20,7 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
     const limiters = require("../rateLimit");
     const app = express();
     app.use(express.json());
-    app.post("/test", limiters[limiterName], (_req, res) =>
-      res.status(200).json({ ok: true })
-    );
+    app.post("/test", limiters[limiterName], (_req, res) => res.status(200).json({ ok: true }));
     return app;
   };
 
@@ -68,9 +63,7 @@ describe("rate limit middleware (regression: brute-force protection)", () => {
     const { authRateLimiter } = require("../rateLimit");
     const app = express();
     app.use(express.json());
-    app.post("/test", authRateLimiter, (_req, res) =>
-      res.status(200).json({ ok: true })
-    );
+    app.post("/test", authRateLimiter, (_req, res) => res.status(200).json({ ok: true }));
 
     for (let i = 0; i < 25; i++) {
       await request(app).post("/test").expect(200);
@@ -85,14 +78,13 @@ describe("auth router (regression: rate-limit on /reset-password*)", () => {
 
   const stack = (authRouter as unknown as { stack: RouteLayer[] }).stack;
 
-  it.each([
-    ["/forgot-password"],
-    ["/reset-password/verify"],
-    ["/reset-password"],
-  ])("should apply passwordResetRateLimiter to %s", (path) => {
-    const layer = stack.find((l) => l.route?.path === path);
-    expect(layer?.route).toBeDefined();
-    const handlers = layer!.route!.stack.map((s) => s.handle);
-    expect(handlers).toContain(passwordResetRateLimiter);
-  });
+  it.each([["/forgot-password"], ["/reset-password/verify"], ["/reset-password"]])(
+    "should apply passwordResetRateLimiter to %s",
+    (path) => {
+      const layer = stack.find((l) => l.route?.path === path);
+      expect(layer?.route).toBeDefined();
+      const handlers = layer!.route!.stack.map((s) => s.handle);
+      expect(handlers).toContain(passwordResetRateLimiter);
+    }
+  );
 });

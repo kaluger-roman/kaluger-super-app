@@ -30,9 +30,7 @@ describe("WebSocketManager — upgrade routing", () => {
 
   const openWs = (path: string): Promise<WebSocket> =>
     new Promise((resolve, reject) => {
-      const ws = new WebSocket(
-        `ws://127.0.0.1:${port}${path}?token=fake`
-      );
+      const ws = new WebSocket(`ws://127.0.0.1:${port}${path}?token=fake`);
       ws.once("open", () => resolve(ws));
       ws.once("error", reject);
     });
@@ -40,9 +38,7 @@ describe("WebSocketManager — upgrade routing", () => {
   beforeAll(async () => {
     server = createServer();
     manager = new WebSocketManager(server);
-    await new Promise<void>((resolve) =>
-      server.listen(0, "127.0.0.1", () => resolve())
-    );
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
     port = (server.address() as AddressInfo).port;
   });
 
@@ -63,10 +59,7 @@ describe("WebSocketManager — upgrade routing", () => {
   });
 
   it("accepts /ws and /ws/student in parallel — single HTTP server", async () => {
-    const [tutorWs, studentWs] = await Promise.all([
-      openWs("/ws"),
-      openWs("/ws/student"),
-    ]);
+    const [tutorWs, studentWs] = await Promise.all([openWs("/ws"), openWs("/ws/student")]);
     expect(tutorWs.readyState).toBe(WebSocket.OPEN);
     expect(studentWs.readyState).toBe(WebSocket.OPEN);
     tutorWs.close();

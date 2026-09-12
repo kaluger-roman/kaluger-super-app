@@ -3,10 +3,7 @@ import type { Response } from "express";
 import { getStudentLessonsByWeek } from "../services/studentCabinet";
 import type { StudentRequest } from "../types";
 
-export const studentCabinetGetLessons = async (
-  req: StudentRequest,
-  res: Response
-) => {
+export const studentCabinetGetLessons = async (req: StudentRequest, res: Response) => {
   try {
     const studentUserId = req.studentUser?.studentUserId;
     if (!studentUserId) {

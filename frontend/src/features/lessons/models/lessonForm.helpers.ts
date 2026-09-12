@@ -78,9 +78,7 @@ export const validateFormData = (
 };
 
 export const canSubmitLessonForm = (formData: LessonFormData): boolean =>
-  formData.withoutStudent
-    ? Boolean(formData.prospectName.trim())
-    : Boolean(formData.studentId);
+  formData.withoutStudent ? Boolean(formData.prospectName.trim()) : Boolean(formData.studentId);
 
 export const applyWithoutStudentRules = (
   formData: LessonFormData,
@@ -100,8 +98,7 @@ export const applyWithoutStudentRules = (
     prospectContactMethod: "",
     // При редактировании существующего пробного урока цена сохраняется —
     // иначе автозаполнение ставкой ученика молча подменит цену при привязке.
-    price:
-      !editingLesson && formData.price === "0" ? "" : formData.price,
+    price: !editingLesson && formData.price === "0" ? "" : formData.price,
   };
 };
 
@@ -150,9 +147,9 @@ export const shouldConfirmTimeChange = (state: {
 }): boolean =>
   Boolean(
     state.editingLesson !== undefined &&
-      state.editingLesson.isRecurring &&
-      state.editingLesson.status === "SCHEDULED" &&
-      hasTimeChanged(state.editingLesson, state.formData)
+    state.editingLesson.isRecurring &&
+    state.editingLesson.status === "SCHEDULED" &&
+    hasTimeChanged(state.editingLesson, state.formData)
   );
 
 export const shouldConfirmPriceChange = (state: {
@@ -161,10 +158,10 @@ export const shouldConfirmPriceChange = (state: {
 }): boolean =>
   Boolean(
     state.editingLesson !== undefined &&
-      state.editingLesson.isRecurring &&
-      state.editingLesson.status === "SCHEDULED" &&
-      !hasTimeChanged(state.editingLesson, state.formData) &&
-      hasPriceChanged(state.editingLesson, state.formData)
+    state.editingLesson.isRecurring &&
+    state.editingLesson.status === "SCHEDULED" &&
+    !hasTimeChanged(state.editingLesson, state.formData) &&
+    hasPriceChanged(state.editingLesson, state.formData)
   );
 
 export const shouldUpdateDirectly = (state: {

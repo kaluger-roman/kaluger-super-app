@@ -16,8 +16,8 @@ export const emailChanged = createEvent<string>();
 export const formSubmitted = createEvent();
 export const formReset = createEvent();
 
-export const forgotPasswordFx = createEffect(
-  async ({ email }: { email: string }) => authApi.forgotPassword({ email }),
+export const forgotPasswordFx = createEffect(async ({ email }: { email: string }) =>
+  authApi.forgotPassword({ email })
 );
 
 export const $isLoading = forgotPasswordFx.pending;

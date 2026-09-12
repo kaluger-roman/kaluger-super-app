@@ -24,12 +24,8 @@ export const TaxRatePeriodsList: FC = () => {
       {labeled.map(({ period, isCurrent, isFuture }) => (
         <Styled.Row key={period.id} $isFuture={isFuture} variant="body2">
           {period.rate}% с {formatDate(period.startDate)}
-          {isCurrent ? (
-            <Styled.CurrentBadge>(текущая)</Styled.CurrentBadge>
-          ) : null}
-          {isFuture ? (
-            <Styled.FutureBadge>(вступит в силу)</Styled.FutureBadge>
-          ) : null}
+          {isCurrent ? <Styled.CurrentBadge>(текущая)</Styled.CurrentBadge> : null}
+          {isFuture ? <Styled.FutureBadge>(вступит в силу)</Styled.FutureBadge> : null}
         </Styled.Row>
       ))}
     </Styled.List>

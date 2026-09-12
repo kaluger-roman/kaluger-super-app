@@ -2,8 +2,7 @@ import type { Server } from "http";
 
 type Handler = (...args: unknown[]) => void;
 
-const makeFakeServer = (): Server =>
-  ({ on: jest.fn() }) as unknown as Server;
+const makeFakeServer = (): Server => ({ on: jest.fn() }) as unknown as Server;
 
 // Mocks for dependencies: ws, auth, and messageHandler
 jest.mock("ws", () => {

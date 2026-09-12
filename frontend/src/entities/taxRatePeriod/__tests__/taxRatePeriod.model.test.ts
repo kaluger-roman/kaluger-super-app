@@ -3,12 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { taxPeriodsApi } from "@shared";
 
-import {
-  $periods,
-  loadPeriodsFx,
-  periodsRequested,
-  periodsSet,
-} from "../taxRatePeriod.model";
+import { $periods, loadPeriodsFx, periodsRequested, periodsSet } from "../taxRatePeriod.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");

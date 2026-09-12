@@ -56,10 +56,7 @@ export const AdminPage: FC = () => {
       </Styled.StyledHeader>
 
       <Styled.StyledPaper>
-        <Styled.StyledTabs
-          value={tabIndex}
-          onChange={(_, value) => actions.changeTab(value)}
-        >
+        <Styled.StyledTabs value={tabIndex} onChange={(_, value) => actions.changeTab(value)}>
           <Styled.StyledTab label="Обзор" />
           <Styled.StyledTab label="Бэкапы" />
         </Styled.StyledTabs>

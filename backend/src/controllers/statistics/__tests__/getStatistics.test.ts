@@ -137,9 +137,7 @@ describe("getStatistics controller", () => {
       .expect(200);
 
     expect(res.body.taxAmount).toBe(6500);
-    expect(res.body.taxBreakdown).toEqual([
-      { rate: 13, earnings: 50000, tax: 6500 },
-    ]);
+    expect(res.body.taxBreakdown).toEqual([{ rate: 13, earnings: 50000, tax: 6500 }]);
   });
 
   it("splits tax across multiple periods by paymentDate, with isOutsidePeriods bucket for early payments", async () => {
@@ -566,9 +564,7 @@ describe("getStatistics controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        expect(res.body.prepaidIncome).toBeGreaterThanOrEqual(
-          res.body.upcomingIncome
-        );
+        expect(res.body.prepaidIncome).toBeGreaterThanOrEqual(res.body.upcomingIncome);
       });
   });
 
@@ -705,9 +701,7 @@ describe("getStatistics controller", () => {
 
   it("handles database errors gracefully", async () => {
     const originalAggregate = prisma.lesson.aggregate;
-    prisma.lesson.aggregate = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.aggregate = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get("/api/statistics")

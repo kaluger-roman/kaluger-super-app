@@ -10,10 +10,7 @@ import type {
 } from "@shared";
 
 import * as adminAuthModel from "./adminAuth.model";
-import {
-  isBackupSettingsValid,
-  prepareBackupSettings,
-} from "./adminData.helpers";
+import { isBackupSettingsValid, prepareBackupSettings } from "./adminData.helpers";
 
 // Gates
 export const AdminPageGate = createGate();
@@ -47,11 +44,7 @@ export const getBackupSettingsFx = createEffect(async () => {
 });
 
 export const updateBackupSettingsFx = createEffect(
-  async (data: {
-    enabled?: boolean;
-    intervalHours?: number;
-    maxStorageMb?: number;
-  }) => {
+  async (data: { enabled?: boolean; intervalHours?: number; maxStorageMb?: number }) => {
     return adminApiMethods.updateBackupSettings(data);
   }
 );
@@ -76,11 +69,7 @@ sample({
 });
 
 sample({
-  clock: [
-    AdminPageGate.open,
-    adminAuthModel.loginFx.done,
-    backupSettingsRequested,
-  ],
+  clock: [AdminPageGate.open, adminAuthModel.loginFx.done, backupSettingsRequested],
   source: adminAuthModel.$isAdminAuthenticated,
   filter: (isAuth) => isAuth,
   target: getBackupSettingsFx,
@@ -110,15 +99,13 @@ sample({ clock: maxStorageMbChanged, target: $maxStorageMb });
 
 sample({
   clock: getBackupSettingsFx.doneData,
-  fn: (data: BackupSettingsFullResponse) =>
-    String(data.settings.intervalHours),
+  fn: (data: BackupSettingsFullResponse) => String(data.settings.intervalHours),
   target: $intervalHours,
 });
 
 sample({
   clock: getBackupSettingsFx.doneData,
-  fn: (data: BackupSettingsFullResponse) =>
-    String(data.settings.maxStorageMb),
+  fn: (data: BackupSettingsFullResponse) => String(data.settings.maxStorageMb),
   target: $maxStorageMb,
 });
 

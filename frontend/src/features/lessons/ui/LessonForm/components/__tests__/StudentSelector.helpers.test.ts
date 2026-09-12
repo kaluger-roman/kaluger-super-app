@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Student } from "@shared";
 
-import {
-  filterStudents,
-  getStudentLabel,
-  isSameStudent,
-} from "../StudentSelector.helpers";
+import { filterStudents, getStudentLabel, isSameStudent } from "../StudentSelector.helpers";
 
 const makeStudent = (over: Partial<Student> = {}): Student => ({
   id: "s-1",
@@ -54,13 +50,8 @@ describe("getStudentLabel", () => {
 describe("isSameStudent", () => {
   it("should compare by id", () => {
     expect(
-      isSameStudent(
-        makeStudent({ id: "s-1", name: "А" }),
-        makeStudent({ id: "s-1", name: "Б" }),
-      ),
+      isSameStudent(makeStudent({ id: "s-1", name: "А" }), makeStudent({ id: "s-1", name: "Б" }))
     ).toBe(true);
-    expect(
-      isSameStudent(makeStudent({ id: "s-1" }), makeStudent({ id: "s-2" })),
-    ).toBe(false);
+    expect(isSameStudent(makeStudent({ id: "s-1" }), makeStudent({ id: "s-2" }))).toBe(false);
   });
 });

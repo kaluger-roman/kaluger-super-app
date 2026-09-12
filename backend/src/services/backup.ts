@@ -7,10 +7,7 @@ import { prisma } from "../lib/prisma";
 const execAsync = promisify(exec);
 
 const getBackupDir = (): string => {
-  const dir = path.resolve(
-    process.cwd(),
-    process.env.BACKUP_DIR || "backups"
-  );
+  const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -72,9 +69,7 @@ export const getBackupFiles = (): Array<{
     .sort((a, b) => b.name.localeCompare(a.name));
 };
 
-export const getTotalSizeMb = (
-  files: Array<{ sizeMb: number }>
-): number => {
+export const getTotalSizeMb = (files: Array<{ sizeMb: number }>): number => {
   return files.reduce((sum, f) => sum + f.sizeMb, 0);
 };
 
@@ -128,14 +123,11 @@ export const performBackup = async (): Promise<string> => {
   // pipefail ensures the pipeline fails if pg_dump fails (not just gzip).
   // Without it, gzip produces a ~20-byte empty file on pg_dump errors.
   try {
-    await execAsync(
-      `set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`,
-      {
-        timeout: 300000,
-        env: { ...process.env, DATABASE_URL: pgDumpUrl },
-        shell: "/bin/bash",
-      }
-    );
+    await execAsync(`set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`, {
+      timeout: 300000,
+      env: { ...process.env, DATABASE_URL: pgDumpUrl },
+      shell: "/bin/bash",
+    });
   } catch (error) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -192,9 +184,7 @@ let backupRunning = false;
 
 export const runBackupJob = async (): Promise<void> => {
   if (backupRunning) {
-    console.warn(
-      "runBackupJob: previous backup still running, skipping this tick"
-    );
+    console.warn("runBackupJob: previous backup still running, skipping this tick");
     return;
   }
 

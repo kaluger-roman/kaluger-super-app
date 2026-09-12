@@ -43,10 +43,7 @@ vi.mock("../components", () => ({
       <button onClick={() => onToggleYear(year)} aria-label={`toggle year ${year}`}>
         Year: {year} - {isCollapsed ? "collapsed" : "expanded"}
       </button>
-      <button
-        onClick={() => onToggleMonth(year, "January")}
-        aria-label={`toggle month January`}
-      >
+      <button onClick={() => onToggleMonth(year, "January")} aria-label={`toggle month January`}>
         Toggle Month
       </button>
       <button

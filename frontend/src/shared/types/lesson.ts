@@ -1,11 +1,6 @@
 import type { ContactMethod, Student } from "./student";
 
-export type LessonStatus =
-  | "SCHEDULED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "RESCHEDULED"
-  | "IN_PROGRESS";
+export type LessonStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
 
 export type Subject = "MATHEMATICS" | "PHYSICS";
 

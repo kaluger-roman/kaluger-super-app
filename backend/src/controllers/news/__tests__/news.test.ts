@@ -271,9 +271,7 @@ describe("news integration tests", () => {
         where: { userId },
       });
 
-      expect(status!.lastReadAt.getTime()).toBeGreaterThan(
-        new Date("2024-01-01").getTime()
-      );
+      expect(status!.lastReadAt.getTime()).toBeGreaterThan(new Date("2024-01-01").getTime());
     });
 
     it("should return Russian success message", async () => {

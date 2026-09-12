@@ -446,9 +446,7 @@ describe("getLessons controller", () => {
       .query({ upcoming: "true", currentTime: now.toISOString() })
       .expect(200)
       .then((res) => {
-        const starts = res.body.lessons.map((l: any) =>
-          new Date(l.startTime).getTime()
-        );
+        const starts = res.body.lessons.map((l: any) => new Date(l.startTime).getTime());
         // ensure ascending
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeGreaterThanOrEqual(starts[i - 1]);
@@ -528,9 +526,7 @@ describe("getLessons controller", () => {
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeGreaterThanOrEqual(starts[i - 1]);
         // ensure student relation is present and matches
-        const found = lessons.find(
-          (l) => l.student && l.student.id === localStudent.id
-        );
+        const found = lessons.find((l) => l.student && l.student.id === localStudent.id);
         expect(found).toBeDefined();
       });
   });
@@ -643,9 +639,7 @@ describe("getLessons controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        const starts = res.body.lessons.map((l: any) =>
-          new Date(l.startTime).getTime()
-        );
+        const starts = res.body.lessons.map((l: any) => new Date(l.startTime).getTime());
         // verify descending order by default for non-upcoming
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeLessThanOrEqual(starts[i - 1]);

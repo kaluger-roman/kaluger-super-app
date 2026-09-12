@@ -7,8 +7,7 @@ import { studentAuthApi } from "@shared";
 import * as model from "../studentLogin.model";
 
 vi.mock("@shared", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared")>("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     studentAuthApi: {
@@ -61,9 +60,7 @@ describe("features/studentAuth/models/studentLogin.model", () => {
       params: { email: "x@example.com", password: "bad" },
     });
 
-    expect(scope.getState(model.$studentLoginError)).toBe(
-      "Неверный email или пароль"
-    );
+    expect(scope.getState(model.$studentLoginError)).toBe("Неверный email или пароль");
   });
 
   it("clears the lingering authToken on successful student login", async () => {

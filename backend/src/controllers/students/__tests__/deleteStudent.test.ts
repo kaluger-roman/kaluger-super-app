@@ -69,9 +69,7 @@ describe("deleteStudent integration tests", () => {
     });
 
     const originalDeleteMany = prisma.student.deleteMany;
-    prisma.student.deleteMany = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.student.deleteMany = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .delete(`/api/students/${student.id}`)

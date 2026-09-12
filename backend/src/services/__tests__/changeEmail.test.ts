@@ -1,11 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils/auth";
-import {
-  initiateEmailChange,
-  verifyEmailChange,
-  resendEmailChangeCode,
-} from "../changeEmail";
+import { initiateEmailChange, verifyEmailChange, resendEmailChangeCode } from "../changeEmail";
 
 jest.mock("../email", () => ({
   sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
@@ -38,20 +34,21 @@ describe("changeEmail service", () => {
   describe("initiateEmailChange", () => {
     it("should throw 404 when user not found", async () => {
       await expect(
-        initiateEmailChange("non-existent-id", "new@example.com", password),
+        initiateEmailChange("non-existent-id", "new@example.com", password)
       ).rejects.toMatchObject({ message: "Пользователь не найден", statusCode: 404 });
     });
 
     it("should throw 400 when password is wrong", async () => {
       await expect(
-        initiateEmailChange(userId, "new@example.com", "WrongPass1"),
+        initiateEmailChange(userId, "new@example.com", "WrongPass1")
       ).rejects.toMatchObject({ message: "Неверный пароль", statusCode: 400 });
     });
 
     it("should throw 400 when email format is invalid", async () => {
-      await expect(
-        initiateEmailChange(userId, "invalid-email", password),
-      ).rejects.toMatchObject({ message: "Некорректный формат email", statusCode: 400 });
+      await expect(initiateEmailChange(userId, "invalid-email", password)).rejects.toMatchObject({
+        message: "Некорректный формат email",
+        statusCode: 400,
+      });
     });
 
     it("should throw 400 when email is not verified", async () => {
@@ -62,7 +59,7 @@ describe("changeEmail service", () => {
 
       try {
         await expect(
-          initiateEmailChange(userId, "new@example.com", password),
+          initiateEmailChange(userId, "new@example.com", password)
         ).rejects.toMatchObject({ message: "Сначала подтвердите текущий email", statusCode: 400 });
       } finally {
         await prisma.user.update({
@@ -73,9 +70,10 @@ describe("changeEmail service", () => {
     });
 
     it("should throw 400 when new email equals current", async () => {
-      await expect(
-        initiateEmailChange(userId, userEmail, password),
-      ).rejects.toMatchObject({ message: "Новый email должен отличаться от текущего", statusCode: 400 });
+      await expect(initiateEmailChange(userId, userEmail, password)).rejects.toMatchObject({
+        message: "Новый email должен отличаться от текущего",
+        statusCode: 400,
+      });
     });
 
     it("should throw 409 when email already taken", async () => {
@@ -87,9 +85,10 @@ describe("changeEmail service", () => {
         },
       });
       try {
-        await expect(
-          initiateEmailChange(userId, otherUser.email, password),
-        ).rejects.toMatchObject({ message: "Этот email уже используется", statusCode: 409 });
+        await expect(initiateEmailChange(userId, otherUser.email, password)).rejects.toMatchObject({
+          message: "Этот email уже используется",
+          statusCode: 409,
+        });
       } finally {
         await prisma.user.delete({ where: { id: otherUser.id } });
       }
@@ -114,18 +113,20 @@ describe("changeEmail service", () => {
         data: { pendingEmail: null, verificationCode: null, verificationCodeExpiry: null },
       });
 
-      await expect(
-        verifyEmailChange(userId, "123456"),
-      ).rejects.toMatchObject({ message: "Нет запроса на смену email", statusCode: 400 });
+      await expect(verifyEmailChange(userId, "123456")).rejects.toMatchObject({
+        message: "Нет запроса на смену email",
+        statusCode: 400,
+      });
     });
 
     it("should throw 400 when code is wrong", async () => {
       const newEmail = faker.internet.email().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
-      await expect(
-        verifyEmailChange(userId, "000000"),
-      ).rejects.toMatchObject({ message: "Неверный код верификации", statusCode: 400 });
+      await expect(verifyEmailChange(userId, "000000")).rejects.toMatchObject({
+        message: "Неверный код верификации",
+        statusCode: 400,
+      });
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       expect(user!.verificationAttempts).toBe(1);
@@ -137,14 +138,12 @@ describe("changeEmail service", () => {
       await initiateEmailChange(userId, newEmail, password);
 
       for (let i = 0; i < 4; i++) {
-        await expect(
-          verifyEmailChange(userId, "000000"),
-        ).rejects.toMatchObject({ statusCode: 400 });
+        await expect(verifyEmailChange(userId, "000000")).rejects.toMatchObject({
+          statusCode: 400,
+        });
       }
 
-      await expect(
-        verifyEmailChange(userId, "000000"),
-      ).rejects.toMatchObject({
+      await expect(verifyEmailChange(userId, "000000")).rejects.toMatchObject({
         message: "Превышено количество попыток. Запросите новый код",
         statusCode: 400,
       });
@@ -162,9 +161,7 @@ describe("changeEmail service", () => {
 
       const PARALLEL_REQUESTS = 4;
       const results = await Promise.allSettled(
-        Array.from({ length: PARALLEL_REQUESTS }, () =>
-          verifyEmailChange(userId, "000000"),
-        ),
+        Array.from({ length: PARALLEL_REQUESTS }, () => verifyEmailChange(userId, "000000"))
       );
 
       results.forEach((r) => {
@@ -189,9 +186,7 @@ describe("changeEmail service", () => {
         },
       });
 
-      await expect(
-        verifyEmailChange(userId, "000000"),
-      ).rejects.toMatchObject({
+      await expect(verifyEmailChange(userId, "000000")).rejects.toMatchObject({
         message: "Код подтверждения не найден. Запросите новый код",
         statusCode: 400,
       });
@@ -208,9 +203,10 @@ describe("changeEmail service", () => {
       });
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      await expect(
-        verifyEmailChange(userId, user!.verificationCode!),
-      ).rejects.toMatchObject({ message: "Срок действия кода верификации истёк", statusCode: 400 });
+      await expect(verifyEmailChange(userId, user!.verificationCode!)).rejects.toMatchObject({
+        message: "Срок действия кода верификации истёк",
+        statusCode: 400,
+      });
     });
 
     it("should change email successfully", async () => {
@@ -235,9 +231,10 @@ describe("changeEmail service", () => {
 
   describe("resendEmailChangeCode", () => {
     it("should throw 400 when no pending email", async () => {
-      await expect(
-        resendEmailChangeCode(userId),
-      ).rejects.toMatchObject({ message: "Нет запроса на смену email", statusCode: 400 });
+      await expect(resendEmailChangeCode(userId)).rejects.toMatchObject({
+        message: "Нет запроса на смену email",
+        statusCode: 400,
+      });
     });
 
     it("should generate new code", async () => {

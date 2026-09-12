@@ -139,9 +139,9 @@ describe("lesson.helpers", () => {
     });
 
     it("should return prospect name when student is absent", () => {
-      expect(
-        getLessonDisplayName({ student: undefined, prospectName: "Пётр (пробный)" })
-      ).toBe("Пётр (пробный)");
+      expect(getLessonDisplayName({ student: undefined, prospectName: "Пётр (пробный)" })).toBe(
+        "Пётр (пробный)"
+      );
     });
 
     it("should return empty string when neither student nor prospect name present", () => {

@@ -29,7 +29,7 @@ const renderPage = () =>
           <ForgotPasswordPage />
         </ThemeProvider>
       </BrowserRouter>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("ForgotPasswordPage", () => {

@@ -16,7 +16,7 @@ const renderWithScope = (scope: ReturnType<typeof fork>) =>
       <ThemeProvider theme={theme}>
         <PaymentsSummaryBar />
       </ThemeProvider>
-    </Provider>,
+    </Provider>
   );
 
 describe("PaymentsSummaryBar", () => {

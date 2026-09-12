@@ -3,10 +3,5 @@ export type LessonForBroadcast = {
   subject: "MATHEMATICS" | "PHYSICS";
   startTime: Date;
   endTime: Date;
-  status:
-    | "SCHEDULED"
-    | "COMPLETED"
-    | "CANCELLED"
-    | "RESCHEDULED"
-    | "IN_PROGRESS";
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
 };

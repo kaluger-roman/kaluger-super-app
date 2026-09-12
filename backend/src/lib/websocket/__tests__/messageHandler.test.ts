@@ -2,9 +2,7 @@ import { WebSocket } from "ws";
 import type { AuthenticatedWebSocket } from "../types";
 import { handleMessage, sendWelcomeMessage } from "../messageHandler";
 
-const makeWs = (
-  overrides: Partial<AuthenticatedWebSocket> = {}
-): AuthenticatedWebSocket =>
+const makeWs = (overrides: Partial<AuthenticatedWebSocket> = {}): AuthenticatedWebSocket =>
   ({
     userId: "user-1",
     readyState: WebSocket.OPEN,
@@ -24,10 +22,7 @@ describe("messageHandler", () => {
 
     handleMessage(ws, data);
 
-    expect(logMock).toHaveBeenCalledWith(
-      `Received message from ${ws.userId}:`,
-      data
-    );
+    expect(logMock).toHaveBeenCalledWith(`Received message from ${ws.userId}:`, data);
 
     expect(ws.send).toHaveBeenCalledTimes(1);
     const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0] as string);

@@ -101,11 +101,7 @@ sample({
   },
   fn: ({ formData, students, archivedStudents, editingLesson }, { field, value }) =>
     applyHourlyRateAutofill(
-      applyWithoutStudentRules(
-        updateFormField(formData, field, value),
-        field,
-        editingLesson
-      ),
+      applyWithoutStudentRules(updateFormField(formData, field, value), field, editingLesson),
       students,
       archivedStudents
     ),

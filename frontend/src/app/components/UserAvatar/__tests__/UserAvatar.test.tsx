@@ -98,8 +98,6 @@ describe("UserAvatar", () => {
   it("should not expose button semantics when onClick is absent", () => {
     renderWithTheme(<UserAvatar user={mockUser} isMobile={false} />);
 
-    expect(
-      screen.queryByRole("button", { name: /меню пользователя/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /меню пользователя/i })).not.toBeInTheDocument();
   });
 });

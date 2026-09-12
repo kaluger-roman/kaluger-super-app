@@ -21,9 +21,7 @@ export const authenticateStudent = async (
 
   const payload = verifyStudentToken(token);
   if (!payload) {
-    return res
-      .status(401)
-      .json({ error: "Недействительный или истекший токен" });
+    return res.status(401).json({ error: "Недействительный или истекший токен" });
   }
 
   const tokenVersion = payload.tokenVersion ?? 0;

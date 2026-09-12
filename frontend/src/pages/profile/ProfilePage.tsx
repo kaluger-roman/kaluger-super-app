@@ -3,12 +3,7 @@ import { useGate, useUnit } from "effector-react";
 import { userModel } from "@entities";
 import { ReminderSettings, TaxRatePeriodsModal } from "@features";
 
-import {
-  FinancesSection,
-  PersonalDataSection,
-  ProfileTabs,
-  SecuritySection,
-} from "./components";
+import { FinancesSection, PersonalDataSection, ProfileTabs, SecuritySection } from "./components";
 import { profileModel } from "./models";
 import * as Styled from "./ProfilePage.styled";
 

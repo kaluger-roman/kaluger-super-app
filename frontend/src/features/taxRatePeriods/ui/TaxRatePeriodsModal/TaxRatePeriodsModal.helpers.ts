@@ -4,12 +4,10 @@ export type PeriodFlags = { isCurrent: boolean; isFuture: boolean };
 
 export const computePeriodFlags = (
   draft: DraftPeriod[],
-  todayIso: string,
+  todayIso: string
 ): Map<string, PeriodFlags> => {
   const map = new Map<string, PeriodFlags>();
-  const sorted = [...draft].sort((a, b) =>
-    a.startDate.localeCompare(b.startDate),
-  );
+  const sorted = [...draft].sort((a, b) => a.startDate.localeCompare(b.startDate));
   let currentTempId: string | null = null;
   for (const p of sorted) {
     if (p.startDate <= todayIso) currentTempId = p.tempId;

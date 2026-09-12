@@ -57,9 +57,7 @@ export const processRecurringLessons = async () => {
     const slotsByTutor = new Map<string, LessonSlot[]>();
     for (const id of tutorIds) slotsByTutor.set(id, []);
     for (const e of existingLessons) {
-      slotsByTutor
-        .get(e.tutorId)!
-        .push({ startTime: e.startTime, endTime: e.endTime });
+      slotsByTutor.get(e.tutorId)!.push({ startTime: e.startTime, endTime: e.endTime });
     }
 
     let createdCount = 0;
@@ -94,12 +92,8 @@ export const processRecurringLessons = async () => {
           tutorSlots.push({ startTime: currentStart, endTime: currentEnd });
         }
 
-        currentStart = truncateToMinute(
-          new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-        );
-        currentEnd = truncateToMinute(
-          new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
-        );
+        currentStart = truncateToMinute(new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+        currentEnd = truncateToMinute(new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
       }
 
       if (lessonsToCreate.length > 0) {

@@ -13,9 +13,7 @@ describe("InfoTooltip", () => {
   it("should render an accessible info button with the given aria-label", () => {
     renderWithTheme(<InfoTooltip title="Пояснение" ariaLabel="Что это значит" />);
 
-    expect(
-      screen.getByRole("button", { name: "Что это значит" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Что это значит" })).toBeInTheDocument();
   });
 
   it("should show the tooltip text on hover", async () => {

@@ -20,9 +20,7 @@ export const AdminLogin: FC = () => {
   return (
     <Styled.StyledWrapper>
       <Styled.StyledPaper elevation={3}>
-        <Styled.StyledTitle variant="h5">
-          Админ-панель
-        </Styled.StyledTitle>
+        <Styled.StyledTitle variant="h5">Админ-панель</Styled.StyledTitle>
         <TextField
           fullWidth
           label="Email"
@@ -39,11 +37,7 @@ export const AdminLogin: FC = () => {
           onChange={(e) => actions.changePassword(e.target.value)}
           margin="normal"
         />
-        {loginError && (
-          <Styled.StyledAlert severity="error">
-            {loginError}
-          </Styled.StyledAlert>
-        )}
+        {loginError && <Styled.StyledAlert severity="error">{loginError}</Styled.StyledAlert>}
         <Styled.StyledButton
           fullWidth
           variant="contained"

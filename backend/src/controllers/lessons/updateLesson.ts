@@ -8,10 +8,7 @@ import {
   notifyLessonUpdated,
   syncAfterLessonUpdate,
 } from "../../services";
-import {
-  RecurringShiftConflictError,
-  SchedulingConflictError,
-} from "../../utils";
+import { RecurringShiftConflictError, SchedulingConflictError } from "../../utils";
 import { findNextUnpaidLesson } from "./getCancellationInfo";
 import { validateUpdateData } from "./updateLesson.validators";
 
@@ -43,30 +40,20 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ error: "Ученик не найден" });
       }
     }
-    const isLinkingStudent =
-      !!updateData.studentId && !existingLesson.studentId;
+    const isLinkingStudent = !!updateData.studentId && !existingLesson.studentId;
 
     const { dataToUpdate, start, end } = buildLessonUpdateData(
       updateData,
       existingLesson,
-      isLinkingStudent,
+      isLinkingStudent
     );
 
-    let nextLessonForTransfer: Awaited<
-      ReturnType<typeof findNextUnpaidLesson>
-    > = null;
-    if (
-      updateData.status === "CANCELLED" &&
-      existingLesson.isPaid &&
-      existingLesson.paymentDate
-    ) {
+    let nextLessonForTransfer: Awaited<ReturnType<typeof findNextUnpaidLesson>> = null;
+    if (updateData.status === "CANCELLED" && existingLesson.isPaid && existingLesson.paymentDate) {
       // Перенос оплаты возможен только для урока с учеником — у пробного
       // урока без ученика очереди уроков нет, но сброс оплаты нужен всегда.
       if (existingLesson.studentId) {
-        nextLessonForTransfer = await findNextUnpaidLesson(
-          userId,
-          existingLesson,
-        );
+        nextLessonForTransfer = await findNextUnpaidLesson(userId, existingLesson);
       }
       dataToUpdate.isPaid = false;
       // Prisma treats `undefined` as "do not update this field". Use explicit
@@ -95,13 +82,10 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       existingLesson,
       updateData,
       updateResult.lesson,
-      updateResult.plannedShift,
+      updateResult.plannedShift
     );
   } catch (error) {
-    if (
-      error instanceof SchedulingConflictError ||
-      error instanceof RecurringShiftConflictError
-    ) {
+    if (error instanceof SchedulingConflictError || error instanceof RecurringShiftConflictError) {
       return res.status(409).json({ error: error.message });
     }
     console.error("Update lesson error:", error);

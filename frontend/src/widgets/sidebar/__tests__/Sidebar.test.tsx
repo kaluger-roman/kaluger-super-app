@@ -31,14 +31,10 @@ describe("Sidebar", () => {
     renderSidebar();
 
     const leaked = Array.from(document.body.querySelectorAll("*")).some((el) =>
-      el
-        .getAttributeNames()
-        .some((name: string) => name.toLowerCase().includes("drawerwidth"))
+      el.getAttributeNames().some((name: string) => name.toLowerCase().includes("drawerwidth"))
     );
     expect(leaked).toBe(false);
-    expect(
-      errorSpy.mock.calls.some((args) => String(args[0]).includes("drawerWidth"))
-    ).toBe(false);
+    expect(errorSpy.mock.calls.some((args) => String(args[0]).includes("drawerWidth"))).toBe(false);
 
     errorSpy.mockRestore();
   });

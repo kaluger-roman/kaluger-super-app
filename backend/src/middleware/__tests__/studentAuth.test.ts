@@ -3,10 +3,7 @@ import express from "express";
 import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
-import {
-  generateAdminToken,
-  generateToken,
-} from "../../utils/auth";
+import { generateAdminToken, generateToken } from "../../utils/auth";
 import { generateStudentToken } from "../../utils/studentAuth";
 import { authenticateStudent } from "../studentAuth";
 import type { StudentRequest } from "../../types";
@@ -87,9 +84,7 @@ describe("authenticateStudent middleware", () => {
   });
 
   it("rejects gibberish tokens", async () => {
-    const res = await request(app)
-      .get("/student-only")
-      .set("Authorization", "Bearer not.a.jwt");
+    const res = await request(app).get("/student-only").set("Authorization", "Bearer not.a.jwt");
     expect(res.status).toBe(401);
   });
 

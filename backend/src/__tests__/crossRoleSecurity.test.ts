@@ -47,9 +47,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentUser
-      .delete({ where: { id: studentUserId } })
-      .catch(() => undefined);
+    await prisma.studentUser.delete({ where: { id: studentUserId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
   });
@@ -68,26 +66,17 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
     test.each(tutorEndpoints)("%s %s rejects student JWT", async (method, path) => {
       const res =
         method === "GET"
-          ? await request(app)
-              .get(path)
-              .set("Authorization", `Bearer ${studentToken}`)
-          : await request(app)
-              .post(path)
-              .set("Authorization", `Bearer ${studentToken}`);
+          ? await request(app).get(path).set("Authorization", `Bearer ${studentToken}`)
+          : await request(app).post(path).set("Authorization", `Bearer ${studentToken}`);
       expect([401, 403]).toContain(res.status);
     });
   });
 
   describe("Tutor JWT must NOT access student endpoints", () => {
-    const studentEndpoints = [
-      "/api/student-auth/me",
-      "/api/student-cabinet/lessons",
-    ];
+    const studentEndpoints = ["/api/student-auth/me", "/api/student-cabinet/lessons"];
 
     test.each(studentEndpoints)("GET %s rejects tutor JWT", async (path) => {
-      const res = await request(app)
-        .get(path)
-        .set("Authorization", `Bearer ${tutorToken}`);
+      const res = await request(app).get(path).set("Authorization", `Bearer ${tutorToken}`);
       expect(res.status).toBe(401);
     });
   });
@@ -110,9 +99,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
 
   describe("Public student invitation validate accepts unauthenticated requests", () => {
     test("works without any auth header (no enumeration leak)", async () => {
-      const res = await request(app).get(
-        "/api/student-invitations/validate/totally-unknown-token"
-      );
+      const res = await request(app).get("/api/student-invitations/validate/totally-unknown-token");
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ valid: false });
     });

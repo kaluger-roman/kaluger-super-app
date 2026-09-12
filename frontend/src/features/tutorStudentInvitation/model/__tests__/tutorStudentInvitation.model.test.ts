@@ -7,8 +7,7 @@ import { notificationsModel } from "@shared/model";
 import * as model from "../tutorStudentInvitation.model";
 
 vi.mock("@shared", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared")>("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     studentInvitationsApi: {
@@ -80,9 +79,7 @@ describe("features/tutorStudentInvitation model", () => {
       params: "student-1",
     });
 
-    expect(scope.getState(model.$ephemeralInviteUrl)).toBe(
-      "https://host/student-invite/new-raw"
-    );
+    expect(scope.getState(model.$ephemeralInviteUrl)).toBe("https://host/student-invite/new-raw");
     expect(scope.getState(model.$status)).toMatchObject({ status: "pending" });
   });
 
@@ -155,8 +152,6 @@ describe("features/tutorStudentInvitation model", () => {
       params: "student-1",
     });
 
-    expect(scope.getState(model.$error)).toBe(
-      "У этого ученика уже есть аккаунт"
-    );
+    expect(scope.getState(model.$error)).toBe("У этого ученика уже есть аккаунт");
   });
 });

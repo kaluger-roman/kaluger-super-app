@@ -17,7 +17,7 @@ import { sendEmailChangeVerification } from "./email";
 export const initiateEmailChange = async (
   userId: string,
   rawNewEmail: string,
-  password: string,
+  password: string
 ): Promise<void> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -43,7 +43,9 @@ export const initiateEmailChange = async (
   }
 
   if (newEmail === user.email) {
-    throw Object.assign(new Error("Новый email должен отличаться от текущего"), { statusCode: 400 });
+    throw Object.assign(new Error("Новый email должен отличаться от текущего"), {
+      statusCode: 400,
+    });
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -78,7 +80,7 @@ export const initiateEmailChange = async (
 
 export const verifyEmailChange = async (
   userId: string,
-  code: string,
+  code: string
 ): Promise<VerifyEmailChangeResult> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -93,10 +95,9 @@ export const verifyEmailChange = async (
   }
 
   if (!user.verificationCode || !user.verificationCodeExpiry) {
-    throw Object.assign(
-      new Error("Код подтверждения не найден. Запросите новый код"),
-      { statusCode: 400 },
-    );
+    throw Object.assign(new Error("Код подтверждения не найден. Запросите новый код"), {
+      statusCode: 400,
+    });
   }
 
   if (isVerificationCodeExpired(user.verificationCodeExpiry)) {
@@ -122,10 +123,9 @@ export const verifyEmailChange = async (
           verificationAttempts: 0,
         },
       });
-      throw Object.assign(
-        new Error("Превышено количество попыток. Запросите новый код"),
-        { statusCode: 400 },
-      );
+      throw Object.assign(new Error("Превышено количество попыток. Запросите новый код"), {
+        statusCode: 400,
+      });
     }
 
     throw Object.assign(new Error("Неверный код верификации"), { statusCode: 400 });
@@ -208,10 +208,7 @@ export const resendEmailChangeCode = async (userId: string): Promise<void> => {
   }
 
   if (isWithinResendCooldown(user.verificationCodeSentAt)) {
-    throw Object.assign(
-      new Error("Подождите перед повторной отправкой кода"),
-      { statusCode: 429 },
-    );
+    throw Object.assign(new Error("Подождите перед повторной отправкой кода"), { statusCode: 429 });
   }
 
   const verificationCode = generateVerificationCode();

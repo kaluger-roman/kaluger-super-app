@@ -177,9 +177,7 @@ describe("ProfilePage", () => {
 
     renderWithProviders(<ProfilePage />, scope);
 
-    expect(
-      screen.getByRole("button", { name: /настроить ставки/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /настроить ставки/i })).toBeInTheDocument();
     expect(screen.getByText(/учитывать налог/i)).toBeInTheDocument();
   });
 

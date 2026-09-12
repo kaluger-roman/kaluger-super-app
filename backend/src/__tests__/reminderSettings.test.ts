@@ -87,15 +87,9 @@ describe("reminder settings integration tests", () => {
       // P2002 unique constraint and surfaced as 500 to one of the requests.
       // The fix uses upsert, which is race-safe.
       const responses = await Promise.all([
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
       ]);
 
       for (const res of responses) {

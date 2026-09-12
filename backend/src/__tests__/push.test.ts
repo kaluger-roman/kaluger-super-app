@@ -37,9 +37,7 @@ describe("push subscription integration tests", () => {
 
   describe("GET /api/push/vapid-key", () => {
     it("should return VAPID public key", async () => {
-      const res = await request(app)
-        .get("/api/push/vapid-key")
-        .expect(200);
+      const res = await request(app).get("/api/push/vapid-key").expect(200);
 
       expect(res.body).toHaveProperty("vapidPublicKey");
       expect(typeof res.body.vapidPublicKey).toBe("string");
@@ -52,9 +50,7 @@ describe("push subscription integration tests", () => {
       delete process.env.VAPID_PUBLIC_KEY;
 
       try {
-        const res = await request(app)
-          .get("/api/push/vapid-key")
-          .expect(200);
+        const res = await request(app).get("/api/push/vapid-key").expect(200);
 
         expect(res.body.vapidPublicKey).toBeNull();
         expect(res.body.configured).toBe(false);

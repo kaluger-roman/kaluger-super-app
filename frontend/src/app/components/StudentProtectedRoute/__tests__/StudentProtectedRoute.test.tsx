@@ -17,17 +17,10 @@ const renderAt = (path: string, sessionValue: unknown) => {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/login" element={<div>LOGIN_PAGE</div>} />
-          <Route
-            path="/student/verify-email"
-            element={<div>VERIFY_EMAIL_PAGE</div>}
-          />
+          <Route path="/student/verify-email" element={<div>VERIFY_EMAIL_PAGE</div>} />
           <Route
             path="/student/cabinet/schedule"
-            element={
-              <StudentProtectedRoute
-                element={<div>STUDENT_SCHEDULE</div>}
-              />
-            }
+            element={<StudentProtectedRoute element={<div>STUDENT_SCHEDULE</div>} />}
           />
         </Routes>
       </MemoryRouter>

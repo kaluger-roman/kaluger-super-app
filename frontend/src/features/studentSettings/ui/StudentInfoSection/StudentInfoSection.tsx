@@ -1,9 +1,6 @@
 import type { FC } from "react";
 
-import {
-  CheckCircle as VerifiedIcon,
-  WarningAmber as UnverifiedIcon,
-} from "@mui/icons-material";
+import { CheckCircle as VerifiedIcon, WarningAmber as UnverifiedIcon } from "@mui/icons-material";
 import { Chip, Stack, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 
@@ -30,19 +27,9 @@ export const StudentInfoSection: FC = () => {
           <Styled.EmailRow>
             <Typography variant="body1">{info.email}</Typography>
             {info.isEmailVerified ? (
-              <Chip
-                icon={<VerifiedIcon />}
-                color="success"
-                size="small"
-                label="Подтверждён"
-              />
+              <Chip icon={<VerifiedIcon />} color="success" size="small" label="Подтверждён" />
             ) : (
-              <Chip
-                icon={<UnverifiedIcon />}
-                color="warning"
-                size="small"
-                label="Не подтверждён"
-              />
+              <Chip icon={<UnverifiedIcon />} color="warning" size="small" label="Не подтверждён" />
             )}
           </Styled.EmailRow>
         </Styled.Field>

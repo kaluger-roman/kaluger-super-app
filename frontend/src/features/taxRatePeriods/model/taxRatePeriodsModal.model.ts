@@ -23,17 +23,14 @@ export const $error = createStore<string>("");
 export const modalOpened = createEvent();
 export const modalClosed = createEvent();
 export const periodAdded = createEvent();
-export const periodStartDateChanged =
-  createEvent<{ tempId: string; startDate: string }>();
-export const periodRateChanged =
-  createEvent<{ tempId: string; rate: number }>();
+export const periodStartDateChanged = createEvent<{ tempId: string; startDate: string }>();
+export const periodRateChanged = createEvent<{ tempId: string; rate: number }>();
 export const periodRemoved = createEvent<{ tempId: string }>();
 export const saveRequested = createEvent();
 
 // Effects
-export const savePeriodsFx = createEffect(
-  async (draft: DraftPeriod[]): Promise<TaxRatePeriod[]> =>
-    taxPeriodsApi.replaceAll(draftToCreatePayload(draft)),
+export const savePeriodsFx = createEffect(async (draft: DraftPeriod[]): Promise<TaxRatePeriod[]> =>
+  taxPeriodsApi.replaceAll(draftToCreatePayload(draft))
 );
 
 // Samples

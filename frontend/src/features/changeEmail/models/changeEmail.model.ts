@@ -32,17 +32,13 @@ const startResendTimer = createEvent();
 const stopResendTimer = createEvent();
 
 // Effects
-export const changeEmailFx = createEffect(
-  async (data: { newEmail: string; password: string }) => {
-    return await authApi.changeEmail(data);
-  },
-);
+export const changeEmailFx = createEffect(async (data: { newEmail: string; password: string }) => {
+  return await authApi.changeEmail(data);
+});
 
-export const verifyEmailChangeFx = createEffect(
-  async (data: { code: string }) => {
-    return await authApi.verifyEmailChange(data);
-  },
-);
+export const verifyEmailChangeFx = createEffect(async (data: { code: string }) => {
+  return await authApi.verifyEmailChange(data);
+});
 
 export const resendEmailChangeCodeFx = createEffect(async () => {
   return await authApi.resendEmailChangeCode();

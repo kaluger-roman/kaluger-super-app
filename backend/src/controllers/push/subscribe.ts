@@ -40,9 +40,7 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
     });
 
     if (existing && existing.userId !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Подписка принадлежит другому пользователю" });
+      return res.status(403).json({ error: "Подписка принадлежит другому пользователю" });
     }
 
     const subscriptionData = {

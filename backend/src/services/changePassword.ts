@@ -1,11 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { setCachedTokenVersion } from "../lib/tokenVersionCache";
-import {
-  comparePassword,
-  generateToken,
-  hashPassword,
-  validatePassword,
-} from "../utils";
+import { comparePassword, generateToken, hashPassword, validatePassword } from "../utils";
 
 type ChangePasswordResult = {
   token: string;
@@ -22,7 +17,7 @@ type ChangePasswordResult = {
 export const changePassword = async (
   userId: string,
   currentPassword: string,
-  newPassword: string,
+  newPassword: string
 ): Promise<ChangePasswordResult> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -40,13 +35,15 @@ export const changePassword = async (
   if (!validatePassword(newPassword)) {
     throw Object.assign(
       new Error("Пароль должен содержать минимум 8 символов, заглавные и строчные буквы и цифру"),
-      { statusCode: 400 },
+      { statusCode: 400 }
     );
   }
 
   const isSamePassword = await comparePassword(newPassword, user.password);
   if (isSamePassword) {
-    throw Object.assign(new Error("Новый пароль должен отличаться от текущего"), { statusCode: 400 });
+    throw Object.assign(new Error("Новый пароль должен отличаться от текущего"), {
+      statusCode: 400,
+    });
   }
 
   const hashedPassword = await hashPassword(newPassword);

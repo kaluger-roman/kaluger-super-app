@@ -5,10 +5,6 @@ import { studentInvitationValidationRateLimiter } from "../middleware/rateLimit"
 
 const router: Router = Router();
 
-router.get(
-  "/validate/:token",
-  studentInvitationValidationRateLimiter,
-  studentInvitationValidate
-);
+router.get("/validate/:token", studentInvitationValidationRateLimiter, studentInvitationValidate);
 
 export { router as studentInvitationsRouter };

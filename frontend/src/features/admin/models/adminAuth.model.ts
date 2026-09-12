@@ -4,9 +4,7 @@ import { adminApiMethods, adminTokenInvalidated, ADMIN_TOKEN_KEY } from "@shared
 
 // Stores
 export const $adminToken = createStore<string | null>(null);
-export const $isAdminAuthenticated = $adminToken.map(
-  (token) => token !== null
-);
+export const $isAdminAuthenticated = $adminToken.map((token) => token !== null);
 export const $loginError = createStore<string | null>(null);
 export const $email = createStore("");
 export const $password = createStore("");

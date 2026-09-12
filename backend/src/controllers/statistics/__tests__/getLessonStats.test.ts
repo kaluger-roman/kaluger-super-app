@@ -88,12 +88,8 @@ describe("statistics integration tests", () => {
       .expect(200)
       .then((res) => {
         expect(res.body.lessonsBySubject).toBeInstanceOf(Array);
-        const math = res.body.lessonsBySubject.find(
-          (s: any) => s.subject === "MATHEMATICS"
-        );
-        const phys = res.body.lessonsBySubject.find(
-          (s: any) => s.subject === "PHYSICS"
-        );
+        const math = res.body.lessonsBySubject.find((s: any) => s.subject === "MATHEMATICS");
+        const phys = res.body.lessonsBySubject.find((s: any) => s.subject === "PHYSICS");
 
         expect(math).toBeDefined();
         expect(phys).toBeDefined();
@@ -142,12 +138,8 @@ describe("statistics integration tests", () => {
       .expect(200)
       .then((res) => {
         expect(res.body.lessonsByType).toBeInstanceOf(Array);
-        const ege = res.body.lessonsByType.find(
-          (t: any) => t.lessonType === "EGE"
-        );
-        const school = res.body.lessonsByType.find(
-          (t: any) => t.lessonType === "SCHOOL"
-        );
+        const ege = res.body.lessonsByType.find((t: any) => t.lessonType === "EGE");
+        const school = res.body.lessonsByType.find((t: any) => t.lessonType === "SCHOOL");
 
         expect(ege).toBeDefined();
         expect(school).toBeDefined();
@@ -193,9 +185,7 @@ describe("statistics integration tests", () => {
       .expect(200)
       .then((res) => {
         // should not include the old lesson
-        const math = res.body.lessonsBySubject.find(
-          (s: any) => s.subject === "MATHEMATICS"
-        );
+        const math = res.body.lessonsBySubject.find((s: any) => s.subject === "MATHEMATICS");
         if (math) {
           // sum should be >= the recent lessons but not equal to include old 111 unless added today
           expect(math._sum.price).not.toBe(111);
@@ -205,9 +195,7 @@ describe("statistics integration tests", () => {
 
   it("handles database errors in by-subject", async () => {
     const originalGroupBy = prisma.lesson.groupBy;
-    prisma.lesson.groupBy = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.groupBy = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get("/api/statistics/by-subject")
@@ -219,9 +207,7 @@ describe("statistics integration tests", () => {
 
   it("handles database errors in by-type", async () => {
     const originalGroupBy = prisma.lesson.groupBy;
-    prisma.lesson.groupBy = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.groupBy = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get("/api/statistics/by-type")

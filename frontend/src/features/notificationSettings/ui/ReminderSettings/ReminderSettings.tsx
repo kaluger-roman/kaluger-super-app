@@ -21,9 +21,7 @@ export const ReminderSettings = () => {
   if (!isPushSupported) {
     return (
       <Styled.SettingsPaper elevation={0}>
-        <Styled.SettingsTitle variant="h6">
-          Напоминания об уроках
-        </Styled.SettingsTitle>
+        <Styled.SettingsTitle variant="h6">Напоминания об уроках</Styled.SettingsTitle>
         <Styled.PermissionAlert severity="info">
           Ваш браузер не поддерживает push-уведомления
         </Styled.PermissionAlert>
@@ -33,9 +31,7 @@ export const ReminderSettings = () => {
 
   return (
     <Styled.SettingsPaper elevation={0}>
-      <Styled.SettingsTitle variant="h6">
-        Напоминания об уроках
-      </Styled.SettingsTitle>
+      <Styled.SettingsTitle variant="h6">Напоминания об уроках</Styled.SettingsTitle>
 
       <Styled.SettingRow>
         <div>
@@ -69,18 +65,15 @@ export const ReminderSettings = () => {
                 Не отправлять напоминания, если у вас сейчас идёт урок
               </Styled.SettingDescription>
             </div>
-            <Switch
-              checked={settings.muteWhenInLesson}
-              onChange={() => actions.muteToggled()}
-            />
+            <Switch checked={settings.muteWhenInLesson} onChange={() => actions.muteToggled()} />
           </Styled.SettingRow>
         </>
       )}
 
       {pushPermission === "denied" && (
         <Styled.PermissionAlert severity="warning">
-          Уведомления заблокированы. Чтобы разрешить: Android — Настройки сайта → Уведомления;
-          iOS — Настройки → Safari → Уведомления; Desktop — значок 🔒 в адресной строке → Уведомления
+          Уведомления заблокированы. Чтобы разрешить: Android — Настройки сайта → Уведомления; iOS —
+          Настройки → Safari → Уведомления; Desktop — значок 🔒 в адресной строке → Уведомления
         </Styled.PermissionAlert>
       )}
     </Styled.SettingsPaper>

@@ -47,21 +47,15 @@ describe("LessonStudentSection", () => {
   it("should render the 'Пробный урок' checkbox with an info tooltip", () => {
     renderSection(baseFormData);
 
-    expect(
-      screen.getByRole("checkbox", { name: "Пробный урок" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Что такое пробный урок" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Пробный урок" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Что такое пробный урок" })).toBeInTheDocument();
   });
 
   it("should explain the trial lesson meaning in the tooltip on hover", async () => {
     const user = userEvent.setup();
     renderSection(baseFormData);
 
-    await user.hover(
-      screen.getByRole("button", { name: "Что такое пробный урок" })
-    );
+    await user.hover(screen.getByRole("button", { name: "Что такое пробный урок" }));
 
     expect(await screen.findByText(/создавать карточку ученика не нужно/i)).toBeInTheDocument();
   });

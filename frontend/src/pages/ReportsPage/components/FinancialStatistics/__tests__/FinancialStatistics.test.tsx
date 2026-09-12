@@ -5,9 +5,7 @@ import type { Statistics } from "@shared";
 
 import { FinancialStatistics } from "../FinancialStatistics";
 
-const createStatistics = (
-  overrides: Partial<Statistics> = {},
-): Statistics => ({
+const createStatistics = (overrides: Partial<Statistics> = {}): Statistics => ({
   completedLessons: 10,
   cancelledLessons: 1,
   upcomingLessons: 3,
@@ -33,9 +31,7 @@ describe("FinancialStatistics", () => {
   it("renders tax card with single rate label", () => {
     render(<FinancialStatistics statistics={createStatistics()} />);
     expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
-    expect(
-      screen.getByText("Сумма налога по оплатам за период"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Сумма налога по оплатам за период")).toBeInTheDocument();
   });
 
   it("renders neutral tax label and info button when multiple rates apply", () => {
@@ -48,13 +44,11 @@ describe("FinancialStatistics", () => {
             { rate: 6, earnings: 10000, tax: 600 },
           ],
         })}
-      />,
+      />
     );
 
     expect(screen.getByText("Налоги")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /подробности расчёта налога/i })).toBeInTheDocument();
   });
 
   it("hides tax card entirely when taxAmount is null", () => {
@@ -64,7 +58,7 @@ describe("FinancialStatistics", () => {
           taxAmount: null,
           taxBreakdown: null,
         })}
-      />,
+      />
     );
     expect(screen.queryByText(/налоги/i)).toBeNull();
   });
@@ -74,18 +68,14 @@ describe("FinancialStatistics", () => {
       <FinancialStatistics
         statistics={createStatistics({
           taxAmount: 0,
-          taxBreakdown: [
-            { rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true },
-          ],
+          taxBreakdown: [{ rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true }],
         })}
-      />,
+      />
     );
 
     expect(screen.getByText("Налоги")).toBeInTheDocument();
     expect(screen.queryByText("Налоги (0%)")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /подробности расчёта налога/i })).toBeInTheDocument();
   });
 
   it("renders other financial cards regardless of tax state", () => {
