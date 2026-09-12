@@ -73,8 +73,8 @@ ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `a
 `any` upstream), named exports only, function expressions only, `type` + `import type`,
 no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded), camelCase
 file/folder names and the role-suffix allowlist (`eslint-plugin-check-file`), no
-`.only` / `.skip` / `done` callbacks in tests (`eslint-plugin-jest`). The rest of this
-doc is review-checked.
+`.only` / `.skip` / `done` callbacks in tests (`eslint-plugin-jest`). Formatting is
+Prettier's (see Code Quality). The rest of this doc is review-checked.
 
 ### Structure
 
@@ -95,6 +95,7 @@ doc is review-checked.
 - **Error messages in Russian**
 - **No ESLint errors** — run lint and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+- **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ## Custom Error Classes
 
