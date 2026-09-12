@@ -48,6 +48,10 @@ const timerRules = [
 ];
 const restrictedSyntax = [enumRule, useUnitArrayRule, ...emptyFileRules, modelNamedImportRule];
 
+// check-file glob: letters and digits, starting with a letter — camelCase or PascalCase.
+const alphanumericName = "[a-zA-Z]*([a-zA-Z0-9])";
+const roleSuffixes = "model,api,types,styled,constants,helpers,hooks";
+
 module.exports = {
     root: true,
     parser: "@typescript-eslint/parser",
@@ -56,7 +60,15 @@ module.exports = {
         sourceType: "module",
         project: ["./tsconfig.json"],
     },
-    plugins: ["@typescript-eslint", "import", "unused-imports", "testing-library", "effector"],
+    plugins: [
+        "@typescript-eslint",
+        "import",
+        "unused-imports",
+        "testing-library",
+        "effector",
+        "check-file",
+        "jest",
+    ],
     extends: [
         "react-app",
         "react-app/jest",
@@ -246,6 +258,19 @@ module.exports = {
                 ],
             },
         ],
+        "check-file/folder-naming-convention": [
+            "error",
+            { "src/**/": `@(__tests__|${alphanumericName})` },
+        ],
+        "check-file/filename-naming-convention": [
+            "error",
+            {
+                "**/*.tsx": "PASCAL_CASE",
+                "**/@(api|model|models|types)/*.ts": "CAMEL_CASE",
+                "**/*.ts": alphanumericName,
+            },
+            { ignoreMiddleExtensions: true },
+        ],
     },
     overrides: [
         {
@@ -270,6 +295,48 @@ module.exports = {
             },
         },
         {
+            // Role-suffix allowlist: a file that survives excludedFiles has no known suffix.
+            // Plain <name>.ts is fine inside api/ and types/ — the folder already names the role.
+            files: ["src/**/*.ts"],
+            excludedFiles: [
+                "**/index.ts",
+                "**/*.d.ts",
+                "**/__tests__/**",
+                "**/*.test.ts",
+                "**/api/*.ts",
+                "**/types/*.ts",
+                `**/*.{${roleSuffixes}}.ts`,
+            ],
+            rules: {
+                "check-file/filename-blocklist": [
+                    "error",
+                    { "**/*.ts": `<name>.{${roleSuffixes}}.ts` },
+                    { errorMessage: `"{{ target }}" needs a role suffix: <name>.{${roleSuffixes}}.ts` },
+                ],
+            },
+        },
+        {
+            files: ["src/**/*.*.tsx"],
+            excludedFiles: ["**/__tests__/**", "**/*.test.tsx", "**/*.constants.tsx"],
+            rules: {
+                "check-file/filename-blocklist": [
+                    "error",
+                    { "**/*.tsx": "<Name>.tsx" },
+                    {
+                        errorMessage:
+                            '"{{ target }}": .tsx is for <Name>.tsx components and <Name>.constants.tsx',
+                    },
+                ],
+            },
+        },
+        {
+            // Names fixed by CRA: the entry point and the generated env declarations.
+            files: ["src/index.tsx", "src/react-app-env.d.ts"],
+            rules: {
+                "check-file/filename-naming-convention": "off",
+            },
+        },
+        {
             // The one place that wraps MUI's styled; everything else goes through it.
             files: ["src/shared/lib/styled.helpers.ts"],
             rules: {
@@ -291,6 +358,8 @@ module.exports = {
                 "jsx-a11y/click-events-have-key-events": "off",
                 "jsx-a11y/no-static-element-interactions": "off",
                 "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, ...emptyFileRules],
+                "jest/no-focused-tests": "error",
+                "jest/no-disabled-tests": "error",
             },
         },
     ],

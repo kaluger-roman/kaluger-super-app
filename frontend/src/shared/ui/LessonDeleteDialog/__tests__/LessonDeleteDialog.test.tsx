@@ -7,8 +7,8 @@ import { describe, it, expect, vi } from "vitest";
 
 import type { Lesson } from "../../../types";
 import { theme } from "../../themeConfig";
-import * as lessonDeleteDialogModel from "../lesson-delete-dialog.model";
 import { LessonDeleteDialog } from "../LessonDeleteDialog";
+import * as lessonDeleteDialogModel from "../LessonDeleteDialog.model";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(

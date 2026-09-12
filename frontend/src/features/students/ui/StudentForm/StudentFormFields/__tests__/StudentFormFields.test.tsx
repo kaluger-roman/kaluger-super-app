@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { theme } from "@shared";
 
-import type { StudentFormData } from "../../types";
+import type { StudentFormData } from "../../StudentForm.types";
 import { StudentFormFields } from "../StudentFormFields";
 
 const renderWithTheme = (ui: React.ReactElement) =>

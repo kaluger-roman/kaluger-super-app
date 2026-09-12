@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Lesson } from "@shared";
 import { theme } from "@shared";
 
-import * as paymentStatusModel from "../payment-status.model";
 import { PaymentStatus } from "../PaymentStatus";
+import * as paymentStatusModel from "../PaymentStatus.model";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(

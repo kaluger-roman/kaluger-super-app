@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { theme } from "@shared";
 import type { Lesson } from "@shared";
 
-import type { LessonFormData } from "../../types";
+import type { LessonFormData } from "../../LessonForm.types";
 import { LessonStudentSection } from "../LessonStudentSection";
 
 const baseFormData: LessonFormData = {

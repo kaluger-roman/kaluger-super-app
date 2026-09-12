@@ -7,8 +7,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { theme } from "@shared";
 import type { Lesson } from "@shared";
 
-import * as homeworkSentStatusModel from "../homework-sent-status.model";
 import { HomeworkSentStatus } from "../HomeworkSentStatus";
+import * as homeworkSentStatusModel from "../HomeworkSentStatus.model";
 
 /**
  * HomeworkSentStatus Component Tests

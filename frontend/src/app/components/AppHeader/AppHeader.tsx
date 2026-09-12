@@ -3,7 +3,7 @@ import type { FC } from "react";
 import { Menu as MenuIcon } from "@mui/icons-material";
 
 import * as Styled from "./AppHeader.styled";
-import type { AppHeaderProps } from "../../types";
+import type { AppHeaderProps } from "../../app.types";
 import { UserAvatar } from "../UserAvatar";
 
 export const AppHeader: FC<AppHeaderProps> = ({ user, onMenuClick, onAvatarClick, isMobile }) => {

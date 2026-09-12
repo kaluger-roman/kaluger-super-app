@@ -11,9 +11,9 @@ import { theme } from "../../../../../shared/ui/themeConfig";
 import {
   lessonPaymentChanged,
   lessonHomeworkSentChanged,
-} from "../../../models/lesson-actions.model";
-import * as lessonStatusIconsModel from "../lesson-status-icons.model";
+} from "../../../models/lessonActions.model";
 import { LessonStatusIcons } from "../LessonStatusIcons";
+import * as lessonStatusIconsModel from "../LessonStatusIcons.model";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(

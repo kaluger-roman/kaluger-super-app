@@ -1,2 +1,2 @@
 export { LessonDeleteDialog } from "./LessonDeleteDialog";
-export * as lessonDeleteDialogModel from "./lesson-delete-dialog.model";
+export * as lessonDeleteDialogModel from "./LessonDeleteDialog.model";

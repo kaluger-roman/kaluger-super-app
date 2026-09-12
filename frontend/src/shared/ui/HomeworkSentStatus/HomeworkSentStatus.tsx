@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import * as homeworkSentStatusModel from "./homework-sent-status.model";
+import * as homeworkSentStatusModel from "./HomeworkSentStatus.model";
 import * as Styled from "./HomeworkSentStatus.styled";
 import type { Lesson } from "../../types";
 

@@ -7,7 +7,7 @@ import { useUnit } from "effector-react";
 import { studentModel } from "@entities";
 import { useDisableNumberScroll } from "@shared";
 
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type PriceInputProps = {
   formData: LessonFormData;

@@ -15,7 +15,7 @@ import { useUnit } from "effector-react";
 
 import * as model from "./RecurringLessonDeleteDialog.model";
 import * as Styled from "./RecurringLessonDeleteDialog.styled";
-import { SUBJECT_LABELS } from "../../constants";
+import { SUBJECT_LABELS } from "../../domain.constants";
 import type { Lesson } from "../../types";
 
 type RecurringLessonDeleteDialogProps = {

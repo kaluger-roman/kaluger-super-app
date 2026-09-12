@@ -25,7 +25,7 @@ import {
   studentWebSocketModel,
   webSocketModel,
 } from "./model";
-import type { BeforeInstallPromptEvent } from "./model/app-init.types";
+import type { BeforeInstallPromptEvent } from "./model/appInit.types";
 
 const AppRouter: FC = () => {
   const navigate = useNavigate();

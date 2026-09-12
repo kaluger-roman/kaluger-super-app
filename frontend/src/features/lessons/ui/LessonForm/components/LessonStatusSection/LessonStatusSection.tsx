@@ -5,7 +5,7 @@ import type { Lesson } from "@shared";
 import * as Styled from "./LessonStatusSection.styled";
 import { HomeworkSentStatus } from "../../../HomeworkSentStatus";
 import { PaymentStatus } from "../../../PaymentStatus";
-import type { LessonFormData } from "../../types";
+import type { LessonFormData } from "../../LessonForm.types";
 
 type LessonStatusSectionProps = {
   lesson?: Lesson;

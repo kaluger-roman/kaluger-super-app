@@ -14,7 +14,7 @@ import {
 import { useDisableNumberScroll } from "@shared";
 
 import { ContactMethodSelect } from "../ContactMethodSelect";
-import type { StudentFormFieldsProps } from "../types";
+import type { StudentFormFieldsProps } from "../StudentForm.types";
 
 export const StudentFormFields: FC<StudentFormFieldsProps> = ({
   formData,

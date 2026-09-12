@@ -8,7 +8,7 @@ import type { Lesson } from "@shared";
 import { TRIAL_LESSON_HINT } from "./LessonStudentSection.constants";
 import { ProspectFields } from "./ProspectFields";
 import { StudentSelector } from "./StudentSelector";
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type LessonStudentSectionProps = {
   formData: LessonFormData;

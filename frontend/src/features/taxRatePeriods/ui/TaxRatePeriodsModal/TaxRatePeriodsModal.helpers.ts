@@ -1,4 +1,4 @@
-import type { DraftPeriod } from "../../model/tax-rate-periods-modal.types";
+import type { DraftPeriod } from "../../model/taxRatePeriodsModal.types";
 
 export type PeriodFlags = { isCurrent: boolean; isFuture: boolean };
 

@@ -30,10 +30,18 @@ import { Button } from "../../shared/ui";
 
 ## File Naming
 
-**PascalCase** — components: `StudentCard/StudentCard.tsx`, `StudentCard.styled.ts`
-**camelCase** — everything else: `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`
+Covers `frontend/src/**`. E2E specs follow `docs/conventions/e2e-testing.md` and stay kebab-case (`create-student.spec.ts`).
 
-**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts`, `.helpers.ts`, `.hooks.ts`
+**PascalCase** — components and their companion files: `StudentCard/StudentCard.tsx`, `StudentCard.styled.ts`, `StudentCard.model.ts`
+**camelCase** — everything else: `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`. Files directly inside `api/`, `model/`, `models/`, `types/` are always camelCase
+**Folders** — camelCase, or PascalCase for a component folder. No kebab-case or snake_case in file or folder names
+**Exceptions** — names fixed by CRA: `src/index.tsx`, `src/react-app-env.d.ts`
+
+**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts(x)`, `.helpers.ts`, `.hooks.ts` (plus `index.ts`, `*.test.ts(x)`, `*.d.ts`, and test support files under `__tests__/` such as `src/__tests__/setup.ts`). A plain `<name>.ts` is allowed only inside `api/` and `types/`, where the folder already names the role (`shared/api/lessons.ts`, `shared/types/auth.ts`)
+
+ESLint enforced (`eslint-plugin-check-file`): PascalCase for `*.tsx`; camelCase for `.ts` directly inside `api/`, `model/`, `models/`, `types/`; letters and digits only, starting with a letter, for every other `.ts` name and every folder (`__tests__` aside); the extension allowlist. Test files may carry an extra qualifier (`PaymentStatus.component.test.tsx`) — they are outside the allowlist, and only the name before the first dot is checked.
+
+Review-checked: a glob cannot tell a companion from a standalone module, so PascalCase vs camelCase for the remaining `.ts` files (`StudentCard.styled.ts` vs `dateFormat.helpers.ts`) and for folders (`StudentCard/` vs `lessons/`) is not linted.
 
 **Folder structure:**
 
@@ -133,7 +141,7 @@ feature/models/
 ### Shared utilities
 
 - **Дата/время** — все примитивы (`addDays`, `getWeekStart`, `getWeekEnd`, `groupByDay`, `formatTime`, `formatDuration`, `formatTimeRange`, `toDateKey`) живут в `shared/lib/date.helpers.ts`. Не объявлять локальные `setDate(getDate() + n)` в компонентах/моделях — импортировать из `@shared`.
-- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.ts`. Тоже импортировать через `@shared`.
+- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.helpers.ts`. Тоже импортировать через `@shared`.
 - **Ошибки axios** — единый `extractAxiosError(err, fallback?)` в `shared/lib/error.helpers.ts`. Не дублировать `axiosError?.response?.data?.error || axiosError?.message || "..."` в каждой модели. При необходимости фолбэк — вторым аргументом.
 
 ## Effector Conventions
@@ -198,7 +206,7 @@ sample({ clock: tick, target: cooldownTick });
 
 Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
-Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/__tests__/web-socket.model.test.ts`.
+Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/__tests__/webSocket.model.test.ts`.
 
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
@@ -298,8 +306,8 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 **Rules:**
 
 - **Date display** — use `toLocaleDateString("ru-RU")` / `toLocaleTimeString("ru-RU")` which automatically use browser timezone
-- **Date formatting** — use helpers from `shared/lib/dateFormat.ts`
-- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessons-filters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
+- **Date formatting** — use helpers from `shared/lib/dateFormat.helpers.ts`
+- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessonsFilters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
 - **Never send raw `Date` objects** — always convert through `toLocalStartOfDay`/`toLocalEndOfDay` or `.toISOString()`
 - **MUI DatePicker values** are in browser local time — no extra conversion needed before passing to `toLocalStartOfDay`/`toLocalEndOfDay`
 
@@ -309,4 +317,4 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 - **Minimal comments — default zero.** Перед написанием комментария спросить себя: «без него читатель ошибётся / потеряет важный контекст?» Если нет — удалить. Не писать «// эта функция делает X», «// Form fields», «// Effects», «// Reactions», «// Создаём store», «Регрессия #N» — имена/структура и git blame уже это говорят. Оставлять только: скрытые инварианты, обходы багов (с источником), неинтуитивные side-effects, спорные «почему именно так». Это применяется и к тестам — описательное `it("...")` уже даёт контекст
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian
-- Use `frontend/src/shared/lib/dateFormat.ts` for date formatting
+- Use `frontend/src/shared/lib/dateFormat.helpers.ts` for date formatting

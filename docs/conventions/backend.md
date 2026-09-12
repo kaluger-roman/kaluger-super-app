@@ -35,6 +35,11 @@ backend/
 | Service types | `[domain].types.ts`       | `services/[domain]/` |
 | Shared types | `[domain].ts` (split) | `types/`                |
 
+**File and folder names are camelCase** (`createLesson.ts`, `lessonCreation/`,
+`webSocketManager.ts`; `__tests__/` is the only exception). Role suffixes come only
+from the table — `.types`, `.helpers`, `.constants`, `.validators` (plus `.test` in
+tests); anything else is a plain `<name>.ts`. ESLint enforced (`eslint-plugin-check-file`).
+
 **Service files split by responsibility.** Each new service lives in its own
 sub-folder. Mixing constants/helpers/types into the entry file is forbidden —
 вынеси в соседние `*.constants.ts`/`*.helpers.ts`/`*.types.ts`. Старые "плоские"
@@ -66,8 +71,10 @@ import { createStudent } from "./controllers/students/createStudent";
 ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `any`
 (prod code; allowed in tests — supertest's `res.body` and hand-rolled mocks are typed
 `any` upstream), named exports only, function expressions only, `type` + `import type`,
-no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded). The rest of
-this doc is review-checked.
+no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded), camelCase
+file/folder names and the role-suffix allowlist (`eslint-plugin-check-file`), no
+`.only` / `.skip` / `done` callbacks in tests (`eslint-plugin-jest`). The rest of this
+doc is review-checked.
 
 ### Structure
 
@@ -162,7 +169,7 @@ type AuthRequest = Request & { user?: JwtPayload };
 4. **Отдельный namespace роутов** (`/api/student-auth/*`, `/api/student-cabinet/*`) — токены физически не пересекаются с tutor-эндпоинтами
 5. **Отдельные rate-limiters** для login/register/resend, чтобы не было общего бюджета попыток с другими ролями
 6. **WebSocket**: добавлять отдельный путь (`/ws/student?token=...`) в общем `WebSocketManager`, со своим пулом клиентов и auth-функцией. Не пересекать пулы — broadcast в один пул не должен видеть клиентов другого
-7. **Cross-role security регрессионные тесты** обязательны: tutor JWT отвергается student-эндпоинтами и наоборот; см. `src/__tests__/cross-role-security.test.ts` как пример
+7. **Cross-role security регрессионные тесты** обязательны: tutor JWT отвергается student-эндпоинтами и наоборот; см. `src/__tests__/crossRoleSecurity.test.ts` как пример
 8. **Раздельные хранилища токенов на фронте** (например, ключ `studentToken` vs `authToken` в `localStorage`) и отдельный axios-инстанс (`shared/api/studentBase.ts` — `studentApi`/`publicApi`)
 9. **Раздельные route guards** на фронте — каждый guard проверяет только "свою" сессию из `entities/<role>`
 

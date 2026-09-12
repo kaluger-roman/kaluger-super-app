@@ -16,10 +16,10 @@ import { useUnit } from "effector-react";
 import type { Lesson } from "@shared";
 import { getLessonDisplayName } from "@shared";
 
-import * as paymentStatusModel from "./payment-status.model";
 import { usePaymentDate } from "./PaymentStatus.hooks";
+import * as paymentStatusModel from "./PaymentStatus.model";
 import * as Styled from "./PaymentStatus.styled";
-import * as lessonActionsModel from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lessonActions.model";
 
 type PaymentStatusProps = {
   lesson: Lesson;

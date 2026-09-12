@@ -7,7 +7,8 @@ Stack: Jest + Supertest + Faker + test database
 - **Do NOT mock Prisma** — use separate test database (ESLint enforced: `no-restricted-syntax` rejects `jest.mock("…prisma…")`)
 - **Clean up after tests** — delete created records
 - **Tests must be independent** — no shared state between tests
-- **Always async/await** — never callbacks
+- **Always async/await** — never `done` callbacks (ESLint `jest/no-done-callback`); wrap callback APIs in a promise: `await new Promise<void>((resolve) => server.close(() => resolve()))`
+- **No `.only` / `.skip` in committed tests** (ESLint `jest/no-focused-tests`, `jest/no-disabled-tests`)
 - **Test edge cases** — invalid input, empty arrays, null values
 - **No `export default`** — only named exports/imports
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing

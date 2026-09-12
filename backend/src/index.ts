@@ -25,7 +25,7 @@ import { pushRouter } from "./routes/push";
 import { reminderSettingsRouter } from "./routes/reminderSettings";
 import { adminRouter } from "./routes/admin";
 import { taxPeriodsRouter } from "./routes/taxPeriods";
-import { testRouter } from "./routes/__test__";
+import { testRouter } from "./routes/testSupport";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";

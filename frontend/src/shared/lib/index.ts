@@ -17,7 +17,7 @@ export {
   formatMonth,
   formatDay,
   formatWeekRange,
-} from "./dateFormat";
+} from "./dateFormat.helpers";
 export {
   formatCurrency,
   validateEmail,
@@ -26,7 +26,7 @@ export {
   capitalizeFirst,
 } from "./lib.helpers";
 export { extractAxiosError } from "./error.helpers";
-export { setNavigate, navigate } from "./navigation";
+export { setNavigate, navigate } from "./navigation.helpers";
 export {
   getLessonDisplayName,
   getStatusLabel,
@@ -38,7 +38,7 @@ export {
   isProspectLesson,
 } from "./lesson.helpers";
 export { useNotifications } from "./notifications.hooks";
-export { useDisableNumberScroll } from "./disable-number-scroll.hooks";
+export { useDisableNumberScroll } from "./disableNumberScroll.hooks";
 export { styled } from "./styled.helpers";
 export { isIos, isInStandaloneMode } from "./platform.helpers";
 export { handleActivationKey } from "./keyboard.helpers";

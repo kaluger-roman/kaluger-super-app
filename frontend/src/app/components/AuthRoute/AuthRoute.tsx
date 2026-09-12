@@ -5,7 +5,7 @@ import { Navigate } from "react-router-dom";
 
 import { userModel } from "@entities";
 
-import type { AuthRouteProps } from "../../types";
+import type { AuthRouteProps } from "../../app.types";
 
 export const AuthRoute: FC<AuthRouteProps> = ({ element, isLoggedIn }) => {
   const user = useUnit(userModel.$user);

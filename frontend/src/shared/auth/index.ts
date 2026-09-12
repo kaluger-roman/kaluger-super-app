@@ -5,4 +5,4 @@ export {
   getStudentToken,
   setStudentToken,
   clearStudentToken,
-} from "./tokenStorage";
+} from "./tokenStorage.helpers";

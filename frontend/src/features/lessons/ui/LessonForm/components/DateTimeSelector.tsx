@@ -6,7 +6,7 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./DateTimeSelector.styled";
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type DateTimeSelectorProps = {
   formData: LessonFormData;
