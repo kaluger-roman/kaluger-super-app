@@ -13,7 +13,7 @@ import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
 import { RecurringCheckbox } from "./RecurringCheckbox";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type LessonFormContentProps = {
   formData: LessonFormData;

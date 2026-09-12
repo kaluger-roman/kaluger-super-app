@@ -9,9 +9,9 @@ import { StudentArchivedInfo } from "@shared";
 import { StudentDeleteDialog } from "@shared/ui";
 
 import * as Styled from "./StudentForm.styled";
+import type { StudentFormProps } from "./StudentForm.types";
 import { StudentFormActions } from "./StudentFormActions";
 import { StudentFormFields } from "./StudentFormFields";
-import type { StudentFormProps } from "./types";
 import { studentFormModel } from "../../models";
 
 export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) => {

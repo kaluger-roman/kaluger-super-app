@@ -1,0 +1,231 @@
+import type { Lesson, CreateLessonDto, Student, UpdateLessonDto } from "@shared";
+import { toDateKey } from "@shared";
+
+import type { LessonFormData } from "../ui/LessonForm/LessonForm.types";
+
+export const prepareFormData = (lesson?: Lesson): LessonFormData => {
+  if (lesson) {
+    return {
+      subject: lesson.subject,
+      lessonType: lesson.lessonType,
+      description: lesson.description || "",
+      startTime: new Date(lesson.startTime),
+      endTime: new Date(lesson.endTime),
+      price: lesson.price?.toString() || "",
+      studentId: lesson.studentId ?? "",
+      withoutStudent: !lesson.studentId,
+      prospectName: lesson.prospectName ?? "",
+      prospectPhone: lesson.prospectPhone ?? "",
+      prospectContactMethod: lesson.prospectContactMethod ?? "",
+      homework: lesson.homework || "",
+      notes: lesson.notes || "",
+      isRecurring: lesson.isRecurring || false,
+      isPaid: lesson.isPaid || false,
+      isHomeworkSentByTeacher: lesson.isHomeworkSentByTeacher || false,
+      paymentDate: lesson.paymentDate ? toDateKey(lesson.paymentDate) : undefined,
+    };
+  }
+
+  const now = new Date();
+  const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+
+  return {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: now,
+    endTime,
+    price: "",
+    studentId: "",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    paymentDate: undefined,
+  };
+};
+
+export const validateFormData = (
+  formData: LessonFormData
+): { isValid: boolean; errors: Record<string, string> } => {
+  const errors: Record<string, string> = {};
+
+  if (formData.withoutStudent) {
+    if (!formData.prospectName.trim()) {
+      errors.prospectName = "Укажите имя ученика";
+    }
+  } else if (!formData.studentId) {
+    errors.studentId = "Выберите ученика";
+  }
+
+  if (formData.startTime >= formData.endTime) {
+    errors.endTime = "Время окончания должно быть позже времени начала";
+  }
+
+  if (formData.price && (isNaN(Number(formData.price)) || Number(formData.price) < 0)) {
+    errors.price = "Цена должна быть положительным числом";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+export const canSubmitLessonForm = (formData: LessonFormData): boolean =>
+  formData.withoutStudent
+    ? Boolean(formData.prospectName.trim())
+    : Boolean(formData.studentId);
+
+export const applyWithoutStudentRules = (
+  formData: LessonFormData,
+  field: string,
+  editingLesson?: Lesson
+): LessonFormData => {
+  if (field !== "withoutStudent") return formData;
+
+  if (formData.withoutStudent) {
+    return { ...formData, studentId: "", isRecurring: false, price: "0" };
+  }
+
+  return {
+    ...formData,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    // При редактировании существующего пробного урока цена сохраняется —
+    // иначе автозаполнение ставкой ученика молча подменит цену при привязке.
+    price:
+      !editingLesson && formData.price === "0" ? "" : formData.price,
+  };
+};
+
+export const prepareSubmitData = (
+  formData: LessonFormData
+): Omit<CreateLessonDto, "description" | "homework" | "notes"> & UpdateLessonDto => ({
+  subject: formData.subject as CreateLessonDto["subject"],
+  lessonType: formData.lessonType as CreateLessonDto["lessonType"],
+  // null, not undefined: undefined is dropped from JSON and the server keeps
+  // the old value — clearing a field in the edit form would not persist.
+  description: formData.description.trim() ? formData.description : null,
+  startTime: formData.startTime.toISOString(),
+  endTime: formData.endTime.toISOString(),
+  price: formData.price ? Number(formData.price) : undefined,
+  ...(formData.withoutStudent
+    ? {
+        prospectName: formData.prospectName.trim(),
+        prospectPhone: formData.prospectPhone.trim() || undefined,
+        prospectContactMethod: formData.prospectContactMethod || undefined,
+      }
+    : { studentId: formData.studentId, isRecurring: formData.isRecurring || undefined }),
+  homework: formData.homework.trim() ? formData.homework : null,
+  notes: formData.notes.trim() ? formData.notes : null,
+  isPaid: formData.isPaid,
+  isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
+  paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,
+});
+
+export const hasTimeChanged = (lesson: Lesson, formData: LessonFormData): boolean => {
+  const oldStart = new Date(lesson.startTime).toISOString();
+  const oldEnd = new Date(lesson.endTime).toISOString();
+  const newStart = formData.startTime.toISOString();
+  const newEnd = formData.endTime.toISOString();
+  return oldStart !== newStart || oldEnd !== newEnd;
+};
+
+export const hasPriceChanged = (lesson: Lesson, formData: LessonFormData): boolean => {
+  const oldPrice = lesson.price ?? null;
+  const newPrice = formData.price ? Number(formData.price) : null;
+  return oldPrice !== newPrice;
+};
+
+export const shouldConfirmTimeChange = (state: {
+  formData: LessonFormData;
+  editingLesson: Lesson | undefined;
+}): boolean =>
+  Boolean(
+    state.editingLesson !== undefined &&
+      state.editingLesson.isRecurring &&
+      state.editingLesson.status === "SCHEDULED" &&
+      hasTimeChanged(state.editingLesson, state.formData)
+  );
+
+export const shouldConfirmPriceChange = (state: {
+  formData: LessonFormData;
+  editingLesson: Lesson | undefined;
+}): boolean =>
+  Boolean(
+    state.editingLesson !== undefined &&
+      state.editingLesson.isRecurring &&
+      state.editingLesson.status === "SCHEDULED" &&
+      !hasTimeChanged(state.editingLesson, state.formData) &&
+      hasPriceChanged(state.editingLesson, state.formData)
+  );
+
+export const shouldUpdateDirectly = (state: {
+  formData: LessonFormData;
+  editingLesson: Lesson | undefined;
+}): state is { formData: LessonFormData; editingLesson: Lesson } =>
+  state.editingLesson !== undefined &&
+  (!state.editingLesson.isRecurring ||
+    state.editingLesson.status !== "SCHEDULED" ||
+    (!hasTimeChanged(state.editingLesson, state.formData) &&
+      !hasPriceChanged(state.editingLesson, state.formData)));
+
+export const clearFieldError = (
+  errors: Record<string, string>,
+  field: string
+): Record<string, string> => {
+  const newErrors = { ...errors };
+  if (newErrors[field]) {
+    delete newErrors[field];
+  }
+  return newErrors;
+};
+
+export const updateFormField = (
+  formData: LessonFormData,
+  field: string,
+  value: unknown
+): LessonFormData => ({
+  ...formData,
+  [field]: value,
+});
+
+export const applyHourlyRateAutofill = (
+  formData: LessonFormData,
+  students: Student[],
+  archivedStudents: Student[]
+): LessonFormData => {
+  if (!formData.studentId || formData.price) return formData;
+  const student =
+    students.find((s) => s.id === formData.studentId) ??
+    archivedStudents.find((s) => s.id === formData.studentId);
+  if (!student?.hourlyRate) return formData;
+  return { ...formData, price: String(student.hourlyRate) };
+};
+
+export const updateFormDate = (
+  formData: LessonFormData,
+  field: "startTime" | "endTime",
+  value: Date | null
+): LessonFormData => {
+  if (!value) return formData;
+
+  const newData = { ...formData, [field]: value };
+
+  if (field === "startTime") {
+    let duration = formData.endTime.getTime() - formData.startTime.getTime();
+    if (!duration || duration <= 0) {
+      duration = 60 * 60 * 1000;
+    }
+    newData.endTime = new Date(value.getTime() + duration);
+  }
+
+  return newData;
+};

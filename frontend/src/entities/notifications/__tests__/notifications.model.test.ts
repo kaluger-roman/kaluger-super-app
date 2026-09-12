@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { userModel } from "@entities/user";
 import { notificationsApi, showNotification } from "@shared";
 
-import { $autoSubscribeAttempted } from "../notifications-toggle.model";
 import * as notificationsModel from "../notifications.model";
+import { $autoSubscribeAttempted } from "../notificationsToggle.model";
 
 vi.mock("@shared", async () => {
   const actual = await vi.importActual("@shared");

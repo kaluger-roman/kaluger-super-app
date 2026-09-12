@@ -1,1 +1,1 @@
-export * as taxRatePeriodModel from "./tax-rate-period.model";
+export * as taxRatePeriodModel from "./taxRatePeriod.model";

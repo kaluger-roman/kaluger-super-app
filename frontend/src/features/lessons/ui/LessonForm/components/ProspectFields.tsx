@@ -4,7 +4,7 @@ import { Box, FormControl, InputLabel, Select, MenuItem, TextField } from "@mui/
 
 import { CONTACT_METHOD_LABELS } from "@shared";
 
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type ProspectFieldsProps = {
   formData: LessonFormData;

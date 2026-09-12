@@ -4,7 +4,7 @@ import { Box, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 
 import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "@shared";
 
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type SubjectTypeSelectorProps = {
   formData: LessonFormData;

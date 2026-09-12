@@ -12,7 +12,7 @@ import { useUnit } from "effector-react";
 
 import * as Styled from "./StudentFormActions.styled";
 import { studentsArchiveModel } from "../../../models";
-import type { StudentFormActionsProps } from "../types";
+import type { StudentFormActionsProps } from "../StudentForm.types";
 
 export const StudentFormActions: FC<StudentFormActionsProps> = ({
   student,

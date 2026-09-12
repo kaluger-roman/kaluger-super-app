@@ -17,8 +17,8 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23) | lint + `tsc --noEmit` |
-| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) | lint + `tsc` build |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23), `check-file` naming (#25), `jest` focused/disabled tests (#26) | lint + `tsc --noEmit` |
+| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) + `check-file` naming (#25) + `jest` test rules (#26) | lint + `tsc` build |
 | landing | flat config | lint + tsc + test |
 
 Three biggest gaps driving this work:
@@ -139,8 +139,20 @@ Notes:
 
 | # | Rule | Convention | Status | Violations |
 | --- | --- | --- | --- | --- |
-| 25 | `eslint-plugin-check-file`: `filename-naming-convention`, `folder-naming-convention` | PascalCase components / camelCase rest / allowed extensions | TODO | _TBD_ |
-| 26 | `eslint-plugin-jest` / `eslint-plugin-vitest`: `no-focused-tests`, `no-disabled-tests`, `no-done-callback` | async tests, no stray `.only`/`.skip` | TODO | _TBD_ |
+| 25 | `eslint-plugin-check-file`: `filename-naming-convention`, `folder-naming-convention`, `filename-blocklist` (as a role-suffix allowlist) | PascalCase components / camelCase rest / allowed extensions | ✅ PR6 | **FE 114 files**: 99 kebab-case (61 prod + 38 tests), 11 prod without a role suffix (+ 2 mirrored tests), 2 dead files deleted; folders **0**. **BE 8**: `WebSocketManager.ts` + its 4 tests, `routes/__test__.ts`, 2 kebab-case tests |
+| 26 | `jest/no-focused-tests`, `jest/no-disabled-tests` (both), `jest/no-done-callback` (backend) | async tests, no stray `.only`/`.skip` | ✅ PR6 | **0** focused/disabled; **5** backend `done` callbacks (WebSocket test hooks) — rewritten to `await new Promise(...)` |
+
+**PR6 (branch `worktree-chore-lint-m5-naming-tests`): #25, #26.** Milestone 5 closed.
+
+Notes:
+- **#25 versions** — the frontend pins `eslint-plugin-check-file@2.8.0`: 3.x supports flat config only, and the frontend is still on legacy `.eslintrc.js`. The backend uses 3.x.
+- **#25 globs** — negated extglobs inside check-file patterns (`!(index|*.model).ts`, `*.!(test).tsx`) don't behave like bash in micromatch: they matched valid names (`App.tsx`, `index.ts`). The suffix allowlist is therefore scoped with ESLint's own `excludedFiles` / `ignores` (minimatch), and `filename-blocklist` with a `**/*.ts` key reports whatever is left. check-file itself only gets positive patterns.
+- **#25 naming** — `*.tsx` PascalCase; files directly in `api/`, `model(s)/`, `types/` camelCase; any other `.ts` "letters and digits, starting with a letter". A glob can't tell a component folder from a camelCase one, so companions (`StudentCard.styled.ts`) and camelCase modules share that rule. Folders: the same glob, plus `__tests__`. Test files may carry qualifiers (`PaymentStatus.component.test.tsx`), so they are outside the suffix allowlist and only their case is checked.
+- **#25 renames** — the 61 kebab-case prod files (`lesson-form.model.ts`) predate the rule; the convention always said camelCase. Models that sit next to their component (`RescheduleDialog/reschedule-dialog.model.ts`) became companions (`RescheduleDialog.model.ts`), like the existing `StudentViewDialog.model.ts`. Import specifiers were rewritten by resolving each path, not by name (`./types`, `./constants` are ambiguous).
+- **#25 role suffixes** — `dateFormat`, `navigation`, `tokenStorage` → `*.helpers.ts`; `themeConfig/{components,moreComponents,palette,typography}` → `*.constants.ts`; `shared/constants.ts` → `shared/domain.constants.ts`; `app/types.ts` → `app/app.types.ts`; `LessonForm/types.ts`, `StudentForm/types.ts` → `<Component>.types.ts`. Deleted: `src/setupTests.ts` (CRA leftover — vitest loads `src/__tests__/setup.ts`) and `shared/ui/theme.ts` (a one-line re-export of `./themeConfig`). `shared/api/*.ts` and `shared/types/*.ts` keep plain names — the folder names the role, and `types/<domain>.ts` is what the "shared types split by domain" rule prescribes.
+- **#25 backend** — camelCase everywhere. The one PascalCase file was the `WebSocketManager` class module; case-only renames go through `git mv` (the macOS FS is case-insensitive). `routes/__test__.ts` → `routes/testSupport.ts`, not `test.ts`: jest's `testMatch` would treat that as a suite. The URL stays `/api/__test__`.
+- **#26 frontend** — uses `eslint-plugin-jest@25` (already loaded by `react-app/jest`, now an explicit devDependency), not `@vitest/eslint-plugin`: 1.x needs TypeScript ≥ 5 (the frontend is on 4.9.5), and jest 25's rules were checked to catch `it.only` / `it.skip` both as globals and as imports from `vitest`. `no-done-callback` is backend-only: in vitest the first test argument is the test context, not a callback.
+- Measured but not adopted (no convention behind them): backend jest `recommended` — `no-conditional-in-test` 46, `expect-expect` 32 (mostly supertest `.expect()` chains), `no-conditional-expect` 10; the rest of the preset is 0. Frontend `vitest/expect-expect` 7.
 
 ---
 
@@ -150,6 +162,15 @@ Notes:
 | --- | --- | --- |
 | 27 | `husky` + `lint-staged` (lint + format on staged files) | TODO |
 | 28 | Backend lint + `format:check` in CI | TODO |
+
+---
+
+## Milestone 7 — E2E (`frontend/e2e/**`)
+
+| # | Rule | Convention | Status | Violations |
+| --- | --- | --- | --- | --- |
+| 29 | Lint `frontend/e2e/**` at all — `npm run lint` covers only `src/`, although `e2e-testing.md` says ESLint applies there; type-aware rules need a tsconfig that includes `e2e/` | e2e conventions | TODO | _TBD_ |
+| 30 | `eslint-plugin-playwright`: `no-focused-test`, `no-wait-for-timeout`, `no-wait-for-selector`, `no-page-pause`; `check-file` kebab-case `*.spec.ts` | no `waitForTimeout`, `expect().toBeVisible()` over `waitForSelector`, kebab-case spec names | TODO | _TBD_ |
 
 ---
 

@@ -7,8 +7,8 @@ import { describe, it, expect, vi } from "vitest";
 
 import type { Lesson } from "../../../types";
 import { theme } from "../../themeConfig";
-import * as rescheduleDialogModel from "../reschedule-dialog.model";
 import { RescheduleDialog } from "../RescheduleDialog";
+import * as rescheduleDialogModel from "../RescheduleDialog.model";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(

@@ -15,9 +15,9 @@ import { useUnit } from "effector-react";
 import type { Lesson } from "@shared";
 import { getLessonDisplayName } from "@shared";
 
-import * as homeworkSentStatusModel from "./homework-sent-status.model";
+import * as homeworkSentStatusModel from "./HomeworkSentStatus.model";
 import * as Styled from "./HomeworkSentStatus.styled";
-import * as lessonActionsModel from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lessonActions.model";
 
 type HomeworkSentStatusProps = {
   lesson: Lesson;

@@ -12,7 +12,7 @@ import {
   isSameStudent,
 } from "./StudentSelector.helpers";
 import * as Styled from "./StudentSelector.styled";
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type StudentSelectorProps = {
   formData: LessonFormData;

@@ -1,7 +1,7 @@
 import { fork, allSettled } from "effector";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import * as paymentStatusModel from "../payment-status.model";
+import * as paymentStatusModel from "../PaymentStatus.model";
 
 describe("PaymentStatus", () => {
   beforeEach(() => {

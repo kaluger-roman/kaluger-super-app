@@ -1,2 +1,2 @@
-export { WebSocketManager } from "./WebSocketManager";
+export { WebSocketManager } from "./webSocketManager";
 export type { AuthenticatedWebSocket } from "./types";

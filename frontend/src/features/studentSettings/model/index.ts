@@ -1,1 +1,1 @@
-export * as studentSettingsModel from "./student-settings.model";
+export * as studentSettingsModel from "./studentSettings.model";

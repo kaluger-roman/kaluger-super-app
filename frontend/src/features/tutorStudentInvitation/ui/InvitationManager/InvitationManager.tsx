@@ -17,7 +17,7 @@ import { useGate, useUnit } from "effector-react";
 import { InvitationActions } from "./InvitationActions";
 import * as Styled from "./InvitationManager.styled";
 import { tutorStudentInvitationModel } from "../../model";
-import { formatDate } from "../../model/tutor-student-invitation.helpers";
+import { formatDate } from "../../model/tutorStudentInvitation.helpers";
 
 type InvitationManagerProps = {
   studentId: string;

@@ -6,10 +6,10 @@ import { useUnit } from "effector-react";
 import type { Lesson } from "@shared";
 import { ConfirmStatusDialog, getLessonDisplayName } from "@shared";
 
-import * as lessonStatusIconsModel from "./lesson-status-icons.model";
 import { usePaymentDate } from "./LessonStatusIcons.hooks";
+import * as lessonStatusIconsModel from "./LessonStatusIcons.model";
 import * as Styled from "./LessonStatusIcons.styled";
-import * as lessonActionsModel from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lessonActions.model";
 
 type Props = {
   lesson: Lesson;

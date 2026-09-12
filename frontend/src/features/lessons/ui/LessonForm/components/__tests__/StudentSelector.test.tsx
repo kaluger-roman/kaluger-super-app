@@ -9,7 +9,7 @@ import { studentModel } from "@entities";
 import { theme } from "@shared";
 import type { Student } from "@shared";
 
-import type { LessonFormData } from "../../types";
+import type { LessonFormData } from "../../LessonForm.types";
 import { StudentSelector } from "../StudentSelector";
 
 const makeStudent = (over: Partial<Student> = {}): Student => ({

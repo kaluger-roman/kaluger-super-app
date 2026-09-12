@@ -1,7 +1,7 @@
 export { Button } from "./Button";
 export { TextField } from "./TextField";
 export { Card } from "./Card";
-export { theme } from "./theme";
+export { theme } from "./themeConfig";
 export { NotificationProvider } from "./NotificationProvider";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { ConfirmStatusDialog } from "./ConfirmStatusDialog";

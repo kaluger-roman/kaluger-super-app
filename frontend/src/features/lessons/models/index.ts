@@ -1,19 +1,19 @@
-import "./lessons-reload.model";
-import "./lessons-notifications.model";
-import "./lessons-page-loader.model";
-import "./lessons-pagination-clamp.model";
+import "./lessonsReload.model";
+import "./lessonsNotifications.model";
+import "./lessonsPageLoader.model";
+import "./lessonsPaginationClamp.model";
 
-import * as lessonActionsModel from "./lesson-actions.model";
-import * as lessonCancellationModel from "./lesson-cancellation.model";
-import * as lessonsConfirmDialogModel from "./lessons-confirm-dialog.model";
-import * as lessonsDeleteDialogModel from "./lessons-delete-dialog.model";
-import * as lessonsEditDialogModel from "./lessons-edit-dialog.model";
-import * as lessonsFiltersModel from "./lessons-filters.model";
-import * as lessonsTabsConstants from "./lessons-tabs.constants";
-import * as lessonTabsModel from "./lessons-tabs.model";
-import * as lessonsViewDialogModel from "./lessons-view-dialog.model";
-import * as lessonsViewModeModel from "./lessons-view-mode.model";
+import * as lessonActionsModel from "./lessonActions.model";
+import * as lessonCancellationModel from "./lessonCancellation.model";
 import * as lessonsMainModel from "./lessons.model";
+import * as lessonsConfirmDialogModel from "./lessonsConfirmDialog.model";
+import * as lessonsDeleteDialogModel from "./lessonsDeleteDialog.model";
+import * as lessonsEditDialogModel from "./lessonsEditDialog.model";
+import * as lessonsFiltersModel from "./lessonsFilters.model";
+import * as lessonsTabsConstants from "./lessonsTabs.constants";
+import * as lessonTabsModel from "./lessonsTabs.model";
+import * as lessonsViewDialogModel from "./lessonsViewDialog.model";
+import * as lessonsViewModeModel from "./lessonsViewMode.model";
 
 export const lessonsModel = {
   ...lessonTabsModel,
@@ -28,5 +28,5 @@ export const lessonsModel = {
   ...lessonsViewModeModel,
 };
 
-export * as lessonFormModel from "./lesson-form.model";
+export * as lessonFormModel from "./lessonForm.model";
 export { lessonCancellationModel };

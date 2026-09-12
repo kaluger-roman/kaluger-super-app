@@ -1,8 +1,8 @@
 export type {
   StudentInvitationView,
   StudentInvitationKind,
-} from "./student-invitation.types";
+} from "./studentInvitation.types";
 export {
   isInvitationActive,
   isStudentRegisteredByInvitation,
-} from "./student-invitation.helpers";
+} from "./studentInvitation.helpers";
