@@ -1,9 +1,6 @@
 import { test as base, expect } from "@playwright/test";
 import { resetDatabase } from "../helpers/db";
-import {
-  createAndLoginTutor,
-  type AuthCredentials,
-} from "../helpers/auth";
+import { createAndLoginTutor, type AuthCredentials } from "../helpers/auth";
 
 export type TutorFixture = {
   credentials: AuthCredentials;

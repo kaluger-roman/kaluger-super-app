@@ -1,10 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export const fillDatePicker = async (
-  page: Page,
-  label: string,
-  digits: string,
-): Promise<void> => {
+export const fillDatePicker = async (page: Page, label: string, digits: string): Promise<void> => {
   const group = page.getByRole("group", { name: label });
   // MUI X v8: each editable section has role="spinbutton"
   const firstSection = group.locator('[role="spinbutton"]').first();
@@ -23,7 +19,7 @@ export const fillDatePicker = async (
 export const fillDateTimePicker = async (
   page: Page,
   label: string,
-  digits: string,
+  digits: string
 ): Promise<void> => {
   const group = page.getByRole("group", { name: label });
   const firstSection = group.locator('[role="spinbutton"]').first();

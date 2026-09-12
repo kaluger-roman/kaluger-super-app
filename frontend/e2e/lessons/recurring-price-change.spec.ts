@@ -35,7 +35,10 @@ test.describe(
       }
 
       await page.goto("/lessons");
-      await page.getByRole("heading", { name: /Олег Орлов/ }).first().click();
+      await page
+        .getByRole("heading", { name: /Олег Орлов/ })
+        .first()
+        .click();
 
       const viewDialog = page.getByRole("dialog").first();
       await viewDialog.getByRole("button", { name: "Редактировать" }).click();
@@ -45,9 +48,7 @@ test.describe(
       await formDialog.getByRole("button", { name: "Обновить урок" }).click();
 
       const confirmDialog = page.getByRole("dialog").last();
-      await expect(
-        confirmDialog.getByText("Изменение цены регулярного урока"),
-      ).toBeVisible();
+      await expect(confirmDialog.getByText("Изменение цены регулярного урока")).toBeVisible();
       await confirmDialog.getByRole("button", { name: "Подтвердить" }).click();
 
       await expect
@@ -57,5 +58,5 @@ test.describe(
         })
         .toEqual([2000, 2000, 2000]);
     });
-  },
+  }
 );

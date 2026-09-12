@@ -40,11 +40,7 @@ test.describe(
       await page.getByRole("option", { name: /Олег Орлов/ }).click();
 
       // Тот же слот, что и у существующего урока → пересечение.
-      await fillDateTimePicker(
-        page,
-        "Время начала",
-        `${ddmmyyyy(occupied)}1400`,
-      );
+      await fillDateTimePicker(page, "Время начала", `${ddmmyyyy(occupied)}1400`);
 
       await dialog.getByRole("button", { name: "Создать урок" }).click();
 
@@ -54,5 +50,5 @@ test.describe(
       const { lessons } = await getLessonsFor(tutor.userId);
       expect(lessons.length).toBe(1);
     });
-  },
+  }
 );

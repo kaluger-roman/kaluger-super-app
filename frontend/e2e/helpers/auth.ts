@@ -9,12 +9,9 @@ export type AuthCredentials = {
   name: string;
 };
 
-const randomSuffix = (): string =>
-  `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const randomSuffix = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-export const generateCredentials = (
-  prefix = "tutor",
-): AuthCredentials => ({
+export const generateCredentials = (prefix = "tutor"): AuthCredentials => ({
   email: `${prefix}-${randomSuffix()}@e2e.local`,
   password: "Password123",
   name: `${prefix} ${randomSuffix()}`,
@@ -22,7 +19,7 @@ export const generateCredentials = (
 
 export const loginViaApi = async (
   email: string,
-  password: string,
+  password: string
 ): Promise<{ token: string; userId: string }> => {
   const result = await apiRequest<{
     token: string;
@@ -35,9 +32,7 @@ export const loginViaApi = async (
   return { token: result.token, userId: result.user.id };
 };
 
-export const registerViaApi = async (
-  credentials: AuthCredentials,
-): Promise<void> => {
+export const registerViaApi = async (credentials: AuthCredentials): Promise<void> => {
   await apiRequest("/api/auth/register", {
     method: "POST",
     body: credentials,
@@ -48,25 +43,19 @@ export const registerViaApi = async (
 export const fetchVerificationCode = async (email: string): Promise<string> => {
   const entry = await waitForMail(
     email,
-    (m) => Boolean(m.verificationCode) && m.subject === "Подтверждение email",
+    (m) => Boolean(m.verificationCode) && m.subject === "Подтверждение email"
   );
   return entry.verificationCode!;
 };
 
-export const verifyEmailViaApi = async (
-  email: string,
-  code: string,
-): Promise<{ token: string }> =>
+export const verifyEmailViaApi = async (email: string, code: string): Promise<{ token: string }> =>
   apiRequest<{ token: string }>("/api/auth/verify-email", {
     method: "POST",
     body: { email, code },
     expectStatus: 200,
   });
 
-export const seedAuthInBrowser = async (
-  page: Page,
-  token: string,
-): Promise<void> => {
+export const seedAuthInBrowser = async (page: Page, token: string): Promise<void> => {
   await page.addInitScript((authToken) => {
     window.localStorage.setItem("authToken", authToken);
   }, token);
@@ -74,7 +63,7 @@ export const seedAuthInBrowser = async (
 
 export const createAndLoginTutor = async (
   page: Page,
-  options: { taxEnabled?: boolean; prefix?: string } = {},
+  options: { taxEnabled?: boolean; prefix?: string } = {}
 ): Promise<{
   credentials: AuthCredentials;
   userId: string;
@@ -90,17 +79,14 @@ export const createAndLoginTutor = async (
 };
 
 export const issueAdminToken = async (): Promise<string> => {
-  const { token } = await apiRequest<{ token: string }>(
-    "/api/__test__/admin/token",
-    { method: "POST", expectStatus: 201 },
-  );
+  const { token } = await apiRequest<{ token: string }>("/api/__test__/admin/token", {
+    method: "POST",
+    expectStatus: 201,
+  });
   return token;
 };
 
-export const seedAdminAuthInBrowser = async (
-  page: Page,
-  token: string,
-): Promise<void> => {
+export const seedAdminAuthInBrowser = async (page: Page, token: string): Promise<void> => {
   await page.addInitScript((adminToken) => {
     window.localStorage.setItem("adminToken", adminToken);
   }, token);

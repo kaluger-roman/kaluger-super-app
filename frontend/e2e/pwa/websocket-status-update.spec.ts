@@ -1,10 +1,5 @@
 import { test, expect } from "../fixtures";
-import {
-  createLesson,
-  createStudentFor,
-  patchLesson,
-  runLessonStatusTick,
-} from "../helpers/db";
+import { createLesson, createStudentFor, patchLesson, runLessonStatusTick } from "../helpers/db";
 
 test.describe(
   "Обновление статуса урока через WebSocket в реальном времени",
@@ -34,9 +29,7 @@ test.describe(
 
       await page.goto("/lessons");
 
-      await expect(
-        page.getByText(/Запланирован/i).first(),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/Запланирован/i).first()).toBeVisible({ timeout: 10_000 });
 
       const pastStart = new Date(now.getTime() - 60 * 1000);
       const futureEnd = new Date(now.getTime() + 60 * 60 * 1000);
@@ -48,9 +41,9 @@ test.describe(
 
       await runLessonStatusTick();
 
-      await expect(
-        page.getByText(/В процессе|Идёт сейчас/).first(),
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/В процессе|Идёт сейчас/).first()).toBeVisible({
+        timeout: 15_000,
+      });
     });
-  },
+  }
 );

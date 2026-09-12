@@ -31,7 +31,10 @@ test.describe("Перенос урока", { tag: ["@regression", "@lessons"] },
     });
 
     await page.goto("/lessons");
-    await page.getByRole("heading", { name: /Олег Орлов/ }).first().click();
+    await page
+      .getByRole("heading", { name: /Олег Орлов/ })
+      .first()
+      .click();
 
     const viewDialog = page.getByRole("dialog").first();
     await viewDialog.getByRole("button", { name: "Перенести" }).click();
