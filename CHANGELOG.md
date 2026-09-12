@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-12
+
+### Changed
+- File and folder naming conventions are now ESLint-enforced via `eslint-plugin-check-file` (#25 of Milestone 5 in `docs/lint-roadmap.md`). Frontend: `*.tsx` PascalCase, files directly in `api/`, `model(s)/`, `types/` camelCase, other `.ts` letters and digits only, folders camelCase/PascalCase, plus a role-suffix allowlist (`.model`, `.api`, `.types`, `.styled`, `.constants`, `.helpers`, `.hooks`; a plain `<name>.ts` only inside `api/` and `types/`). 99 kebab-case files were renamed to camelCase (models next to their component became `<Component>.model.ts`) and 11 files got a role suffix (`dateFormat.helpers.ts`, `navigation.helpers.ts`, `tokenStorage.helpers.ts`, `themeConfig/*.constants.ts`, `shared/domain.constants.ts`, `app/app.types.ts`, `LessonForm.types.ts`, `StudentForm.types.ts`). Backend: camelCase files and folders plus the role-suffix allowlist from `backend.md` — `WebSocketManager.ts` → `webSocketManager.ts` with its tests, `routes/__test__.ts` → `routes/testSupport.ts`, two kebab-case tests renamed (71119fc)
+- Test-runner rules are ESLint-enforced (#26): no `.only` / `.skip` in frontend and backend tests (`jest/no-focused-tests`, `jest/no-disabled-tests`; on the frontend they also catch `it`/`describe` imported from `vitest`) and no `done` callbacks in backend tests (`jest/no-done-callback`) — five WebSocket test hooks now await a promise instead (71119fc)
+
+### Removed
+- Dead `frontend/src/setupTests.ts` (CRA leftover — vitest loads `src/__tests__/setup.ts`) and `frontend/src/shared/ui/theme.ts` (a one-line re-export of `./themeConfig`) (71119fc)
+
+### Infrastructure
+- New devDependencies: `eslint-plugin-check-file` (frontend 2.8 for the legacy `.eslintrc.js`, backend 3.x) and `eslint-plugin-jest` (frontend 25.x — the version `react-app/jest` already loads, now explicit; backend 29.x). `docs/lint-roadmap.md` closes Milestone 5 and adds Milestone 7 — linting `frontend/e2e/**`, which `npm run lint` does not cover yet (71119fc)
+
 ## 2026-09-11
 
 ### Changed
