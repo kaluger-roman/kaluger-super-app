@@ -11,17 +11,18 @@ import { theme } from "@shared";
 import { NewsList } from "../NewsList";
 
 vi.mock("../../NewsCard", () => ({
-  NewsCard: ({ news }: { news: NewsItem }) => (
-    <div data-testid="news-card">{news.title}</div>
-  ),
+  NewsCard: ({ news }: { news: NewsItem }) => <div data-testid="news-card">{news.title}</div>,
 }));
 
 const renderWithProviders = (
   ui: React.ReactElement,
-  { news = [], pagination = null }: {
+  {
+    news = [],
+    pagination = null,
+  }: {
     news?: NewsItem[];
     pagination?: NewsPagination | null;
-  } = {},
+  } = {}
 ) => {
   const scope = fork({
     values: [
@@ -33,7 +34,7 @@ const renderWithProviders = (
   return render(
     <Provider value={scope}>
       <ThemeProvider theme={theme}>{ui}</ThemeProvider>
-    </Provider>,
+    </Provider>
   );
 };
 
@@ -111,7 +112,7 @@ describe("NewsList", () => {
         <ThemeProvider theme={theme}>
           <NewsList />
         </ThemeProvider>
-      </Provider>,
+      </Provider>
     );
 
     const button = screen.getByRole("button", { name: "Загрузка..." });

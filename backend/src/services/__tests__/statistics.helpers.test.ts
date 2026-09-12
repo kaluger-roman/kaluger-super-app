@@ -8,9 +8,10 @@ const range = {
 
 describe("computeTaxSummary", () => {
   it("should return nulls when tax is disabled", () => {
-    expect(
-      computeTaxSummary({ taxEnabled: false, taxRatePeriods: [] }, [], range),
-    ).toEqual({ taxAmount: null, taxBreakdown: null });
+    expect(computeTaxSummary({ taxEnabled: false, taxRatePeriods: [] }, [], range)).toEqual({
+      taxAmount: null,
+      taxBreakdown: null,
+    });
   });
 
   it("should return nulls when the user is missing or lessons were not loaded", () => {
@@ -18,9 +19,10 @@ describe("computeTaxSummary", () => {
       taxAmount: null,
       taxBreakdown: null,
     });
-    expect(
-      computeTaxSummary({ taxEnabled: true, taxRatePeriods: [] }, null, range),
-    ).toEqual({ taxAmount: null, taxBreakdown: null });
+    expect(computeTaxSummary({ taxEnabled: true, taxRatePeriods: [] }, null, range)).toEqual({
+      taxAmount: null,
+      taxBreakdown: null,
+    });
   });
 
   it("should compute tax from paid lessons using the period rate", () => {
@@ -47,11 +49,9 @@ describe("computeTaxSummary", () => {
           startTime: new Date("2026-03-15T00:00:00Z"),
         },
       ],
-      range,
+      range
     );
     expect(summary.taxAmount).toBe(90);
-    expect(summary.taxBreakdown).toEqual([
-      { rate: 6, earnings: 1500, tax: 90 },
-    ]);
+    expect(summary.taxBreakdown).toEqual([{ rate: 6, earnings: 1500, tax: 90 }]);
   });
 });

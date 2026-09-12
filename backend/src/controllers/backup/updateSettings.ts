@@ -5,8 +5,7 @@ import { validateUpdateBackupSettingsDto } from "./validators";
 
 export const updateSettings = async (req: AdminRequest, res: Response) => {
   try {
-    const { enabled, intervalHours, maxStorageMb } =
-      req.body as UpdateBackupSettingsDto;
+    const { enabled, intervalHours, maxStorageMb } = req.body as UpdateBackupSettingsDto;
 
     const errors = validateUpdateBackupSettingsDto({
       enabled,

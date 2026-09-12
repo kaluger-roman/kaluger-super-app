@@ -2,10 +2,7 @@ import type { Request, Response } from "express";
 
 import { validateRawToken } from "../services/studentInvitation";
 
-export const studentInvitationValidate = async (
-  req: Request<{ token: string }>,
-  res: Response
-) => {
+export const studentInvitationValidate = async (req: Request<{ token: string }>, res: Response) => {
   try {
     const { token } = req.params;
     if (!token || typeof token !== "string") {

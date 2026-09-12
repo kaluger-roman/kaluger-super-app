@@ -46,7 +46,7 @@ const baseFormData: LessonFormData = {
 const renderWith = (
   students: Student[],
   archived: Student[],
-  props: Partial<React.ComponentProps<typeof StudentSelector>> = {},
+  props: Partial<React.ComponentProps<typeof StudentSelector>> = {}
 ) => {
   const scope = fork({
     values: [
@@ -69,7 +69,7 @@ const renderWith = (
           onChange={onChange}
         />
       </ThemeProvider>
-    </Provider>,
+    </Provider>
   );
 
   return { onChange };

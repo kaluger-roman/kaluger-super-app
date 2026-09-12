@@ -14,9 +14,7 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
     const { newEmail, password } = req.body as ChangeEmailDto;
 
     if (!newEmail || !password) {
-      return res
-        .status(400)
-        .json({ error: "Все поля обязательны для заполнения" });
+      return res.status(400).json({ error: "Все поля обязательны для заполнения" });
     }
 
     await initiateEmailChange(userId!, newEmail, password);

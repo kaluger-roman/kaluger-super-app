@@ -13,11 +13,7 @@ type InfoTooltipProps = {
   placement?: TooltipProps["placement"];
 };
 
-export const InfoTooltip: FC<InfoTooltipProps> = ({
-  title,
-  ariaLabel,
-  placement = "top",
-}) => {
+export const InfoTooltip: FC<InfoTooltipProps> = ({ title, ariaLabel, placement = "top" }) => {
   const [open, setOpen] = useState(false);
 
   const handleClose = () => setOpen(false);
@@ -26,13 +22,7 @@ export const InfoTooltip: FC<InfoTooltipProps> = ({
 
   return (
     <ClickAwayListener onClickAway={handleClose}>
-      <Tooltip
-        open={open}
-        title={title}
-        arrow
-        placement={placement}
-        onClose={handleClose}
-      >
+      <Tooltip open={open} title={title} arrow placement={placement} onClose={handleClose}>
         <Styled.Container
           role="button"
           aria-label={ariaLabel}

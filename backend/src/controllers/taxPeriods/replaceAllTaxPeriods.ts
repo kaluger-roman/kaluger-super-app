@@ -2,11 +2,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import type { CreateTaxRatePeriodDto } from "../../types";
-import {
-  hasDuplicateStartDates,
-  normalizeRate,
-  validateTaxPeriodInput,
-} from "./validators";
+import { hasDuplicateStartDates, normalizeRate, validateTaxPeriodInput } from "./validators";
 
 type ReplaceAllBody = { periods?: CreateTaxRatePeriodDto[] };
 
@@ -16,9 +12,7 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
     const { periods } = (req.body ?? {}) as ReplaceAllBody;
 
     if (!Array.isArray(periods)) {
-      return res
-        .status(400)
-        .json({ error: "Поле periods должно быть массивом" });
+      return res.status(400).json({ error: "Поле periods должно быть массивом" });
     }
 
     for (const p of periods) {
@@ -27,9 +21,7 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
     }
 
     if (hasDuplicateStartDates(periods)) {
-      return res
-        .status(400)
-        .json({ error: "Период с такой датой начала уже существует" });
+      return res.status(400).json({ error: "Период с такой датой начала уже существует" });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -69,7 +61,7 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
         id: p.id,
         startDate: p.startDate.toISOString(),
         rate: p.rate,
-      })),
+      }))
     );
   } catch (error) {
     console.error("Replace tax periods error:", error);

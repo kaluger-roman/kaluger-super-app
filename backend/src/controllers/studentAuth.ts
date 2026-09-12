@@ -1,10 +1,6 @@
 import type { Request, Response } from "express";
 
-import {
-  getStudentSettings,
-  loginStudent,
-  registerStudentByInvite,
-} from "../services/studentAuth";
+import { getStudentSettings, loginStudent, registerStudentByInvite } from "../services/studentAuth";
 import {
   resendStudentVerificationCode,
   verifyStudentEmailCode,
@@ -60,9 +56,7 @@ export const studentVerifyEmail = async (
 
     const { code } = req.body;
     if (!code || !/^[0-9]{6}$/.test(code)) {
-      return res
-        .status(400)
-        .json({ error: "Код подтверждения должен состоять из 6 цифр" });
+      return res.status(400).json({ error: "Код подтверждения должен состоять из 6 цифр" });
     }
 
     const result = await verifyStudentEmailCode(studentUserId, code);
@@ -91,10 +85,7 @@ export const studentVerifyEmail = async (
   }
 };
 
-export const studentResendVerification = async (
-  req: StudentRequest,
-  res: Response
-) => {
+export const studentResendVerification = async (req: StudentRequest, res: Response) => {
   try {
     const studentUserId = req.studentUser?.studentUserId;
     if (!studentUserId) {
@@ -109,9 +100,7 @@ export const studentResendVerification = async (
         });
       }
       if (result.reason === "send_failed") {
-        return res
-          .status(500)
-          .json({ error: "Ошибка отправки письма. Попробуйте позже" });
+        return res.status(500).json({ error: "Ошибка отправки письма. Попробуйте позже" });
       }
       return res.status(400).json({ error: "Email уже подтверждён" });
     }

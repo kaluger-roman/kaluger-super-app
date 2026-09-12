@@ -3,10 +3,7 @@ import type { Lesson } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { getWebSocketManager } from "../../lib/wsManager";
 import type { ShiftResult, UpdateLessonDto } from "../../types";
-import {
-  RecurringShiftConflictError,
-  SchedulingConflictError,
-} from "../../utils";
+import { RecurringShiftConflictError, SchedulingConflictError } from "../../utils";
 import { truncateToMinute } from "../../utils/time";
 import {
   applyShiftFutureRecurringLessons,
@@ -14,10 +11,7 @@ import {
   updatePriceForFutureRecurringLessons,
 } from "../recurringHelpers";
 import type { ShiftPreview } from "../recurringHelpers";
-import {
-  cancelRemindersForLesson,
-  scheduleRemindersForLesson,
-} from "../reminderScheduler";
+import { cancelRemindersForLesson, scheduleRemindersForLesson } from "../reminderScheduler";
 import { broadcastStudentLessonUpdated } from "../studentLessonBroadcast";
 import { MAX_TX_RETRIES } from "./lessonUpdate.constants";
 import {
@@ -59,9 +53,7 @@ const runLessonUpdateTransaction = ({
           },
         });
         if (conflictingLesson) {
-          throw new SchedulingConflictError(
-            "Временной слот конфликтует с существующим уроком",
-          );
+          throw new SchedulingConflictError("Временной слот конфликтует с существующим уроком");
         }
       }
 
@@ -71,12 +63,10 @@ const runLessonUpdateTransaction = ({
           existingLesson,
           truncateToMinute(new Date(start)),
           truncateToMinute(new Date(end)),
-          tx,
+          tx
         );
         if (plannedShift.conflicts.length > 0) {
-          throw new RecurringShiftConflictError(
-            "Перенесенная серия конфликтует с другими уроками",
-          );
+          throw new RecurringShiftConflictError("Перенесенная серия конфликтует с другими уроками");
         }
       }
 
@@ -99,11 +89,11 @@ const runLessonUpdateTransaction = ({
 
       return { lesson, result, plannedShift };
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
 
 export const applyLessonUpdate = async (
-  params: ApplyLessonUpdateParams,
+  params: ApplyLessonUpdateParams
 ): Promise<LessonUpdateResult> => {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -114,9 +104,7 @@ export const applyLessonUpdate = async (
         throw err;
       }
       // Jittered exponential-ish backoff before retrying the transaction.
-      await new Promise((r) =>
-        setTimeout(r, 10 * attempt + Math.floor(Math.random() * 20)),
-      );
+      await new Promise((r) => setTimeout(r, 10 * attempt + Math.floor(Math.random() * 20)));
     }
   }
 };
@@ -125,7 +113,7 @@ export const syncAfterLessonUpdate = async (
   id: string,
   existingLesson: Lesson,
   updateData: UpdateLessonDto,
-  { lesson, result }: LessonUpdateResult,
+  { lesson, result }: LessonUpdateResult
 ) => {
   if (result?.shifted && result.shifted > 0) {
     console.log(`Shifted ${result.shifted} future recurring lessons`);
@@ -136,14 +124,10 @@ export const syncAfterLessonUpdate = async (
   }
 
   if (shouldPropagateRecurringPrice(updateData, existingLesson)) {
-    await updatePriceForFutureRecurringLessons(
-      existingLesson,
-      updateData.price ?? null,
-    );
+    await updatePriceForFutureRecurringLessons(existingLesson, updateData.price ?? null);
   }
 
-  const statusChanged =
-    !!updateData.status && updateData.status !== existingLesson.status;
+  const statusChanged = !!updateData.status && updateData.status !== existingLesson.status;
   const alreadyRecalculated = result?.shiftedIds?.includes(id);
 
   if ((isTimeChanging(updateData) || statusChanged) && !alreadyRecalculated) {
@@ -159,14 +143,10 @@ export const notifyLessonUpdated = (
   existingLesson: Lesson,
   updateData: UpdateLessonDto,
   lesson: UpdatedLesson,
-  plannedShift: ShiftPreview | undefined,
+  plannedShift: ShiftPreview | undefined
 ) => {
   if (updateData.status && updateData.status !== existingLesson.status) {
-    getWebSocketManager()?.broadcastLessonStatusUpdate(
-      lesson.id,
-      lesson.status,
-      userId,
-    );
+    getWebSocketManager()?.broadcastLessonStatusUpdate(lesson.id, lesson.status, userId);
   }
 
   void broadcastStudentLessonUpdated({

@@ -31,7 +31,7 @@ const renderForm = (token: string, scope = fork()) =>
           <ResetPasswordForm token={token} />
         </ThemeProvider>
       </BrowserRouter>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("ResetPasswordForm", () => {
@@ -153,7 +153,7 @@ describe("ResetPasswordForm", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(
-      await screen.findByText("Новый пароль должен отличаться от текущего"),
+      await screen.findByText("Новый пароль должен отличаться от текущего")
     ).toBeInTheDocument();
   });
 });

@@ -115,9 +115,7 @@ describe("createStudent integration tests", () => {
       .send(payload)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "У вас уже есть ученик с таким номером телефона"
-        );
+        expect(res.body.error).toBe("У вас уже есть ученик с таким номером телефона");
       });
   });
 
@@ -133,9 +131,7 @@ describe("createStudent integration tests", () => {
       .send(payload)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Не выбран способ связи (WhatsApp, Telegram или MAX)"
-        );
+        expect(res.body.error).toBe("Не выбран способ связи (WhatsApp, Telegram или MAX)");
       });
   });
 });

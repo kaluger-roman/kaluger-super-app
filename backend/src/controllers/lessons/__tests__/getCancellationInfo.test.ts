@@ -295,9 +295,7 @@ describe("GET /api/lessons/:id/cancellation-info", () => {
     });
 
     const originalFindFirst = prisma.lesson.findFirst;
-    prisma.lesson.findFirst = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.findFirst = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get(`/api/lessons/${lesson.id}/cancellation-info`)

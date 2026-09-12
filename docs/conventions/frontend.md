@@ -137,6 +137,7 @@ feature/models/
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+- **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ### Shared utilities
 

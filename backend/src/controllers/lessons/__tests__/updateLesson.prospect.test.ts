@@ -165,9 +165,7 @@ describe("updateLesson prospect (trial without student) integration tests", () =
       .send({ prospectName: "Иван" })
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Данные пробного ученика нельзя указывать вместе с учеником"
-        );
+        expect(res.body.error).toBe("Данные пробного ученика нельзя указывать вместе с учеником");
       });
   });
 
@@ -203,9 +201,7 @@ describe("updateLesson prospect (trial without student) integration tests", () =
       .send({ prospectName: "   " })
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Имя ученика для пробного урока обязательно"
-        );
+        expect(res.body.error).toBe("Имя ученика для пробного урока обязательно");
       });
   });
 

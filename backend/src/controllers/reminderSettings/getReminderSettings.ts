@@ -24,10 +24,7 @@ export const getReminderSettings = async (req: AuthRequest, res: Response) => {
         },
       });
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         settings = await prisma.reminderSettings.findUniqueOrThrow({
           where: { userId: userId! },
         });

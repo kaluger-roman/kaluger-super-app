@@ -168,9 +168,7 @@ describe("createLesson integration tests", () => {
       studentId,
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
-      startTime: new Date(
-        Date.now() + 24 * 3600 * 1000 + 1800000
-      ).toISOString(),
+      startTime: new Date(Date.now() + 24 * 3600 * 1000 + 1800000).toISOString(),
       endTime: new Date(Date.now() + 24 * 3600 * 1000 + 5400000).toISOString(),
       isRecurring: false,
     };
@@ -181,9 +179,7 @@ describe("createLesson integration tests", () => {
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Временной слот конфликтует с существующим уроком"
-        );
+        expect(res.body.error).toBe("Временной слот конфликтует с существующим уроком");
       });
   });
 
@@ -200,9 +196,7 @@ describe("createLesson integration tests", () => {
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
       startTime: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString(),
-      endTime: new Date(
-        Date.now() + 10 * 24 * 3600 * 1000 + 3600000
-      ).toISOString(),
+      endTime: new Date(Date.now() + 10 * 24 * 3600 * 1000 + 3600000).toISOString(),
       isRecurring: false,
       price: 0,
     };
@@ -231,9 +225,7 @@ describe("createLesson integration tests", () => {
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
       startTime: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString(),
-      endTime: new Date(
-        Date.now() + 12 * 24 * 3600 * 1000 + 3600000
-      ).toISOString(),
+      endTime: new Date(Date.now() + 12 * 24 * 3600 * 1000 + 3600000).toISOString(),
       isRecurring: false,
       // price omitted
     };

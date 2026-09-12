@@ -1,8 +1,4 @@
-export {
-  applyLessonUpdate,
-  notifyLessonUpdated,
-  syncAfterLessonUpdate,
-} from "./lessonUpdate";
+export { applyLessonUpdate, notifyLessonUpdated, syncAfterLessonUpdate } from "./lessonUpdate";
 export {
   buildLessonUpdateData,
   computeUpdatedStatus,

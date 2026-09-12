@@ -27,10 +27,7 @@ export const getCachedTokenVersion = (userId: string): number | undefined => {
   return entry.tokenVersion;
 };
 
-export const setCachedTokenVersion = (
-  userId: string,
-  tokenVersion: number,
-): void => {
+export const setCachedTokenVersion = (userId: string, tokenVersion: number): void => {
   cache.set(userId, {
     tokenVersion,
     expiresAt: Date.now() + CACHE_TTL_MS,

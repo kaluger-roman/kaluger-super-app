@@ -80,11 +80,7 @@ export const addDays = (date: Date | string, days: number): Date => {
 // Понедельник 00:00 локального дня (ISO-8601 неделя).
 export const getWeekStart = (date: Date | string): Date => {
   const source = toDateSafe(date);
-  const start = new Date(
-    source.getFullYear(),
-    source.getMonth(),
-    source.getDate()
-  );
+  const start = new Date(source.getFullYear(), source.getMonth(), source.getDate());
   const day = start.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   start.setDate(start.getDate() + diff);
@@ -100,10 +96,8 @@ export const getWeekEnd = (date: Date | string): Date => {
 };
 
 // "10:00—11:00" — formatTime пара через em-dash.
-export const formatTimeRange = (
-  start: Date | string,
-  end: Date | string
-): string => `${formatTime(start)}—${formatTime(end)}`;
+export const formatTimeRange = (start: Date | string, end: Date | string): string =>
+  `${formatTime(start)}—${formatTime(end)}`;
 
 // Группировка списка по локальному дню. Ключ — локализованная строка вида
 // "среда, 6 мая 2026 г.". Внутри каждой группы — сортировка по startTime.
@@ -125,11 +119,7 @@ export const groupByDay = <T>(
     groups[dayKey].push(item);
   }
   for (const dayItems of Object.values(groups)) {
-    dayItems.sort(
-      (a, b) =>
-        toDateSafe(getStart(a)).getTime() -
-        toDateSafe(getStart(b)).getTime()
-    );
+    dayItems.sort((a, b) => toDateSafe(getStart(a)).getTime() - toDateSafe(getStart(b)).getTime());
   }
   return groups;
 };

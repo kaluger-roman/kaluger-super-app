@@ -8,7 +8,7 @@ const RECURRING_HORIZON_MONTHS = 3;
 export const computeLessonStatus = (
   start: Date,
   end: Date,
-  now: Date,
+  now: Date
 ): LessonStatus | undefined => {
   if (end.getTime() <= now.getTime()) {
     return "COMPLETED";
@@ -44,7 +44,7 @@ export const checkSchedulingConflicts = async (
   userId: string,
   startTime: Date,
   endTime: Date,
-  prisma: PrismaLike,
+  prisma: PrismaLike
 ) => {
   return prisma.lesson.findMany({
     where: {

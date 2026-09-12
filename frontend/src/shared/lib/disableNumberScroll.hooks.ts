@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 
-export const useDisableNumberScroll = (
-  ref: React.RefObject<HTMLElement | null>
-) => {
+export const useDisableNumberScroll = (ref: React.RefObject<HTMLElement | null>) => {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;

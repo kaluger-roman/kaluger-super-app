@@ -52,12 +52,7 @@ describe("taxRatePeriodsModal.model", () => {
 
   it("clears draft on modalClosed", async () => {
     const scope = fork({
-      values: [
-        [
-          $draftPeriods,
-          [{ tempId: "x", startDate: "2024-01-01", rate: 6 }],
-        ],
-      ],
+      values: [[$draftPeriods, [{ tempId: "x", startDate: "2024-01-01", rate: 6 }]]],
     });
     await allSettled(modalClosed, { scope, params: undefined });
     expect(scope.getState($isModalOpen)).toBe(false);

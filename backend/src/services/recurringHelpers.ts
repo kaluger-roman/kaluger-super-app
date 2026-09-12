@@ -79,9 +79,7 @@ export const previewShiftFutureRecurringLessons = async (
     },
   });
 
-  const groups = groupRecurringLessonsByPattern(
-    futureLessons.concat(existingLesson)
-  );
+  const groups = groupRecurringLessonsByPattern(futureLessons.concat(existingLesson));
   const base = groups.get(key);
 
   if (!base) {
@@ -91,12 +89,8 @@ export const previewShiftFutureRecurringLessons = async (
   const toShift = futureLessons.filter((l) => getRecurringLessonKey(l) === key);
 
   const planned: PlannedShift[] = toShift.map((l) => {
-    const shiftedStart = truncateToMinute(
-      new Date(new Date(l.startTime).getTime() + deltaStart)
-    );
-    const shiftedEnd = truncateToMinute(
-      new Date(new Date(l.endTime).getTime() + deltaEnd)
-    );
+    const shiftedStart = truncateToMinute(new Date(new Date(l.startTime).getTime() + deltaStart));
+    const shiftedEnd = truncateToMinute(new Date(new Date(l.endTime).getTime() + deltaEnd));
     return { original: l, shiftedStart, shiftedEnd };
   });
 
@@ -109,10 +103,7 @@ export const previewShiftFutureRecurringLessons = async (
           id: { notIn: plannedIds },
           tutorId: existingLesson.tutorId,
           status: { not: "CANCELLED" },
-          AND: [
-            { startTime: { lt: p.shiftedEnd } },
-            { endTime: { gt: p.shiftedStart } },
-          ],
+          AND: [{ startTime: { lt: p.shiftedEnd } }, { endTime: { gt: p.shiftedStart } }],
         },
       });
       return { planned: p, conflict };
@@ -158,19 +149,13 @@ export const shiftFutureRecurringLessons = async (
   newStart: Date,
   newEnd: Date
 ): Promise<ShiftResult> => {
-  const preview = await previewShiftFutureRecurringLessons(
-    existingLesson,
-    newStart,
-    newEnd
-  );
+  const preview = await previewShiftFutureRecurringLessons(existingLesson, newStart, newEnd);
 
   if (preview.conflicts.length > 0) {
     return { shifted: 0, conflicts: preview.conflicts };
   }
 
-  return prisma.$transaction((tx) =>
-    applyShiftFutureRecurringLessons(tx, preview.planned)
-  );
+  return prisma.$transaction((tx) => applyShiftFutureRecurringLessons(tx, preview.planned));
 };
 
 // Update price for future recurring lessons in the same group
@@ -189,17 +174,13 @@ export const updatePriceForFutureRecurringLessons = async (
     },
   });
 
-  const toUpdate = futureLessons.filter(
-    (l) => getRecurringLessonKey(l) === key
-  );
+  const toUpdate = futureLessons.filter((l) => getRecurringLessonKey(l) === key);
 
   if (toUpdate.length === 0) return { updated: 0 };
 
   // Perform updates in a transaction
   await prisma.$transaction(
-    toUpdate.map((t) =>
-      prisma.lesson.update({ where: { id: t.id }, data: { price: newPrice } })
-    )
+    toUpdate.map((t) => prisma.lesson.update({ where: { id: t.id }, data: { price: newPrice } }))
   );
 
   return { updated: toUpdate.length };

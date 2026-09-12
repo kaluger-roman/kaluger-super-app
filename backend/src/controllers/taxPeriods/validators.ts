@@ -21,9 +21,7 @@ const validateStartDate = (startDate: unknown): string | null => {
   return null;
 };
 
-export const validateTaxPeriodInput = (
-  data: CreateTaxRatePeriodDto,
-): string | null => {
+export const validateTaxPeriodInput = (data: CreateTaxRatePeriodDto): string | null => {
   const rateError = validateRate(data.rate);
   if (rateError) return rateError;
   const dateError = validateStartDate(data.startDate);
@@ -31,12 +29,9 @@ export const validateTaxPeriodInput = (
   return null;
 };
 
-export const hasDuplicateStartDates = (
-  periods: { startDate: string }[],
-): boolean => {
+export const hasDuplicateStartDates = (periods: { startDate: string }[]): boolean => {
   const normalized = periods.map((p) => new Date(p.startDate).getTime());
   return new Set(normalized).size !== normalized.length;
 };
 
-export const normalizeRate = (rate: number): number =>
-  Math.round(rate * 10) / 10;
+export const normalizeRate = (rate: number): number => Math.round(rate * 10) / 10;

@@ -1,10 +1,7 @@
 import { WebSocket } from "ws";
 import type { AuthenticatedWebSocket } from "./types";
 
-export const handleMessage = (
-  ws: AuthenticatedWebSocket,
-  data: unknown
-): void => {
+export const handleMessage = (ws: AuthenticatedWebSocket, data: unknown): void => {
   console.log(`Received message from ${ws.userId}:`, data);
 
   // Skip the echo when the socket has already started closing — `ws.send`
@@ -21,10 +18,7 @@ export const handleMessage = (
   );
 };
 
-export const sendWelcomeMessage = (
-  ws: AuthenticatedWebSocket,
-  userId: string
-) => {
+export const sendWelcomeMessage = (ws: AuthenticatedWebSocket, userId: string) => {
   ws.send(
     JSON.stringify({
       type: "connection_established",

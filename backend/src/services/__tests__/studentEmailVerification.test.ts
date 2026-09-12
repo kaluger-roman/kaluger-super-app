@@ -46,9 +46,7 @@ describe("studentEmailVerification service", () => {
 
         expect(after?.verificationCode).toBeNull();
         expect(after?.verificationCodeExpiry).toBeNull();
-        expect(
-          results.some((r) => !r.ok && r.reason === "attempts_exceeded")
-        ).toBe(true);
+        expect(results.some((r) => !r.ok && r.reason === "attempts_exceeded")).toBe(true);
       } finally {
         await prisma.studentUser.delete({ where: { id: studentUser.id } });
       }

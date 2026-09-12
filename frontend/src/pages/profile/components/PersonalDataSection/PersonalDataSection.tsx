@@ -28,11 +28,7 @@ export const PersonalDataSection = () => {
       <Styled.InfoSection>
         <Styled.InfoLabel variant="body2">Имя</Styled.InfoLabel>
         {isEditMode ? (
-          <TextField
-            fullWidth
-            value={name}
-            onChange={(e) => actions.nameChanged(e.target.value)}
-          />
+          <TextField fullWidth value={name} onChange={(e) => actions.nameChanged(e.target.value)} />
         ) : (
           <Styled.InfoValue variant="body1">{user.name}</Styled.InfoValue>
         )}

@@ -3,7 +3,13 @@ import type { FC } from "react";
 import { Box, Typography } from "@mui/material";
 
 import type { Lesson } from "@shared";
-import { SUBJECT_LABELS, LESSON_TYPE_LABELS, getLessonDisplayName, getStatusLabel, formatTimeForCell } from "@shared";
+import {
+  SUBJECT_LABELS,
+  LESSON_TYPE_LABELS,
+  getLessonDisplayName,
+  getStatusLabel,
+  formatTimeForCell,
+} from "@shared";
 
 import * as Styled from "./LessonCell.styled";
 

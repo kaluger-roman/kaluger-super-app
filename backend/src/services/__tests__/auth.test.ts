@@ -7,12 +7,7 @@ import {
   TaxPeriodsRequiredError,
   UserAlreadyExistsError,
 } from "../../utils";
-import {
-  getUserProfile,
-  loginUser,
-  registerUser,
-  updateUserProfile,
-} from "../auth";
+import { getUserProfile, loginUser, registerUser, updateUserProfile } from "../auth";
 import { sendVerificationEmail } from "../email";
 
 jest.mock("../email", () => ({
@@ -41,10 +36,7 @@ describe("auth service", () => {
 
       expect(user).toMatchObject({ email, name: "Тест", isEmailVerified: false });
       expect(user).not.toHaveProperty("password");
-      expect(sendVerificationEmail).toHaveBeenCalledWith(
-        email,
-        expect.any(String),
-      );
+      expect(sendVerificationEmail).toHaveBeenCalledWith(email, expect.any(String));
       const stored = await prisma.user.findUnique({ where: { id: user.id } });
       expect(stored?.verificationCode).toBeTruthy();
       expect(stored?.password).not.toBe(password);
@@ -52,15 +44,13 @@ describe("auth service", () => {
 
     it("should throw UserAlreadyExistsError for a duplicate email", async () => {
       const { email } = await register();
-      await expect(
-        registerUser({ email, password, name: "Тест" }),
-      ).rejects.toBeInstanceOf(UserAlreadyExistsError);
+      await expect(registerUser({ email, password, name: "Тест" })).rejects.toBeInstanceOf(
+        UserAlreadyExistsError
+      );
     });
 
     it("should still register when the email fails to send", async () => {
-      (sendVerificationEmail as jest.Mock).mockRejectedValueOnce(
-        new Error("smtp down"),
-      );
+      (sendVerificationEmail as jest.Mock).mockRejectedValueOnce(new Error("smtp down"));
       const { user } = await register();
       expect(user.id).toBeTruthy();
     });
@@ -68,23 +58,21 @@ describe("auth service", () => {
 
   describe("loginUser", () => {
     it("should throw InvalidCredentialsError for an unknown email", async () => {
-      await expect(
-        loginUser({ email: "nobody@example.com", password }),
-      ).rejects.toBeInstanceOf(InvalidCredentialsError);
+      await expect(loginUser({ email: "nobody@example.com", password })).rejects.toBeInstanceOf(
+        InvalidCredentialsError
+      );
     });
 
     it("should throw InvalidCredentialsError for a wrong password", async () => {
       const { email } = await register();
-      await expect(
-        loginUser({ email, password: "WrongPass1" }),
-      ).rejects.toBeInstanceOf(InvalidCredentialsError);
+      await expect(loginUser({ email, password: "WrongPass1" })).rejects.toBeInstanceOf(
+        InvalidCredentialsError
+      );
     });
 
     it("should throw EmailNotVerifiedError until the email is confirmed", async () => {
       const { email } = await register();
-      await expect(loginUser({ email, password })).rejects.toBeInstanceOf(
-        EmailNotVerifiedError,
-      );
+      await expect(loginUser({ email, password })).rejects.toBeInstanceOf(EmailNotVerifiedError);
     });
 
     it("should return a token carrying userId and tokenVersion for a verified user", async () => {
@@ -127,9 +115,9 @@ describe("auth service", () => {
 
     it("should refuse to enable tax without rate periods", async () => {
       const { user } = await register();
-      await expect(
-        updateUserProfile(user.id, { taxEnabled: true }),
-      ).rejects.toBeInstanceOf(TaxPeriodsRequiredError);
+      await expect(updateUserProfile(user.id, { taxEnabled: true })).rejects.toBeInstanceOf(
+        TaxPeriodsRequiredError
+      );
       const stored = await prisma.user.findUnique({ where: { id: user.id } });
       expect(stored?.taxEnabled).toBe(false);
     });

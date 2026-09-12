@@ -15,11 +15,7 @@ const makeMockSocket = (open = true): MockSocket => ({
   close: jest.fn(),
 });
 
-const injectStudent = (
-  manager: WebSocketManager,
-  studentUserId: string,
-  socket: MockSocket
-) => {
+const injectStudent = (manager: WebSocketManager, studentUserId: string, socket: MockSocket) => {
   // The studentClients Map is private — controlled access for tests only.
   const internalMap = (
     manager as unknown as {
@@ -29,14 +25,8 @@ const injectStudent = (
   internalMap.set(studentUserId, socket);
 };
 
-const injectTutor = (
-  manager: WebSocketManager,
-  userId: string,
-  socket: MockSocket
-) => {
-  const internalMap = (
-    manager as unknown as { clients: Map<string, unknown> }
-  ).clients;
+const injectTutor = (manager: WebSocketManager, userId: string, socket: MockSocket) => {
+  const internalMap = (manager as unknown as { clients: Map<string, unknown> }).clients;
   internalMap.set(userId, socket);
 };
 
@@ -117,12 +107,7 @@ describe("WebSocketManager — student broadcasts", () => {
     injectStudent(manager, "student-1", studentSocket);
     injectTutor(manager, "tutor-1", tutorSocket);
 
-    manager.broadcastLessonStatusUpdate(
-      "l-1",
-      "IN_PROGRESS",
-      "tutor-1",
-      "student-1"
-    );
+    manager.broadcastLessonStatusUpdate("l-1", "IN_PROGRESS", "tutor-1", "student-1");
 
     expect(tutorSocket.send).toHaveBeenCalledWith(
       JSON.stringify({
@@ -163,9 +148,6 @@ describe("WebSocketManager — student broadcasts", () => {
     injectStudent(manager, "student-a", makeMockSocket());
     injectStudent(manager, "student-b", makeMockSocket());
     expect(manager.getConnectedStudentsCount()).toBe(2);
-    expect(manager.getConnectedStudents().sort()).toEqual([
-      "student-a",
-      "student-b",
-    ]);
+    expect(manager.getConnectedStudents().sort()).toEqual(["student-a", "student-b"]);
   });
 });

@@ -1,10 +1,7 @@
 import { memo, useCallback, useState } from "react";
 import type { MouseEvent } from "react";
 
-import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-} from "@mui/icons-material";
+import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon } from "@mui/icons-material";
 
 import { useIsTextClamped } from "./LessonNotes.hooks";
 import * as Styled from "./LessonNotes.styled";
@@ -26,11 +23,7 @@ export const LessonNotes = memo<LessonNotesProps>(({ notes }) => {
 
   return (
     <Styled.NotesContainer>
-      <Styled.NotesText
-        ref={ref}
-        variant="body2"
-        $expanded={expanded}
-      >
+      <Styled.NotesText ref={ref} variant="body2" $expanded={expanded}>
         📝 {notes}
       </Styled.NotesText>
 

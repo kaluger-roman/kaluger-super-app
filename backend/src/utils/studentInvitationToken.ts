@@ -20,8 +20,7 @@ export const getInvitationExpiry = (): Date => {
   return expiry;
 };
 
-export const isInvitationExpired = (expiry: Date): boolean =>
-  new Date() > expiry;
+export const isInvitationExpired = (expiry: Date): boolean => new Date() > expiry;
 
 export const buildInviteUrl = (token: string): string => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";

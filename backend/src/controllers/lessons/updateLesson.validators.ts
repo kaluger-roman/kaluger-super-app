@@ -3,16 +3,12 @@ import type { UpdateLessonDto } from "../../types";
 import { truncateToMinute } from "../../utils/time";
 import { CONTACT_METHODS } from "./validators";
 
-export const validateUpdateData = (
-  updateData: UpdateLessonDto,
-  existingLesson: Lesson,
-) => {
+export const validateUpdateData = (updateData: UpdateLessonDto, existingLesson: Lesson) => {
   if (updateData.startTime || updateData.endTime) {
     if (existingLesson.status === "CANCELLED") {
       return {
         isValid: false,
-        error:
-          "Невозможно перенести отменённый урок. Сначала восстановите урок",
+        error: "Невозможно перенести отменённый урок. Сначала восстановите урок",
         statusCode: 400,
       };
     }
@@ -72,11 +68,7 @@ export const validateUpdateData = (
     };
   }
 
-  if (
-    updateData.isRecurring &&
-    !existingLesson.studentId &&
-    !updateData.studentId
-  ) {
+  if (updateData.isRecurring && !existingLesson.studentId && !updateData.studentId) {
     return {
       isValid: false,
       error: "Пробный урок без ученика не может быть повторяющимся",

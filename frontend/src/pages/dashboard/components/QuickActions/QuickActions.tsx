@@ -52,7 +52,10 @@ export const QuickActions = ({ studentsCount }: QuickActionsProps) => {
         </Styled.ActionAction>
       </Styled.ActionCard>
       <Styled.NewLessonCard>
-        <Styled.NewLessonAction onClick={() => navigate("/lessons")} aria-label="Создать новый урок">
+        <Styled.NewLessonAction
+          onClick={() => navigate("/lessons")}
+          aria-label="Создать новый урок"
+        >
           <Styled.NewLessonCardContent>
             <Styled.NewLessonIcon as={AddIcon} />
             <Styled.NewLessonTitle variant="h6">Новый урок</Styled.NewLessonTitle>

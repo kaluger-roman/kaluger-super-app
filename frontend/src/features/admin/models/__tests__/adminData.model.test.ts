@@ -84,9 +84,7 @@ describe("features/admin/models/adminData.model", () => {
     });
 
     it("should show error notification on failure", async () => {
-      vi.mocked(adminApiMethods.getOverview).mockRejectedValue(
-        new Error("fail")
-      );
+      vi.mocked(adminApiMethods.getOverview).mockRejectedValue(new Error("fail"));
 
       const scope = fork();
       await allSettled(getOverviewFx, { scope });
@@ -100,28 +98,20 @@ describe("features/admin/models/adminData.model", () => {
 
   describe("getBackupSettingsFx", () => {
     it("should populate backup stores on success", async () => {
-      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(
-        mockBackupSettingsResponse
-      );
+      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(mockBackupSettingsResponse);
 
       const scope = fork();
       await allSettled(getBackupSettingsFx, { scope });
 
-      expect(scope.getState($backupSettings)).toEqual(
-        mockBackupSettingsResponse.settings
-      );
-      expect(scope.getState($backupFiles)).toEqual(
-        mockBackupSettingsResponse.files
-      );
+      expect(scope.getState($backupSettings)).toEqual(mockBackupSettingsResponse.settings);
+      expect(scope.getState($backupFiles)).toEqual(mockBackupSettingsResponse.files);
       expect(scope.getState($totalSizeMb)).toBe(1.5);
       expect(scope.getState($intervalHours)).toBe("6");
       expect(scope.getState($maxStorageMb)).toBe("300");
     });
 
     it("should show error notification on failure", async () => {
-      vi.mocked(adminApiMethods.getBackupSettings).mockRejectedValue(
-        new Error("fail")
-      );
+      vi.mocked(adminApiMethods.getBackupSettings).mockRejectedValue(new Error("fail"));
 
       const scope = fork();
       await allSettled(getBackupSettingsFx, { scope });
@@ -159,9 +149,7 @@ describe("features/admin/models/adminData.model", () => {
         maxStorageMb: 500,
         lastBackupAt: null,
       });
-      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(
-        mockBackupSettingsResponse
-      );
+      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(mockBackupSettingsResponse);
 
       const scope = fork({
         values: [
@@ -199,9 +187,7 @@ describe("features/admin/models/adminData.model", () => {
         sizeMb: 1,
         createdAt: "2026-03-30T12:00:00Z",
       });
-      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(
-        mockBackupSettingsResponse
-      );
+      vi.mocked(adminApiMethods.getBackupSettings).mockResolvedValue(mockBackupSettingsResponse);
 
       const scope = fork();
       await allSettled(backupCreated, { scope });
@@ -210,9 +196,7 @@ describe("features/admin/models/adminData.model", () => {
     });
 
     it("should show error notification on failure", async () => {
-      vi.mocked(adminApiMethods.createBackup).mockRejectedValue(
-        new Error("fail")
-      );
+      vi.mocked(adminApiMethods.createBackup).mockRejectedValue(new Error("fail"));
 
       const scope = fork();
       await allSettled(backupCreated, { scope });
@@ -226,9 +210,7 @@ describe("features/admin/models/adminData.model", () => {
 
   describe("updateBackupSettingsFx", () => {
     it("should show error notification on failure", async () => {
-      vi.mocked(adminApiMethods.updateBackupSettings).mockRejectedValue(
-        new Error("fail")
-      );
+      vi.mocked(adminApiMethods.updateBackupSettings).mockRejectedValue(new Error("fail"));
 
       const scope = fork();
       await allSettled(updateBackupSettingsFx, {

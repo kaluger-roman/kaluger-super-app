@@ -26,8 +26,7 @@ export const issueInvitation = async (
   if (!student) return { ok: false, reason: "student_not_found" };
   if (student.tutorId !== tutorId) return { ok: false, reason: "not_owner" };
   if (student.archived) return { ok: false, reason: "archived" };
-  if (student.studentUser)
-    return { ok: false, reason: "already_registered" };
+  if (student.studentUser) return { ok: false, reason: "already_registered" };
 
   const { token, tokenHash } = createInvitationToken();
   const expiresAt = getInvitationExpiry();
@@ -49,9 +48,7 @@ export const issueInvitation = async (
 export const getInvitationStatus = async (
   tutorId: string,
   studentId: string
-): Promise<
-  TutorInvitationStatusResponse | { error: "not_found" | "forbidden" }
-> => {
+): Promise<TutorInvitationStatusResponse | { error: "not_found" | "forbidden" }> => {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
     include: { studentUser: true },
@@ -102,9 +99,7 @@ export const revokeInvitation = async (
   return { ok: true, revoked: result.count > 0 };
 };
 
-export const validateRawToken = async (
-  rawToken: string
-): Promise<ValidateTokenResult> => {
+export const validateRawToken = async (rawToken: string): Promise<ValidateTokenResult> => {
   const tokenHash = hashInvitationToken(rawToken);
   const invitation = await prisma.studentInvitation.findUnique({
     where: { tokenHash },

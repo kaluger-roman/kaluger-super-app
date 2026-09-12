@@ -2,12 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { prisma } from "../../lib/prisma";
-import {
-  getTotalSizeMb,
-  cleanupOldBackups,
-  getBackupSettings,
-  runBackupJob,
-} from "../backup";
+import { getTotalSizeMb, cleanupOldBackups, getBackupSettings, runBackupJob } from "../backup";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -79,11 +74,7 @@ describe("backup service", () => {
       // Regression for bug-hunt 2026-05-09-3 #8: parallel callers used to both
       // see findFirst -> null and both call create, ending with two rows.
       // upsert with a fixed singleton id is race-safe.
-      await Promise.all([
-        getBackupSettings(),
-        getBackupSettings(),
-        getBackupSettings(),
-      ]);
+      await Promise.all([getBackupSettings(), getBackupSettings(), getBackupSettings()]);
 
       const count = await prisma.backupSettings.count();
       expect(count).toBe(1);
@@ -189,9 +180,7 @@ describe("backup service", () => {
       expect(mockExec).toHaveBeenCalled();
 
       const settings = await prisma.backupSettings.findFirst();
-      expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(
-        sixHoursAgo.getTime()
-      );
+      expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(sixHoursAgo.getTime());
     });
 
     it("should not start a parallel pg_dump while another is running (regression: cron overlap)", async () => {

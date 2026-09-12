@@ -1,10 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server, IncomingMessage } from "http";
 import type { Socket } from "net";
-import type {
-  AuthenticatedStudentWebSocket,
-  AuthenticatedWebSocket,
-} from "./types";
+import type { AuthenticatedStudentWebSocket, AuthenticatedWebSocket } from "./types";
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
@@ -20,27 +17,19 @@ export class WebSocketManager {
   private wss: WebSocketServer;
   private studentWss: WebSocketServer;
   private clients: Map<string, AuthenticatedWebSocket> = new Map();
-  private studentClients: Map<string, AuthenticatedStudentWebSocket> =
-    new Map();
+  private studentClients: Map<string, AuthenticatedStudentWebSocket> = new Map();
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ noServer: true });
     this.wss.on("connection", this.handleConnection.bind(this));
 
     this.studentWss = new WebSocketServer({ noServer: true });
-    this.studentWss.on(
-      "connection",
-      this.handleStudentConnection.bind(this)
-    );
+    this.studentWss.on("connection", this.handleStudentConnection.bind(this));
 
     server.on("upgrade", this.handleUpgrade.bind(this));
   }
 
-  private handleUpgrade(
-    request: IncomingMessage,
-    socket: Socket,
-    head: Buffer
-  ) {
+  private handleUpgrade(request: IncomingMessage, socket: Socket, head: Buffer) {
     const rawUrl = request.url ?? "/";
     const pathname = rawUrl.split("?", 1)[0];
 
@@ -59,10 +48,7 @@ export class WebSocketManager {
     socket.destroy();
   }
 
-  private async handleConnection(
-    ws: AuthenticatedWebSocket,
-    request: IncomingMessage
-  ) {
+  private async handleConnection(ws: AuthenticatedWebSocket, request: IncomingMessage) {
     const decoded = await authenticateWebSocket(ws, request);
     if (!decoded) return;
 
@@ -85,9 +71,7 @@ export class WebSocketManager {
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в clients.
     ws.on("close", () => {
-      console.log(
-        `WebSocket disconnected: ${decoded.email} (${decoded.userId})`
-      );
+      console.log(`WebSocket disconnected: ${decoded.email} (${decoded.userId})`);
       if (this.clients.get(decoded.userId) === ws) {
         this.clients.delete(decoded.userId);
       }
@@ -140,29 +124,21 @@ export class WebSocketManager {
       try {
         previous.close(4000, "Replaced by newer connection");
       } catch (error) {
-        console.error(
-          "Error closing previous student WebSocket:",
-          error
-        );
+        console.error("Error closing previous student WebSocket:", error);
       }
     }
 
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в studentClients.
     ws.on("close", () => {
-      console.log(
-        `Student WebSocket disconnected: ${decoded.email} (${decoded.studentUserId})`
-      );
+      console.log(`Student WebSocket disconnected: ${decoded.email} (${decoded.studentUserId})`);
       if (this.studentClients.get(decoded.studentUserId) === ws) {
         this.studentClients.delete(decoded.studentUserId);
       }
     });
 
     ws.on("error", (error) => {
-      console.error(
-        `Student WebSocket error for ${decoded.studentUserId}:`,
-        error
-      );
+      console.error(`Student WebSocket error for ${decoded.studentUserId}:`, error);
       if (this.studentClients.get(decoded.studentUserId) === ws) {
         this.studentClients.delete(decoded.studentUserId);
       }
@@ -177,9 +153,7 @@ export class WebSocketManager {
 
     this.studentClients.set(decoded.studentUserId, ws);
 
-    console.log(
-      `Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`
-    );
+    console.log(`Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`);
   }
 
   // Method to broadcast lesson status changes to all connected clients
@@ -226,10 +200,7 @@ export class WebSocketManager {
   }
 
   // Send a typed lesson event to a specific student (used for create/update/delete)
-  public broadcastStudentLessonEvent(
-    studentUserId: string,
-    event: StudentLessonWsEvent
-  ): boolean {
+  public broadcastStudentLessonEvent(studentUserId: string, event: StudentLessonWsEvent): boolean {
     return this.sendToStudent(studentUserId, event);
   }
 

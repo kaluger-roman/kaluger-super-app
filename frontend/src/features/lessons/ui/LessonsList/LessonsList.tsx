@@ -4,7 +4,6 @@ import { Box } from "@mui/material";
 
 import type { Lesson } from "@shared";
 
-
 import { EmptyState, InfoMessage, LessonContextMenu, LessonsYear, WeeklyView } from "./components";
 import { useLessonsGrouping, useLessonMenu } from "./hooks";
 import { sortYears } from "./LessonsList.helpers";

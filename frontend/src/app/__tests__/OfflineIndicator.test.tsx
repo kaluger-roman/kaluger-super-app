@@ -78,12 +78,8 @@ describe("appResumed", () => {
     const initMock = vi.fn().mockResolvedValue([[], []]);
 
     const scope = fork({
-      values: [
-        [userModel.$user, { id: "1", name: "Test", email: "t@t.com" }],
-      ],
-      handlers: [
-        [appInitModel.initializeAppFx, initMock],
-      ],
+      values: [[userModel.$user, { id: "1", name: "Test", email: "t@t.com" }]],
+      handlers: [[appInitModel.initializeAppFx, initMock]],
     });
 
     await allSettled(appInitModel.appResumed, { scope });
@@ -95,12 +91,8 @@ describe("appResumed", () => {
     const initMock = vi.fn().mockResolvedValue([[], []]);
 
     const scope = fork({
-      values: [
-        [userModel.$user, null],
-      ],
-      handlers: [
-        [appInitModel.initializeAppFx, initMock],
-      ],
+      values: [[userModel.$user, null]],
+      handlers: [[appInitModel.initializeAppFx, initMock]],
     });
 
     await allSettled(appInitModel.appResumed, { scope });

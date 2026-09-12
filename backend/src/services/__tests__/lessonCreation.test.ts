@@ -10,37 +10,23 @@ describe("computeLessonStatus", () => {
 
   it("should return COMPLETED when the lesson already ended", () => {
     expect(
-      computeLessonStatus(
-        new Date("2026-03-10T10:00:00Z"),
-        new Date("2026-03-10T11:00:00Z"),
-        now,
-      ),
+      computeLessonStatus(new Date("2026-03-10T10:00:00Z"), new Date("2026-03-10T11:00:00Z"), now)
     ).toBe("COMPLETED");
   });
 
   it("should return COMPLETED when the lesson ends exactly now", () => {
-    expect(
-      computeLessonStatus(new Date("2026-03-10T11:00:00Z"), now, now),
-    ).toBe("COMPLETED");
+    expect(computeLessonStatus(new Date("2026-03-10T11:00:00Z"), now, now)).toBe("COMPLETED");
   });
 
   it("should return IN_PROGRESS when now is inside the lesson", () => {
     expect(
-      computeLessonStatus(
-        new Date("2026-03-10T11:30:00Z"),
-        new Date("2026-03-10T12:30:00Z"),
-        now,
-      ),
+      computeLessonStatus(new Date("2026-03-10T11:30:00Z"), new Date("2026-03-10T12:30:00Z"), now)
     ).toBe("IN_PROGRESS");
   });
 
   it("should return undefined for a future lesson", () => {
     expect(
-      computeLessonStatus(
-        new Date("2026-03-10T13:00:00Z"),
-        new Date("2026-03-10T14:00:00Z"),
-        now,
-      ),
+      computeLessonStatus(new Date("2026-03-10T13:00:00Z"), new Date("2026-03-10T14:00:00Z"), now)
     ).toBeUndefined();
   });
 });
@@ -56,13 +42,9 @@ describe("buildRecurringSlots", () => {
 
     expect(slots.length).toBeGreaterThanOrEqual(13);
     expect(slots[0].start.getTime()).toBe(start.getTime());
-    expect(slots[slots.length - 1].start.getTime()).toBeLessThanOrEqual(
-      horizon.getTime(),
-    );
+    expect(slots[slots.length - 1].start.getTime()).toBeLessThanOrEqual(horizon.getTime());
     for (let i = 1; i < slots.length; i++) {
-      expect(slots[i].start.getTime() - slots[i - 1].start.getTime()).toBe(
-        7 * 24 * 60 * 60 * 1000,
-      );
+      expect(slots[i].start.getTime() - slots[i - 1].start.getTime()).toBe(7 * 24 * 60 * 60 * 1000);
     }
   });
 
@@ -81,7 +63,7 @@ describe("buildRecurringSlots", () => {
   it("should truncate seconds and milliseconds in every slot", () => {
     const slots = buildRecurringSlots(
       new Date("2026-01-05T10:00:45.500Z"),
-      new Date("2026-01-05T11:00:30.250Z"),
+      new Date("2026-01-05T11:00:30.250Z")
     );
     for (const slot of slots) {
       expect(slot.start.getUTCSeconds()).toBe(0);
@@ -111,7 +93,7 @@ describe("checkSchedulingConflicts", () => {
       userId,
       startTime,
       endTime,
-      mockPrisma as unknown as PrismaClient,
+      mockPrisma as unknown as PrismaClient
     );
 
     expect(mockPrisma.lesson.findMany).toHaveBeenCalledTimes(1);
@@ -130,7 +112,7 @@ describe("checkSchedulingConflicts", () => {
       "tutor-2",
       new Date("2025-01-05T10:00:00Z"),
       new Date("2025-01-05T11:00:00Z"),
-      mockPrisma as unknown as PrismaClient,
+      mockPrisma as unknown as PrismaClient
     );
 
     expect(res).toEqual([]);

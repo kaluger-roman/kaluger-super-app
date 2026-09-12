@@ -6,8 +6,7 @@ import { studentAuthApi } from "@shared";
 import * as model from "../studentEmailVerification.model";
 
 vi.mock("@shared", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared")>("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     studentAuthApi: {
@@ -54,15 +53,11 @@ describe("features/studentAuth/models/studentEmailVerification.model", () => {
     const scope = fork({ values: [[model.$code, "654321"]] });
     await allSettled(model.codeSubmitted, { scope, params: undefined });
 
-    expect(scope.getState(model.$verifyError)).toBe(
-      "Неверный код подтверждения"
-    );
+    expect(scope.getState(model.$verifyError)).toBe("Неверный код подтверждения");
   });
 
   it("starts 60s cooldown on successful resend", async () => {
-    vi.mocked(studentAuthApi.resendVerification).mockResolvedValueOnce(
-      undefined
-    );
+    vi.mocked(studentAuthApi.resendVerification).mockResolvedValueOnce(undefined);
 
     const scope = fork();
 

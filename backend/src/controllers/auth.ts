@@ -10,24 +10,17 @@ import {
 } from "../utils";
 import type { CreateUserDto, LoginDto } from "../types";
 import type { AuthRequest } from "../middleware/auth";
-import {
-  getUserProfile,
-  loginUser,
-  registerUser,
-  updateUserProfile,
-} from "../services";
+import { getUserProfile, loginUser, registerUser, updateUserProfile } from "../services";
 
 export const register = async (
   req: Request<Record<string, never>, unknown, CreateUserDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { email: rawEmail, password, name } = req.body;
 
     if (!rawEmail || !password || !name) {
-      return res
-        .status(400)
-        .json({ error: "Email, пароль и имя обязательны для заполнения" });
+      return res.status(400).json({ error: "Email, пароль и имя обязательны для заполнения" });
     }
 
     if (!validateEmail(rawEmail)) {
@@ -48,8 +41,7 @@ export const register = async (
     });
 
     res.status(201).json({
-      message:
-        "Пользователь успешно создан. Проверьте email для подтверждения регистрации",
+      message: "Пользователь успешно создан. Проверьте email для подтверждения регистрации",
       user,
     });
   } catch (error) {
@@ -63,15 +55,13 @@ export const register = async (
 
 export const login = async (
   req: Request<Record<string, never>, unknown, LoginDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { email: rawEmail, password } = req.body;
 
     if (!rawEmail || !password) {
-      return res
-        .status(400)
-        .json({ error: "Email и пароль обязательны для заполнения" });
+      return res.status(400).json({ error: "Email и пароль обязательны для заполнения" });
     }
 
     const { token, user } = await loginUser({
@@ -116,9 +106,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     }
 
     if (taxEnabled !== undefined && typeof taxEnabled !== "boolean") {
-      return res
-        .status(400)
-        .json({ error: "Поле taxEnabled должно быть булевым" });
+      return res.status(400).json({ error: "Поле taxEnabled должно быть булевым" });
     }
 
     const user = await updateUserProfile(req.user!.userId, {

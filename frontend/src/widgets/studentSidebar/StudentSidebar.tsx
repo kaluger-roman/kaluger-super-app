@@ -1,14 +1,7 @@
 import type { FC } from "react";
 
 import { Logout as LogoutIcon } from "@mui/icons-material";
-import {
-  Divider,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
+import { Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
 import { useUnit } from "effector-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -19,11 +12,7 @@ import { getInitials } from "./StudentSidebar.helpers";
 import * as Styled from "./StudentSidebar.styled";
 import type { StudentSidebarProps } from "./StudentSidebar.types";
 
-export const StudentSidebar: FC<StudentSidebarProps> = ({
-  drawerWidth,
-  open,
-  onClose,
-}) => {
+export const StudentSidebar: FC<StudentSidebarProps> = ({ drawerWidth, open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useUnit(studentUserModel.$studentSession);
@@ -73,13 +62,9 @@ export const StudentSidebar: FC<StudentSidebarProps> = ({
       <Styled.UserSection>
         {session && (
           <Styled.UserInfoBox>
-            <Styled.StyledAvatar>
-              {getInitials(session.name)}
-            </Styled.StyledAvatar>
+            <Styled.StyledAvatar>{getInitials(session.name)}</Styled.StyledAvatar>
             <Styled.UserDetailsBox>
-              <Styled.UserName variant="subtitle1">
-                {session.name}
-              </Styled.UserName>
+              <Styled.UserName variant="subtitle1">{session.name}</Styled.UserName>
               <Styled.UserEmail variant="body2" color="text.secondary">
                 {session.email}
               </Styled.UserEmail>

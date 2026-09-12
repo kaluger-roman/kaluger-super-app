@@ -6,9 +6,7 @@ import { truncateToMinute } from "../../utils/time";
 jest.mock("../../lib/wsManager");
 
 describe("updateLessonStatuses", () => {
-  const mockedGetWs = getWebSocketManager as jest.MockedFunction<
-    typeof getWebSocketManager
-  >;
+  const mockedGetWs = getWebSocketManager as jest.MockedFunction<typeof getWebSocketManager>;
 
   let createdUserIds: string[] = [];
 
@@ -86,11 +84,7 @@ describe("updateLessonStatuses", () => {
     expect(updated).toBeTruthy();
     expect(updated!.status).toBe("IN_PROGRESS");
 
-    expect(broadcastMock).toHaveBeenCalledWith(
-      lesson.id,
-      "IN_PROGRESS",
-      lesson.tutorId
-    );
+    expect(broadcastMock).toHaveBeenCalledWith(lesson.id, "IN_PROGRESS", lesson.tutorId);
   });
 
   it("should move IN_PROGRESS and SCHEDULED lessons with endTime <= now to COMPLETED and broadcast", async () => {
@@ -171,16 +165,8 @@ describe("updateLessonStatuses", () => {
 
     expect(broadcastMock).toHaveBeenCalled();
     // Ensure both lesson ids were broadcasted as COMPLETED
-    expect(broadcastMock).toHaveBeenCalledWith(
-      lesson1.id,
-      "COMPLETED",
-      lesson1.tutorId
-    );
-    expect(broadcastMock).toHaveBeenCalledWith(
-      lesson2.id,
-      "COMPLETED",
-      lesson2.tutorId
-    );
+    expect(broadcastMock).toHaveBeenCalledWith(lesson1.id, "COMPLETED", lesson1.tutorId);
+    expect(broadcastMock).toHaveBeenCalledWith(lesson2.id, "COMPLETED", lesson2.tutorId);
   });
 
   it("should move RESCHEDULED lesson to IN_PROGRESS and broadcast", async () => {
@@ -229,11 +215,7 @@ describe("updateLessonStatuses", () => {
       where: { id: lesson.id },
     });
     expect(updated!.status).toBe("IN_PROGRESS");
-    expect(broadcastMock).toHaveBeenCalledWith(
-      lesson.id,
-      "IN_PROGRESS",
-      lesson.tutorId
-    );
+    expect(broadcastMock).toHaveBeenCalledWith(lesson.id, "IN_PROGRESS", lesson.tutorId);
   });
 
   it("should move RESCHEDULED lesson with endTime <= now to COMPLETED and broadcast", async () => {
@@ -282,11 +264,7 @@ describe("updateLessonStatuses", () => {
       where: { id: lesson.id },
     });
     expect(updated!.status).toBe("COMPLETED");
-    expect(broadcastMock).toHaveBeenCalledWith(
-      lesson.id,
-      "COMPLETED",
-      lesson.tutorId
-    );
+    expect(broadcastMock).toHaveBeenCalledWith(lesson.id, "COMPLETED", lesson.tutorId);
   });
 
   it("should not change CANCELLED or COMPLETED lessons", async () => {
@@ -406,24 +384,23 @@ describe("updateLessonStatuses", () => {
     // Simulate user manually cancelling the lesson AFTER findMany but BEFORE updateMany.
     // We hook into updateMany to flip status to CANCELLED right before the update fires.
     const originalUpdateMany = prisma.lesson.updateMany.bind(prisma.lesson);
-    const updateManySpy = jest
-      .spyOn(prisma.lesson, "updateMany")
-      .mockImplementation(((args: any) => {
-        const exec = async () => {
-          const idArg = args?.where?.id;
-          const targetsLesson =
-            idArg === lesson.id ||
-            (idArg && Array.isArray(idArg.in) && idArg.in.includes(lesson.id));
-          if (targetsLesson) {
-            await prisma.lesson.update({
-              where: { id: lesson.id },
-              data: { status: "CANCELLED" },
-            });
-          }
-          return originalUpdateMany(args);
-        };
-        return exec();
-      }) as never);
+    const updateManySpy = jest.spyOn(prisma.lesson, "updateMany").mockImplementation(((
+      args: any
+    ) => {
+      const exec = async () => {
+        const idArg = args?.where?.id;
+        const targetsLesson =
+          idArg === lesson.id || (idArg && Array.isArray(idArg.in) && idArg.in.includes(lesson.id));
+        if (targetsLesson) {
+          await prisma.lesson.update({
+            where: { id: lesson.id },
+            data: { status: "CANCELLED" },
+          });
+        }
+        return originalUpdateMany(args);
+      };
+      return exec();
+    }) as never);
 
     await updateLessonStatuses();
 
@@ -433,11 +410,7 @@ describe("updateLessonStatuses", () => {
     expect(after!.status).toBe("CANCELLED");
 
     // No broadcast should be sent when conditional update was skipped
-    expect(broadcastMock).not.toHaveBeenCalledWith(
-      lesson.id,
-      "IN_PROGRESS",
-      lesson.tutorId
-    );
+    expect(broadcastMock).not.toHaveBeenCalledWith(lesson.id, "IN_PROGRESS", lesson.tutorId);
   });
 
   it("should work when WebSocket manager is not present (no broadcast)", async () => {

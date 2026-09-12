@@ -6,18 +6,14 @@ import {
   verifyResetToken as verifyResetTokenService,
 } from "../services";
 import { validateEmail } from "../utils";
-import type {
-  ForgotPasswordDto,
-  ResetPasswordDto,
-  VerifyResetTokenDto,
-} from "../types";
+import type { ForgotPasswordDto, ResetPasswordDto, VerifyResetTokenDto } from "../types";
 
 const NEUTRAL_FORGOT_PASSWORD_MESSAGE =
   "Если адрес зарегистрирован, мы отправили на него письмо со ссылкой для сброса пароля";
 
 export const forgotPassword = async (
   req: Request<Record<string, never>, unknown, ForgotPasswordDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { email } = req.body;
@@ -34,15 +30,13 @@ export const forgotPassword = async (
     return res.json({ message: NEUTRAL_FORGOT_PASSWORD_MESSAGE });
   } catch (error) {
     console.error("Forgot password error:", error);
-    return res
-      .status(500)
-      .json({ error: "Ошибка при запросе восстановления пароля" });
+    return res.status(500).json({ error: "Ошибка при запросе восстановления пароля" });
   }
 };
 
 export const verifyResetToken = async (
   req: Request<Record<string, never>, unknown, VerifyResetTokenDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { token } = req.body;
@@ -62,7 +56,7 @@ export const verifyResetToken = async (
 
 export const resetPassword = async (
   req: Request<Record<string, never>, unknown, ResetPasswordDto>,
-  res: Response,
+  res: Response
 ) => {
   try {
     const { token, newPassword, confirmPassword } = req.body;

@@ -22,8 +22,7 @@ describe("studentAuth + studentInvitations controllers", () => {
   let studentId: string;
 
   beforeAll(async () => {
-    if (!process.env.FRONTEND_URL)
-      process.env.FRONTEND_URL = "http://localhost:3000";
+    if (!process.env.FRONTEND_URL) process.env.FRONTEND_URL = "http://localhost:3000";
     const tutor = await prisma.user.create({
       data: {
         email: faker.internet.email().toLowerCase(),
@@ -42,12 +41,8 @@ describe("studentAuth + studentInvitations controllers", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentInvitation
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
-    await prisma.studentUser
-      .deleteMany({ where: { studentId } })
-      .catch(() => undefined);
+    await prisma.studentInvitation.deleteMany({ where: { tutorId } }).catch(() => undefined);
+    await prisma.studentUser.deleteMany({ where: { studentId } }).catch(() => undefined);
     await prisma.student.delete({ where: { id: studentId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
@@ -105,9 +100,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns 401 without auth token", async () => {
-      const res = await request(app).post(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).post(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -132,9 +125,7 @@ describe("studentAuth + studentInvitations controllers", () => {
 
   describe("GET /api/students/:id/invitations", () => {
     it("returns 401 without auth token", async () => {
-      const res = await request(app).get(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).get(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -204,9 +195,7 @@ describe("studentAuth + studentInvitations controllers", () => {
 
   describe("DELETE /api/students/:id/invitations", () => {
     it("returns 401 without auth token", async () => {
-      const res = await request(app).delete(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).delete(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -309,9 +298,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       if (!issued.ok) throw new Error("issue failed");
       const token = issued.inviteUrl.split("/").pop();
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
         valid: true,
@@ -321,9 +308,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns valid:false for unknown token (no enumeration leak)", async () => {
-      const res = await request(app).get(
-        "/api/student-invitations/validate/totally-unknown"
-      );
+      const res = await request(app).get("/api/student-invitations/validate/totally-unknown");
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ valid: false });
     });
@@ -338,9 +323,7 @@ describe("studentAuth + studentInvitations controllers", () => {
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
 
@@ -353,9 +336,7 @@ describe("studentAuth + studentInvitations controllers", () => {
         .delete(`/api/students/${studentId}/invitations`)
         .set("Authorization", `Bearer ${tutorToken}`);
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
 
@@ -373,9 +354,7 @@ describe("studentAuth + studentInvitations controllers", () => {
         },
       });
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
   });

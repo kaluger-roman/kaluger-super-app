@@ -30,7 +30,7 @@ const renderPage = (search: string) =>
           <ResetPasswordPage />
         </ThemeProvider>
       </MemoryRouter>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("ResetPasswordPage", () => {

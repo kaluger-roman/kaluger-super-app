@@ -15,14 +15,8 @@ import {
   validatePassword,
 } from "../../utils/auth";
 import { StudentInvitationConsumedError } from "../../utils/errors";
-import {
-  assertStudentAuthConfigured,
-  generateStudentToken,
-} from "../../utils/studentAuth";
-import {
-  hashInvitationToken,
-  isInvitationExpired,
-} from "../../utils/studentInvitationToken";
+import { assertStudentAuthConfigured, generateStudentToken } from "../../utils/studentAuth";
+import { hashInvitationToken, isInvitationExpired } from "../../utils/studentInvitationToken";
 import { issueAndSendStudentVerificationCode } from "../studentEmailVerification";
 import {
   EMAIL_TAKEN_ERROR,
@@ -34,7 +28,7 @@ import { buildSettingsResponse } from "./studentAuth.helpers";
 import type { LoginResult, RegisterResult } from "./studentAuth.types";
 
 export const registerStudentByInvite = async (
-  dto: StudentRegisterByInviteDto,
+  dto: StudentRegisterByInviteDto
 ): Promise<RegisterResult> => {
   assertStudentAuthConfigured();
 
@@ -107,10 +101,7 @@ export const registerStudentByInvite = async (
     if (err instanceof StudentInvitationConsumedError) {
       return { ok: false, status: 410, error: INVALID_LINK_ERROR };
     }
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const rawTarget = err.meta?.target;
       const fields = Array.isArray(rawTarget)
         ? rawTarget
@@ -131,14 +122,9 @@ export const registerStudentByInvite = async (
 
   // Fire-and-forget — отправка письма не должна откатывать регистрацию;
   // ученик увидит баннер "Подтвердите email" и сможет переотправить код.
-  void issueAndSendStudentVerificationCode(createdStudentUser.id).catch(
-    (error) => {
-      console.error(
-        "Failed to send initial student verification email:",
-        error,
-      );
-    },
-  );
+  void issueAndSendStudentVerificationCode(createdStudentUser.id).catch((error) => {
+    console.error("Failed to send initial student verification email:", error);
+  });
 
   const token = generateStudentToken({
     studentUserId: createdStudentUser.id,
@@ -168,15 +154,13 @@ export const registerStudentByInvite = async (
           name: createdStudentUser.name,
           isEmailVerified: createdStudentUser.isEmailVerified,
         },
-        tutorName,
+        tutorName
       ),
     },
   };
 };
 
-export const loginStudent = async (
-  dto: StudentLoginDto,
-): Promise<LoginResult> => {
+export const loginStudent = async (dto: StudentLoginDto): Promise<LoginResult> => {
   if (!dto.email || !dto.password) {
     return { ok: false, status: 400, error: "Email и пароль обязательны" };
   }
@@ -191,10 +175,7 @@ export const loginStudent = async (
     return { ok: false, status: 401, error: INVALID_CREDENTIALS_ERROR };
   }
 
-  const passwordValid = await comparePassword(
-    dto.password,
-    studentUser.password,
-  );
+  const passwordValid = await comparePassword(dto.password, studentUser.password);
   if (!passwordValid) {
     return { ok: false, status: 401, error: INVALID_CREDENTIALS_ERROR };
   }
@@ -218,14 +199,14 @@ export const loginStudent = async (
           name: studentUser.name,
           isEmailVerified: studentUser.isEmailVerified,
         },
-        studentUser.student?.tutor?.name ?? null,
+        studentUser.student?.tutor?.name ?? null
       ),
     },
   };
 };
 
 export const getStudentSettings = async (
-  studentUserId: string,
+  studentUserId: string
 ): Promise<StudentSettingsResponse | null> => {
   const studentUser = await prisma.studentUser.findUnique({
     where: { id: studentUserId },
@@ -240,6 +221,6 @@ export const getStudentSettings = async (
       name: studentUser.name,
       isEmailVerified: studentUser.isEmailVerified,
     },
-    studentUser.student?.tutor?.name ?? null,
+    studentUser.student?.tutor?.name ?? null
   );
 };

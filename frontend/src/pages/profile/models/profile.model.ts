@@ -4,11 +4,7 @@ import { createGate } from "effector-react";
 import { taxRatePeriodModel, userModel } from "@entities";
 import { authApi, extractAxiosError, notificationsModel } from "@shared";
 
-import {
-  PROFILE_SAVED_MESSAGE,
-  getUserName,
-  isUserDefined,
-} from "./profile.helpers";
+import { PROFILE_SAVED_MESSAGE, getUserName, isUserDefined } from "./profile.helpers";
 import type { ProfileTab } from "./profile.types";
 
 // Gates
@@ -28,7 +24,7 @@ export const saveRequested = createEvent();
 
 // Effects
 export const updateProfileFx = createEffect(async ({ name }: { name: string }) =>
-  authApi.updateProfile({ name }),
+  authApi.updateProfile({ name })
 );
 
 // Samples — load periods on gate open (Finances tab needs them)

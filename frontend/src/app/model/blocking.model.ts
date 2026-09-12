@@ -72,18 +72,13 @@ export const $isBlocking = combine(
     studentLogout: studentUserModel.studentLogoutFx.pending,
     studentGetCurrent: studentUserModel.getCurrentStudentFx.pending,
     studentVerifyEmail: studentEmailVerificationModel.verifyEmailFx.pending,
-    studentResendVerification:
-      studentEmailVerificationModel.resendVerificationFx.pending,
-    studentValidateInvitation:
-      studentInviteModel.validateInvitationTokenFx.pending,
+    studentResendVerification: studentEmailVerificationModel.resendVerificationFx.pending,
+    studentValidateInvitation: studentInviteModel.validateInvitationTokenFx.pending,
     studentRegister: studentInviteModel.registerStudentByInviteFx.pending,
     studentLoadLessons: studentScheduleModel.loadLessonsFx.pending,
-    tutorInvitationLoadStatus:
-      tutorStudentInvitationModel.loadStatusFx.pending,
-    tutorInvitationIssue:
-      tutorStudentInvitationModel.issueInvitationFx.pending,
-    tutorInvitationRevoke:
-      tutorStudentInvitationModel.revokeInvitationFx.pending,
+    tutorInvitationLoadStatus: tutorStudentInvitationModel.loadStatusFx.pending,
+    tutorInvitationIssue: tutorStudentInvitationModel.issueInvitationFx.pending,
+    tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

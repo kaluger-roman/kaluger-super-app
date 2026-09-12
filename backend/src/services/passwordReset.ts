@@ -33,9 +33,7 @@ export const requestPasswordReset = async (rawEmail: string): Promise<void> => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return;
 
-  const cooldownThreshold = new Date(
-    Date.now() - RESET_REQUEST_COOLDOWN_SECONDS * 1000,
-  );
+  const cooldownThreshold = new Date(Date.now() - RESET_REQUEST_COOLDOWN_SECONDS * 1000);
   const recentToken = await prisma.passwordResetToken.findFirst({
     where: { userId: user.id, createdAt: { gte: cooldownThreshold } },
   });
@@ -88,7 +86,7 @@ export const verifyResetToken = async (token: string): Promise<void> => {
 export const applyPasswordReset = async (
   token: string,
   newPassword: string,
-  confirmPassword: string,
+  confirmPassword: string
 ): Promise<void> => {
   if (!token || !newPassword || !confirmPassword) {
     throwHttp("Все поля обязательны для заполнения", 400);
@@ -99,7 +97,7 @@ export const applyPasswordReset = async (
   if (!validatePassword(newPassword)) {
     throwHttp(
       "Пароль должен содержать минимум 8 символов, заглавные и строчные буквы и цифру",
-      400,
+      400
     );
   }
 

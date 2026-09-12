@@ -18,8 +18,8 @@ export const cooldownTick = createEvent();
 export const cooldownStarted = createEvent();
 export const cooldownEnded = createEvent();
 
-export const verifyEmailFx = createEffect(
-  async (code: string): Promise<StudentSession> => studentAuthApi.verifyEmail(code)
+export const verifyEmailFx = createEffect(async (code: string): Promise<StudentSession> =>
+  studentAuthApi.verifyEmail(code)
 );
 
 export const resendVerificationFx = createEffect(async () => studentAuthApi.resendVerification());

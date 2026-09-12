@@ -1,8 +1,6 @@
-const devApiUrl = (): string =>
-  process.env.REACT_APP_API_URL || "http://localhost:3001/api";
+const devApiUrl = (): string => process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
-export const API_BASE_URL =
-  process.env.NODE_ENV === "production" ? "/api" : devApiUrl();
+export const API_BASE_URL = process.env.NODE_ENV === "production" ? "/api" : devApiUrl();
 
 export const resolveWsUrl = (path: string): string =>
   process.env.NODE_ENV === "production"

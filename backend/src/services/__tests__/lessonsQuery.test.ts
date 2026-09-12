@@ -1,8 +1,4 @@
-import {
-  buildLessonsWhere,
-  parseLessonsPagination,
-  parseLessonsQuery,
-} from "../lessonsQuery";
+import { buildLessonsWhere, parseLessonsPagination, parseLessonsQuery } from "../lessonsQuery";
 
 const userId = "tutor-1";
 
@@ -15,7 +11,7 @@ describe("parseLessonsQuery", () => {
         studentId: ["a", "b"],
         unknown: "x",
         limit: 5,
-      }),
+      })
     ).toEqual({ status: "SCHEDULED", page: "2" });
   });
 });
@@ -84,7 +80,7 @@ describe("buildLessonsWhere", () => {
       buildLessonsWhere(userId, {
         studentId: "student-1",
         onlyWithoutHomework: "true",
-      }),
+      })
     ).toMatchObject({ studentId: "student-1", isHomeworkSentByTeacher: false });
   });
 
@@ -102,7 +98,7 @@ describe("buildLessonsWhere", () => {
       buildLessonsWhere(userId, {
         paymentDateFrom: "2026-03-01T00:00:00Z",
         paymentDateTo: "2026-03-31T00:00:00Z",
-      }).paymentDate,
+      }).paymentDate
     ).toEqual({
       not: null,
       gte: new Date("2026-03-01T00:00:00Z"),
@@ -136,8 +132,8 @@ describe("buildLessonsWhere", () => {
   });
 
   it("should turn a comma-separated status into an IN filter", () => {
-    expect(
-      buildLessonsWhere(userId, { status: "SCHEDULED, COMPLETED" }).status,
-    ).toEqual({ in: ["SCHEDULED", "COMPLETED"] });
+    expect(buildLessonsWhere(userId, { status: "SCHEDULED, COMPLETED" }).status).toEqual({
+      in: ["SCHEDULED", "COMPLETED"],
+    });
   });
 });

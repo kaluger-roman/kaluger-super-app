@@ -41,9 +41,7 @@ export class InvalidCredentialsError extends Error {
 
 export class EmailNotVerifiedError extends Error {
   constructor() {
-    super(
-      "Email не подтвержден. Проверьте почту или запросите новый код подтверждения",
-    );
+    super("Email не подтвержден. Проверьте почту или запросите новый код подтверждения");
     this.name = "EmailNotVerifiedError";
   }
 }

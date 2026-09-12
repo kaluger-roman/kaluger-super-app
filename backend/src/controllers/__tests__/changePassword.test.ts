@@ -29,13 +29,11 @@ describe("POST /api/auth/change-password", () => {
   });
 
   it("should return 401 without auth token", async () => {
-    const res = await request(app)
-      .post("/api/auth/change-password")
-      .send({
-        currentPassword,
-        newPassword: "NewPassword1",
-        confirmPassword: "NewPassword1",
-      });
+    const res = await request(app).post("/api/auth/change-password").send({
+      currentPassword,
+      newPassword: "NewPassword1",
+      confirmPassword: "NewPassword1",
+    });
     expect(res.status).toBe(401);
   });
 
@@ -126,7 +124,10 @@ describe("POST /api/auth/change-password", () => {
 
     const loginRes = await request(app)
       .post("/api/auth/login")
-      .send({ email: (await prisma.user.findUnique({ where: { id: userId } }))!.email, password: newPassword });
+      .send({
+        email: (await prisma.user.findUnique({ where: { id: userId } }))!.email,
+        password: newPassword,
+      });
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
 

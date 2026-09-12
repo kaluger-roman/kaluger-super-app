@@ -124,7 +124,10 @@ describe("features/resetPassword/models/resetPassword.model", () => {
 
     it("should not call api when fields are empty", async () => {
       const scope = fork({
-        values: [[resetPasswordModel.$token, "t"], [resetPasswordModel.$newPassword, ""]],
+        values: [
+          [resetPasswordModel.$token, "t"],
+          [resetPasswordModel.$newPassword, ""],
+        ],
       });
 
       await allSettled(resetPasswordModel.formSubmitted, { scope });
@@ -163,7 +166,7 @@ describe("features/resetPassword/models/resetPassword.model", () => {
       await allSettled(resetPasswordModel.formSubmitted, { scope });
 
       expect(scope.getState(resetPasswordModel.$error)).toBe(
-        "Новый пароль должен отличаться от текущего",
+        "Новый пароль должен отличаться от текущего"
       );
       expect(scope.getState(resetPasswordModel.$isSuccess)).toBe(false);
     });

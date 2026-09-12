@@ -95,27 +95,17 @@ export const updateLessonStatuses = async () => {
 
     if (wsManager) {
       for (const lesson of startedLessons) {
-        wsManager.broadcastLessonStatusUpdate(
-          lesson.id,
-          "IN_PROGRESS",
-          lesson.tutorId
-        );
+        wsManager.broadcastLessonStatusUpdate(lesson.id, "IN_PROGRESS", lesson.tutorId);
         void broadcastStudentLessonStatusUpdated(lesson.id, "IN_PROGRESS");
       }
       for (const lesson of completedLessons) {
-        wsManager.broadcastLessonStatusUpdate(
-          lesson.id,
-          "COMPLETED",
-          lesson.tutorId
-        );
+        wsManager.broadcastLessonStatusUpdate(lesson.id, "COMPLETED", lesson.tutorId);
         void broadcastStudentLessonStatusUpdated(lesson.id, "COMPLETED");
       }
     }
 
     if (startedCount > 0 || completedCount > 0) {
-      console.log(
-        `Updated ${startedCount} lessons to IN_PROGRESS, ${completedCount} to COMPLETED`
-      );
+      console.log(`Updated ${startedCount} lessons to IN_PROGRESS, ${completedCount} to COMPLETED`);
     }
 
     return {

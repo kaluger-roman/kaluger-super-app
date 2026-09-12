@@ -51,11 +51,13 @@ export const sendPushToUser = async (userId: string, payload: PushNotificationPa
 
       // Remove stale subscriptions (gone or not found)
       if (statusCode === 410 || statusCode === 404) {
-        await prisma.pushSubscription.delete({
-          where: { id: sub.id },
-        }).catch(() => {
-          // Ignore if already deleted
-        });
+        await prisma.pushSubscription
+          .delete({
+            where: { id: sub.id },
+          })
+          .catch(() => {
+            // Ignore if already deleted
+          });
       }
 
       failed++;
@@ -97,7 +99,11 @@ export const formatReminderBody = (
   const typeName = lessonTypeMap[lessonType] || lessonType;
 
   const formatTime = (date: Date): string => {
-    const options: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hour12: false };
+    const options: Intl.DateTimeFormatOptions = {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    };
     if (timezone) options.timeZone = timezone;
     return date.toLocaleTimeString("ru-RU", options);
   };

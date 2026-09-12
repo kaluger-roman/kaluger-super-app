@@ -67,9 +67,7 @@ describe("Password reset endpoints", () => {
     });
 
     it("should return neutral 200 and send email when user exists", async () => {
-      const res = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: userEmail });
+      const res = await request(app).post("/api/auth/forgot-password").send({ email: userEmail });
       expect(res.status).toBe(200);
       expect(res.body.message).toMatch(/Если адрес зарегистрирован/);
       expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
@@ -95,17 +93,13 @@ describe("Password reset endpoints", () => {
         data: { userId, tokenHash, expiresAt: new Date(Date.now() + 60_000) },
       });
 
-      const res = await request(app)
-        .post("/api/auth/reset-password/verify")
-        .send({ token });
+      const res = await request(app).post("/api/auth/reset-password/verify").send({ token });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ valid: true });
     });
 
     it("should return 400 for missing token", async () => {
-      const res = await request(app)
-        .post("/api/auth/reset-password/verify")
-        .send({});
+      const res = await request(app).post("/api/auth/reset-password/verify").send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Токен обязателен");
     });
@@ -124,9 +118,7 @@ describe("Password reset endpoints", () => {
         data: { userId, tokenHash, expiresAt: new Date(Date.now() - 60_000) },
       });
 
-      const res = await request(app)
-        .post("/api/auth/reset-password/verify")
-        .send({ token });
+      const res = await request(app).post("/api/auth/reset-password/verify").send({ token });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Срок действия ссылки истёк. Запросите новую");
     });
@@ -142,9 +134,7 @@ describe("Password reset endpoints", () => {
         },
       });
 
-      const res = await request(app)
-        .post("/api/auth/reset-password/verify")
-        .send({ token });
+      const res = await request(app).post("/api/auth/reset-password/verify").send({ token });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Эта ссылка уже была использована. Запросите новую");
     });
@@ -160,9 +150,7 @@ describe("Password reset endpoints", () => {
     };
 
     it("should return 400 when required fields are missing", async () => {
-      const res = await request(app)
-        .post("/api/auth/reset-password")
-        .send({ token: "x" });
+      const res = await request(app).post("/api/auth/reset-password").send({ token: "x" });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Все поля обязательны для заполнения");
     });
@@ -187,13 +175,11 @@ describe("Password reset endpoints", () => {
 
     it("should return 400 when new password matches current password", async () => {
       const { token } = await createValidToken();
-      const res = await request(app)
-        .post("/api/auth/reset-password")
-        .send({
-          token,
-          newPassword: ORIGINAL_PASSWORD,
-          confirmPassword: ORIGINAL_PASSWORD,
-        });
+      const res = await request(app).post("/api/auth/reset-password").send({
+        token,
+        newPassword: ORIGINAL_PASSWORD,
+        confirmPassword: ORIGINAL_PASSWORD,
+      });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Новый пароль должен отличаться от текущего");
     });
@@ -201,13 +187,11 @@ describe("Password reset endpoints", () => {
     it("should reset password and login should succeed with new password", async () => {
       const { token, recordId } = await createValidToken();
 
-      const res = await request(app)
-        .post("/api/auth/reset-password")
-        .send({
-          token,
-          newPassword: VALID_NEW_PASSWORD,
-          confirmPassword: VALID_NEW_PASSWORD,
-        });
+      const res = await request(app).post("/api/auth/reset-password").send({
+        token,
+        newPassword: VALID_NEW_PASSWORD,
+        confirmPassword: VALID_NEW_PASSWORD,
+      });
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Пароль успешно изменён");
 
@@ -241,13 +225,11 @@ describe("Password reset endpoints", () => {
         })
         .expect(200);
 
-      const res = await request(app)
-        .post("/api/auth/reset-password")
-        .send({
-          token,
-          newPassword: "AnotherPassword1",
-          confirmPassword: "AnotherPassword1",
-        });
+      const res = await request(app).post("/api/auth/reset-password").send({
+        token,
+        newPassword: "AnotherPassword1",
+        confirmPassword: "AnotherPassword1",
+      });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Эта ссылка уже была использована. Запросите новую");
     });

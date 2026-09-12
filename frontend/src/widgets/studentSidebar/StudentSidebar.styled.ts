@@ -10,16 +10,14 @@ import {
 
 import { styled } from "@shared";
 
-export const StyledDrawer = styled(Drawer)<{ $drawerWidth: number }>(
-  ({ $drawerWidth }) => ({
+export const StyledDrawer = styled(Drawer)<{ $drawerWidth: number }>(({ $drawerWidth }) => ({
+  width: $drawerWidth,
+  flexShrink: 0,
+  "& .MuiDrawer-paper": {
     width: $drawerWidth,
-    flexShrink: 0,
-    "& .MuiDrawer-paper": {
-      width: $drawerWidth,
-      boxSizing: "border-box",
-    },
-  })
-);
+    boxSizing: "border-box",
+  },
+}));
 
 export const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   minHeight: 56,

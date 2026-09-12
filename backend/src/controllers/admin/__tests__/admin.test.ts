@@ -2,11 +2,7 @@ import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
-import {
-  generateAdminToken,
-  generateToken,
-  hashPassword,
-} from "../../../utils/auth";
+import { generateAdminToken, generateToken, hashPassword } from "../../../utils/auth";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -77,17 +73,11 @@ describe("admin integration tests", () => {
     });
 
     it("should return 400 when email is missing", async () => {
-      await request(app)
-        .post("/api/admin/login")
-        .send({ password: adminPassword })
-        .expect(400);
+      await request(app).post("/api/admin/login").send({ password: adminPassword }).expect(400);
     });
 
     it("should return 400 when password is missing", async () => {
-      await request(app)
-        .post("/api/admin/login")
-        .send({ email: adminEmail })
-        .expect(400);
+      await request(app).post("/api/admin/login").send({ email: adminEmail }).expect(400);
     });
 
     it("should return 400 with invalid email format", async () => {

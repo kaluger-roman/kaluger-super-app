@@ -6,11 +6,7 @@ import { useUnit } from "effector-react";
 import { studentModel } from "@entities";
 import type { Lesson, Student } from "@shared";
 
-import {
-  filterStudents,
-  getStudentLabel,
-  isSameStudent,
-} from "./StudentSelector.helpers";
+import { filterStudents, getStudentLabel, isSameStudent } from "./StudentSelector.helpers";
 import * as Styled from "./StudentSelector.styled";
 import type { LessonFormData } from "../LessonForm.types";
 

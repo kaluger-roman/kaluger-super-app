@@ -13,27 +13,15 @@ export type {
   ResetPasswordDto,
   UpdateProfileDto,
 } from "./auth";
-export type {
-  ContactMethod,
-  CreateStudentDto,
-  UpdateStudentDto,
-} from "./student";
-export type {
-  CreateLessonDto,
-  UpdateLessonDto,
-  ShiftResult,
-  LessonSlot,
-} from "./lesson";
+export type { ContactMethod, CreateStudentDto, UpdateStudentDto } from "./student";
+export type { CreateLessonDto, UpdateLessonDto, ShiftResult, LessonSlot } from "./lesson";
 export type {
   TaxRatePeriodDto,
   CreateTaxRatePeriodDto,
   ReplaceTaxRatePeriodsDto,
   TaxBreakdownEntry,
 } from "./taxRate";
-export type {
-  NewsItemResponse,
-  NewsPaginationResponse,
-} from "./news";
+export type { NewsItemResponse, NewsPaginationResponse } from "./news";
 export type {
   PushSubscriptionDto,
   PushUnsubscribeDto,
@@ -42,17 +30,8 @@ export type {
   PushSubscriptionResponse,
   PushNotificationPayload,
 } from "./push";
-export type {
-  AdminJwtPayload,
-  AdminRequest,
-  AdminLoginDto,
-  AdminOverviewResponse,
-} from "./admin";
-export type {
-  UpdateBackupSettingsDto,
-  BackupSettingsResponse,
-  BackupFileResponse,
-} from "./backup";
+export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
+export type { UpdateBackupSettingsDto, BackupSettingsResponse, BackupFileResponse } from "./backup";
 export type {
   StudentJwtPayload,
   StudentRequest,

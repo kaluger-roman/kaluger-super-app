@@ -1,7 +1,4 @@
-import {
-  Schedule as ScheduleIcon,
-  Settings as SettingsIcon,
-} from "@mui/icons-material";
+import { Schedule as ScheduleIcon, Settings as SettingsIcon } from "@mui/icons-material";
 
 import type { NavigationItem } from "./StudentSidebar.types";
 

@@ -4,10 +4,7 @@ import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import { prisma } from "../lib/prisma";
 import { generateAdminToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
-import {
-  generateVerificationCode,
-  getVerificationCodeExpiry,
-} from "../utils/verification";
+import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 
 export const testRouter = Router();
@@ -111,9 +108,7 @@ testRouter.post("/users/:userId/students", async (req: Request, res: Response) =
       notes: data.notes ?? null,
       archived: Boolean(data.archived),
       archivedAt: data.archived ? new Date() : null,
-      archiveReason: data.archived
-        ? (data.archiveReason ?? "COMPLETED_STUDIES")
-        : null,
+      archiveReason: data.archived ? (data.archiveReason ?? "COMPLETED_STUDIES") : null,
     },
   });
   res.status(201).json({ student });
@@ -194,88 +189,69 @@ testRouter.post("/news", async (req: Request, res: Response) => {
   res.json({ items: stored });
 });
 
-testRouter.post(
-  "/run-lesson-status-tick",
-  async (_req: Request, res: Response) => {
-    const { updateLessonStatuses } = await import(
-      "../services/lessonStatusUpdater"
-    );
-    await updateLessonStatuses();
-    res.status(204).end();
-  },
-);
+testRouter.post("/run-lesson-status-tick", async (_req: Request, res: Response) => {
+  const { updateLessonStatuses } = await import("../services/lessonStatusUpdater");
+  await updateLessonStatuses();
+  res.status(204).end();
+});
 
-testRouter.post(
-  "/run-recurring-lessons-tick",
-  async (_req: Request, res: Response) => {
-    const { processRecurringLessons } = await import(
-      "../services/recurringLessons"
-    );
-    await processRecurringLessons();
-    res.status(204).end();
-  },
-);
+testRouter.post("/run-recurring-lessons-tick", async (_req: Request, res: Response) => {
+  const { processRecurringLessons } = await import("../services/recurringLessons");
+  await processRecurringLessons();
+  res.status(204).end();
+});
 
-testRouter.get(
-  "/users/:userId/scheduled-reminders",
-  async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    const reminders = await prisma.scheduledReminder.findMany({
-      where: { userId },
-      orderBy: { scheduledAt: "asc" },
-    });
-    res.json({ reminders });
-  },
-);
+testRouter.get("/users/:userId/scheduled-reminders", async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const reminders = await prisma.scheduledReminder.findMany({
+    where: { userId },
+    orderBy: { scheduledAt: "asc" },
+  });
+  res.json({ reminders });
+});
 
-testRouter.get(
-  "/users/:userId/push-subscriptions",
-  async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    const subscriptions = await prisma.pushSubscription.findMany({
-      where: { userId },
-    });
-    res.json({ subscriptions });
-  },
-);
+testRouter.get("/users/:userId/push-subscriptions", async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { userId },
+  });
+  res.json({ subscriptions });
+});
 
-testRouter.post(
-  "/students/:studentId/student-user",
-  async (req: Request, res: Response) => {
-    const { studentId } = req.params;
-    const { name, email, password, isEmailVerified, withCode } = req.body;
-    const hashed = await hashPassword(password);
-    const code = withCode ? generateVerificationCode() : null;
-    const studentUser = await prisma.studentUser.create({
-      data: {
-        email: normalizeEmail(email),
-        password: hashed,
-        name,
-        studentId,
-        isEmailVerified: Boolean(isEmailVerified),
-        verificationCode: code,
-        verificationCodeExpiry: code ? getVerificationCodeExpiry() : null,
-        verificationCodeSentAt: code ? new Date() : null,
-      },
-    });
-    const token = generateStudentToken({
-      studentUserId: studentUser.id,
-      email: studentUser.email,
-      isStudent: true,
-      tokenVersion: studentUser.tokenVersion,
-    });
-    res.status(201).json({
-      studentUser: {
-        id: studentUser.id,
-        email: studentUser.email,
-        name: studentUser.name,
-        isEmailVerified: studentUser.isEmailVerified,
-      },
-      token,
+testRouter.post("/students/:studentId/student-user", async (req: Request, res: Response) => {
+  const { studentId } = req.params;
+  const { name, email, password, isEmailVerified, withCode } = req.body;
+  const hashed = await hashPassword(password);
+  const code = withCode ? generateVerificationCode() : null;
+  const studentUser = await prisma.studentUser.create({
+    data: {
+      email: normalizeEmail(email),
+      password: hashed,
+      name,
+      studentId,
+      isEmailVerified: Boolean(isEmailVerified),
       verificationCode: code,
-    });
-  },
-);
+      verificationCodeExpiry: code ? getVerificationCodeExpiry() : null,
+      verificationCodeSentAt: code ? new Date() : null,
+    },
+  });
+  const token = generateStudentToken({
+    studentUserId: studentUser.id,
+    email: studentUser.email,
+    isStudent: true,
+    tokenVersion: studentUser.tokenVersion,
+  });
+  res.status(201).json({
+    studentUser: {
+      id: studentUser.id,
+      email: studentUser.email,
+      name: studentUser.name,
+      isEmailVerified: studentUser.isEmailVerified,
+    },
+    token,
+    verificationCode: code,
+  });
+});
 
 testRouter.post("/admin/token", (_req: Request, res: Response) => {
   const email = process.env.ADMIN_EMAIL || "admin@e2e.local";
@@ -286,10 +262,7 @@ testRouter.post("/admin/token", (_req: Request, res: Response) => {
 testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
   const fs = await import("fs");
   const path = await import("path");
-  const dir = path.resolve(
-    process.cwd(),
-    process.env.BACKUP_DIR || "backups",
-  );
+  const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
   if (fs.existsSync(dir)) {
     for (const file of fs.readdirSync(dir)) {
       if (file.endsWith(".sql.gz")) {

@@ -52,7 +52,7 @@ describe("resolveUpdatedTimes", () => {
         startTime: new Date("2026-03-12T10:00:30.500Z"),
         endTime: new Date("2026-03-12T11:00:59Z"),
       },
-      makeLesson(),
+      makeLesson()
     );
     expect(start.toISOString()).toBe("2026-03-12T10:00:00.000Z");
     expect(end.toISOString()).toBe("2026-03-12T11:00:00.000Z");
@@ -74,50 +74,30 @@ describe("computeUpdatedStatus", () => {
   };
 
   it("should return COMPLETED for a lesson that already ended", () => {
-    expect(
-      computeUpdatedStatus({}, makeLesson(), past.start, past.end, now),
-    ).toBe("COMPLETED");
+    expect(computeUpdatedStatus({}, makeLesson(), past.start, past.end, now)).toBe("COMPLETED");
   });
 
   it("should return IN_PROGRESS for a lesson running right now", () => {
-    expect(
-      computeUpdatedStatus({}, makeLesson(), running.start, running.end, now),
-    ).toBe("IN_PROGRESS");
+    expect(computeUpdatedStatus({}, makeLesson(), running.start, running.end, now)).toBe(
+      "IN_PROGRESS"
+    );
   });
 
   it("should never override an explicit CANCELLED status", () => {
     expect(
-      computeUpdatedStatus(
-        { status: "CANCELLED" },
-        makeLesson(),
-        past.start,
-        past.end,
-        now,
-      ),
+      computeUpdatedStatus({ status: "CANCELLED" }, makeLesson(), past.start, past.end, now)
     ).toBeUndefined();
   });
 
   it("should keep a cancelled lesson cancelled when no status is sent", () => {
     expect(
-      computeUpdatedStatus(
-        {},
-        makeLesson({ status: "CANCELLED" }),
-        future.start,
-        future.end,
-        now,
-      ),
+      computeUpdatedStatus({}, makeLesson({ status: "CANCELLED" }), future.start, future.end, now)
     ).toBe("CANCELLED");
   });
 
   it("should return undefined for a future lesson with an explicit status", () => {
     expect(
-      computeUpdatedStatus(
-        { status: "RESCHEDULED" },
-        makeLesson(),
-        future.start,
-        future.end,
-        now,
-      ),
+      computeUpdatedStatus({ status: "RESCHEDULED" }, makeLesson(), future.start, future.end, now)
     ).toBeUndefined();
   });
 });
@@ -132,7 +112,7 @@ describe("buildLessonUpdateData", () => {
       },
       makeLesson(),
       false,
-      now,
+      now
     );
     expect(dataToUpdate.notes).toBe("text");
     expect(dataToUpdate.startTime).toEqual(start);
@@ -148,7 +128,7 @@ describe("buildLessonUpdateData", () => {
       },
       makeLesson(),
       false,
-      now,
+      now
     );
     expect(dataToUpdate.status).toBe("COMPLETED");
   });
@@ -158,7 +138,7 @@ describe("buildLessonUpdateData", () => {
       { prospectName: "  Иван  " },
       makeLesson({ studentId: null }),
       false,
-      now,
+      now
     );
     expect(dataToUpdate.prospectName).toBe("Иван");
   });
@@ -168,7 +148,7 @@ describe("buildLessonUpdateData", () => {
       { studentId: "student-2" },
       makeLesson({ studentId: null, prospectName: "Иван" }),
       true,
-      now,
+      now
     );
     expect(dataToUpdate.studentId).toBe("student-2");
     expect(dataToUpdate.prospectName).toBeNull();
@@ -189,34 +169,26 @@ describe("recurring-series predicates", () => {
   it("shouldShiftRecurringSeries should require a scheduled recurring lesson with a time change", () => {
     expect(shouldShiftRecurringSeries({ startTime: now }, recurring)).toBe(true);
     expect(shouldShiftRecurringSeries({ notes: "x" }, recurring)).toBe(false);
-    expect(
-      shouldShiftRecurringSeries({ startTime: now }, makeLesson({ isRecurring: false })),
-    ).toBe(false);
+    expect(shouldShiftRecurringSeries({ startTime: now }, makeLesson({ isRecurring: false }))).toBe(
+      false
+    );
     expect(
       shouldShiftRecurringSeries(
         { startTime: now },
-        makeLesson({ isRecurring: true, status: "COMPLETED" }),
-      ),
+        makeLesson({ isRecurring: true, status: "COMPLETED" })
+      )
     ).toBe(false);
-    expect(
-      shouldShiftRecurringSeries(
-        { startTime: now, status: "RESCHEDULED" },
-        recurring,
-      ),
-    ).toBe(false);
+    expect(shouldShiftRecurringSeries({ startTime: now, status: "RESCHEDULED" }, recurring)).toBe(
+      false
+    );
   });
 
   it("shouldPropagateRecurringPrice should react to an explicit price key only", () => {
     expect(shouldPropagateRecurringPrice({ price: 1500 }, recurring)).toBe(true);
-    expect(shouldPropagateRecurringPrice({ price: undefined }, recurring)).toBe(
-      true,
-    );
+    expect(shouldPropagateRecurringPrice({ price: undefined }, recurring)).toBe(true);
     expect(shouldPropagateRecurringPrice({ notes: "x" }, recurring)).toBe(false);
-    expect(
-      shouldPropagateRecurringPrice(
-        { price: 1500 },
-        makeLesson({ isRecurring: false }),
-      ),
-    ).toBe(false);
+    expect(shouldPropagateRecurringPrice({ price: 1500 }, makeLesson({ isRecurring: false }))).toBe(
+      false
+    );
   });
 });

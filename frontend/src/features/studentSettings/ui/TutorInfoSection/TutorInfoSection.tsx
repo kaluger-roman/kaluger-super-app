@@ -1,9 +1,6 @@
 import type { FC } from "react";
 
-import {
-  LinkOff as LinkOffIcon,
-  School as SchoolIcon,
-} from "@mui/icons-material";
+import { LinkOff as LinkOffIcon, School as SchoolIcon } from "@mui/icons-material";
 import { Box, Stack, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 

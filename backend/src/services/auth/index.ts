@@ -1,9 +1,4 @@
-export {
-  getUserProfile,
-  loginUser,
-  registerUser,
-  updateUserProfile,
-} from "./auth";
+export { getUserProfile, loginUser, registerUser, updateUserProfile } from "./auth";
 export type {
   LoginUserInput,
   LoginUserResult,

@@ -4,8 +4,7 @@ import { truncateToMinute } from "../../utils/time";
 export const CONTACT_METHODS: ContactMethod[] = ["WHATSAPP", "TELEGRAM", "MAX"];
 
 const validateProspectFields = (data: CreateLessonDto): string | null => {
-  const { studentId, prospectName, prospectPhone, prospectContactMethod } =
-    data;
+  const { studentId, prospectName, prospectPhone, prospectContactMethod } = data;
 
   if (studentId) {
     if (
@@ -30,10 +29,7 @@ const validateProspectFields = (data: CreateLessonDto): string | null => {
     return "Пробный урок без ученика не может быть повторяющимся";
   }
 
-  if (
-    prospectContactMethod !== undefined &&
-    !CONTACT_METHODS.includes(prospectContactMethod)
-  ) {
+  if (prospectContactMethod !== undefined && !CONTACT_METHODS.includes(prospectContactMethod)) {
     return "Недопустимый способ связи (WhatsApp, Telegram или MAX)";
   }
 
@@ -46,8 +42,7 @@ export const validateLessonData = (data: CreateLessonDto) => {
   if (!subject || !lessonType || !startTime || !endTime) {
     return {
       isValid: false,
-      error:
-        "Предмет, тип урока, время начала и время окончания обязательны",
+      error: "Предмет, тип урока, время начала и время окончания обязательны",
     };
   }
 

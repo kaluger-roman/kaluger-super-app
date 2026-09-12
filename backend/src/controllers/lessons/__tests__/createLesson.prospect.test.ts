@@ -131,9 +131,7 @@ describe("createLesson prospect (trial without student) integration tests", () =
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Укажите ученика или имя для пробного урока без ученика"
-        );
+        expect(res.body.error).toBe("Укажите ученика или имя для пробного урока без ученика");
       });
   });
 
@@ -152,9 +150,7 @@ describe("createLesson prospect (trial without student) integration tests", () =
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Данные пробного ученика нельзя указывать вместе с учеником"
-        );
+        expect(res.body.error).toBe("Данные пробного ученика нельзя указывать вместе с учеником");
       });
   });
 
@@ -172,9 +168,7 @@ describe("createLesson prospect (trial without student) integration tests", () =
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Имя ученика для пробного урока обязательно"
-        );
+        expect(res.body.error).toBe("Имя ученика для пробного урока обязательно");
       });
   });
 
@@ -193,9 +187,7 @@ describe("createLesson prospect (trial without student) integration tests", () =
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Пробный урок без ученика не может быть повторяющимся"
-        );
+        expect(res.body.error).toBe("Пробный урок без ученика не может быть повторяющимся");
       });
   });
 
@@ -214,9 +206,7 @@ describe("createLesson prospect (trial without student) integration tests", () =
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Недопустимый способ связи (WhatsApp, Telegram или MAX)"
-        );
+        expect(res.body.error).toBe("Недопустимый способ связи (WhatsApp, Telegram или MAX)");
       });
   });
 });

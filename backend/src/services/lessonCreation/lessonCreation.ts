@@ -11,33 +11,22 @@ import {
   checkSchedulingConflicts,
   computeLessonStatus,
 } from "./lessonCreation.helpers";
-import type {
-  CreatedRecurringLessons,
-  LessonWithStudent,
-} from "./lessonCreation.types";
+import type { CreatedRecurringLessons, LessonWithStudent } from "./lessonCreation.types";
 
 export const createSingleLesson = (
   userId: string,
   data: CreateLessonDto,
-  student: Student | null,
+  student: Student | null
 ): Promise<LessonWithStudent> => {
   const start = truncateToMinute(new Date(data.startTime));
   const end = truncateToMinute(new Date(data.endTime));
-  const computedStatus = computeLessonStatus(
-    start,
-    end,
-    truncateToMinute(new Date()),
-  );
-  const lessonPrice = student
-    ? (data.price ?? student.hourlyRate)
-    : (data.price ?? 0);
+  const computedStatus = computeLessonStatus(start, end, truncateToMinute(new Date()));
+  const lessonPrice = student ? (data.price ?? student.hourlyRate) : (data.price ?? 0);
 
   return prisma.$transaction(async (tx) => {
     const conflicts = await checkSchedulingConflicts(userId, start, end, tx);
     if (conflicts.length > 0) {
-      throw new SchedulingConflictError(
-        "Временной слот конфликтует с существующим уроком",
-      );
+      throw new SchedulingConflictError("Временной слот конфликтует с существующим уроком");
     }
     return tx.lesson.create({
       data: {
@@ -65,7 +54,7 @@ export const createSingleLesson = (
 export const createRecurringLessons = (
   userId: string,
   data: CreateLessonDto,
-  student: Student,
+  student: Student
 ): Promise<CreatedRecurringLessons> => {
   const start = truncateToMinute(new Date(data.startTime));
   const end = truncateToMinute(new Date(data.endTime));
@@ -75,12 +64,7 @@ export const createRecurringLessons = (
   return prisma.$transaction(async (tx) => {
     const slotsToCreate: Prisma.LessonCreateManyInput[] = [];
     for (const slot of candidateSlots) {
-      const conflicts = await checkSchedulingConflicts(
-        userId,
-        slot.start,
-        slot.end,
-        tx,
-      );
+      const conflicts = await checkSchedulingConflicts(userId, slot.start, slot.end, tx);
       if (conflicts.length === 0) {
         slotsToCreate.push({
           subject: data.subject,
@@ -100,7 +84,7 @@ export const createRecurringLessons = (
 
     if (slotsToCreate.length === 0) {
       throw new SchedulingConflictError(
-        "Невозможно создать регулярные уроки из-за конфликтов в расписании",
+        "Невозможно создать регулярные уроки из-за конфликтов в расписании"
       );
     }
 
@@ -115,15 +99,11 @@ export const createRecurringLessons = (
   });
 };
 
-export const notifyLessonsCreated = (
-  userId: string,
-  lessons: Lesson[],
-  primary: Lesson | null,
-) => {
+export const notifyLessonsCreated = (userId: string, lessons: Lesson[], primary: Lesson | null) => {
   for (const lesson of lessons) {
     if (lesson.status === "SCHEDULED") {
       scheduleRemindersForLesson(lesson.id).catch((err) =>
-        console.error("Failed to schedule reminders:", err),
+        console.error("Failed to schedule reminders:", err)
       );
     }
   }

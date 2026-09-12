@@ -12,17 +12,8 @@ export const getStatistics = async (req: AuthRequest, res: Response) => {
 
     const statistics = await collectLessonStatistics({
       userId,
-      where: buildStatisticsWhere(
-        userId,
-        startDate as string,
-        endDate as string,
-        timezone,
-      ),
-      paymentDateRange: getDateRange(
-        startDate as string,
-        endDate as string,
-        timezone,
-      ),
+      where: buildStatisticsWhere(userId, startDate as string, endDate as string, timezone),
+      paymentDateRange: getDateRange(startDate as string, endDate as string, timezone),
       lastMonthRange: getLastMonthRange(timezone),
       now: truncateToMinute(new Date()),
     });

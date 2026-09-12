@@ -48,25 +48,20 @@ export const prepareUpdateData = (updateData: UpdateStudentDto) => {
     preparedData.contactMethod = updateData.contactMethod || undefined;
   }
   if ("parentPhone" in updateData) {
-    preparedData.parentPhone =
-      updateData.parentPhone === "" ? null : updateData.parentPhone;
+    preparedData.parentPhone = updateData.parentPhone === "" ? null : updateData.parentPhone;
   }
   if ("parentContactMethod" in updateData) {
     preparedData.parentContactMethod = updateData.parentContactMethod || null;
   }
   if ("telegramNick" in updateData) {
-    preparedData.telegramNick =
-      updateData.telegramNick === "" ? null : updateData.telegramNick;
+    preparedData.telegramNick = updateData.telegramNick === "" ? null : updateData.telegramNick;
   }
   if ("parentTelegramNick" in updateData) {
     preparedData.parentTelegramNick =
-      updateData.parentTelegramNick === ""
-        ? null
-        : updateData.parentTelegramNick;
+      updateData.parentTelegramNick === "" ? null : updateData.parentTelegramNick;
   }
   if ("parentName" in updateData) {
-    preparedData.parentName =
-      updateData.parentName === "" ? null : updateData.parentName;
+    preparedData.parentName = updateData.parentName === "" ? null : updateData.parentName;
   }
   if ("phone" in updateData) {
     preparedData.phone = updateData.phone === "" ? null : updateData.phone;
@@ -82,9 +77,7 @@ export const prepareUpdateData = (updateData: UpdateStudentDto) => {
   }
   if ("grade" in updateData) {
     preparedData.grade =
-      updateData.grade === null || updateData.grade === undefined
-        ? null
-        : updateData.grade;
+      updateData.grade === null || updateData.grade === undefined ? null : updateData.grade;
   }
 
   return preparedData;

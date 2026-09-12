@@ -1,0 +1,46 @@
+#!/bin/sh
+# Prettier and ESLint --fix on staged files; tasks live in frontend/.lintstagedrc.json and
+# backend/.lintstagedrc.json. Enabled by `npm install` at the repo root
+# (scripts/install-git-hooks.mjs). Skip once with `git commit --no-verify`.
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- frontend/src backend/src)
+[ -n "$staged" ] || exit 0
+
+for pkg in frontend backend; do
+  printf '%s\n' "$staged" | grep -q "^$pkg/" || continue
+  if [ ! -d "$pkg/node_modules" ]; then
+    echo "pre-commit: $pkg/node_modules is missing — run npm install in $pkg/" >&2
+    echo "pre-commit: in a worktree, symlink it from the main checkout instead" >&2
+    exit 1
+  fi
+  # A node_modules symlinked from the main checkout lags behind until that checkout reinstalls,
+  # and a Prettier other than the lockfile's would format the staged files unlike CI.
+  mismatch=$(node -e '
+    const read = (file) => { try { return JSON.parse(require("fs").readFileSync(file, "utf8")); } catch { return {}; } };
+    const pkg = process.argv[1];
+    const want = read(`${pkg}/package-lock.json`).packages?.["node_modules/prettier"]?.version;
+    const have = read(`${pkg}/node_modules/prettier/package.json`).version;
+    if (want && want !== have) console.log(`${have ? `prettier ${have}` : "no prettier"}, ${pkg}/package-lock.json has ${want}`);
+  ' "$pkg")
+  if [ -n "$mismatch" ]; then
+    echo "pre-commit: $pkg/node_modules has $mismatch — run npm install in $(dirname "$(cd -P "$pkg/node_modules" && pwd)")" >&2
+    exit 1
+  fi
+done
+
+# A worktree without its own root install borrows the main checkout's.
+lint_staged=node_modules/.bin/lint-staged
+[ -x "$lint_staged" ] || lint_staged="$(dirname "$(git rev-parse --git-common-dir)")/node_modules/.bin/lint-staged"
+if [ ! -x "$lint_staged" ]; then
+  echo "pre-commit: lint-staged is not installed — run npm install at the repo root" >&2
+  exit 1
+fi
+
+# The stash stack is shared by all worktrees and sessions, so lint-staged runs with --no-stash.
+# Except when some file is partially staged: lint-staged hides the unstaged hunks of every such
+# file while its tasks run, and after a failed --no-stash run it does not put them back
+# (lint-staged 16.4), so its backup stash stays on then.
+if git status --porcelain --untracked-files=no | grep -q '^[^ ?][^ ?]'; then
+  exec "$lint_staged"
+fi
+exec "$lint_staged" --no-stash

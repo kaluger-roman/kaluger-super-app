@@ -3,10 +3,7 @@ import type { UpdateLessonDto } from "../../types";
 import { truncateToMinute } from "../../utils/time";
 import type { PreparedLessonUpdate } from "./lessonUpdate.types";
 
-export const resolveUpdatedTimes = (
-  updateData: UpdateLessonDto,
-  existingLesson: Lesson,
-) => ({
+export const resolveUpdatedTimes = (updateData: UpdateLessonDto, existingLesson: Lesson) => ({
   start: updateData.startTime
     ? truncateToMinute(new Date(updateData.startTime))
     : truncateToMinute(new Date(existingLesson.startTime)),
@@ -20,7 +17,7 @@ export const computeUpdatedStatus = (
   existingLesson: Lesson,
   start: Date,
   end: Date,
-  now: Date,
+  now: Date
 ): UpdateLessonDto["status"] | undefined => {
   if (updateData.status === "CANCELLED") {
     return undefined;
@@ -40,10 +37,7 @@ export const computeUpdatedStatus = (
 export const isTimeChanging = (updateData: UpdateLessonDto) =>
   !!(updateData.startTime || updateData.endTime);
 
-export const shouldShiftRecurringSeries = (
-  updateData: UpdateLessonDto,
-  existingLesson: Lesson,
-) =>
+export const shouldShiftRecurringSeries = (updateData: UpdateLessonDto, existingLesson: Lesson) =>
   existingLesson.isRecurring &&
   isTimeChanging(updateData) &&
   existingLesson.status === "SCHEDULED" &&
@@ -51,7 +45,7 @@ export const shouldShiftRecurringSeries = (
 
 export const shouldPropagateRecurringPrice = (
   updateData: UpdateLessonDto,
-  existingLesson: Lesson,
+  existingLesson: Lesson
 ) =>
   existingLesson.isRecurring &&
   Object.prototype.hasOwnProperty.call(updateData, "price") &&
@@ -62,16 +56,10 @@ export const buildLessonUpdateData = (
   updateData: UpdateLessonDto,
   existingLesson: Lesson,
   isLinkingStudent: boolean,
-  now: Date = truncateToMinute(new Date()),
+  now: Date = truncateToMinute(new Date())
 ): PreparedLessonUpdate => {
   const { start, end } = resolveUpdatedTimes(updateData, existingLesson);
-  const computedStatus = computeUpdatedStatus(
-    updateData,
-    existingLesson,
-    start,
-    end,
-    now,
-  );
+  const computedStatus = computeUpdatedStatus(updateData, existingLesson, start, end, now);
 
   return {
     start,

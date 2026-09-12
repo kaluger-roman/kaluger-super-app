@@ -37,7 +37,7 @@ export const LessonsYear = memo<LessonsYearProps>(
   }) => {
     const sortedMonths = useMemo(
       () => sortMonths(Object.entries(yearData), type),
-      [yearData, type],
+      [yearData, type]
     );
 
     const handleToggleYear = useCallback(() => {
@@ -48,7 +48,7 @@ export const LessonsYear = memo<LessonsYearProps>(
       (month: string) => {
         onToggleMonth(year, month);
       },
-      [onToggleMonth, year],
+      [onToggleMonth, year]
     );
 
     return (
@@ -85,7 +85,7 @@ export const LessonsYear = memo<LessonsYearProps>(
         </Collapse>
       </Fragment>
     );
-  },
+  }
 );
 
 LessonsYear.displayName = "LessonsYear";

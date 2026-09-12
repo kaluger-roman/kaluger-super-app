@@ -19,10 +19,7 @@ export const VerifyStep: FC = () => {
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const codeArray = code
-    .padEnd(CODE_LENGTH, " ")
-    .split("")
-    .slice(0, CODE_LENGTH);
+  const codeArray = code.padEnd(CODE_LENGTH, " ").split("").slice(0, CODE_LENGTH);
 
   const handleInputChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -44,10 +41,7 @@ export const VerifyStep: FC = () => {
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, CODE_LENGTH);
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
     actions.codeChanged(pastedData);
     const nextEmptyIndex = Math.min(pastedData.length, CODE_LENGTH - 1);
     inputRefs.current[nextEmptyIndex]?.focus();

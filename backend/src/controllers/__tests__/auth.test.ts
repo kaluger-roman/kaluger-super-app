@@ -28,13 +28,9 @@ describe("Auth Controller", () => {
 
   describe("register", () => {
     it("returns 400 when required fields missing", async () => {
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "a@b" });
+      const res = await request(app).post("/api/auth/register").send({ email: "a@b" });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Email, пароль и имя обязательны для заполнения",
-      );
+      expect(res.body.error).toBe("Email, пароль и имя обязательны для заполнения");
     });
 
     it("returns 400 on invalid email or password", async () => {
@@ -56,8 +52,7 @@ describe("Auth Controller", () => {
       const res = await request(app)
         .post("/api/auth/register")
         .send({
-          email: (await prisma.user.findUnique({ where: { id: userId } }))!
-            .email,
+          email: (await prisma.user.findUnique({ where: { id: userId } }))!.email,
           password: "Password1",
           name: "Name",
         });
@@ -105,9 +100,7 @@ describe("Auth Controller", () => {
 
   describe("login", () => {
     it("returns 400 when missing fields", async () => {
-      const res = await request(app)
-        .post("/api/auth/login")
-        .send({ email: "a@b" });
+      const res = await request(app).post("/api/auth/login").send({ email: "a@b" });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Email и пароль обязательны для заполнения");
     });
@@ -154,9 +147,7 @@ describe("Auth Controller", () => {
         data: { isEmailVerified: true },
       });
 
-      const res = await request(app)
-        .post("/api/auth/login")
-        .send({ email, password });
+      const res = await request(app).post("/api/auth/login").send({ email, password });
       expect(res.status).toBe(200);
       expect(res.body.token).toBeDefined();
       expect(res.body.user.email).toBe(normalizedEmail);
@@ -166,9 +157,7 @@ describe("Auth Controller", () => {
       expect(res.body.user.isEmailVerified).toBe(true);
 
       // cleanup
-      await prisma.user
-        .delete({ where: { email: normalizedEmail } })
-        .catch(() => undefined);
+      await prisma.user.delete({ where: { email: normalizedEmail } }).catch(() => undefined);
     });
 
     it("login should accept email with different letter case (regression: case-insensitive login)", async () => {
@@ -195,9 +184,7 @@ describe("Auth Controller", () => {
       expect(res.status).toBe(200);
       expect(res.body.user.email).toBe(normalizedEmail);
 
-      await prisma.user
-        .delete({ where: { email: normalizedEmail } })
-        .catch(() => undefined);
+      await prisma.user.delete({ where: { email: normalizedEmail } }).catch(() => undefined);
     });
 
     it("returns 403 when email not verified", async () => {
@@ -209,17 +196,13 @@ describe("Auth Controller", () => {
         .send({ email, password, name: "L" })
         .expect(201);
 
-      const res = await request(app)
-        .post("/api/auth/login")
-        .send({ email, password });
+      const res = await request(app).post("/api/auth/login").send({ email, password });
 
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/Email не подтвержден/);
 
       // cleanup
-      await prisma.user
-        .delete({ where: { email: email.toLowerCase() } })
-        .catch(() => undefined);
+      await prisma.user.delete({ where: { email: email.toLowerCase() } }).catch(() => undefined);
     });
   });
 
@@ -251,9 +234,7 @@ describe("Auth Controller", () => {
     it("returns 500 on database error", async () => {
       // Mock prisma to throw an error
       const originalFindUnique = prisma.user.findUnique;
-      prisma.user.findUnique = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+      prisma.user.findUnique = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       try {
         const res = await request(app)
@@ -351,9 +332,7 @@ describe("Auth Controller", () => {
         .send({ taxEnabled: true });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Чтобы включить учёт налога, добавьте хотя бы один период",
-      );
+      expect(res.body.error).toBe("Чтобы включить учёт налога, добавьте хотя бы один период");
     });
 
     it("enables taxEnabled when user has at least one period", async () => {
@@ -409,9 +388,7 @@ describe("Auth Controller", () => {
   describe("error handling", () => {
     it("handles database errors in register", async () => {
       const originalFindUnique = prisma.user.findUnique;
-      prisma.user.findUnique = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+      prisma.user.findUnique = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       const res = await request(app).post("/api/auth/register").send({
         email: faker.internet.email(),
@@ -427,9 +404,7 @@ describe("Auth Controller", () => {
 
     it("handles database errors in login", async () => {
       const originalFindUnique = prisma.user.findUnique;
-      prisma.user.findUnique = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+      prisma.user.findUnique = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       const res = await request(app).post("/api/auth/login").send({
         email: "test@example.com",

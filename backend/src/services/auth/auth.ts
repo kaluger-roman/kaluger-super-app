@@ -55,10 +55,7 @@ export const registerUser = async ({
   return toPublicUser(user);
 };
 
-export const loginUser = async ({
-  email,
-  password,
-}: LoginUserInput): Promise<LoginUserResult> => {
+export const loginUser = async ({ email, password }: LoginUserInput): Promise<LoginUserResult> => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     throw new InvalidCredentialsError();
@@ -91,7 +88,7 @@ export const getUserProfile = (userId: string): Promise<ProfileUser | null> =>
 
 export const updateUserProfile = (
   userId: string,
-  { name, taxEnabled }: UpdateProfileInput,
+  { name, taxEnabled }: UpdateProfileInput
 ): Promise<ProfileUser> =>
   prisma.$transaction(async (tx) => {
     if (taxEnabled === true) {

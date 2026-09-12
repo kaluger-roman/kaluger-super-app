@@ -33,8 +33,7 @@ export const StudentContacts: FC<StudentContactsProps> = ({ student }) => (
     {student.parentPhone && (
       <Typography variant="body2" color="text.secondary">
         Родители: {student.parentName ? `${student.parentName} — ` : ""}
-        {student.parentPhone} (
-        {CONTACT_METHOD_LABELS[student.parentContactMethod ?? "WHATSAPP"]})
+        {student.parentPhone} ({CONTACT_METHOD_LABELS[student.parentContactMethod ?? "WHATSAPP"]})
       </Typography>
     )}
     {student.parentContactMethod === "TELEGRAM" && student.parentTelegramNick && (

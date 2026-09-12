@@ -32,8 +32,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
     (field: string) =>
     (
       event:
-        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-        | { target: { value: unknown } }
+        React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
     ) => {
       const target = (event as { target?: { value?: unknown } }).target;
       const value = target?.value ?? "";

@@ -276,12 +276,10 @@ describe("lessonCancellation.model", () => {
         resolveA = resolve;
       });
 
-      vi.mocked(lessonsApi.getCancellationInfo).mockImplementation(
-        async (id: string) => {
-          if (id === "lesson-A") return promiseA;
-          return infoB;
-        },
-      );
+      vi.mocked(lessonsApi.getCancellationInfo).mockImplementation(async (id: string) => {
+        if (id === "lesson-A") return promiseA;
+        return infoB;
+      });
 
       // Fire both events through scopeBind (no allSettled): allSettled would
       // wait for *all* pending effects in the scope to settle, which dead-

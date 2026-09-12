@@ -299,7 +299,6 @@ describe("studentsFeedback.model", () => {
         type: "error",
       });
     });
-
   });
 
   describe("updateStudentFx error", () => {
@@ -433,7 +432,6 @@ describe("studentsFeedback.model", () => {
         type: "error",
       });
     });
-
   });
 
   describe("removeStudentFx error", () => {
@@ -549,6 +547,5 @@ describe("studentsFeedback.model", () => {
         type: "error",
       });
     });
-
   });
 });

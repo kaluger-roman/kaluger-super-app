@@ -105,7 +105,7 @@ sample({
   clock: notificationsModel.subscribePushFx.done,
   source: $isManualToggle,
   filter: (isManual) => isManual,
-  fn: () => ({ enabled: true } as Partial<ReminderSettings>),
+  fn: () => ({ enabled: true }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });
 
@@ -118,7 +118,7 @@ sample({
     canSub: $canSubscribe,
   },
   filter: ({ settings, subscribed, canSub }) => !settings.enabled && subscribed && canSub,
-  fn: () => ({ enabled: true } as Partial<ReminderSettings>),
+  fn: () => ({ enabled: true }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });
 
@@ -140,7 +140,7 @@ sample({
 // disabled, browser keeps active subscription).
 sample({
   clock: notificationsModel.unsubscribePushFx.done,
-  fn: () => ({ enabled: false } as Partial<ReminderSettings>),
+  fn: () => ({ enabled: false }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });
 
@@ -163,6 +163,6 @@ sample({
     subscribed: notificationsModel.$isPushSubscribed,
   },
   filter: ({ settings, subscribed }) => settings.enabled && !subscribed,
-  fn: () => ({ enabled: false } as Partial<ReminderSettings>),
+  fn: () => ({ enabled: false }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });

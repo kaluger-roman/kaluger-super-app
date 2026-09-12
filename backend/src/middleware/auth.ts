@@ -1,9 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
-import {
-  getCachedTokenVersion,
-  setCachedTokenVersion,
-} from "../lib/tokenVersionCache";
+import { getCachedTokenVersion, setCachedTokenVersion } from "../lib/tokenVersionCache";
 import type { JwtPayload } from "../types";
 import { verifyToken } from "../utils/auth";
 import { isValidTimezone } from "../utils/time";
@@ -12,11 +9,7 @@ export type AuthRequest = Request & {
   user?: JwtPayload;
 };
 
-export const authenticateToken = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -26,9 +19,7 @@ export const authenticateToken = async (
 
   const payload = verifyToken(token);
   if (!payload) {
-    return res
-      .status(401)
-      .json({ error: "Недействительный или истекший токен" });
+    return res.status(401).json({ error: "Недействительный или истекший токен" });
   }
 
   // Verify tokenVersion so password/email changes immediately revoke
@@ -71,12 +62,14 @@ export const authenticateToken = async (
   // protect downstream Date.toLocaleTimeString from RangeError)
   const timezone = req.headers["x-timezone"] as string | undefined;
   if (timezone && payload.userId && isValidTimezone(timezone)) {
-    prisma.user.update({
-      where: { id: payload.userId },
-      data: { timezone },
-    }).catch(() => {
-      // Non-critical, ignore errors
-    });
+    prisma.user
+      .update({
+        where: { id: payload.userId },
+        data: { timezone },
+      })
+      .catch(() => {
+        // Non-critical, ignore errors
+      });
   }
 
   next();

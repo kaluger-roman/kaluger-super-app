@@ -104,9 +104,7 @@ describe("studentCabinet controller", () => {
         },
       })
       .catch(() => undefined);
-    await prisma.student
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
+    await prisma.student.deleteMany({ where: { tutorId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
   });

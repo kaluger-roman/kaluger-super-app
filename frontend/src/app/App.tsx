@@ -10,21 +10,11 @@ import { useUnit } from "effector-react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
 import { studentUserModel, userModel } from "@entities";
-import {
-  getStudentToken,
-  theme,
-  NotificationProvider,
-  setNavigate,
-} from "@shared";
+import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
 import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
-import {
-  appInitModel,
-  blockingModel,
-  studentWebSocketModel,
-  webSocketModel,
-} from "./model";
+import { appInitModel, blockingModel, studentWebSocketModel, webSocketModel } from "./model";
 import type { BeforeInstallPromptEvent } from "./model/appInit.types";
 
 const AppRouter: FC = () => {
@@ -44,9 +34,7 @@ const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
   const isBlockingVisible = useUnit(blockingModel.$isBlockingVisible);
   const isAuthenticated = useUnit(userModel.$isAuthenticated);
-  const isStudentAuthenticated = useUnit(
-    studentUserModel.$isStudentAuthenticated
-  );
+  const isStudentAuthenticated = useUnit(studentUserModel.$isStudentAuthenticated);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");

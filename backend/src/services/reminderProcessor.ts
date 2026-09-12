@@ -102,7 +102,7 @@ export const processScheduledReminders = async () => {
     data: {
       status: "SENT" | "FAILED" | "CANCELLED";
       sentAt: Date | null;
-    },
+    }
   ) => {
     await prisma.scheduledReminder.updateMany({
       where: { id: reminderId, status: "PROCESSING", claimedAt: now },
@@ -149,9 +149,7 @@ export const processScheduledReminders = async () => {
 
       const user = userById.get(reminder.userId);
       const safeTimezone =
-        user?.timezone && isValidTimezone(user.timezone)
-          ? user.timezone
-          : undefined;
+        user?.timezone && isValidTimezone(user.timezone) ? user.timezone : undefined;
 
       // Build notification payload
       const payload: PushNotificationPayload = {
@@ -188,19 +186,16 @@ export const processScheduledReminders = async () => {
       }
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}:`, error);
-      await finalize(reminder.id, { status: "FAILED", sentAt: null }).catch(
-        (updateError) => {
-          console.error(
-            `Failed to mark reminder ${reminder.id} as FAILED:`,
-            updateError,
-          );
-        },
-      );
+      await finalize(reminder.id, { status: "FAILED", sentAt: null }).catch((updateError) => {
+        console.error(`Failed to mark reminder ${reminder.id} as FAILED:`, updateError);
+      });
       failedCount++;
     }
   }
 
   if (sentCount > 0 || cancelledCount > 0 || failedCount > 0) {
-    console.log(`Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled, ${failedCount} failed`);
+    console.log(
+      `Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled, ${failedCount} failed`
+    );
   }
 };

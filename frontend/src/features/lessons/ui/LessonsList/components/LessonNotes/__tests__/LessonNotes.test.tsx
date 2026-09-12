@@ -10,14 +10,8 @@ import { LessonNotes } from "../LessonNotes";
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
-const originalScrollHeight = Object.getOwnPropertyDescriptor(
-  HTMLElement.prototype,
-  "scrollHeight"
-);
-const originalClientHeight = Object.getOwnPropertyDescriptor(
-  HTMLElement.prototype,
-  "clientHeight"
-);
+const originalScrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+const originalClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
 
 const stubOverflow = ({ overflowing }: { overflowing: boolean }) => {
   Object.defineProperty(HTMLElement.prototype, "clientHeight", {
@@ -113,9 +107,10 @@ describe("LessonNotes", () => {
 
       await userEvent.click(toggle);
 
-      expect(
-        screen.getByRole("button", { name: "Свернуть заметку" })
-      ).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("button", { name: "Свернуть заметку" })).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      );
     });
 
     it("should keep expand state independent for each card", async () => {

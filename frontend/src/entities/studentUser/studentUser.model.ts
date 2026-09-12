@@ -45,9 +45,7 @@ const clearStudentSessionFx = createEffect(() => {
 // Stores
 export const $studentSession = createStore<StudentSession | null>(null);
 
-export const $isStudentAuthenticated = $studentSession.map(
-  (session) => session !== null
-);
+export const $isStudentAuthenticated = $studentSession.map((session) => session !== null);
 
 export const $isStudentEmailVerified = $studentSession.map((session) =>
   session ? session.isEmailVerified : false

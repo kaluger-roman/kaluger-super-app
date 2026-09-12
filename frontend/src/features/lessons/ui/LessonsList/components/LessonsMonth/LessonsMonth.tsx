@@ -52,7 +52,7 @@ export const LessonsMonth = memo<LessonsMonthProps>(
         </Collapse>
       </Fragment>
     );
-  },
+  }
 );
 
 LessonsMonth.displayName = "LessonsMonth";

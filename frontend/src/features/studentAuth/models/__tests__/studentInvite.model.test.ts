@@ -7,8 +7,7 @@ import { navigate, setStudentToken, studentAuthApi, studentInvitationsApi } from
 import * as model from "../studentInvite.model";
 
 vi.mock("@shared", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared")>("@shared");
+  const actual = await vi.importActual<typeof import("@shared")>("@shared");
   return {
     ...actual,
     studentInvitationsApi: {
@@ -39,9 +38,7 @@ describe("features/studentAuth/models/studentInvite.model", () => {
     const scope = fork();
     await allSettled(model.tokenSet, { scope, params: "raw-token" });
 
-    expect(studentInvitationsApi.validateToken).toHaveBeenCalledWith(
-      "raw-token"
-    );
+    expect(studentInvitationsApi.validateToken).toHaveBeenCalledWith("raw-token");
     expect(scope.getState(model.$validationState)).toEqual({
       valid: true,
       studentName: "Иван",
@@ -167,7 +164,10 @@ describe("features/studentAuth/models/studentInvite.model", () => {
   it("redirects to /student/cabinet when StudentInviteGate opens with an active session", async () => {
     const scope = fork({
       values: [
-        [studentUserModel.$studentSession, { id: "s-1", email: "e", name: "N", isEmailVerified: true, tutor: { name: "T" } }],
+        [
+          studentUserModel.$studentSession,
+          { id: "s-1", email: "e", name: "N", isEmailVerified: true, tutor: { name: "T" } },
+        ],
       ],
     });
 
@@ -230,10 +230,7 @@ describe("features/studentAuth/models/studentInvite.model", () => {
         [model.$email, "old@example.com"],
         [model.$password, "Old1234A"],
         [model.$passwordConfirmation, "Old1234A"],
-        [
-          model.$validationState,
-          { valid: true, studentName: "X", tutorName: "Y" },
-        ],
+        [model.$validationState, { valid: true, studentName: "X", tutorName: "Y" }],
       ],
     });
 

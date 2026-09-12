@@ -20,22 +20,16 @@ describe("TaxRateInfoTooltip", () => {
 
   it("renders an info button", () => {
     renderWithTheme(<TaxRateInfoTooltip breakdown={breakdown} />);
-    expect(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /подробности расчёта налога/i })).toBeInTheDocument();
   });
 
   it("shows breakdown items on hover", async () => {
     const user = userEvent.setup();
     renderWithTheme(<TaxRateInfoTooltip breakdown={breakdown} />);
 
-    await user.hover(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    );
+    await user.hover(screen.getByRole("button", { name: /подробности расчёта налога/i }));
 
-    expect(
-      await screen.findByText(/0%.*вне настроенных периодов/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/0%.*вне настроенных периодов/)).toBeInTheDocument();
     expect(screen.getByText(/4%.*=.*₽/)).toBeInTheDocument();
     expect(screen.getByText(/6%.*=.*₽/)).toBeInTheDocument();
   });

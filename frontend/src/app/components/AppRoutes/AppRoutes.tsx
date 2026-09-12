@@ -119,9 +119,7 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
         <Route path="/student/verify-email" element={<StudentVerifyEmailPage />} />
         <Route
           path="/student/cabinet"
-          element={
-            <StudentProtectedRoute element={<StudentCabinetLayout />} />
-          }
+          element={<StudentProtectedRoute element={<StudentCabinetLayout />} />}
         >
           <Route index element={<Navigate to="schedule" replace />} />
           <Route path="schedule" element={<StudentSchedulePage />} />

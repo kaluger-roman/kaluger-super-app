@@ -40,10 +40,7 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
   );
 
   return (
-    <Styled.StyledCard
-      variant="outlined"
-      onClick={onCardClick ? handleCardClick : undefined}
-    >
+    <Styled.StyledCard variant="outlined" onClick={onCardClick ? handleCardClick : undefined}>
       <Styled.StyledCardContent>
         <Styled.HeaderRow>
           <Styled.ContentColumn>
@@ -88,17 +85,11 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
               <LessonStatusIcons lesson={lesson} />
             </Styled.BottomRow>
 
-            {hasVisibleNotes(lesson.notes) && (
-              <LessonNotes notes={lesson.notes} />
-            )}
+            {hasVisibleNotes(lesson.notes) && <LessonNotes notes={lesson.notes} />}
           </Styled.ContentColumn>
 
           {onMenuClick && (
-            <IconButton
-              size="small"
-              aria-label="Меню урока"
-              onClick={handleMenuClick}
-            >
+            <IconButton size="small" aria-label="Меню урока" onClick={handleMenuClick}>
               <MoreVertIcon />
             </IconButton>
           )}

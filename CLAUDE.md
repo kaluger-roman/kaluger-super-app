@@ -17,6 +17,7 @@ npm test                 # All tests (vitest)
 npm run test -- path     # Single test file
 npm run lint             # ESLint
 npm run lint:fix         # ESLint autofix
+npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm run test:e2e         # Playwright E2E
 npm run find-cycle       # Circular dependency check (madge)
@@ -29,6 +30,8 @@ npm run dev              # Dev server (nodemon)
 npm run build            # TypeScript compile
 npm run lint             # ESLint (flat config)
 npm run lint:fix         # ESLint autofix
+npm run format           # Prettier write
+npm run format:check     # Prettier check
 npm test                 # All tests (jest)
 npm test -- --testPathPattern=path  # Single test file
 npm run db:migrate       # Prisma migrate dev
@@ -38,6 +41,13 @@ npm run db:seed          # Seed database
 npm run db:migrate:test  # Migrate test database (.env.test)
 npm run news:generate    # Save news entry as JSON file (--title, --content, --version)
 npm run news:sync        # Sync news JSON files to database (runs on deploy)
+```
+
+### Repo root
+
+```bash
+npm install              # lint-staged + enables the pre-commit hook for the main checkout and all worktrees
+node --test scripts/__tests__/  # Tests for scripts/ and .githooks/
 ```
 
 ## Architecture
@@ -107,6 +117,8 @@ Before committing code, you MUST verify:
 2. **ESLint clean** — `npm run lint` in `frontend/` and `backend/`
 3. **TypeScript clean** — `npm run build` in `backend/`
 4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
+
+The pre-commit hook (`.githooks/pre-commit`) runs `prettier --write`, `eslint --fix` and `prettier --write` again on staged `frontend/src` / `backend/src` files and re-stages the result; CI also runs `npm run format:check`. The hook sees only staged files, so the checks above still apply. It runs lint-staged with `--no-stash` because the stash stack is shared by all worktrees, so the "Skipping backup because `--no-stash` was used. This might result in data loss." warning is expected; if any file is partially staged, the hook keeps lint-staged's backup stash instead, since a failed `--no-stash` run would not restore the unstaged hunks. It needs `frontend/node_modules` / `backend/node_modules` — in a fresh worktree, symlink them from the main checkout. It also stops the commit when a staged package's installed Prettier differs from its `package-lock.json` (typically a main checkout pulled without `npm install`); run `npm install` in the directory the hint names. If it fails, fix the cause; do not commit with `--no-verify` unless the user asks.
 
 ## Testing Requirements
 

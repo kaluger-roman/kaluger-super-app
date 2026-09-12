@@ -1,24 +1,15 @@
 import type { Prisma } from "@prisma/client";
 import type { TaxRatePeriodDto } from "../../types";
 import { buildTaxBreakdown } from "../taxRate";
-import type {
-  DateRange,
-  PaidLessonForTax,
-  TaxSummary,
-  TaxUser,
-} from "./statistics.types";
+import type { DateRange, PaidLessonForTax, TaxSummary, TaxUser } from "./statistics.types";
 
-export const decimalToNumber = (value: Prisma.Decimal | null | undefined) =>
-  value?.toNumber() ?? 0;
+export const decimalToNumber = (value: Prisma.Decimal | null | undefined) => value?.toNumber() ?? 0;
 
 // Lessons that contributed money in the filter window. Primary signal
 // is `paymentDate`, but legacy/imported lessons may be marked as paid
 // without one — for those we fall back to `startTime` so the income
 // still surfaces in the period it was earned.
-export const paidInRangeWhere = (
-  userId: string,
-  range: DateRange,
-): Prisma.LessonWhereInput => ({
+export const paidInRangeWhere = (userId: string, range: DateRange): Prisma.LessonWhereInput => ({
   tutorId: userId,
   isPaid: true,
   price: { gt: 0 },
@@ -28,7 +19,7 @@ export const paidInRangeWhere = (
 export const computeTaxSummary = (
   user: TaxUser | null,
   paidLessons: PaidLessonForTax[] | null,
-  range: DateRange,
+  range: DateRange
 ): TaxSummary => {
   if (!user?.taxEnabled || !paidLessons) {
     return { taxAmount: null, taxBreakdown: null };

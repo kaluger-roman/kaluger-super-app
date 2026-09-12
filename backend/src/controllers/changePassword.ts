@@ -7,13 +7,10 @@ import type { ChangePasswordDto } from "../types";
 export const changePassword = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { currentPassword, newPassword, confirmPassword } =
-      req.body as ChangePasswordDto;
+    const { currentPassword, newPassword, confirmPassword } = req.body as ChangePasswordDto;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      return res
-        .status(400)
-        .json({ error: "Все поля обязательны для заполнения" });
+      return res.status(400).json({ error: "Все поля обязательны для заполнения" });
     }
 
     if (newPassword !== confirmPassword) {

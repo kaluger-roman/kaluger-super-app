@@ -38,7 +38,10 @@ describe("InstallPrompt", () => {
   });
 
   it("should show Chrome install banner when beforeinstallprompt fires", () => {
-    const mockPrompt = { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: "accepted" as const }) };
+    const mockPrompt = {
+      prompt: vi.fn(),
+      userChoice: Promise.resolve({ outcome: "accepted" as const }),
+    };
 
     const scope = fork({
       values: [
@@ -90,7 +93,10 @@ describe("InstallPrompt", () => {
 
   it("should dismiss Chrome banner on close", async () => {
     const user = userEvent.setup();
-    const mockPrompt = { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: "accepted" as const }) };
+    const mockPrompt = {
+      prompt: vi.fn(),
+      userChoice: Promise.resolve({ outcome: "accepted" as const }),
+    };
 
     const scope = fork({
       values: [

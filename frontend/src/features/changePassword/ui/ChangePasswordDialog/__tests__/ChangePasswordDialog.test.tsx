@@ -27,7 +27,7 @@ const renderWithProviders = (scope: ReturnType<typeof fork>) =>
       <ThemeProvider theme={theme}>
         <ChangePasswordDialog />
       </ThemeProvider>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("ChangePasswordDialog — forgot password link", () => {

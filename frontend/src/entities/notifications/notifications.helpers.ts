@@ -1,6 +1,9 @@
 import type { ReminderSettings } from "./notifications.types";
 
-export const toggleInterval = (settings: ReminderSettings, interval: number): Partial<ReminderSettings> => {
+export const toggleInterval = (
+  settings: ReminderSettings,
+  interval: number
+): Partial<ReminderSettings> => {
   const newIntervals = settings.intervals.includes(interval)
     ? settings.intervals.filter((i) => i !== interval)
     : [...settings.intervals, interval];

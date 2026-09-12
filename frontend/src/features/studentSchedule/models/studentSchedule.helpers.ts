@@ -20,19 +20,15 @@ export const formatRangeLabel = (weekStart: Date | string): string =>
 
 export const groupLessonsByDay = (
   lessons: StudentVisibleLesson[]
-): Record<string, StudentVisibleLesson[]> =>
-  groupByDay(lessons, (lesson) => lesson.startTime);
+): Record<string, StudentVisibleLesson[]> => groupByDay(lessons, (lesson) => lesson.startTime);
 
 export const formatLessonTime = formatTime;
 export const formatLessonDuration = formatDuration;
 
-export const subjectLabel = (
-  subject: StudentVisibleLesson["subject"]
-): string => (subject === "MATHEMATICS" ? "Математика" : "Физика");
+export const subjectLabel = (subject: StudentVisibleLesson["subject"]): string =>
+  subject === "MATHEMATICS" ? "Математика" : "Физика";
 
-export const statusLabel = (
-  status: StudentVisibleLesson["status"]
-): string => {
+export const statusLabel = (status: StudentVisibleLesson["status"]): string => {
   switch (status) {
     case "SCHEDULED":
       return "Запланирован";

@@ -26,19 +26,15 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
 
     const isWeekly = params.weekly === "true";
     const pagination =
-      isWeekly || params.noPagination === "true"
-        ? null
-        : parseLessonsPagination(params);
+      isWeekly || params.noPagination === "true" ? null : parseLessonsPagination(params);
 
     const { lessons, total, paymentsSummary } = await fetchLessonsPage(
       buildLessonsWhere(userId, params),
       {
         orderAsc: params.upcoming === "true" || isWeekly,
         pagination,
-        withPaymentsSummary: Boolean(
-          params.paymentDateFrom || params.paymentDateTo,
-        ),
-      },
+        withPaymentsSummary: Boolean(params.paymentDateFrom || params.paymentDateTo),
+      }
     );
 
     res.json({

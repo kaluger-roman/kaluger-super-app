@@ -1,9 +1,4 @@
-import {
-  createEffect,
-  createEvent,
-  createStore,
-  sample,
-} from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 
 import { studentUserModel, userModel } from "@entities";
 import { loginFormModel } from "@features/auth/models";
@@ -17,8 +12,7 @@ export const studentLoginRequested = createEvent<StudentLoginRequest>();
 export const $studentLoginError = createStore<string | null>(null);
 
 export const studentLoginFx = createEffect(
-  async (dto: StudentLoginRequest): Promise<StudentAuthResponse> =>
-    studentAuthApi.login(dto)
+  async (dto: StudentLoginRequest): Promise<StudentAuthResponse> => studentAuthApi.login(dto)
 );
 
 const persistStudentTokenFx = createEffect((data: StudentAuthResponse) => {

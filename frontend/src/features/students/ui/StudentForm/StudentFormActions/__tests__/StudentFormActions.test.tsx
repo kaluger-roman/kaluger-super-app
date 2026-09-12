@@ -534,7 +534,7 @@ describe("StudentFormActions", () => {
               isMobile={false}
               onClose={mockOnClose}
               onDelete={mockOnDelete}
-          onSubmit={mockOnSubmit}
+              onSubmit={mockOnSubmit}
             />
           </ThemeProvider>
         </Provider>

@@ -17,15 +17,17 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23), `check-file` naming (#25), `jest` focused/disabled tests (#26) | lint + `tsc --noEmit` |
-| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) + `check-file` naming (#25) + `jest` test rules (#26) | lint + `tsc` build |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23), `check-file` naming (#25), `jest` focused/disabled tests (#26) | lint + `tsc --noEmit` + `format:check` |
+| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) + `check-file` naming (#25) + `jest` test rules (#26) | lint + `tsc` build + `format:check` |
 | landing | flat config | lint + tsc + test |
+
+Pre-commit (#27): `.githooks/pre-commit` → `lint-staged` runs `prettier --write` + `eslint --fix` on staged `frontend/src` / `backend/src` files.
 
 Three biggest gaps driving this work:
 
 1. ~~**Backend is not linted at all**~~ — closed by PR3 (`eslint.config.mjs` + `lint` script + CI step).
 2. ~~**Effector rules are marked "ESLint enforced" but are not**~~ — closed by PR2 (`eslint-plugin-effector@0.16.0`).
-3. **No pre-commit hook** — lint runs only in CI, so violations are caught late. "Catch reliably" needs `lint-staged` (Milestone 6).
+3. ~~**No pre-commit hook**~~ — closed by PR7 (`.githooks/pre-commit` + `lint-staged`, Milestone 6).
 
 ---
 
@@ -35,7 +37,7 @@ Three biggest gaps driving this work:
 | --- | --- | --- | --- | --- |
 | 0.1 | Scaffold ESLint (flat config + `typescript-eslint`) + `lint` script + CI step | backend | ✅ PR3 | eslint 9 + `typescript-eslint` 8 + `eslint-plugin-import`; non-type-aware (no `project`) so CI lint needs no `prisma generate` |
 | 0.2 | Remove duplicate `plugins` key (`.eslintrc.js` lines 9–10) | frontend | ✅ PR1 | first line was dead |
-| 0.3 | `husky` + `lint-staged` on commit | repo | TODO | do after core rules adopted |
+| 0.3 | `husky` + `lint-staged` on commit | repo | ✅ PR7 | done as #27: `lint-staged` from a committed `.githooks/pre-commit`, no husky (see Milestone 6 notes) |
 | 0.4 | tsconfig: `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch` | both | TODO | compiler-level guarantees |
 
 ---
@@ -160,8 +162,18 @@ Notes:
 
 | # | Task | Status |
 | --- | --- | --- |
-| 27 | `husky` + `lint-staged` (lint + format on staged files) | TODO |
-| 28 | Backend lint + `format:check` in CI | TODO |
+| 27 | Pre-commit hook: `lint-staged` runs `prettier --write` + `eslint --fix` on staged `frontend/src` / `backend/src` files | ✅ PR7 |
+| 28 | `format:check` in CI for frontend and backend (backend lint is in CI since PR3) | ✅ PR7 — **318 files** reformatted once: frontend 172 (+640/−1162), backend 146 (+827/−2015) |
+
+**PR7 (branch `worktree-chore-lint-m6-enforcement`): #27, #28.** Milestone 6 closed.
+
+Notes:
+- **#27 no husky** — husky 9 sets a relative `core.hooksPath=.husky/_` and generates `.husky/_/` on `npm install`. Tasks here run in fresh worktrees with symlinked `node_modules`, where `.husky/_` would not exist, so hooks would silently not run. On top of that, Claude Code rewrites a relative `core.hooksPath` into an absolute path under the main checkout whenever it creates a worktree (seen in its worktree setup code; this repo's `.git/config` already carries such an absolute `hooksPath`). Instead, `npm install` at the root (`prepare` → `scripts/install-git-hooks.mjs`) writes a small dispatcher into the shared hooks dir. Git starts it at the root of the worktree being committed, and it execs that tree's own `.githooks/pre-commit`; branches without `.githooks/` are unaffected. The installer writes only into a hooks dir set up for this repository: it skips a `core.hooksPath` from the global or system git config (that dir serves every repository on the machine) and any `.githooks/` directory (a dispatcher there would exec itself).
+- **#27 lint-staged** — installed at the repo root: `lint-staged@16` (Node ≥ 20.17; 17.x needs Node 22). One config per package (`frontend/.lintstagedrc.json`, `backend/.lintstagedrc.json`). With several configs, lint-staged runs each group's tasks in its config's directory (the frontend ESLint config needs that for `parserOptions.project: ./tsconfig.json`) and resolves `eslint` / `prettier` from that package's `node_modules/.bin`. With a single config it would run them from the repo root and match its globs from there, so dropping one of the two configs silently disables the other. When a worktree has no root `node_modules`, the hook uses the main checkout's, so worktrees only need `frontend/` / `backend/` `node_modules`. Those are often symlinked from the main checkout, which lags behind after a pull until it is reinstalled, so the hook compares each staged package's installed Prettier with its `package-lock.json` and stops on a mismatch rather than format with a different Prettier than CI's `format:check` (found by the local code review, `iter-2.json`). The root `package-lock.json` would make Next.js take the repo root as the workspace root of `landing/`, so `landing/next.config.ts` pins `turbopack.root` (the build output is unchanged).
+- **#27 stash** — the stash stack is shared by all worktrees and parallel sessions, so the hook runs `lint-staged --no-stash`, and a failed run leaves the tasks' fixes in the index instead of reverting them. The exception is a partially staged file anywhere in the repo: while its tasks run, lint-staged hides the unstaged hunks of every such file, and after a failed `--no-stash` run lint-staged 16.4 does not put them back (`restoreUnstagedChangesSkipped` in `lib/state.js` has a no-op `false` where a `return` was meant), leaving them only in a patch file that the next run overwrites. So with a partially staged file the hook keeps lint-staged's backup stash, which restores everything on failure and is dropped afterwards. Found by the local code review (`docs/code-reviews/worktree-chore-lint-m6-enforcement/iter-1.json`).
+- **#27 scope** — globs mirror `npm run lint` / `format:check`: ESLint on `src/**/*.{ts,tsx}` (frontend) and `src/**/*.ts` (backend), Prettier on the same plus `js,jsx,json,css,md` in frontend. `frontend/e2e/**` waits for Milestone 7. Prettier runs before ESLint, so `max-lines` counts the formatted file, and once more after `eslint --fix` to format its fixes.
+- **#28 Prettier 3** — frontend moved from 2.8.8 to 3.x and backend got the same version. The config moved from `frontend/.prettierrc` to the repo root, so both packages share one (CI path filters include `.prettierrc`). Most of the churn was code wrapped at 80 columns: backend had no Prettier config (80 is Prettier's default), and much of the frontend code was wrapped at 80 despite its `printWidth: 100` config. The one-off reformat is a separate commit listed in `.git-blame-ignore-revs`.
+- Hook and installer are tested in `scripts/__tests__/{pre-commit-hook,install-git-hooks}.test.mjs` (temp git repos with a stub `lint-staged`, plus one run of the real `lint-staged` for the partially staged case); a new `scripts` CI job installs the root dependencies and runs `node --test scripts/__tests__/`.
 
 ---
 

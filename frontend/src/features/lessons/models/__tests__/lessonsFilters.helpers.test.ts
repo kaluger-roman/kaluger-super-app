@@ -128,7 +128,12 @@ describe("buildPagedLessonParams", () => {
   it("should add page and limit to the filter params", () => {
     expect(
       buildPagedLessonParams(
-        { onlyUnpaid: false, onlyWithoutHomework: true, paymentDateFrom: null, paymentDateTo: null },
+        {
+          onlyUnpaid: false,
+          onlyWithoutHomework: true,
+          paymentDateFrom: null,
+          paymentDateTo: null,
+        },
         3,
         10
       )

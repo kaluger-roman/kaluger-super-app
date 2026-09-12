@@ -70,9 +70,7 @@ describe("updateStudent integration tests", () => {
       .send({ hourlyRate: -10 })
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Почасовая ставка должна быть положительной"
-        );
+        expect(res.body.error).toBe("Почасовая ставка должна быть положительной");
       });
   });
 
@@ -171,9 +169,7 @@ describe("updateStudent integration tests", () => {
     });
 
     const originalUpdate = prisma.student.update;
-    prisma.student.update = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.student.update = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .put(`/api/students/${student.id}`)

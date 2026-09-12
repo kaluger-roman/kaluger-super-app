@@ -56,9 +56,7 @@ describe("auth utils", () => {
     const original = process.env.JWT_SECRET;
     delete process.env.JWT_SECRET;
     try {
-      expect(() =>
-        generateToken({ userId: "u1", email: "a@b.c" })
-      ).toThrow(/JWT_SECRET/);
+      expect(() => generateToken({ userId: "u1", email: "a@b.c" })).toThrow(/JWT_SECRET/);
     } finally {
       process.env.JWT_SECRET = original;
     }

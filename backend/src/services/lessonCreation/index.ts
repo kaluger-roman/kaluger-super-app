@@ -1,8 +1,4 @@
-export {
-  createRecurringLessons,
-  createSingleLesson,
-  notifyLessonsCreated,
-} from "./lessonCreation";
+export { createRecurringLessons, createSingleLesson, notifyLessonsCreated } from "./lessonCreation";
 export {
   buildRecurringSlots,
   checkSchedulingConflicts,

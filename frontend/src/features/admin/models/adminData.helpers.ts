@@ -9,10 +9,7 @@ export const isBackupSettingsValid = ({
   return hours >= 1 && hours <= 168 && mb >= 10 && mb <= 10000;
 };
 
-export const prepareBackupSettings = ({
-  intervalHours,
-  maxStorageMb,
-}: BackupSettingsInput) => ({
+export const prepareBackupSettings = ({ intervalHours, maxStorageMb }: BackupSettingsInput) => ({
   intervalHours: parseInt(intervalHours, 10),
   maxStorageMb: parseInt(maxStorageMb, 10),
 });

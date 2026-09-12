@@ -9,12 +9,7 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
     const { startDate, endDate } = req.query;
     const timezone = req.headers["x-timezone"] as string | undefined;
 
-    const where = buildStatisticsWhere(
-      userId!,
-      startDate as string,
-      endDate as string,
-      timezone
-    );
+    const where = buildStatisticsWhere(userId!, startDate as string, endDate as string, timezone);
 
     const studentStats = await prisma.lesson.groupBy({
       by: ["studentId"],

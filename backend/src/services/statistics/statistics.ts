@@ -2,15 +2,8 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
 import { ACTIVE_STATUSES, DAY_MS } from "./statistics.constants";
-import {
-  computeTaxSummary,
-  decimalToNumber,
-  paidInRangeWhere,
-} from "./statistics.helpers";
-import type {
-  LessonStatistics,
-  LessonStatisticsInput,
-} from "./statistics.types";
+import { computeTaxSummary, decimalToNumber, paidInRangeWhere } from "./statistics.helpers";
+import type { LessonStatistics, LessonStatisticsInput } from "./statistics.types";
 
 export const collectLessonStatistics = async ({
   userId,

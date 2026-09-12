@@ -10,9 +10,7 @@ export const StudentInviteForm: FC = () => {
   const name = useUnit(studentInviteModel.$name);
   const email = useUnit(studentInviteModel.$email);
   const password = useUnit(studentInviteModel.$password);
-  const passwordConfirmation = useUnit(
-    studentInviteModel.$passwordConfirmation
-  );
+  const passwordConfirmation = useUnit(studentInviteModel.$passwordConfirmation);
   const formErrors = useUnit(studentInviteModel.$formErrors);
   const validationState = useUnit(studentInviteModel.$validationState);
   const isRegistering = useUnit(studentInviteModel.$isRegistering);
@@ -28,8 +26,8 @@ export const StudentInviteForm: FC = () => {
       </Typography>
       {validationState?.valid && (
         <Typography variant="body2" color="text.secondary">
-          Преподаватель <strong>{validationState.tutorName}</strong> пригласил
-          вас зарегистрироваться. Заполните данные ниже.
+          Преподаватель <strong>{validationState.tutorName}</strong> пригласил вас
+          зарегистрироваться. Заполните данные ниже.
         </Typography>
       )}
 
@@ -79,9 +77,7 @@ export const StudentInviteForm: FC = () => {
           label="Подтверждение пароля"
           type="password"
           value={passwordConfirmation}
-          onChange={(e) =>
-            studentInviteModel.passwordConfirmationChanged(e.target.value)
-          }
+          onChange={(e) => studentInviteModel.passwordConfirmationChanged(e.target.value)}
           autoComplete="new-password"
           required
           fullWidth

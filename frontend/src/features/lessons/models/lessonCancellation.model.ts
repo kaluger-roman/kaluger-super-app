@@ -101,9 +101,9 @@ sample({
   filter: (cancellingLesson, lesson) =>
     Boolean(
       cancellingLesson &&
-        lesson &&
-        cancellingLesson.id === lesson.id &&
-        lesson.status === "CANCELLED"
+      lesson &&
+      cancellingLesson.id === lesson.id &&
+      lesson.status === "CANCELLED"
     ),
   fn: () => null,
   target: [$cancellingLesson, $cancellationInfo],

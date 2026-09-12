@@ -27,8 +27,7 @@ export type StudentFormFieldsProps = {
     field: string
   ) => (
     event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { value: unknown } }
+      React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
   ) => void;
   onGradeChange: (value: string) => void;
 };

@@ -1,17 +1,8 @@
 import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
-import {
-  createResetToken,
-  comparePassword,
-  hashPassword,
-  hashResetToken,
-} from "../../utils";
-import {
-  applyPasswordReset,
-  requestPasswordReset,
-  verifyResetToken,
-} from "../passwordReset";
+import { createResetToken, comparePassword, hashPassword, hashResetToken } from "../../utils";
+import { applyPasswordReset, requestPasswordReset, verifyResetToken } from "../passwordReset";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -134,7 +125,7 @@ describe("passwordReset service", () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "Password reset email failed",
-        expect.objectContaining({ userId }),
+        expect.objectContaining({ userId })
       );
 
       consoleSpy.mockRestore();
@@ -217,7 +208,9 @@ describe("passwordReset service", () => {
     };
 
     it("should reject when fields are missing", async () => {
-      await expect(applyPasswordReset("", VALID_NEW_PASSWORD, VALID_NEW_PASSWORD)).rejects.toMatchObject({
+      await expect(
+        applyPasswordReset("", VALID_NEW_PASSWORD, VALID_NEW_PASSWORD)
+      ).rejects.toMatchObject({
         statusCode: 400,
         message: "Все поля обязательны для заполнения",
       });
@@ -235,15 +228,14 @@ describe("passwordReset service", () => {
       const { token } = await createValidToken();
       await expect(applyPasswordReset(token, "short", "short")).rejects.toMatchObject({
         statusCode: 400,
-        message:
-          "Пароль должен содержать минимум 8 символов, заглавные и строчные буквы и цифру",
+        message: "Пароль должен содержать минимум 8 символов, заглавные и строчные буквы и цифру",
       });
     });
 
     it("should reject when new password equals current password", async () => {
       const { token } = await createValidToken();
       await expect(
-        applyPasswordReset(token, ORIGINAL_PASSWORD, ORIGINAL_PASSWORD),
+        applyPasswordReset(token, ORIGINAL_PASSWORD, ORIGINAL_PASSWORD)
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "Новый пароль должен отличаться от текущего",
@@ -278,7 +270,7 @@ describe("passwordReset service", () => {
       await applyPasswordReset(token, VALID_NEW_PASSWORD, VALID_NEW_PASSWORD);
 
       await expect(
-        applyPasswordReset(token, "AnotherPassword1", "AnotherPassword1"),
+        applyPasswordReset(token, "AnotherPassword1", "AnotherPassword1")
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "Эта ссылка уже была использована. Запросите новую",
@@ -289,7 +281,7 @@ describe("passwordReset service", () => {
       const fakeTokenHash = hashResetToken("unknown");
       const before = await prisma.user.findUnique({ where: { id: userId } });
       await expect(
-        applyPasswordReset("unknown", VALID_NEW_PASSWORD, VALID_NEW_PASSWORD),
+        applyPasswordReset("unknown", VALID_NEW_PASSWORD, VALID_NEW_PASSWORD)
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "Ссылка для сброса пароля недействительна",
@@ -307,9 +299,7 @@ describe("passwordReset service", () => {
       // findValidResetToken and the transaction (intercepting the
       // user.findUnique call that runs in between).
       const { token, recordId } = await createValidToken();
-      const findUniqueImpl = (async (
-        args: Parameters<typeof prisma.user.findUnique>[0],
-      ) => {
+      const findUniqueImpl = (async (args: Parameters<typeof prisma.user.findUnique>[0]) => {
         // Concurrent winner finishes its own apply: mark token used
         await prisma.passwordResetToken.update({
           where: { id: recordId },
@@ -318,13 +308,11 @@ describe("passwordReset service", () => {
         spy.mockRestore();
         return prisma.user.findUnique(args);
       }) as unknown as typeof prisma.user.findUnique;
-      const spy = jest
-        .spyOn(prisma.user, "findUnique")
-        .mockImplementationOnce(findUniqueImpl);
+      const spy = jest.spyOn(prisma.user, "findUnique").mockImplementationOnce(findUniqueImpl);
 
       try {
         await expect(
-          applyPasswordReset(token, VALID_NEW_PASSWORD, VALID_NEW_PASSWORD),
+          applyPasswordReset(token, VALID_NEW_PASSWORD, VALID_NEW_PASSWORD)
         ).rejects.toMatchObject({
           statusCode: 400,
           message: "Эта ссылка уже была использована. Запросите новую",
@@ -332,12 +320,8 @@ describe("passwordReset service", () => {
 
         const user = await prisma.user.findUnique({ where: { id: userId } });
         // Critical: password must NOT have been changed by the loser
-        expect(await comparePassword(VALID_NEW_PASSWORD, user!.password)).toBe(
-          false,
-        );
-        expect(await comparePassword(ORIGINAL_PASSWORD, user!.password)).toBe(
-          true,
-        );
+        expect(await comparePassword(VALID_NEW_PASSWORD, user!.password)).toBe(false);
+        expect(await comparePassword(ORIGINAL_PASSWORD, user!.password)).toBe(true);
       } finally {
         spy.mockRestore();
       }

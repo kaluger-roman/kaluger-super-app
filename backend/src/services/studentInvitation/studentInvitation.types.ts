@@ -2,16 +2,11 @@ export type IssueInvitationResult =
   | { ok: true; inviteUrl: string; expiresAt: Date }
   | {
       ok: false;
-      reason:
-        | "student_not_found"
-        | "not_owner"
-        | "archived"
-        | "already_registered";
+      reason: "student_not_found" | "not_owner" | "archived" | "already_registered";
     };
 
 export type RevokeInvitationResult =
-  | { ok: true; revoked: boolean }
-  | { ok: false; reason: "student_not_found" | "not_owner" };
+  { ok: true; revoked: boolean } | { ok: false; reason: "student_not_found" | "not_owner" };
 
 export type ValidateTokenResult =
   | {

@@ -25,10 +25,7 @@ const readTimezone = async (userId: string): Promise<string | null> => {
 
 // The timezone write in the middleware is fire-and-forget, so poll the row
 // instead of asserting right after the response.
-const waitForTimezone = async (
-  userId: string,
-  expected: string | null,
-): Promise<string | null> => {
+const waitForTimezone = async (userId: string, expected: string | null): Promise<string | null> => {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const timezone = await readTimezone(userId);
     if (timezone === expected) return timezone;
@@ -78,27 +75,21 @@ describe("authenticateToken middleware", () => {
   });
 
   it("should return 401 when Authorization header has no token", async () => {
-    const res = await request(app)
-      .get("/protected")
-      .set("Authorization", "Bearer");
+    const res = await request(app).get("/protected").set("Authorization", "Bearer");
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: "Токен доступа обязателен" });
   });
 
   it("should return 401 when the token is not a valid JWT", async () => {
-    const res = await request(app)
-      .get("/protected")
-      .set("Authorization", "Bearer invalid-token");
+    const res = await request(app).get("/protected").set("Authorization", "Bearer invalid-token");
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: "Недействительный или истекший токен" });
   });
 
   it("should call next and attach user when the token is valid", async () => {
-    const res = await request(app)
-      .get("/protected")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
@@ -108,9 +99,7 @@ describe("authenticateToken middleware", () => {
   it("should return 401 when the token's tokenVersion does not match the user's", async () => {
     const staleToken = generateToken({ userId, email, tokenVersion: 99 });
 
-    const res = await request(app)
-      .get("/protected")
-      .set("Authorization", `Bearer ${staleToken}`);
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${staleToken}`);
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: "Токен отозван" });
@@ -123,9 +112,7 @@ describe("authenticateToken middleware", () => {
       tokenVersion: 0,
     });
 
-    const res = await request(app)
-      .get("/protected")
-      .set("Authorization", `Bearer ${orphanToken}`);
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${orphanToken}`);
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: "Токен отозван" });

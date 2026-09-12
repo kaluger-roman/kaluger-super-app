@@ -21,8 +21,7 @@ export const issueAndSendStudentVerificationCode = async (
     where: { id: studentUserId },
   });
   if (!studentUser) return { ok: false, reason: "already_verified" };
-  if (studentUser.isEmailVerified)
-    return { ok: false, reason: "already_verified" };
+  if (studentUser.isEmailVerified) return { ok: false, reason: "already_verified" };
 
   const verificationCode = generateVerificationCode();
   const verificationCodeExpiry = getVerificationCodeExpiry();
@@ -54,13 +53,9 @@ export const verifyStudentEmailCode = async (
     where: { id: studentUserId },
   });
   if (!studentUser) return { ok: false, reason: "already_verified" };
-  if (studentUser.isEmailVerified)
-    return { ok: false, reason: "already_verified" };
+  if (studentUser.isEmailVerified) return { ok: false, reason: "already_verified" };
 
-  if (
-    !studentUser.verificationCode ||
-    !studentUser.verificationCodeExpiry
-  ) {
+  if (!studentUser.verificationCode || !studentUser.verificationCodeExpiry) {
     return { ok: false, reason: "no_active_code" };
   }
 
@@ -114,17 +109,13 @@ export const resendStudentVerificationCode = async (
     where: { id: studentUserId },
   });
   if (!studentUser) return { ok: false, reason: "already_verified" };
-  if (studentUser.isEmailVerified)
-    return { ok: false, reason: "already_verified" };
+  if (studentUser.isEmailVerified) return { ok: false, reason: "already_verified" };
 
   if (isWithinResendCooldown(studentUser.verificationCodeSentAt)) {
     const elapsedMs = studentUser.verificationCodeSentAt
       ? Date.now() - studentUser.verificationCodeSentAt.getTime()
       : 0;
-    const retryAfterSeconds = Math.max(
-      1,
-      RESEND_COOLDOWN_SECONDS - Math.floor(elapsedMs / 1000)
-    );
+    const retryAfterSeconds = Math.max(1, RESEND_COOLDOWN_SECONDS - Math.floor(elapsedMs / 1000));
     return { ok: false, reason: "cooldown", retryAfterSeconds };
   }
 

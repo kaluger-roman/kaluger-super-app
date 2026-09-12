@@ -29,14 +29,14 @@ describe("lessonsPaginationClamp.helpers — createLastPageParams", () => {
   };
 
   it("should target the last page and pass through filters and limit", () => {
-    expect(
-      createLastPageParams(filters, { total: 10, page: 2, limit: 10, totalPages: 1 })
-    ).toEqual({
-      page: 1,
-      limit: 10,
-      onlyUnpaid: false,
-      onlyWithoutHomework: true,
-    });
+    expect(createLastPageParams(filters, { total: 10, page: 2, limit: 10, totalPages: 1 })).toEqual(
+      {
+        page: 1,
+        limit: 10,
+        onlyUnpaid: false,
+        onlyWithoutHomework: true,
+      }
+    );
   });
 
   it("should omit payment date bounds when they are null", () => {
@@ -48,7 +48,11 @@ describe("lessonsPaginationClamp.helpers — createLastPageParams", () => {
 
   it("should include payment date bounds when they are set", () => {
     const params = createLastPageParams(
-      { ...filters, paymentDateFrom: new Date("2026-01-01"), paymentDateTo: new Date("2026-02-01") },
+      {
+        ...filters,
+        paymentDateFrom: new Date("2026-01-01"),
+        paymentDateTo: new Date("2026-02-01"),
+      },
       { total: 30, page: 5, limit: 10, totalPages: 3 }
     );
 
