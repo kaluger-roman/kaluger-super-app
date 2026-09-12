@@ -52,7 +52,7 @@ afterEach(() => {
   localStorage.removeItem(STUDENT_TOKEN_KEY);
 });
 
-describe("app/model/student-web-socket.model — disconnect race", () => {
+describe("app/model/studentWebSocket.model — disconnect race", () => {
   it("stores the WebSocket synchronously so an early disconnect closes the still-opening socket (regression: orphaned WS before onopen)", async () => {
     const scope = fork();
 
@@ -75,7 +75,7 @@ describe("app/model/student-web-socket.model — disconnect race", () => {
 // The reconnect delay lives in patronum's `delay`, whose internal effect stays
 // pending until the timer fires — `allSettled` calls that schedule a reconnect
 // are fire-and-forget, and the clock is driven explicitly.
-describe("app/model/student-web-socket.model — reconnect", () => {
+describe("app/model/studentWebSocket.model — reconnect", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

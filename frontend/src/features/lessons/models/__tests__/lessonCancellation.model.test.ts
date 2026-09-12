@@ -44,7 +44,7 @@ const createMockLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
   ...overrides,
 });
 
-describe("lesson-cancellation.model", () => {
+describe("lessonCancellation.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

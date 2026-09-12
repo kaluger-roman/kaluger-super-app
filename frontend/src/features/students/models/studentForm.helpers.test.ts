@@ -29,7 +29,7 @@ const mockStudent: Student = {
   updatedAt: "2024-12-20T15:30:00Z",
 };
 
-describe("student-form.helpers", () => {
+describe("studentForm.helpers", () => {
   describe("prepareFormDataForEdit", () => {
     it("should convert student data to form data", () => {
       const formData = prepareFormDataForEdit(mockStudent);

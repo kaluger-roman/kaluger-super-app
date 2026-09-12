@@ -33,7 +33,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("app/model/app-init.model", () => {
+describe("app/model/appInit.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

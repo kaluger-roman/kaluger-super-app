@@ -50,7 +50,7 @@ const createMockLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
   ...overrides,
 });
 
-describe("lesson-form.model", () => {
+describe("lessonForm.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

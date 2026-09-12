@@ -39,7 +39,7 @@ const createLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
   ...overrides,
 });
 
-describe("lessons-view-dialog.model", () => {
+describe("lessonsViewDialog.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

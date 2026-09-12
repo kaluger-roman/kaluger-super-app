@@ -26,7 +26,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/admin/models/admin-auth.model", () => {
+describe("features/admin/models/adminAuth.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

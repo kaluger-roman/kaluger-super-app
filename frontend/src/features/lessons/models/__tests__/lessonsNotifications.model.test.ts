@@ -8,7 +8,7 @@ import "../lessonsNotifications.model";
 
 const mockLesson = { id: "1" } as never;
 
-describe("lessons-notifications.model", () => {
+describe("lessonsNotifications.model", () => {
   describe("success notifications", () => {
     it("should show 'Урок создан' on addLessonFx.done", async () => {
       const fn = vi.fn();

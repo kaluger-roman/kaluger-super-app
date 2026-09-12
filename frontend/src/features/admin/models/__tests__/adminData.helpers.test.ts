@@ -5,7 +5,7 @@ import {
   prepareBackupSettings,
 } from "../adminData.helpers";
 
-describe("features/admin/models/admin-data.helpers", () => {
+describe("features/admin/models/adminData.helpers", () => {
   describe("isBackupSettingsValid", () => {
     it("should return true for valid settings", () => {
       expect(

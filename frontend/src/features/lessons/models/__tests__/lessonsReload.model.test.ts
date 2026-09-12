@@ -8,7 +8,7 @@ import { CANCELLED_TAB_INDEX, COMPLETED_TAB_INDEX, UPCOMING_TAB_INDEX } from "..
 import * as tabsModel from "../lessonsTabs.model";
 import * as viewModeModel from "../lessonsViewMode.model";
 
-describe("lessons-reload.model — removeLessonFx reload", () => {
+describe("lessonsReload.model — removeLessonFx reload", () => {
   it("should call loadUpcomingLessonsFx when on UPCOMING tab in paged mode", async () => {
     const loadUpcomingFn = vi.fn(() => Promise.resolve({ lessons: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
     const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));

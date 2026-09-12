@@ -15,7 +15,7 @@ const mockStudent: Student = {
   updatedAt: "2024-01-15T10:00:00Z",
 };
 
-describe("students-archive.model", () => {
+describe("studentsArchive.model", () => {
   beforeEach(() => {
     // Reset all mocks before each test
   });

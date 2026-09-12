@@ -24,7 +24,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/studentAuth/models/student-invite.model", () => {
+describe("features/studentAuth/models/studentInvite.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

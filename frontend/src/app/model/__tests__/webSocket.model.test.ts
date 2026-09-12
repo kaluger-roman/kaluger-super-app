@@ -28,7 +28,7 @@ const createScope = () => {
   return { scope, connectHandler };
 };
 
-describe("app/model/web-socket.model — reconnect", () => {
+describe("app/model/webSocket.model — reconnect", () => {
   it("does NOT reconnect when user logged out before the timer fires (regression: stale reconnect after logout)", async () => {
     const { scope, connectHandler } = createScope();
 

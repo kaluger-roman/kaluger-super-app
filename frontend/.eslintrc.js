@@ -330,8 +330,8 @@ module.exports = {
             },
         },
         {
-            // CRA entry point.
-            files: ["src/index.tsx"],
+            // Names fixed by CRA: the entry point and the generated env declarations.
+            files: ["src/index.tsx", "src/react-app-env.d.ts"],
             rules: {
                 "check-file/filename-naming-convention": "off",
             },
@@ -344,12 +344,11 @@ module.exports = {
             },
         },
         {
-            // CRA's react-app-env.d.ts is a bare `/// <reference>` with a kebab-case name —
-            // both by design. Only the empty-file rules and naming are lifted; enums etc. stay banned.
+            // CRA's react-app-env.d.ts is a bare `/// <reference>` — empty body by design.
+            // Only the empty-file rules are lifted; enums etc. stay banned.
             files: ["**/*.d.ts"],
             rules: {
                 "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, modelNamedImportRule],
-                "check-file/filename-naming-convention": "off",
             },
         },
         {

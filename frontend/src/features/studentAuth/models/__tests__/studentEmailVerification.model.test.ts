@@ -18,7 +18,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/studentAuth/models/student-email-verification.model", () => {
+describe("features/studentAuth/models/studentEmailVerification.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

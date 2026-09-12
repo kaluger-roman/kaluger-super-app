@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { createLastPageParams, isPageBeyondLastPage } from "../lessonsPaginationClamp.helpers";
 
-describe("lessons-pagination-clamp.helpers — isPageBeyondLastPage", () => {
+describe("lessonsPaginationClamp.helpers — isPageBeyondLastPage", () => {
   it("should return true when the page is beyond the last page", () => {
     expect(isPageBeyondLastPage({ total: 10, page: 2, limit: 10, totalPages: 1 })).toBe(true);
   });
@@ -20,7 +20,7 @@ describe("lessons-pagination-clamp.helpers — isPageBeyondLastPage", () => {
   });
 });
 
-describe("lessons-pagination-clamp.helpers — createLastPageParams", () => {
+describe("lessonsPaginationClamp.helpers — createLastPageParams", () => {
   const filters = {
     onlyUnpaid: false,
     onlyWithoutHomework: true,

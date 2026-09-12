@@ -15,7 +15,7 @@ import {
   resetPaymentDateFilter,
 } from "../lessonsFilters.model";
 
-describe("lessons-filters.model", () => {
+describe("lessonsFilters.model", () => {
   describe("basic stores", () => {
     it("should have correct initial values", () => {
       const scope = fork();

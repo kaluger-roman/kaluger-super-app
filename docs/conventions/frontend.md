@@ -30,13 +30,18 @@ import { Button } from "../../shared/ui";
 
 ## File Naming
 
+Covers `frontend/src/**`. E2E specs follow `docs/conventions/e2e-testing.md` and stay kebab-case (`create-student.spec.ts`).
+
 **PascalCase** — components and their companion files: `StudentCard/StudentCard.tsx`, `StudentCard.styled.ts`, `StudentCard.model.ts`
 **camelCase** — everything else: `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`. Files directly inside `api/`, `model/`, `models/`, `types/` are always camelCase
 **Folders** — camelCase, or PascalCase for a component folder. No kebab-case or snake_case in file or folder names
+**Exceptions** — names fixed by CRA: `src/index.tsx`, `src/react-app-env.d.ts`
 
-**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts(x)`, `.helpers.ts`, `.hooks.ts` (plus `index.ts`, `*.test.ts(x)`, `*.d.ts`). A plain `<name>.ts` is allowed only inside `api/` and `types/`, where the folder already names the role (`shared/api/lessons.ts`, `shared/types/auth.ts`)
+**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts(x)`, `.helpers.ts`, `.hooks.ts` (plus `index.ts`, `*.test.ts(x)`, `*.d.ts`, and test support files under `__tests__/` such as `src/__tests__/setup.ts`). A plain `<name>.ts` is allowed only inside `api/` and `types/`, where the folder already names the role (`shared/api/lessons.ts`, `shared/types/auth.ts`)
 
-ESLint enforced (`eslint-plugin-check-file`): file and folder name case and the extension allowlist. Test files may carry an extra qualifier (`PaymentStatus.component.test.tsx`) — only their case is checked.
+ESLint enforced (`eslint-plugin-check-file`): PascalCase for `*.tsx`; camelCase for `.ts` directly inside `api/`, `model/`, `models/`, `types/`; letters and digits only, starting with a letter, for every other `.ts` name and every folder (`__tests__` aside); the extension allowlist. Test files may carry an extra qualifier (`PaymentStatus.component.test.tsx`) — they are outside the allowlist, and only the name before the first dot is checked.
+
+Review-checked: a glob cannot tell a companion from a standalone module, so PascalCase vs camelCase for the remaining `.ts` files (`StudentCard.styled.ts` vs `dateFormat.helpers.ts`) and for folders (`StudentCard/` vs `lessons/`) is not linted.
 
 **Folder structure:**
 

@@ -23,7 +23,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/auth/models/register-form.model", () => {
+describe("features/auth/models/registerForm.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

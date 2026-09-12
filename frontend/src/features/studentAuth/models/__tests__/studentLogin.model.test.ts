@@ -20,7 +20,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/studentAuth/models/student-login.model", () => {
+describe("features/studentAuth/models/studentLogin.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

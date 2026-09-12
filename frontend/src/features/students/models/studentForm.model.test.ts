@@ -17,7 +17,7 @@ const mockStudent: Student = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
-describe("student-form.model", () => {
+describe("studentForm.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

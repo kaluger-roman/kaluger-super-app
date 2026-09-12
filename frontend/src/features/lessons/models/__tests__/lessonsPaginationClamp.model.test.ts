@@ -16,7 +16,7 @@ const respondWith = (total: number, limit: number, totalPages: number) =>
     })
   );
 
-describe("lessons-pagination-clamp.model", () => {
+describe("lessonsPaginationClamp.model", () => {
   it("should reload the last valid page when the requested page is now beyond totalPages", async () => {
     const loadUpcomingFn = respondWith(10, 10, 1);
 

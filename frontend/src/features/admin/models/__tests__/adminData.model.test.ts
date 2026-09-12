@@ -52,7 +52,7 @@ const mockBackupSettingsResponse: BackupSettingsFullResponse = {
   totalSizeMb: 1.5,
 };
 
-describe("features/admin/models/admin-data.model", () => {
+describe("features/admin/models/adminData.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

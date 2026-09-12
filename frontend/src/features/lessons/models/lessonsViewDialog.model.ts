@@ -17,7 +17,7 @@ export const cancelFromViewRequested = createEvent();
 export const restoreFromViewRequested = createEvent();
 export const rescheduleFromViewRequested = createEvent();
 export const deleteFromViewRequested = createEvent();
-// confirm dialog events/stores are provided by lessons-confirm-dialog.model
+// confirm dialog events/stores are provided by lessonsConfirmDialog.model
 export const openCancelConfirmForLesson = createEvent<Lesson>();
 export const openRestoreConfirmForLesson = createEvent<Lesson>();
 export const openDeleteConfirmForLesson = createEvent<Lesson>();
@@ -132,7 +132,7 @@ sample({
   target: lessonsDeleteDialogModel.$deleteDialogOpen,
 });
 
-// Logic - Confirm Dialog ($confirmDialog open/close is owned by lessons-confirm-dialog.model)
+// Logic - Confirm Dialog ($confirmDialog open/close is owned by lessonsConfirmDialog.model)
 sample({
   clock: openCancelConfirmForLesson,
   fn: (lesson): ConfirmDialogState => ({

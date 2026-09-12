@@ -20,7 +20,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("tax-rate-period.model", () => {
+describe("taxRatePeriod.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

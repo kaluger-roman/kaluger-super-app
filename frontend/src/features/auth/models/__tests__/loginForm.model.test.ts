@@ -28,7 +28,7 @@ vi.mock("@shared", async () => {
   };
 });
 
-describe("features/auth/models/login-form.model", () => {
+describe("features/auth/models/loginForm.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

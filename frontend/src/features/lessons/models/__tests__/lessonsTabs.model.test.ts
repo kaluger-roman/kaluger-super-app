@@ -11,7 +11,7 @@ import {
 import { ALL_TAB_INDEX } from "../lessonsTabs.constants";
 import { $currentTab, tabChanged } from "../lessonsTabs.model";
 
-describe("lessons-tabs.model", () => {
+describe("lessonsTabs.model", () => {
   describe("tabChanged", () => {
     it("should update $currentTab", async () => {
       const scope = fork();

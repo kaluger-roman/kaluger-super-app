@@ -29,7 +29,7 @@ const makeLesson = (
   ...overrides,
 });
 
-describe("features/studentSchedule/models/student-schedule.model", () => {
+describe("features/studentSchedule/models/studentSchedule.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
