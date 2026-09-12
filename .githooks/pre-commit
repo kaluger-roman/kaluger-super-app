@@ -1,5 +1,5 @@
 #!/bin/sh
-# ESLint --fix and Prettier on staged files; tasks live in frontend/.lintstagedrc.json and
+# Prettier and ESLint --fix on staged files; tasks live in frontend/.lintstagedrc.json and
 # backend/.lintstagedrc.json. Enabled by `npm install` at the repo root
 # (scripts/install-git-hooks.mjs). Skip once with `git commit --no-verify`.
 
@@ -22,7 +22,11 @@ if [ ! -x "$lint_staged" ]; then
   exit 1
 fi
 
-# --no-stash: the stash stack is shared by all worktrees and sessions. Partially staged files
-# are still safe: lint-staged hides their unstaged hunks in a patch under the worktree's git
-# dir and re-applies it after the tasks.
+# The stash stack is shared by all worktrees and sessions, so lint-staged runs with --no-stash.
+# Except when some file is partially staged: lint-staged hides the unstaged hunks of every such
+# file while its tasks run, and after a failed --no-stash run it does not put them back
+# (lint-staged 16.4), so its backup stash stays on then.
+if git status --porcelain --untracked-files=no | grep -q '^[^ ?][^ ?]'; then
+  exec "$lint_staged"
+fi
 exec "$lint_staged" --no-stash

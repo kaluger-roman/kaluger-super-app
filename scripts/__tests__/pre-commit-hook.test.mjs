@@ -1,15 +1,26 @@
 // Fixture-based test for .githooks/pre-commit. Run: node --test scripts/__tests__/
-// Real git in a temp repo; lint-staged is a stub that logs its arguments.
+// Real git in a temp repo; lint-staged is a stub that logs its arguments, except in the last
+// test, which runs the real one installed at the repo root.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const HOOK = join(dirname(dirname(dirname(fileURLToPath(import.meta.url)))), ".githooks", "pre-commit");
-const FAKE_LINT_STAGED = '#!/bin/sh\necho "$*" >> "$LINT_STAGED_LOG"\nexit "${LINT_STAGED_EXIT:-0}"\n';
+const REPO_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+const HOOK = join(REPO_ROOT, ".githooks", "pre-commit");
+const FAKE_LINT_STAGED = '#!/bin/sh\necho "[$*]" >> "$LINT_STAGED_LOG"\nexit "${LINT_STAGED_EXIT:-0}"\n';
 
 let root;
 let repo;
@@ -71,7 +82,7 @@ test("runs lint-staged with --no-stash for staged package sources", () => {
   const res = runHook();
 
   assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(lintStagedCalls(), ["--no-stash"]);
+  assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
 });
 
 test("fails the commit when lint-staged fails", () => {
@@ -79,6 +90,23 @@ test("fails the commit when lint-staged fails", () => {
   stage(repo, "frontend/src/app.ts");
 
   assert.equal(runHook().status, 1);
+  assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
+});
+
+test("keeps lint-staged's backup stash when a staged file also has unstaged changes", () => {
+  stage(repo, "frontend/src/app.ts");
+  write(repo, "frontend/src/app.ts", "unstaged edit\n");
+
+  assert.equal(runHook().status, 0);
+  assert.deepEqual(lintStagedCalls(), ["[]"]);
+});
+
+test("a partially staged file outside frontend/src and backend/src also keeps the backup", () => {
+  stage(repo, "frontend/src/app.ts", "docs/readme.md");
+  write(repo, "docs/readme.md", "unstaged edit\n");
+
+  assert.equal(runHook().status, 0);
+  assert.deepEqual(lintStagedCalls(), ["[]"]);
 });
 
 test("ignores staged deletions", () => {
@@ -104,7 +132,7 @@ test("does not require node_modules of a package with nothing staged", () => {
   stage(repo, "backend/src/index.ts");
 
   assert.equal(runHook().status, 0);
-  assert.deepEqual(lintStagedCalls(), ["--no-stash"]);
+  assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
 });
 
 test("a worktree without a root install uses the main checkout's lint-staged", () => {
@@ -116,7 +144,7 @@ test("a worktree without a root install uses the main checkout's lint-staged", (
   const res = runHook(wt);
 
   assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(lintStagedCalls(), ["--no-stash"]);
+  assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
 });
 
 test("fails with a hint when lint-staged is not installed", () => {
@@ -128,3 +156,28 @@ test("fails with a hint when lint-staged is not installed", () => {
   assert.equal(res.status, 1);
   assert.match(res.stderr, /lint-staged is not installed/);
 });
+
+test(
+  "real lint-staged: a failed task leaves the unstaged hunks of a partially staged file in place",
+  { skip: !existsSync(join(REPO_ROOT, "node_modules", ".bin", "lint-staged")) && "run npm install at the repo root" },
+  () => {
+    rmSync(join(repo, "node_modules"), { recursive: true });
+    symlinkSync(join(REPO_ROOT, "node_modules"), join(repo, "node_modules"));
+    write(repo, ".gitignore", "node_modules\n");
+    // Two configs, as in the repo: with a single one, lint-staged matches its globs from the repo root.
+    write(repo, "frontend/.lintstagedrc.json", '{ "src/**/*.ts": "node -e process.exit(1)" }\n');
+    write(repo, "backend/.lintstagedrc.json", '{ "src/**/*.ts": "node -e process.exit(0)" }\n');
+    git(repo, "add", ".gitignore", "frontend/.lintstagedrc.json", "backend/.lintstagedrc.json");
+    git(repo, "commit", "-q", "-m", "lint-staged config");
+    write(repo, "frontend/src/app.ts", "staged\n");
+    git(repo, "add", "frontend/src/app.ts");
+    write(repo, "frontend/src/app.ts", "staged\nunstaged\n");
+
+    const res = runHook();
+
+    assert.equal(res.status, 1, res.stdout + res.stderr);
+    assert.equal(readFileSync(join(repo, "frontend", "src", "app.ts"), "utf8"), "staged\nunstaged\n");
+    assert.equal(git(repo, "show", ":frontend/src/app.ts"), "staged");
+    assert.equal(git(repo, "stash", "list"), "");
+  }
+);

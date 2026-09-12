@@ -89,6 +89,14 @@ test("installs an executable dispatcher into the shared hooks dir", () => {
   assert.ok(statSync(target).mode & 0o100);
 });
 
+test("installs dispatchers only for the extensionless files in .githooks/", () => {
+  writeFileSync(join(repo, ".githooks", "README.md"), "docs\n");
+
+  assert.equal(install().status, 0);
+  assert.equal(readFileSync(join(repo, ".git", "hooks", "pre-commit"), "utf8"), dispatcherScript("pre-commit"));
+  assert.equal(existsSync(join(repo, ".git", "hooks", "README.md")), false);
+});
+
 test("each worktree runs its own .githooks/pre-commit", () => {
   install();
   const wt = join(root, "wt");
@@ -111,7 +119,8 @@ test("a failing hook blocks the commit", () => {
 });
 
 test("a branch without .githooks/ commits without running anything", () => {
-  install();
+  assert.equal(install().status, 0);
+  assert.equal(readFileSync(join(repo, ".git", "hooks", "pre-commit"), "utf8"), dispatcherScript("pre-commit"));
   git(repo, "rm", "-q", "-r", ".githooks");
   git(repo, "commit", "-q", "--no-verify", "-m", "drop hooks");
 
@@ -125,6 +134,30 @@ test("follows an absolute core.hooksPath", () => {
 
   assert.equal(install().status, 0);
   assert.equal(readFileSync(join(hooksDir, "pre-commit"), "utf8"), dispatcherScript("pre-commit"));
+});
+
+test("does not install into a core.hooksPath from the global git config", () => {
+  const hooksDir = join(root, "global-hooks");
+  env.GIT_CONFIG_GLOBAL = join(root, "gitconfig");
+  writeFileSync(env.GIT_CONFIG_GLOBAL, `[core]\n\thooksPath = ${hooksDir}\n`);
+
+  const res = install();
+
+  assert.equal(res.status, 0);
+  assert.equal(existsSync(join(hooksDir, "pre-commit")), false);
+  assert.match(res.stderr, /global git config/);
+});
+
+test("does not install into another checkout's .githooks/", () => {
+  const otherHooks = join(root, "other", ".githooks");
+  mkdirSync(otherHooks, { recursive: true });
+  git(repo, "config", "core.hooksPath", otherHooks);
+
+  const res = install();
+
+  assert.equal(res.status, 0);
+  assert.equal(existsSync(join(otherHooks, "pre-commit")), false);
+  assert.match(res.stderr, /every worktree runs that checkout's hooks/);
 });
 
 test("leaves a hook it did not install untouched", () => {

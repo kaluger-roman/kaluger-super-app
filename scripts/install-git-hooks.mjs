@@ -21,7 +21,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const MARKER = "# Installed by scripts/install-git-hooks.mjs";
@@ -33,14 +33,21 @@ export const isDispatcher = (content) => content.includes(MARKER);
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
+const git = (...args) =>
+  execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+
 const resolveHooksDir = () => {
   try {
-    const out = execFileSync("git", ["rev-parse", "--git-path", "hooks"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return resolve(repoRoot, out.trim());
+    return resolve(repoRoot, git("rev-parse", "--git-path", "hooks"));
+  } catch {
+    return null;
+  }
+};
+
+// Where core.hooksPath is set ("local", "global", "system", ...), or null when it is not.
+const hooksPathScope = () => {
+  try {
+    return git("config", "--show-scope", "--get", "core.hooksPath").split("\t")[0];
   } catch {
     return null;
   }
@@ -55,6 +62,20 @@ const main = () => {
   const sourceDir = join(repoRoot, ".githooks");
   if (hooksDir === sourceDir) {
     console.log("install-git-hooks: core.hooksPath already points at .githooks/, nothing to do");
+    return;
+  }
+  // A dispatcher in another checkout's .githooks/ would exec itself when that checkout commits.
+  if (basename(hooksDir) === ".githooks") {
+    console.warn(
+      `install-git-hooks: core.hooksPath points at ${hooksDir}, so every worktree runs that checkout's hooks; nothing installed. Unset core.hooksPath and re-run npm install`
+    );
+    return;
+  }
+  const scope = hooksPathScope();
+  if (scope && scope !== "local" && scope !== "worktree") {
+    console.warn(
+      `install-git-hooks: core.hooksPath comes from the ${scope} git config and serves every repository; nothing installed in ${hooksDir}, so .githooks/ hooks will not run`
+    );
     return;
   }
   mkdirSync(hooksDir, { recursive: true });
