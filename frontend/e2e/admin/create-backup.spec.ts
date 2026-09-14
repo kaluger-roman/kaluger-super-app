@@ -18,7 +18,7 @@ test.describe("Ручное создание бэкапа БД", { tag: ["@regre
 
     await page.getByRole("button", { name: "Создать бэкап" }).click();
 
-    const backupRow = page.locator("text=/backup-.*\\.sql\\.gz/").first();
+    const backupRow = page.getByText(/backup-.*\.sql\.gz/).first();
     await expect(backupRow).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/^Последний бэкап:/)).toBeVisible();
   });

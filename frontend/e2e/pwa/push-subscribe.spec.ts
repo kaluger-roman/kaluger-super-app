@@ -33,10 +33,7 @@ test.describe("Push-подписка на напоминания об урока
 
     await page.goto("/profile");
 
-    const notificationsTab = page.getByRole("tab", { name: "Уведомления" });
-    if (await notificationsTab.isVisible().catch(() => false)) {
-      await notificationsTab.click();
-    }
+    await page.getByRole("tab", { name: "Уведомления" }).click();
 
     await expect(page.getByText(/Напоминания об уроках/i)).toBeVisible();
   });

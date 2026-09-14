@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createLesson } from "../helpers/db";
 import { fillDatePicker } from "../helpers/datepicker";
+import { createStudentFor, createLesson } from "../helpers/db";
 
 const formatDdMmYyyy = (date: Date): string => {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -52,9 +52,7 @@ test.describe("Фильтрация отчёта по периоду", { tag: ["
     await page.goto("/reports");
     await expect(page.getByRole("heading", { name: "Заработок" })).toBeVisible();
 
-    const earningsAmount = page
-      .getByRole("heading", { name: "Заработок" })
-      .locator("xpath=following-sibling::*[1]");
+    const earningsAmount = page.getByTestId("earnings-amount");
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);

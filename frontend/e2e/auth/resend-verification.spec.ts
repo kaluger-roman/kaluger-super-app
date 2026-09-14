@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { generateCredentials } from "../helpers/auth";
 import { apiRequest } from "../helpers/api";
+import { generateCredentials } from "../helpers/auth";
 import { waitForMail, clearMailbox } from "../helpers/mailbox";
 
 test.describe("Повторная отправка кода верификации", { tag: ["@regression", "@auth"] }, () => {
@@ -35,7 +35,7 @@ test.describe("Повторная отправка кода верификаци
 
     expect(secondCode).not.toBe(firstCode);
 
-    const firstCodeInput = page.locator('input[type="text"][inputmode="numeric"]').first();
+    const firstCodeInput = page.getByLabel("Цифра 1 из 6");
     await firstCodeInput.click();
     await firstCodeInput.pressSequentially(secondCode);
 

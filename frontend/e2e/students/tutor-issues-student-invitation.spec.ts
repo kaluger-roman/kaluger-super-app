@@ -25,7 +25,7 @@ test.describe(
       const inviteField = dialog.getByRole("textbox");
       await expect(inviteField).toHaveValue(/\/student-invite\//);
 
-      await dialog.locator('button:has([data-testid="ContentCopyIcon"])').click();
+      await dialog.getByRole("button", { name: "Копировать ссылку" }).click();
 
       const clipboard = await page.evaluate(() => navigator.clipboard.readText());
       expect(clipboard).toMatch(/\/student-invite\//);

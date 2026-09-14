@@ -1,7 +1,7 @@
 import { test, expect } from "../fixtures";
 import { createAndLoginTutor } from "../helpers/auth";
-import { createStudentFor, createLesson, setTaxPeriodsFor } from "../helpers/db";
 import { fillDatePicker } from "../helpers/datepicker";
+import { createStudentFor, createLesson, setTaxPeriodsFor } from "../helpers/db";
 
 test.describe("Расчёт налога с несколькими ставками", { tag: ["@regression", "@reports"] }, () => {
   test("налоговый блок показывает корректную сумму при двух исторических ставках", async ({
@@ -62,9 +62,7 @@ test.describe("Расчёт налога с несколькими ставка�
 
     await expect(page.getByRole("heading", { name: /Налоги/ })).toBeVisible();
 
-    const taxAmountEl = page
-      .getByRole("heading", { name: /Налоги/ })
-      .locator("xpath=following-sibling::*[1]");
+    const taxAmountEl = page.getByTestId("tax-amount");
     await expect(taxAmountEl).toContainText(/100/);
   });
 });

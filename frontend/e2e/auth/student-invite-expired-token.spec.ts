@@ -1,12 +1,12 @@
 import { test, expect } from "../fixtures";
 import { apiRequest } from "../helpers/api";
+import { generateCredentials } from "../helpers/auth";
 import {
   createStudentFor,
   createVerifiedUser,
   extractInviteToken,
   issueStudentInvitation,
 } from "../helpers/db";
-import { generateCredentials } from "../helpers/auth";
 import { STUDENT_PASSWORD } from "../helpers/student";
 
 test.describe("Невалидная инвайт-ссылка ученика", { tag: ["@regression", "@auth"] }, () => {

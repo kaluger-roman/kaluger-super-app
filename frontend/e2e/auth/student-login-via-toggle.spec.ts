@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { registerStudentDirect, STUDENT_PASSWORD } from "../helpers/student";
 
 test.describe(

@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import {
   currentWeekSlot,
   nextWeekSlot,

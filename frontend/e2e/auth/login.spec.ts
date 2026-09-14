@@ -1,7 +1,7 @@
 import { test, expect } from "../fixtures";
+import { apiRequest } from "../helpers/api";
 import { generateCredentials } from "../helpers/auth";
 import { createVerifiedUser, resetDatabase } from "../helpers/db";
-import { apiRequest } from "../helpers/api";
 
 test.describe("Вход в аккаунт", { tag: ["@regression", "@auth"] }, () => {
   test("учитель вводит верные учётные данные и попадает на дашборд", async ({ page }) => {

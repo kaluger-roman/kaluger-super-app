@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { apiRequest } from "./api";
 
 export const STUDENT_PASSWORD = "StrongPass1";

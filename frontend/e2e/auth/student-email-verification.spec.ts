@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { registerStudentDirect, seedStudentAuthInBrowser } from "../helpers/student";
 
 test.describe("Подтверждение email ученика", { tag: ["@regression", "@auth"] }, () => {

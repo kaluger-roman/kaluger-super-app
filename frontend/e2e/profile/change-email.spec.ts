@@ -1,7 +1,7 @@
 import { test, expect } from "../fixtures";
+import { apiRequest } from "../helpers/api";
 import { generateCredentials, loginViaApi } from "../helpers/auth";
 import { waitForMail, clearMailbox } from "../helpers/mailbox";
-import { apiRequest } from "../helpers/api";
 
 test.describe("Смена email с верификацией кодом", { tag: ["@regression", "@profile"] }, () => {
   test("учитель меняет email и может войти только с новым адресом", async ({ page, tutor }) => {
@@ -29,10 +29,9 @@ test.describe("Смена email с верификацией кодом", { tag: 
     );
     const code = mail.verificationCode!;
 
-    const codeInputs = dialog.locator('input[inputmode="numeric"]');
-    await expect(codeInputs).toHaveCount(6);
+    await expect(dialog.getByRole("textbox", { name: /^Цифра \d из 6$/ })).toHaveCount(6);
     for (let i = 0; i < 6; i += 1) {
-      await codeInputs.nth(i).fill(code[i]);
+      await dialog.getByLabel(`Цифра ${i + 1} из 6`).fill(code[i]);
     }
 
     await dialog.getByRole("button", { name: "Подтвердить" }).click();

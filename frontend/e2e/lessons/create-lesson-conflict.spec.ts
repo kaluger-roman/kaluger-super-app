@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 import { fillDateTimePicker } from "../helpers/datepicker";
+import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 
 const HOUR_MS = 60 * 60 * 1000;
 const pad2 = (v: number): string => v.toString().padStart(2, "0");

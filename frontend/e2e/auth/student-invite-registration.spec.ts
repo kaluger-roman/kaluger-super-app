@@ -30,9 +30,8 @@ test.describe("Регистрация ученика по приглашению
 
       await studentPage.getByLabel("ФИО").fill("Пётр Сидоров");
       await studentPage.getByLabel("Email").fill(studentEmail);
-      const passwordInputs = studentPage.locator('input[type="password"]');
-      await passwordInputs.first().fill("StrongPass1");
-      await passwordInputs.nth(1).fill("StrongPass1");
+      await studentPage.getByLabel(/^Пароль/).fill("StrongPass1");
+      await studentPage.getByLabel(/^Подтверждение пароля/).fill("StrongPass1");
 
       await studentPage.getByRole("button", { name: "Зарегистрироваться" }).click();
 

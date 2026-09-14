@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createLesson } from "../helpers/db";
 import { apiRequest } from "../helpers/api";
+import { createStudentFor, createLesson } from "../helpers/db";
 
 type StudentStatsResponse = {
   studentStatistics: Array<{

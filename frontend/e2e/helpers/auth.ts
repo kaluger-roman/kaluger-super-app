@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { apiRequest } from "./api";
 import { createVerifiedUser } from "./db";
 import { waitForMail } from "./mailbox";
