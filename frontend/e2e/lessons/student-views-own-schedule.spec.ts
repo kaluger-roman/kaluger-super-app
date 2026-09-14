@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import {
   currentWeekSlot,
   nextWeekSlot,
@@ -12,12 +12,8 @@ test.describe(
   "Ученик видит своё расписание в кабинете",
   { tag: ["@regression", "@lessons"] },
   () => {
-    test("ученик видит свой урок и не видит урок чужого ученика", async ({
-      page,
-    }) => {
-      const { user: tutorA } = await createVerifiedUser(
-        generateCredentials("tutorA"),
-      );
+    test("ученик видит свой урок и не видит урок чужого ученика", async ({ page }) => {
+      const { user: tutorA } = await createVerifiedUser(generateCredentials("tutorA"));
       const { student: studentA } = await createStudentFor(tutorA.id, {
         name: "Пётр Сидоров",
         hourlyRate: 1500,
@@ -32,9 +28,7 @@ test.describe(
         status: "SCHEDULED",
       });
 
-      const { user: tutorB } = await createVerifiedUser(
-        generateCredentials("tutorB"),
-      );
+      const { user: tutorB } = await createVerifiedUser(generateCredentials("tutorB"));
       const { student: studentB } = await createStudentFor(tutorB.id, {
         name: "Чужой Ученик",
         hourlyRate: 1500,
@@ -62,12 +56,8 @@ test.describe(
       await expect(page.getByText("Физика")).toHaveCount(0);
     });
 
-    test("ученик переключает неделю вперёд и видит урок следующей недели", async ({
-      page,
-    }) => {
-      const { user: tutor } = await createVerifiedUser(
-        generateCredentials("tutor"),
-      );
+    test("ученик переключает неделю вперёд и видит урок следующей недели", async ({ page }) => {
+      const { user: tutor } = await createVerifiedUser(generateCredentials("tutor"));
       const { student } = await createStudentFor(tutor.id, {
         name: "Пётр Сидоров",
         hourlyRate: 1500,
@@ -108,5 +98,5 @@ test.describe(
       await expect(page.getByText("Физика")).toBeVisible();
       await expect(page.getByText("Математика")).toHaveCount(0);
     });
-  },
+  }
 );

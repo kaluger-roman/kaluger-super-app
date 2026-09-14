@@ -61,6 +61,7 @@ export const VerifyStep: FC = () => {
             }}
             type="text"
             inputMode="numeric"
+            aria-label={`Цифра ${index + 1} из ${CODE_LENGTH}`}
             maxLength={1}
             value={digit.trim()}
             onChange={(e) => handleInputChange(index, e.target.value)}

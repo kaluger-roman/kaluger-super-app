@@ -36,6 +36,12 @@ describe("IncomeCards", () => {
     expect(screen.getByText(/4 оплат по дате платежа/)).toBeInTheDocument();
   });
 
+  it("should mark the earnings amount with the test id used by e2e", () => {
+    render(<IncomeCards statistics={statistics} />);
+
+    expect(screen.getByTestId("earnings-amount")).toHaveTextContent(/50\s*000/);
+  });
+
   it("should fall back to zero for missing prepaid and payments sums", () => {
     render(
       <IncomeCards

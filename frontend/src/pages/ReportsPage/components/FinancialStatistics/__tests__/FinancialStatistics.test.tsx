@@ -34,6 +34,11 @@ describe("FinancialStatistics", () => {
     expect(screen.getByText("Сумма налога по оплатам за период")).toBeInTheDocument();
   });
 
+  it("marks the tax amount with the test id used by e2e", () => {
+    render(<FinancialStatistics statistics={createStatistics()} />);
+    expect(screen.getByTestId("tax-amount")).toHaveTextContent(/3\s*000/);
+  });
+
   it("renders neutral tax label and info button when multiple rates apply", () => {
     render(
       <FinancialStatistics

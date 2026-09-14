@@ -1,4 +1,6 @@
 {
   "src/**/*.{ts,tsx}": ["prettier --write", "eslint --fix", "prettier --write"],
-  "src/**/*.{js,jsx,json,css,md}": "prettier --write"
+  "{e2e/**/*.ts,playwright.config.ts}": ["prettier --write", "eslint --fix", "prettier --write"],
+  "src/**/*.{js,jsx,json,css,md}": "prettier --write",
+  "e2e/**/*.md": "prettier --write"
 }

@@ -27,5 +27,5 @@ test.describe(
 
       await expect(page).toHaveURL(/\/login$/);
     });
-  },
+  }
 );

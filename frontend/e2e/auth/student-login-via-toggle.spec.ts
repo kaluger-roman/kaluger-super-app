@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createStudentFor, createVerifiedUser } from "../helpers/db";
 import { registerStudentDirect, STUDENT_PASSWORD } from "../helpers/student";
 
 test.describe(
@@ -23,9 +23,7 @@ test.describe(
       return { email };
     };
 
-    test("ученик переключает роль на «Ученик» и попадает в свой кабинет", async ({
-      page,
-    }) => {
+    test("ученик переключает роль на «Ученик» и попадает в свой кабинет", async ({ page }) => {
       const { email } = await setupStudent();
 
       await page.goto("/login");
@@ -36,14 +34,10 @@ test.describe(
       await page.getByRole("button", { name: "Войти" }).click();
 
       await expect(page).toHaveURL(/\/student\/cabinet\/schedule$/);
-      await expect(
-        page.getByRole("heading", { name: "Расписание" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Расписание" })).toBeVisible();
     });
 
-    test("ученик не может войти как преподаватель тем же email и паролем", async ({
-      page,
-    }) => {
+    test("ученик не может войти как преподаватель тем же email и паролем", async ({ page }) => {
       const { email } = await setupStudent();
 
       await page.goto("/login");
@@ -55,5 +49,5 @@ test.describe(
       await expect(page.getByRole("alert")).toBeVisible();
       await expect(page).toHaveURL(/\/login$/);
     });
-  },
+  }
 );

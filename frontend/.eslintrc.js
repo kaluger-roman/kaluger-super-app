@@ -48,6 +48,46 @@ const timerRules = [
 ];
 const restrictedSyntax = [enumRule, useUnitArrayRule, ...emptyFileRules, modelNamedImportRule];
 
+// react-app/jest turns Jest and Testing Library rules on for every *.spec.* file; e2e runs on Playwright.
+const disableAllRules = (prefix, plugin) =>
+    Object.fromEntries(Object.keys(require(plugin).rules).map((rule) => [`${prefix}/${rule}`, "off"]));
+
+// Tag scheme from docs/conventions/e2e-testing.md: every test.describe gets a level and an area tag.
+const e2eLevelTags = ["@regression", "@visual", "@draft"];
+const e2eAreaTags = [
+    "@auth",
+    "@students",
+    "@lessons",
+    "@profile",
+    "@reports",
+    "@admin",
+    "@dashboard",
+    "@news",
+    "@pwa",
+];
+const describeCall =
+    ':matches(CallExpression[callee.object.name="test"][callee.property.name="describe"], CallExpression[callee.object.object.name="test"][callee.object.property.name="describe"][callee.property.name!="configure"])';
+const tagOption = `${describeCall} > ObjectExpression > Property[key.name="tag"]`;
+const anyTagOf = (tags) => `Literal[value=/^(${tags.join("|")})$/]`;
+const e2eTagRules = [
+    {
+        selector: `${describeCall}:not([arguments.length=3])`,
+        message: "Tag the suite: test.describe(title, { tag: [level, area] }, fn).",
+    },
+    {
+        selector: `${describeCall} > ObjectExpression:not(:has(Property[key.name="tag"]))`,
+        message: "Tag the suite: test.describe(title, { tag: [level, area] }, fn).",
+    },
+    {
+        selector: `${tagOption}:not(:has(${anyTagOf(e2eLevelTags)}))`,
+        message: `test.describe needs a level tag: ${e2eLevelTags.join(", ")}.`,
+    },
+    {
+        selector: `${tagOption}:not(:has(${anyTagOf(e2eAreaTags)}))`,
+        message: `test.describe needs an area tag: ${e2eAreaTags.join(", ")}.`,
+    },
+];
+
 // check-file glob: letters and digits, starting with a letter — camelCase or PascalCase.
 const alphanumericName = "[a-zA-Z]*([a-zA-Z0-9])";
 const roleSuffixes = "model,api,types,styled,constants,helpers,hooks";
@@ -360,6 +400,44 @@ module.exports = {
                 "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, ...emptyFileRules],
                 "jest/no-focused-tests": "error",
                 "jest/no-disabled-tests": "error",
+            },
+        },
+        {
+            files: ["e2e/**/*.ts"],
+            plugins: ["playwright"],
+            rules: {
+                ...disableAllRules("jest", "eslint-plugin-jest"),
+                ...disableAllRules("testing-library", "eslint-plugin-testing-library"),
+                "no-restricted-syntax": ["error", enumRule, ...emptyFileRules, ...e2eTagRules],
+                "check-file/folder-naming-convention": ["error", { "e2e/**/": "KEBAB_CASE" }],
+                "check-file/filename-naming-convention": [
+                    "error",
+                    { "**/*.ts": "KEBAB_CASE" },
+                    { ignoreMiddleExtensions: true },
+                ],
+                "playwright/no-focused-test": "error",
+                "playwright/no-page-pause": "error",
+                "playwright/no-raw-locators": "error",
+                "playwright/no-wait-for-selector": "error",
+                "playwright/no-wait-for-timeout": "error",
+                "playwright/valid-test-tags": [
+                    "error",
+                    { allowedTags: [...e2eLevelTags, ...e2eAreaTags] },
+                ],
+            },
+        },
+        {
+            // Page objects are named after their screen: pages/<Area>Page.ts (e2e-testing.md).
+            files: ["e2e/pages/**/*.ts"],
+            rules: {
+                "check-file/filename-naming-convention": ["error", { "**/*.ts": "PASCAL_CASE" }],
+            },
+        },
+        {
+            // Playwright reads its config from the default export.
+            files: ["playwright.config.ts"],
+            rules: {
+                "import/no-default-export": "off",
             },
         },
     ],

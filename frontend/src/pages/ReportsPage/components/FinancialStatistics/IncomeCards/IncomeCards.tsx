@@ -21,7 +21,7 @@ export const IncomeCards: FC<IncomeCardsProps> = ({ statistics }) => (
             <AttachMoney className="icon" />
             Заработок
           </Styled.GreenTitle>
-          <Styled.GreenAmount variant="h4">
+          <Styled.GreenAmount variant="h4" data-testid="earnings-amount">
             {formatCurrency(statistics.earnings)}
           </Styled.GreenAmount>
           <Typography variant="body2" color="textSecondary">
