@@ -96,6 +96,7 @@ export const EmailVerificationForm: FC = () => {
               }}
               type="text"
               inputMode="numeric"
+              aria-label={`Цифра ${index + 1} из ${EMAIL_VERIFICATION_CODE_LENGTH}`}
               maxLength={1}
               value={digit.trim()}
               onChange={(e) => handleInputChange(index, e.target.value)}

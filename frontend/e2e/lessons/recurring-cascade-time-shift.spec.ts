@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures";
-import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 import { fillDateTimePicker } from "../helpers/datepicker";
+import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 
 const HOUR_MS = 60 * 60 * 1000;
 const WEEK_MS = 7 * 24 * HOUR_MS;
@@ -9,7 +9,7 @@ const pad2 = (value: number): string => value.toString().padStart(2, "0");
 
 const formatDdMmYyyyHhMm = (date: Date): string =>
   `${pad2(date.getDate())}${pad2(date.getMonth() + 1)}${date.getFullYear()}${pad2(
-    date.getHours(),
+    date.getHours()
   )}${pad2(date.getMinutes())}`;
 
 test.describe(
@@ -51,44 +51,29 @@ test.describe(
 
       await page.goto("/lessons");
 
-      await page.getByRole("heading", { name: /Илья Иванов/ }).first().click();
-
-      const viewDialog = page.getByRole("dialog").first();
-      await viewDialog
-        .getByRole("button", { name: "Редактировать" })
+      await page
+        .getByRole("heading", { name: /Илья Иванов/ })
+        .first()
         .click();
 
+      const viewDialog = page.getByRole("dialog").first();
+      await viewDialog.getByRole("button", { name: "Редактировать" }).click();
+
       const formDialog = page.getByRole("dialog").last();
-      await expect(
-        formDialog.getByText("Редактировать урок"),
-      ).toBeVisible();
+      await expect(formDialog.getByText("Редактировать урок")).toBeVisible();
 
       const newStart = new Date(baseStart.getTime() + HOUR_MS);
       const newEnd = new Date(newStart.getTime() + HOUR_MS);
 
-      await fillDateTimePicker(
-        page,
-        "Время начала",
-        formatDdMmYyyyHhMm(newStart),
-      );
-      await fillDateTimePicker(
-        page,
-        "Время окончания",
-        formatDdMmYyyyHhMm(newEnd),
-      );
+      await fillDateTimePicker(page, "Время начала", formatDdMmYyyyHhMm(newStart));
+      await fillDateTimePicker(page, "Время окончания", formatDdMmYyyyHhMm(newEnd));
 
-      await formDialog
-        .getByRole("button", { name: "Обновить урок" })
-        .click();
+      await formDialog.getByRole("button", { name: "Обновить урок" }).click();
 
       const confirmDialog = page.getByRole("dialog").last();
-      await expect(
-        confirmDialog.getByText("Изменение времени регулярного урока"),
-      ).toBeVisible();
+      await expect(confirmDialog.getByText("Изменение времени регулярного урока")).toBeVisible();
 
-      await confirmDialog
-        .getByRole("button", { name: "Подтвердить" })
-        .click();
+      await confirmDialog.getByRole("button", { name: "Подтвердить" }).click();
 
       const expectedStartByLessonId = new Map([
         [first.id, newStart.toISOString()],
@@ -103,14 +88,12 @@ test.describe(
             return lessons
               .filter((l) => expectedStartByLessonId.has(l.id))
               .every(
-                (l) =>
-                  new Date(l.startTime).toISOString() ===
-                  expectedStartByLessonId.get(l.id),
+                (l) => new Date(l.startTime).toISOString() === expectedStartByLessonId.get(l.id)
               );
           },
-          { timeout: 10_000 },
+          { timeout: 10_000 }
         )
         .toBe(true);
     });
-  },
+  }
 );

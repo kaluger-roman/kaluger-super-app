@@ -65,13 +65,15 @@ npm run test:e2e -- --grep "@auth" --list
 1. **Один level-тег** — `@regression` | `@visual` | `@draft`
 2. **Один area-тег** — `@auth` | `@students` | `@lessons` | `@profile` | `@reports` | `@admin` | `@dashboard` | `@news` | `@pwa`
 
-Возможны несколько area-тегов, если journey пересекает области (редкий случай). `@draft` — временный тег для черновиков `/e2e-check`, исключается из прогонов; убирается после доработки.
+Возможны несколько area-тегов, если journey пересекает области (редкий случай). `@draft` — временный тег для черновиков `/e2e-check`, исключается из прогонов; после доработки заменяется на `@regression` (просто убрать его нельзя — без level-тега линт падает).
+
+ESLint enforced: у каждого `test.describe` (включая `.serial`, `.parallel` и другие формы, кроме `describe.configure`) должна быть опция `tag` хотя бы с одним level- и одним area-тегом (`no-restricted-syntax`), и только с тегами из этого списка (`playwright/valid-test-tags`). Новый area-тег добавляется в `e2eAreaTags` во `frontend/.eslintrc.js`. Playwright считает тегом и `@слово` в заголовке, поэтому `@` в названиях не использовать. Что level-тег ровно один, проверяется на ревью.
 
 ## Имена и язык
 
 - `test.describe` — на **русском**, как видит пользователь: `'Создание ученика'`, `'Восстановление пароля'`. Совпадает с journey-формулировкой из спеки.
 - `test('...')` — на **русском**, в форме «учитель делает X и видит Y».
-- Файл — kebab-case, без префиксов: `create-student.spec.ts`, `forgot-password.spec.ts`.
+- Файл — kebab-case, без префиксов: `create-student.spec.ts`, `forgot-password.spec.ts`. ESLint enforced (`check-file`) для всех файлов и папок `e2e/**`, кроме Page Objects (см. ниже).
 
 Это согласуется с общим правилом проекта: error messages и UI на русском, идентификаторы и код — на английском.
 
@@ -87,6 +89,8 @@ npm run test:e2e -- --grep "@auth" --list
 
 **Запрещены:** CSS-классы (`.MuiButton-root`), `nth-child`, XPath, селекторы по auto-сгенерированным классам стилей.
 
+ESLint enforced: `playwright/no-raw-locators` не пропускает `locator("…")` со строковым литералом (CSS, XPath, `text=`), `playwright/no-element-handle` и `playwright/no-eval` — `page.$`, `page.$$`, `page.$eval`. Шорткаты `page.click("…")`, `page.fill("…", …)` и `locator(переменная)` линтер не видит, они остаются на ревью. Если у элемента нет ни роли, ни подписи, ни текста, сначала чинить разметку: `aria-label` у поля ввода или кнопки-иконки (это заодно a11y-правило из `frontend.md`). `data-testid` — только когда связи нет и в разметке, например сумма в карточке отчёта (`data-testid="earnings-amount"`). Точечное исключение — опция `allowed` этого правила во `frontend/.eslintrc.js`.
+
 ## Тестовые данные
 
 - Стартовое состояние БД — через API (`POST /api/auth/login` + REST для setup), не через UI. UI используется **только** для журналирования journey, который тестируем.
@@ -98,20 +102,20 @@ npm run test:e2e -- --grep "@auth" --list
 
 Применять **только когда** один и тот же экран встречается в 3+ тестах с дублирующейся настройкой. Преждевременная абстракция — главный источник flaky и неподдерживаемой иерархии.
 
-Когда становятся нужны — `frontend/e2e/pages/<Area>Page.ts`, named export класса или функции `createStudentsPage(page)`. **Никаких `export default`** (общая конвенция проекта).
+Когда становятся нужны — `frontend/e2e/pages/<Area>Page.ts`, named export класса или функции `createStudentsPage(page)`. **Никаких `export default`** (общая конвенция проекта). Имя файла в `pages/` — PascalCase (ESLint enforced).
 
 ## Стабильность и flakiness
 
-- Использовать `await expect(...).toBeVisible()` вместо `waitForSelector` — встроенный auto-retry умнее.
-- Не ставить `waitForTimeout` (магические задержки). Если тест моргает — найти конкретное условие готовности (видимый toast, исчезнувший спиннер, обновлённый URL) и ждать его.
+- Использовать `await expect(...).toBeVisible()` вместо `waitForSelector` — встроенный auto-retry умнее (ESLint `playwright/no-wait-for-selector`).
+- Не ставить `waitForTimeout` (магические задержки; ESLint `playwright/no-wait-for-timeout`). Если тест моргает — найти конкретное условие готовности (видимый toast, исчезнувший спиннер, обновлённый URL) и ждать его.
 - Тест, упавший один раз и прошедший после ретрая, — это **не** «просто моргнул». Это сигнал, что либо неправильное условие готовности, либо реальная гонка в коде. Разобраться, не глушить.
 - Если flaky тест нельзя починить за разумное время — пометить `test.skip` с TODO и issue, не оставлять «иногда падает».
 
 ## Линтинг и типы
 
-- TypeScript строгий. Никаких `any` (общая конвенция).
-- Названные импорты, никаких `default exports`.
-- ESLint и Prettier применяются к `frontend/e2e/**` так же, как к остальному фронту.
+- TypeScript строгий. Никаких `any` (общая конвенция). `frontend/tsconfig.json` включает `e2e/` и `playwright.config.ts`, так что `npx tsc --noEmit` проверяет и e2e.
+- Названные импорты, никаких `default exports`. Исключение — `playwright.config.ts`: Playwright читает конфиг из default export.
+- `npm run lint`, `npm run format:check` и pre-commit хук покрывают `frontend/e2e/**` и `playwright.config.ts` так же, как `src/`. Правила Jest и Testing Library, которые `react-app/jest` включает для любых `*.spec.*`, для e2e выключены; вместо них `eslint-plugin-playwright`: `no-focused-test`, `no-page-pause`, `no-wait-for-selector`, `no-wait-for-timeout`, `no-raw-locators`, `no-element-handle`, `no-eval`, `valid-test-tags`.
 
 ## Связанные команды
 

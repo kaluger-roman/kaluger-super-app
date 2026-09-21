@@ -9,13 +9,9 @@ export type MailboxEntry = {
   sentAt: string;
 };
 
-export const fetchLatestMail = async (
-  email: string,
-): Promise<MailboxEntry | null> => {
+export const fetchLatestMail = async (email: string): Promise<MailboxEntry | null> => {
   try {
-    return await apiRequest<MailboxEntry>(
-      `/api/__test__/mailbox/${encodeURIComponent(email)}`,
-    );
+    return await apiRequest<MailboxEntry>(`/api/__test__/mailbox/${encodeURIComponent(email)}`);
   } catch {
     return null;
   }
@@ -24,7 +20,7 @@ export const fetchLatestMail = async (
 export const waitForMail = async (
   email: string,
   predicate: (entry: MailboxEntry) => boolean = () => true,
-  timeoutMs = 5_000,
+  timeoutMs = 5_000
 ): Promise<MailboxEntry> => {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {

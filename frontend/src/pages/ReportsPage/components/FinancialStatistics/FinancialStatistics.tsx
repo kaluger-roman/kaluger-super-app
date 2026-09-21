@@ -68,7 +68,7 @@ export const FinancialStatistics: FC<FinancialStatisticsProps> = ({ statistics }
                 {taxLabel}
                 {showInfoIcon ? <TaxRateInfoTooltip breakdown={breakdown} /> : null}
               </Styled.TaxTitle>
-              <Styled.OrangeAmount variant="h4">
+              <Styled.OrangeAmount variant="h4" data-testid="tax-amount">
                 {formatCurrency(statistics.taxAmount ?? 0)}
               </Styled.OrangeAmount>
               <Typography variant="body2" color="textSecondary">

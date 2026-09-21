@@ -20,20 +20,14 @@ test.describe(
       await page.getByText("Пётр Сидоров").click();
 
       const dialog = page.getByRole("dialog");
-      await dialog
-        .getByRole("button", { name: "Создать ссылку-приглашение" })
-        .click();
+      await dialog.getByRole("button", { name: "Создать ссылку-приглашение" }).click();
 
       const inviteField = dialog.getByRole("textbox");
       await expect(inviteField).toHaveValue(/\/student-invite\//);
 
-      await dialog
-        .locator('button:has([data-testid="ContentCopyIcon"])')
-        .click();
+      await dialog.getByRole("button", { name: "Копировать ссылку" }).click();
 
-      const clipboard = await page.evaluate(() =>
-        navigator.clipboard.readText(),
-      );
+      const clipboard = await page.evaluate(() => navigator.clipboard.readText());
       expect(clipboard).toMatch(/\/student-invite\//);
     });
 
@@ -50,21 +44,15 @@ test.describe(
       await page.getByText("Пётр Сидоров").click();
 
       const dialog = page.getByRole("dialog");
-      await dialog
-        .getByRole("button", { name: "Создать ссылку-приглашение" })
-        .click();
+      await dialog.getByRole("button", { name: "Создать ссылку-приглашение" }).click();
 
-      await expect(dialog.getByRole("textbox")).toHaveValue(
-        /\/student-invite\//,
-      );
+      await expect(dialog.getByRole("textbox")).toHaveValue(/\/student-invite\//);
 
-      await dialog
-        .getByRole("button", { name: "Отозвать", exact: true })
-        .click();
+      await dialog.getByRole("button", { name: "Отозвать", exact: true }).click();
 
       await expect(
-        dialog.getByRole("button", { name: "Создать ссылку-приглашение" }),
+        dialog.getByRole("button", { name: "Создать ссылку-приглашение" })
       ).toBeVisible();
     });
-  },
+  }
 );
