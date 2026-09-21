@@ -23,13 +23,13 @@ const renderVerifyStep = () => {
 };
 
 describe("VerifyStep", () => {
-  it("should give every code digit input an accessible name", () => {
+  it("should give every code digit input an accessible name and the numeric keyboard", () => {
     renderVerifyStep();
 
     for (let digit = 1; digit <= CODE_LENGTH; digit += 1) {
-      expect(
-        screen.getByRole("textbox", { name: `Цифра ${digit} из ${CODE_LENGTH}` })
-      ).toBeInTheDocument();
+      const input = screen.getByRole("textbox", { name: `Цифра ${digit} из ${CODE_LENGTH}` });
+
+      expect(input).toHaveAttribute("inputmode", "numeric");
     }
   });
 });

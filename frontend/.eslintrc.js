@@ -65,8 +65,12 @@ const e2eAreaTags = [
     "@news",
     "@pwa",
 ];
-const describeCall =
-    ':matches(CallExpression[callee.object.name="test"][callee.property.name="describe"], CallExpression[callee.object.object.name="test"][callee.object.property.name="describe"][callee.property.name!="configure"])';
+const describeCalls = [
+    'CallExpression[callee.object.name="test"][callee.property.name="describe"]',
+    'CallExpression[callee.object.object.name="test"][callee.object.property.name="describe"][callee.property.name!="configure"]',
+    'CallExpression[callee.object.object.object.name="test"][callee.object.object.property.name="describe"]',
+];
+const describeCall = `:matches(${describeCalls.join(", ")})`;
 const tagOption = `${describeCall} > ObjectExpression > Property[key.name="tag"]`;
 const anyTagOf = (tags) => `Literal[value=/^(${tags.join("|")})$/]`;
 const e2eTagRules = [
@@ -408,6 +412,9 @@ module.exports = {
             rules: {
                 ...disableAllRules("jest", "eslint-plugin-jest"),
                 ...disableAllRules("testing-library", "eslint-plugin-testing-library"),
+                // FSD layers and the MUI `styled` ban are about src/; `../**/pages/**` would
+                // otherwise reject the page objects that e2e-testing.md prescribes.
+                "no-restricted-imports": "off",
                 "no-restricted-syntax": ["error", enumRule, ...emptyFileRules, ...e2eTagRules],
                 "check-file/folder-naming-convention": ["error", { "e2e/**/": "KEBAB_CASE" }],
                 "check-file/filename-naming-convention": [
@@ -415,6 +422,8 @@ module.exports = {
                     { "**/*.ts": "KEBAB_CASE" },
                     { ignoreMiddleExtensions: true },
                 ],
+                "playwright/no-element-handle": "error",
+                "playwright/no-eval": "error",
                 "playwright/no-focused-test": "error",
                 "playwright/no-page-pause": "error",
                 "playwright/no-raw-locators": "error",
@@ -427,8 +436,10 @@ module.exports = {
             },
         },
         {
-            // Page objects are named after their screen: pages/<Area>Page.ts (e2e-testing.md).
+            // Page objects are named after their screen: pages/<Area>Page.ts (e2e-testing.md);
+            // a barrel index.ts falls back to the kebab-case rule of the e2e override.
             files: ["e2e/pages/**/*.ts"],
+            excludedFiles: ["**/index.ts"],
             rules: {
                 "check-file/filename-naming-convention": ["error", { "**/*.ts": "PASCAL_CASE" }],
             },

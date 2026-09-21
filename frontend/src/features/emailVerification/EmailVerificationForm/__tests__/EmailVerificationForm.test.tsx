@@ -22,15 +22,15 @@ const renderForm = () => {
 };
 
 describe("EmailVerificationForm", () => {
-  it("should give every code digit input an accessible name", () => {
+  it("should give every code digit input an accessible name and the numeric keyboard", () => {
     renderForm();
 
     for (let digit = 1; digit <= EMAIL_VERIFICATION_CODE_LENGTH; digit += 1) {
-      expect(
-        screen.getByRole("textbox", {
-          name: `Цифра ${digit} из ${EMAIL_VERIFICATION_CODE_LENGTH}`,
-        })
-      ).toBeInTheDocument();
+      const input = screen.getByRole("textbox", {
+        name: `Цифра ${digit} из ${EMAIL_VERIFICATION_CODE_LENGTH}`,
+      });
+
+      expect(input).toHaveAttribute("inputmode", "numeric");
     }
   });
 });

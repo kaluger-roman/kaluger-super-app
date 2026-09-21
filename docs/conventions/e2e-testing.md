@@ -65,7 +65,7 @@ npm run test:e2e -- --grep "@auth" --list
 1. **Один level-тег** — `@regression` | `@visual` | `@draft`
 2. **Один area-тег** — `@auth` | `@students` | `@lessons` | `@profile` | `@reports` | `@admin` | `@dashboard` | `@news` | `@pwa`
 
-Возможны несколько area-тегов, если journey пересекает области (редкий случай). `@draft` — временный тег для черновиков `/e2e-check`, исключается из прогонов; убирается после доработки.
+Возможны несколько area-тегов, если journey пересекает области (редкий случай). `@draft` — временный тег для черновиков `/e2e-check`, исключается из прогонов; после доработки заменяется на `@regression` (просто убрать его нельзя — без level-тега линт падает).
 
 ESLint enforced: у каждого `test.describe` (включая `.serial`, `.parallel` и другие формы, кроме `describe.configure`) должна быть опция `tag` хотя бы с одним level- и одним area-тегом (`no-restricted-syntax`), и только с тегами из этого списка (`playwright/valid-test-tags`). Новый area-тег добавляется в `e2eAreaTags` во `frontend/.eslintrc.js`. Playwright считает тегом и `@слово` в заголовке, поэтому `@` в названиях не использовать. Что level-тег ровно один, проверяется на ревью.
 
@@ -89,7 +89,7 @@ ESLint enforced: у каждого `test.describe` (включая `.serial`, `.
 
 **Запрещены:** CSS-классы (`.MuiButton-root`), `nth-child`, XPath, селекторы по auto-сгенерированным классам стилей.
 
-ESLint enforced: `playwright/no-raw-locators` не пропускает `locator("…")` со строковым селектором (CSS, XPath, `text=`), остаются только `getBy*` и их `filter` / `first` / `nth`. Если у элемента нет ни роли, ни подписи, ни текста, сначала чинить разметку: `aria-label` у поля ввода или кнопки-иконки (это заодно a11y-правило из `frontend.md`). `data-testid` — только когда связи нет и в разметке, например сумма в карточке отчёта (`data-testid="earnings-amount"`). Точечное исключение — опция `allowed` этого правила во `frontend/.eslintrc.js`.
+ESLint enforced: `playwright/no-raw-locators` не пропускает `locator("…")` со строковым литералом (CSS, XPath, `text=`), `playwright/no-element-handle` и `playwright/no-eval` — `page.$`, `page.$$`, `page.$eval`. Шорткаты `page.click("…")`, `page.fill("…", …)` и `locator(переменная)` линтер не видит, они остаются на ревью. Если у элемента нет ни роли, ни подписи, ни текста, сначала чинить разметку: `aria-label` у поля ввода или кнопки-иконки (это заодно a11y-правило из `frontend.md`). `data-testid` — только когда связи нет и в разметке, например сумма в карточке отчёта (`data-testid="earnings-amount"`). Точечное исключение — опция `allowed` этого правила во `frontend/.eslintrc.js`.
 
 ## Тестовые данные
 
@@ -115,7 +115,7 @@ ESLint enforced: `playwright/no-raw-locators` не пропускает `locator
 
 - TypeScript строгий. Никаких `any` (общая конвенция). `frontend/tsconfig.json` включает `e2e/` и `playwright.config.ts`, так что `npx tsc --noEmit` проверяет и e2e.
 - Названные импорты, никаких `default exports`. Исключение — `playwright.config.ts`: Playwright читает конфиг из default export.
-- `npm run lint`, `npm run format:check` и pre-commit хук покрывают `frontend/e2e/**` и `playwright.config.ts` так же, как `src/`. Правила Jest и Testing Library, которые `react-app/jest` включает для любых `*.spec.*`, для e2e выключены; вместо них `eslint-plugin-playwright`: `no-focused-test`, `no-page-pause`, `no-wait-for-selector`, `no-wait-for-timeout`, `no-raw-locators`, `valid-test-tags`.
+- `npm run lint`, `npm run format:check` и pre-commit хук покрывают `frontend/e2e/**` и `playwright.config.ts` так же, как `src/`. Правила Jest и Testing Library, которые `react-app/jest` включает для любых `*.spec.*`, для e2e выключены; вместо них `eslint-plugin-playwright`: `no-focused-test`, `no-page-pause`, `no-wait-for-selector`, `no-wait-for-timeout`, `no-raw-locators`, `no-element-handle`, `no-eval`, `valid-test-tags`.
 
 ## Связанные команды
 
