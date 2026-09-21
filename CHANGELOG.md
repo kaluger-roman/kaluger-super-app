@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-14
+
+### Changed
+- `frontend/e2e/**` and `frontend/playwright.config.ts` are now type-checked, linted and format-checked like `frontend/src` (closes Milestone 7 of `docs/lint-roadmap.md`): `frontend/tsconfig.json` includes them, so `npx tsc --noEmit` in CI covers e2e, and `npm run lint` / `lint:fix` / `format` / `format:check`, `frontend/.lintstagedrc.json` and the pre-commit hook's staged-file filter take them as well. The e2e ESLint override turns off every Jest and Testing Library rule (`react-app/jest` enables them for any `*.spec.*` file, and `prefer-screen-queries` alone flagged 282 `page.getByRole` calls) and adds `eslint-plugin-playwright` (`no-focused-test`, `no-page-pause`, `no-wait-for-selector`, `no-wait-for-timeout`, `no-raw-locators`, `valid-test-tags` with the tag-scheme allowlist), `no-restricted-syntax` selectors that require a level and an area tag on every `test.describe`, kebab-case file and folder names (PascalCase for page objects in `e2e/pages/`) and a default-export exception for `playwright.config.ts`. `e2e-testing.md`, `frontend/e2e/README.md` and `CLAUDE.md` state what is enforced (226c101)
+- The 13 raw Playwright locators (CSS attribute selectors, `.nth()`, XPath, `text=`) are rewritten with `getByLabel` / `getByRole` / `getByText` / `getByTestId`; the report amounts that e2e reads carry `data-testid="earnings-amount"` and `data-testid="tax-amount"`, since nothing in the markup ties an amount to its card title (226c101)
+- `frontend/e2e` reformatted with Prettier 3: 56 files, code wrapped at 80 columns under the `printWidth: 100` config. The commit is listed in `.git-blame-ignore-revs` (f107631)
+
+### Fixed
+- The six code-digit inputs on the email verification screen and in the change-email dialog had no accessible name, so screen readers could not tell which digit a field holds; each now has `aria-label="Цифра N из 6"` (226c101)
+- `push-subscribe.spec.ts` failed on every run: it clicked the «Уведомления» tab only when a non-waiting `isVisible()` found it right after navigation, which never happened; the click now waits for the tab (226c101)
+
+### Infrastructure
+- New frontend devDependency `eslint-plugin-playwright` 2.11: it only needs `eslint >=8.40` and still ships legacy `.eslintrc` configs, so it fits the frontend's ESLint 8 / TypeScript 4.9 setup (226c101)
+
 ## 2026-09-12
 
 ### Changed
