@@ -188,6 +188,7 @@ model Lesson {
   @@index([tutorId, startTime])
   @@index([tutorId, status])
   @@index([tutorId, isPaid, status])
+  @@index([studentId, startTime])
   @@map("lessons")
 }
 
