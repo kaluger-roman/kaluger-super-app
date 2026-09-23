@@ -103,6 +103,7 @@ testRouter.post("/users/:userId/students", async (req: Request, res: Response) =
       name: data.name,
       contactMethod: data.contactMethod ?? "WHATSAPP",
       hourlyRate: data.hourlyRate ?? null,
+      commissionAmount: data.commissionAmount ?? 0,
       grade: data.grade ?? null,
       phone: data.phone ?? null,
       notes: data.notes ?? null,

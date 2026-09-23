@@ -2,8 +2,9 @@ import type { Response } from "express";
 import type { CreateStudentDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
+import { tryAttachCommissionToStudents } from "../../services";
 import { handlePrismaError } from "../../utils/prismaErrorHandler";
-import { validateCreateStudentDto } from "./validators";
+import { normalizeCommissionAmount, validateCreateStudentDto } from "./validators";
 
 export const createStudent = async (req: AuthRequest, res: Response) => {
   try {
@@ -29,13 +30,16 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
         grade: data.grade,
         notes: data.notes,
         hourlyRate: data.hourlyRate,
+        commissionAmount: normalizeCommissionAmount(data.commissionAmount),
         tutorId: userId!,
       },
     });
 
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
     res.status(201).json({
       message: "Ученик успешно создан",
-      student,
+      student: studentWithCommission,
     });
   } catch (error) {
     console.error("Create student error:", error);

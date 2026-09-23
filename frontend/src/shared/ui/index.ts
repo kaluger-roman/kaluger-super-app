@@ -18,3 +18,5 @@ export { StudentName } from "./StudentName";
 export { LessonStudentName } from "./LessonStudentName";
 export { InfoTooltip } from "./InfoTooltip";
 export { StudentArchivedInfo } from "./StudentArchivedInfo";
+export { CommissionBadge } from "./CommissionBadge";
+export { CommissionProgress, isCommissionClosed } from "./CommissionProgress";

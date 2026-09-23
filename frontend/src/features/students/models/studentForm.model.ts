@@ -9,7 +9,10 @@ import {
   prepareEmptyFormData,
   prepareUpdateData,
   prepareCreateData,
+  hasCommissionError,
+  getCommissionErrorText,
   isEditMode,
+  isFormSubmittable,
 } from "./studentForm.helpers";
 import type { StudentFormData } from "../ui/StudentForm/StudentForm.types";
 
@@ -32,6 +35,7 @@ export const $formData = createStore<StudentFormData>({
   parentTelegramNick: "",
   phone: "",
   hourlyRate: "",
+  commissionAmount: "",
   grade: "",
   notes: "",
 });
@@ -104,10 +108,18 @@ sample({
   target: notificationsModel.showErrorEvent,
 });
 
+sample({
+  clock: formSubmitted,
+  source: $formData,
+  filter: hasCommissionError,
+  fn: getCommissionErrorText,
+  target: notificationsModel.showErrorEvent,
+});
+
 const validatedSubmit = sample({
   clock: formSubmitted,
   source: { formData: $formData, editingStudent: $editingStudent },
-  filter: ({ formData }) => Boolean(formData.name.trim()),
+  filter: ({ formData }) => isFormSubmittable(formData),
 });
 
 sample({

@@ -57,9 +57,9 @@ describe("LessonCard", () => {
 
       expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
       expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === "💰 2000 ₽" || false;
-        })
+        screen.getByText(
+          (content, element) => element?.tagName === "P" && element.textContent === "💰 2000 ₽"
+        )
       ).toBeInTheDocument();
       expect(screen.getByText(/математика/i)).toBeInTheDocument();
       expect(screen.getByText(/егэ/i)).toBeInTheDocument();
@@ -71,9 +71,9 @@ describe("LessonCard", () => {
       renderWithTheme(<LessonCard lesson={freeLesson} />);
 
       expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === "💰 Бесплатно" || false;
-        })
+        screen.getByText(
+          (content, element) => element?.tagName === "P" && element.textContent === "💰 Бесплатно"
+        )
       ).toBeInTheDocument();
     });
 
@@ -261,6 +261,35 @@ describe("LessonCard", () => {
       renderWithTheme(<LessonCard lesson={lessonWithArchivedStudent} />);
 
       expect(screen.getByText("Архив")).toBeInTheDocument();
+    });
+  });
+  describe("Commission credit", () => {
+    it("should render the fact badge next to the price", () => {
+      renderWithTheme(
+        <LessonCard lesson={{ ...mockLesson, commissionCredit: { amount: 1000, state: "FACT" } }} />
+      );
+
+      expect(screen.getByTestId("HandshakeIcon")).toBeInTheDocument();
+      expect(screen.getByText(/^\(.*1.*000.*₽\)$/)).toBeInTheDocument();
+    });
+
+    it("should render the forecast badge with its own icon", () => {
+      renderWithTheme(
+        <LessonCard
+          lesson={{ ...mockLesson, commissionCredit: { amount: 500, state: "FORECAST" } }}
+        />
+      );
+
+      expect(screen.getByTestId("HandshakeOutlinedIcon")).toBeInTheDocument();
+      expect(screen.getByText(/^\(~/)).toBeInTheDocument();
+    });
+
+    it("should render neither badge nor empty block without a credit", () => {
+      renderWithTheme(<LessonCard lesson={mockLesson} />);
+
+      expect(screen.queryByTestId("HandshakeIcon")).toBeNull();
+      expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
+      expect(screen.queryByRole("img")).toBeNull();
     });
   });
 });

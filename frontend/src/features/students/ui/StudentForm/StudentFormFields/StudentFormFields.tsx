@@ -13,6 +13,7 @@ import {
 
 import { useDisableNumberScroll } from "@shared";
 
+import { CommissionField } from "../CommissionField";
 import { ContactMethodSelect } from "../ContactMethodSelect";
 import type { StudentFormFieldsProps } from "../StudentForm.types";
 
@@ -115,6 +116,12 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         }}
         placeholder="1000"
         size={isMobile ? "small" : "medium"}
+      />
+
+      <CommissionField
+        value={formData.commissionAmount}
+        isMobile={isMobile}
+        onChange={onChange("commissionAmount")}
       />
 
       <FormControl fullWidth size={isMobile ? "small" : "medium"}>

@@ -1,3 +1,5 @@
+import type { LessonStatus } from "@prisma/client";
+
 import type { ContactMethod } from "./student";
 
 export type CreateLessonDto = {
@@ -33,6 +35,35 @@ export type UpdateLessonDto = Omit<
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
+};
+
+export type { LessonStatus };
+
+export type CommissionCreditState = "FACT" | "FORECAST";
+
+export type CommissionCredit = {
+  amount: number;
+  state: CommissionCreditState;
+};
+
+export type CommissionLessonInput = {
+  id: string;
+  startTime: Date;
+  paymentDate: Date | null;
+  price: number | null;
+  status: LessonStatus;
+  isPaid: boolean;
+};
+
+export type AllocateCommissionInput = {
+  commissionAmount: number;
+  lessons: CommissionLessonInput[];
+};
+
+export type CommissionAllocation = {
+  repaid: number;
+  remaining: number;
+  creditByLessonId: Map<string, CommissionCredit>;
 };
 
 export type ShiftResult = {

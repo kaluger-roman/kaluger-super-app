@@ -30,29 +30,6 @@ export const GreenAmount = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
-export const BlueCard = styled(Card)({
-  backgroundColor: "#e3f2fd",
-});
-
-export const BlueCardContent = styled(CardContent)(({ theme }) => ({
-  "& .icon": {
-    color: "#1565c0",
-    marginRight: theme.spacing(1),
-  },
-}));
-
-export const BlueTitle = styled(Typography)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  marginBottom: theme.spacing(2),
-}));
-
-export const BlueAmount = styled(Typography)(({ theme }) => ({
-  color: "#1565c0",
-  fontWeight: "bold",
-  marginBottom: theme.spacing(1),
-}));
-
 export const TealCard = styled(Card)({
   backgroundColor: "#e0f2f1",
 });

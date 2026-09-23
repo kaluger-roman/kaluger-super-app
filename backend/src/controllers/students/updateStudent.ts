@@ -2,6 +2,7 @@ import type { Response } from "express";
 import type { UpdateStudentDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
+import { tryAttachCommissionToStudents } from "../../services";
 import { handlePrismaError } from "../../utils/prismaErrorHandler";
 import { validateUpdateStudentDto, prepareUpdateData } from "./validators";
 
@@ -37,9 +38,11 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       data: preparedData,
     });
 
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
     res.json({
       message: "Ученик успешно обновлен",
-      student,
+      student: studentWithCommission,
     });
   } catch (error) {
     console.error("Update student error:", error);

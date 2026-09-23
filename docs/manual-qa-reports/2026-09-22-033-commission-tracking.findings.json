@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "branch": "033-commission-tracking",
+  "feature_id": "033-commission-tracking",
+  "spec_path": "specs/033-commission-tracking/spec.md",
+  "base_url": "http://localhost:61776",
+  "run_at": "2026-09-22T21:05:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-09-22-033-commission-tracking.md",
+  "readiness": "green",
+  "coverage": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0,
+    "warned": 0,
+    "scenarios": [
+      { "id": "P1.1", "title": "Поле «Комиссия»: пустое = 0, без пометок", "priority": "P1", "status": "pass" },
+      { "id": "P1.2", "title": "Комиссия 3000 сохраняется и отображается при переоткрытии", "priority": "P1", "status": "pass" },
+      { "id": "P1.3", "title": "Отрицательная комиссия отклоняется", "priority": "P1", "status": "pass" },
+      { "id": "P1.4", "title": "Более двух знаков после запятой отклоняется", "priority": "P1", "status": "pass" },
+      { "id": "P1.5", "title": "Комиссия выше 99 999 999,99 ₽ отклоняется", "priority": "P1", "status": "pass" },
+      { "id": "P1.6", "title": "Ученик с комиссией 0 — без пометок", "priority": "P1", "status": "pass" },
+      { "id": "P1.7", "title": "Комиссия видна в списке/просмотре при значении > 0", "priority": "P1", "status": "pass" },
+      { "id": "P1.8", "title": "Изоляция кабинета ученика (UI + сырой API)", "priority": "P1", "status": "pass" },
+      { "id": "P2.1", "title": "FACT-пометки 1000/1000/500 на трёх уроках", "priority": "P2", "status": "pass" },
+      { "id": "P2.2", "title": "После полного погашения — без пометки", "priority": "P2", "status": "pass" },
+      { "id": "P2.7", "title": "Бесплатный урок — без пометки, не тратит остаток", "priority": "P2", "status": "pass" },
+      { "id": "P2.8", "title": "Отменённый урок — доля переходит следующему", "priority": "P2", "status": "pass" },
+      { "id": "P2.9", "title": "Факт и прогноз одновременно, визуально различимы", "priority": "P2", "status": "pass" },
+      { "id": "P2.10-11", "title": "Прогноз не влияет на статистику; прогноз->факт при оплате", "priority": "P2", "status": "pass" },
+      { "id": "P3.1-4", "title": "Списание за период по дате оплаты, пересчёт при смене периода", "priority": "P3", "status": "pass" },
+      { "id": "P3.5", "title": "Репетитор без комиссий — показателей нет", "priority": "P3", "status": "pass" },
+      { "id": "P3.repay-order", "title": "Поздняя оплата раннего урока не меняет закрытый период", "priority": "P3", "status": "pass" },
+      { "id": "P4.1-3", "title": "Прогресс погашения: частичный / тихая строка при полном", "priority": "P4", "status": "pass" },
+      { "id": "P4.5-7", "title": "Общий остаток период-независим, live-обновление", "priority": "P4", "status": "pass" },
+      { "id": "Edge.archive-mobile", "title": "Архивный ученик исключён из остатка; мобильная ширина 375px", "priority": "Edge", "status": "pass" }
+    ]
+  },
+  "summary": {
+    "total_findings": 0,
+    "by_severity": { "critical": 0, "high": 0, "medium": 0, "low": 0 },
+    "by_category": { "spec-mismatch": 0, "bug": 0, "ux": 0, "improvement": 0 },
+    "unambiguous_fix_count": 0
+  },
+  "findings": []
+}

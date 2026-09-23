@@ -16,6 +16,9 @@ export type Student = {
   notes?: string | null;
   hourlyRate?: number | null;
   grade?: number | null; // Класс от 1 до 11
+  commissionAmount?: number | null;
+  commissionRepaid?: number | null;
+  commissionRemaining?: number | null;
   archived: boolean;
   archivedAt?: string | null;
   archiveReason?: ArchiveReason | null;
@@ -37,6 +40,7 @@ export type CreateStudentDto = {
   notes?: string | null;
   hourlyRate?: number | null;
   grade?: number | null;
+  commissionAmount?: number | null;
 };
 
 export type UpdateStudentDto = Partial<CreateStudentDto>;

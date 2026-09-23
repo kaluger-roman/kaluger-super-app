@@ -179,4 +179,32 @@ describe("LessonCell", () => {
 
     expect(screen.getByText(/Школа/)).toBeInTheDocument();
   });
+  it("should render the commission badge in the schedule cell", () => {
+    const onClick = vi.fn();
+    const lesson = {
+      ...mockLesson,
+      commissionCredit: { amount: 1500, state: "FACT" as const },
+    };
+    renderWithTheme(<LessonCell lesson={lesson} onClick={onClick} />);
+
+    expect(screen.getByRole("img", { name: /комисси/i })).toBeInTheDocument();
+  });
+
+  it("should render the commission badge in the compact cell", () => {
+    const onClick = vi.fn();
+    const lesson = {
+      ...mockLesson,
+      commissionCredit: { amount: 500, state: "FORECAST" as const },
+    };
+    renderWithTheme(<LessonCell lesson={lesson} onClick={onClick} compact />);
+
+    expect(screen.getByRole("img", { name: /комисси/i })).toBeInTheDocument();
+  });
+
+  it("should not render a commission badge without a credit", () => {
+    const onClick = vi.fn();
+    renderWithTheme(<LessonCell lesson={mockLesson} onClick={onClick} />);
+
+    expect(screen.queryByRole("img", { name: /комисси/i })).toBeNull();
+  });
 });

@@ -85,6 +85,7 @@ model Student {
   phone               String?
   notes               String?
   hourlyRate          Decimal?       @db.Decimal(10, 2)
+  commissionAmount    Decimal        @default(0) @db.Decimal(10, 2)
   grade               Int?
   archived            Boolean        @default(false)
   archivedAt          DateTime?

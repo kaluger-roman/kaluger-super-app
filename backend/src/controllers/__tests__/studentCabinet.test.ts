@@ -134,6 +134,35 @@ describe("studentCabinet controller", () => {
     expect(res.body.lessons[0]).not.toHaveProperty("notes");
   });
 
+  it("never exposes commission data to the student cabinet", async () => {
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { commissionAmount: 5000 },
+    });
+
+    // studentId is shared by the suite, so the commission is reset even when an
+    // assertion below fails.
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body).toLowerCase()).not.toContain("commission");
+      for (const lesson of res.body.lessons) {
+        expect(Object.keys(lesson).some((key) => key.startsWith("commission"))).toBe(false);
+        expect(lesson).not.toHaveProperty("price");
+        expect(lesson).not.toHaveProperty("isPaid");
+      }
+    } finally {
+      await prisma.student.update({
+        where: { id: studentId },
+        data: { commissionAmount: 0 },
+      });
+    }
+  });
+
   it("does not leak other students' lessons even when querying same week", async () => {
     const res = await request(app)
       .get("/api/student-cabinet/lessons")

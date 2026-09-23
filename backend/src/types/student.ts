@@ -11,6 +11,7 @@ export type CreateStudentDto = {
   phone?: string | null;
   notes?: string | null;
   hourlyRate?: number | null;
+  commissionAmount?: number | null;
   grade?: number | null; // Класс от 1 до 11
 };
 

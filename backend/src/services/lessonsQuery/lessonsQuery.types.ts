@@ -23,6 +23,7 @@ export type LessonsPagination = {
 };
 
 export type LessonsPageOptions = {
+  tutorId: string;
   orderAsc: boolean;
   pagination: LessonsPagination | null;
   withPaymentsSummary: boolean;

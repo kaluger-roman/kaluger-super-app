@@ -170,4 +170,26 @@ describe("StudentCard", () => {
       })
     );
   });
+  it("should render the compact commission summary for an open commission", () => {
+    renderWithTheme(
+      <StudentCard student={{ ...mockStudent, commissionAmount: 3000, commissionRepaid: 1200 }} />
+    );
+
+    expect(screen.getByText(/Комиссия .* · погашено .* · осталось/)).toBeInTheDocument();
+  });
+
+  it("should move a fully repaid commission out of the summary into the details", () => {
+    renderWithTheme(
+      <StudentCard student={{ ...mockStudent, commissionAmount: 3000, commissionRepaid: 3000 }} />
+    );
+
+    expect(screen.queryByText(/Комиссия .* · погашено/)).toBeNull();
+    expect(screen.getByText(/выплачена/)).toBeInTheDocument();
+  });
+
+  it("should render nothing about commissions for a student without one", () => {
+    renderWithTheme(<StudentCard student={mockStudent} />);
+
+    expect(screen.queryByText(/комисси/i)).toBeNull();
+  });
 });

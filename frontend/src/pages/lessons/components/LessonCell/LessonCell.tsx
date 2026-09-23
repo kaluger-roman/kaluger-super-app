@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 
 import type { Lesson } from "@shared";
 import {
+  CommissionBadge,
   SUBJECT_LABELS,
   LESSON_TYPE_LABELS,
   getLessonDisplayName,
@@ -31,6 +32,7 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
             {lesson.price ? `${lesson.price}₽ ` : ""}
             {getLessonDisplayName(lesson)}
           </Styled.StyledCaption>
+          <CommissionBadge credit={lesson.commissionCredit} />
           {lesson.student?.archived && (
             <Styled.StyledCaption variant="caption" color="text.secondary">
               📦
@@ -67,9 +69,12 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
 
       {lesson.price != null && lesson.price > 0 && (
         <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
-          <Typography variant="caption" fontWeight="bold">
-            {lesson.price}₽
-          </Typography>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <Typography variant="caption" fontWeight="bold">
+              {lesson.price}₽
+            </Typography>
+            <CommissionBadge credit={lesson.commissionCredit} />
+          </Box>
           {!lesson.isPaid && (
             <Styled.UnpaidChip label="Не оплачен" size="small" color="error" variant="outlined" />
           )}
