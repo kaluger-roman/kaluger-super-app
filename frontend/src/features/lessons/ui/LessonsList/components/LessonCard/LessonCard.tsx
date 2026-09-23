@@ -14,6 +14,7 @@ import {
   formatDate,
   RecurringLessonBadge,
   LessonStudentName,
+  CommissionBadge,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -66,9 +67,12 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
               <Typography variant="body2" color="text.secondary">
                 ⏰ {formatTimeFromString(lesson.startTime)} - {formatTimeFromString(lesson.endTime)}
               </Typography>
-              <Styled.PriceText variant="body2">
-                💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
-              </Styled.PriceText>
+              <Styled.PriceGroup>
+                <Styled.PriceText variant="body2">
+                  💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
+                </Styled.PriceText>
+                <CommissionBadge credit={lesson.commissionCredit} />
+              </Styled.PriceGroup>
             </Styled.InfoRow>
 
             {lesson.isPaid && lesson.paymentDate && (

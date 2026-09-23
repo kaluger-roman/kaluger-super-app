@@ -173,6 +173,7 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - PostgreSQL via Prisma ORM — расширение enum `ContactMethod`, (031-max-messenger-trial-lessons)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, Material UI (styled-components API), (032-lesson-notes-in-card)
 - N/A — без изменений БД: поле `notes` уже есть в модели урока (032-lesson-notes-in-card)
+- PostgreSQL через Prisma. Одна новая колонка: (033-commission-tracking)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

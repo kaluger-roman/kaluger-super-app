@@ -31,6 +31,7 @@ export type StudentSeed = {
   name: string;
   contactMethod?: "WHATSAPP" | "TELEGRAM";
   hourlyRate?: number;
+  commissionAmount?: number;
   grade?: number;
   phone?: string;
   notes?: string;
@@ -41,7 +42,9 @@ export type StudentSeed = {
 export const createStudentFor = async (
   userId: string,
   data: StudentSeed,
-): Promise<{ student: { id: string; name: string; hourlyRate: number | null } }> =>
+): Promise<{
+  student: { id: string; name: string; hourlyRate: number | null; commissionAmount: number };
+}> =>
   apiRequest(`/api/__test__/users/${userId}/students`, {
     method: "POST",
     body: data,
@@ -188,7 +191,12 @@ export const getStudentsFor = async (
   userId: string,
   archived = false,
 ): Promise<{
-  students: Array<{ id: string; name: string; archived: boolean }>;
+  students: Array<{
+    id: string;
+    name: string;
+    archived: boolean;
+    commissionAmount: number;
+  }>;
 }> =>
   apiRequest(
     `/api/__test__/users/${userId}/students?archived=${archived}`,

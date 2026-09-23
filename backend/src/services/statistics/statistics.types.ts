@@ -44,4 +44,7 @@ export type LessonStatistics = TaxSummary & {
   unpaidDebtOver24hCount: number;
   paymentsInRangeSum: number;
   paymentsInRangeCount: number;
+  hasCommissionStudents: boolean;
+  commissionWrittenOffSum: number;
+  commissionRemainingTotal: number;
 };

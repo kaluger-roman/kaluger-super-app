@@ -1,3 +1,4 @@
+import "./commissionReload.model";
 import "./lessonsReload.model";
 import "./lessonsNotifications.model";
 import "./lessonsPageLoader.model";

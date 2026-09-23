@@ -136,4 +136,32 @@ describe("LessonDetails", () => {
     renderWithTheme(<LessonDetails lesson={recurringLesson} />);
     // Component should show some indication of recurring status
   });
+  it("should render the full commission badge for a fact credit", () => {
+    renderWithTheme(
+      <LessonDetails
+        lesson={{ ...mockLesson, commissionCredit: { amount: 1000, state: "FACT" } }}
+      />
+    );
+
+    expect(screen.getByText(/^в счёт комиссии: /)).toBeInTheDocument();
+    expect(screen.getByTestId("HandshakeIcon")).toBeInTheDocument();
+  });
+
+  it("should render the full commission badge for a forecast credit", () => {
+    renderWithTheme(
+      <LessonDetails
+        lesson={{ ...mockLesson, commissionCredit: { amount: 500, state: "FORECAST" } }}
+      />
+    );
+
+    expect(screen.getByText(/^план, в счёт комиссии: ~/)).toBeInTheDocument();
+    expect(screen.getByTestId("HandshakeOutlinedIcon")).toBeInTheDocument();
+  });
+
+  it("should render no commission badge without a credit", () => {
+    renderWithTheme(<LessonDetails lesson={mockLesson} />);
+
+    expect(screen.queryByTestId("HandshakeIcon")).toBeNull();
+    expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
+  });
 });

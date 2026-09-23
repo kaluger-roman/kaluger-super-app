@@ -4,6 +4,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import {
   applyLessonUpdate,
+  tryAttachCommissionToLessons,
   buildLessonUpdateData,
   notifyLessonUpdated,
   syncAfterLessonUpdate,
@@ -75,7 +76,13 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
 
     await syncAfterLessonUpdate(id, existingLesson, updateData, updateResult);
 
-    res.json({ message: "Урок успешно обновлен", lesson: updateResult.lesson });
+    // The open lesson view patches itself from this response, so the credit
+    // has to travel with it — otherwise the badge vanishes right after paying.
+    const [lessonWithCommission] = await tryAttachCommissionToLessons(userId, [
+      updateResult.lesson,
+    ]);
+
+    res.json({ message: "Урок успешно обновлен", lesson: lessonWithCommission });
 
     notifyLessonUpdated(
       userId,

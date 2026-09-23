@@ -68,6 +68,15 @@ export const $archivedStudents = createStore<Student[]>([]);
 
 export const $currentStudent = createStore<Student | null>(null);
 
+// Gates every extra commission-driven refetch: a tutor who never sets a
+// commission must not pay a single request for the feature.
+export const $hasCommissionStudents = combine(
+  $students,
+  $archivedStudents,
+  (students, archivedStudents) =>
+    [...students, ...archivedStudents].some((student) => (student.commissionAmount ?? 0) > 0)
+);
+
 export const $isLoadStudent = loadStudentFx.pending;
 export const $isAddStudent = addStudentFx.pending;
 export const $isUpdateStudent = updateStudentFx.pending;
@@ -143,6 +152,16 @@ sample({
   fn: (students, updatedStudent) =>
     students.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)),
   target: $students,
+});
+
+// An archived student stays editable, so the archive list has to pick the
+// update up too — otherwise its card keeps the stale commission.
+sample({
+  clock: updateStudentFx.doneData,
+  source: $archivedStudents,
+  fn: (students, updatedStudent) =>
+    students.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)),
+  target: $archivedStudents,
 });
 
 sample({

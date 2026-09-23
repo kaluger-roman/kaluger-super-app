@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
+import { collectCommissionStatistics } from "../commission";
 import { ACTIVE_STATUSES, DAY_MS } from "./statistics.constants";
 import { computeTaxSummary, decimalToNumber, paidInRangeWhere } from "./statistics.helpers";
 import type { LessonStatistics, LessonStatisticsInput } from "./statistics.types";
@@ -35,6 +36,7 @@ export const collectLessonStatistics = async ({
     unpaidOver24h,
     paymentsInRange,
     currentUser,
+    commission,
   ] = await Promise.all([
     prisma.lesson.count({ where: { ...where, status: "COMPLETED" } }),
     prisma.lesson.count({ where: { ...where, status: "CANCELLED" } }),
@@ -94,6 +96,7 @@ export const collectLessonStatistics = async ({
         },
       },
     }),
+    collectCommissionStatistics(userId, paymentDateRange),
   ]);
 
   const paidLessonsForTax = currentUser?.taxEnabled
@@ -122,6 +125,7 @@ export const collectLessonStatistics = async ({
     unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
     paymentsInRangeSum: decimalToNumber(paymentsInRange._sum.price),
     paymentsInRangeCount: paymentsInRange._count.id || 0,
+    ...commission,
     ...computeTaxSummary(currentUser, paidLessonsForTax, paymentDateRange),
   };
 };

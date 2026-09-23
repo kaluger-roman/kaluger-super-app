@@ -21,7 +21,7 @@ export const IncomeCards: FC<IncomeCardsProps> = ({ statistics }) => (
             <AttachMoney className="icon" />
             Заработок
           </Styled.GreenTitle>
-          <Styled.GreenAmount variant="h4">
+          <Styled.GreenAmount variant="h4" data-testid="earnings">
             {formatCurrency(statistics.earnings)}
           </Styled.GreenAmount>
           <Typography variant="body2" color="textSecondary">
@@ -29,23 +29,6 @@ export const IncomeCards: FC<IncomeCardsProps> = ({ statistics }) => (
           </Typography>
         </Styled.GreenCardContent>
       </Styled.GreenCard>
-    </Styled.StatBox>
-
-    <Styled.StatBox>
-      <Styled.BlueCard>
-        <Styled.BlueCardContent>
-          <Styled.BlueTitle variant="h6">
-            <AttachMoney className="icon" />
-            Предоплата
-          </Styled.BlueTitle>
-          <Styled.BlueAmount variant="h4">
-            {formatCurrency(statistics.prepaidIncome || 0)}
-          </Styled.BlueAmount>
-          <Typography variant="body2" color="textSecondary">
-            Дохoд от всех предоплаченных уроков (остаток)
-          </Typography>
-        </Styled.BlueCardContent>
-      </Styled.BlueCard>
     </Styled.StatBox>
 
     <Styled.StatBox>

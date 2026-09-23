@@ -7,7 +7,11 @@ import {
   prepareEmptyFormData,
   prepareUpdateData,
   prepareCreateData,
+  hasCommissionError,
+  getCommissionError,
+  getCommissionErrorText,
   isEditMode,
+  isFormSubmittable,
 } from "./studentForm.helpers";
 import type { StudentFormData } from "../ui/StudentForm/StudentForm.types";
 
@@ -44,6 +48,7 @@ describe("studentForm.helpers", () => {
         parentTelegramNick: "@parent",
         phone: "+79991234567",
         hourlyRate: "1500",
+        commissionAmount: "",
         grade: "9",
         notes: "Хороший ученик",
       });
@@ -80,6 +85,7 @@ describe("studentForm.helpers", () => {
         parentTelegramNick: "",
         phone: "",
         hourlyRate: "",
+        commissionAmount: "",
         grade: "",
         notes: "",
       });
@@ -109,6 +115,7 @@ describe("studentForm.helpers", () => {
         parentTelegramNick: "",
         phone: "",
         hourlyRate: "",
+        commissionAmount: "",
         grade: "",
         notes: "",
       });
@@ -132,6 +139,7 @@ describe("studentForm.helpers", () => {
       parentTelegramNick: "  @parent  ",
       phone: "  +79991234567  ",
       hourlyRate: "1500.50",
+      commissionAmount: "",
       grade: "9",
       notes: "  Хороший ученик  ",
     };
@@ -183,6 +191,7 @@ describe("studentForm.helpers", () => {
         parentTelegramNick: "",
         phone: "",
         hourlyRate: "",
+        commissionAmount: "",
         grade: "",
         notes: "",
       };
@@ -209,6 +218,7 @@ describe("studentForm.helpers", () => {
       parentTelegramNick: "  @parent  ",
       phone: "  +79991234567  ",
       hourlyRate: "1500",
+      commissionAmount: "",
       grade: "9",
       notes: "  Хороший ученик  ",
     };
@@ -248,6 +258,7 @@ describe("studentForm.helpers", () => {
         parentTelegramNick: "",
         phone: "",
         hourlyRate: "",
+        commissionAmount: "",
         grade: "",
         notes: "",
       };
@@ -288,5 +299,132 @@ describe("studentForm.helpers", () => {
 
       expect(isEditMode(state)).toBe(false);
     });
+  });
+  describe("commissionAmount", () => {
+    const base: StudentFormData = {
+      name: "Иван",
+      contactMethod: "WHATSAPP",
+      parentPhone: "",
+      parentName: "",
+      parentContactMethod: "WHATSAPP",
+      telegramNick: "",
+      parentTelegramNick: "",
+      phone: "",
+      hourlyRate: "",
+      commissionAmount: "",
+      grade: "",
+      notes: "",
+    };
+
+    it("should start empty in a blank form", () => {
+      expect(prepareEmptyFormData().commissionAmount).toBe("");
+    });
+
+    it("should convert a stored commission to a string when editing", () => {
+      const student = { ...mockStudent, commissionAmount: 2500 };
+      expect(prepareFormDataForEdit(student).commissionAmount).toBe("2500");
+    });
+
+    it("should leave a zero commission as an empty field when editing", () => {
+      const student = { ...mockStudent, commissionAmount: 0 };
+      expect(prepareFormDataForEdit(student).commissionAmount).toBe("");
+    });
+
+    it("should send undefined for an empty commission on create", () => {
+      expect(prepareCreateData(base).commissionAmount).toBeUndefined();
+    });
+
+    it("should parse a filled commission on create", () => {
+      expect(prepareCreateData({ ...base, commissionAmount: "1500.50" }).commissionAmount).toBe(
+        1500.5
+      );
+    });
+
+    it("should send zero for an empty commission on update", () => {
+      expect(prepareUpdateData(base).commissionAmount).toBe(0);
+    });
+
+    it("should parse a filled commission on update", () => {
+      expect(prepareUpdateData({ ...base, commissionAmount: "3000" }).commissionAmount).toBe(3000);
+    });
+  });
+
+  describe("submit predicates", () => {
+    const base: StudentFormData = {
+      name: "Иван",
+      contactMethod: "WHATSAPP",
+      parentPhone: "",
+      parentName: "",
+      parentContactMethod: "WHATSAPP",
+      telegramNick: "",
+      parentTelegramNick: "",
+      phone: "",
+      hourlyRate: "",
+      commissionAmount: "",
+      grade: "",
+      notes: "",
+    };
+
+    it("should allow a submit with a valid commission", () => {
+      expect(isFormSubmittable(base)).toBe(true);
+      expect(hasCommissionError(base)).toBe(false);
+    });
+
+    it("should block a submit with a negative commission", () => {
+      const invalid = { ...base, commissionAmount: "-1" };
+      expect(isFormSubmittable(invalid)).toBe(false);
+      expect(hasCommissionError(invalid)).toBe(true);
+    });
+
+    it("should report no commission error when the name is missing", () => {
+      const noName = { ...base, name: "", commissionAmount: "-1" };
+      expect(hasCommissionError(noName)).toBe(false);
+      expect(isFormSubmittable(noName)).toBe(false);
+    });
+  });
+});
+
+describe("getCommissionError", () => {
+  it("should accept an empty value", () => {
+    expect(getCommissionError("")).toBeNull();
+    expect(getCommissionError("   ")).toBeNull();
+  });
+
+  it("should accept zero and positive values with either decimal separator", () => {
+    expect(getCommissionError("0")).toBeNull();
+    expect(getCommissionError("1500.50")).toBeNull();
+    expect(getCommissionError("1500,50")).toBeNull();
+  });
+
+  it("should reject a negative value", () => {
+    expect(getCommissionError("-1")).toBe("negative");
+  });
+
+  it("should reject a non-numeric value", () => {
+    expect(getCommissionError("abc")).toBe("not-a-number");
+  });
+
+  // Regression: Number("Infinity") is finite-looking to Number.isNaN, so an
+  // infinite value used to pass the form and reach the API as 0.
+  it("should reject an infinite value", () => {
+    expect(getCommissionError("Infinity")).toBe("not-a-number");
+    expect(getCommissionError("-Infinity")).toBe("not-a-number");
+  });
+
+  it("should reject a value above the DECIMAL(10,2) ceiling", () => {
+    expect(getCommissionError("100000000")).toBe("too-large");
+    expect(getCommissionError("99999999.99")).toBeNull();
+  });
+
+  it("should reject more than two decimal places", () => {
+    expect(getCommissionError("1500.555")).toBe("too-precise");
+    expect(getCommissionError("1500.07")).toBeNull();
+  });
+});
+
+describe("getCommissionErrorText", () => {
+  it("should name the actual problem instead of always blaming a negative value", () => {
+    const formData = { ...prepareEmptyFormData(), name: "Иван", commissionAmount: "abc" };
+    expect(getCommissionErrorText(formData)).toBe("Комиссия должна быть числом");
   });
 });

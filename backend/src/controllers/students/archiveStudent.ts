@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
-import { ACTIVE_REMINDER_STATUSES } from "../../services";
+import { ACTIVE_REMINDER_STATUSES, tryAttachCommissionToStudents } from "../../services";
 
 export const archiveStudent = async (req: AuthRequest, res: Response) => {
   try {
@@ -61,7 +61,9 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
       return student;
     });
 
-    res.json({ student: result });
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [result]);
+
+    res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Archive student error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });
@@ -91,7 +93,9 @@ export const unarchiveStudent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ student });
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
+    res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Unarchive student error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

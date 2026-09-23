@@ -20,6 +20,8 @@ export type {
   LessonType,
   CreateLessonDto,
   UpdateLessonDto,
+  CommissionCredit,
+  CommissionCreditState,
 } from "./lesson";
 export type { TaxRatePeriod, CreateTaxRatePeriodDto, TaxBreakdownEntry } from "./taxRate";
 export type { Statistics } from "./statistics";

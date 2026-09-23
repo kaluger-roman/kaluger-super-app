@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
 
+// The pickers are typed digit by digit, so a date becomes DDMMYYYY.
+export const formatDdMmYyyy = (date: Date): string => {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${dd}${mm}${String(date.getFullYear())}`;
+};
+
 export const fillDatePicker = async (
   page: Page,
   label: string,

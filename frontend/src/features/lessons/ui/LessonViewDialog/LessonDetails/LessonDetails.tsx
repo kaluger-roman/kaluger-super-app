@@ -8,6 +8,7 @@ import {
   formatDateTimeLong,
   formatDate,
   LessonStudentName,
+  CommissionBadge,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -30,9 +31,12 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
         <Typography variant="body1" color="text.secondary" gutterBottom>
           📚 {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}
         </Typography>
-        <Typography variant="body1" gutterBottom>
-          💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
-        </Typography>
+        <Styled.PriceGroup>
+          <Typography variant="body1">
+            💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
+          </Typography>
+          <CommissionBadge credit={lesson.commissionCredit} variant="full" />
+        </Styled.PriceGroup>
         <Styled.PaymentStatusBox>
           <PaymentStatus lesson={lesson} />
         </Styled.PaymentStatusBox>

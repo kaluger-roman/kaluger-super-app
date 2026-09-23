@@ -27,21 +27,25 @@ const statistics: Statistics = {
 };
 
 describe("IncomeCards", () => {
-  it("should render earnings, prepaid and payments cards", () => {
+  it("should render earnings and payments cards", () => {
     render(<IncomeCards statistics={statistics} />);
 
     expect(screen.getByText("Заработок")).toBeInTheDocument();
-    expect(screen.getByText("Предоплата")).toBeInTheDocument();
     expect(screen.getByText("Поступления за период")).toBeInTheDocument();
     expect(screen.getByText(/4 оплат по дате платежа/)).toBeInTheDocument();
   });
 
-  it("should fall back to zero for missing prepaid and payments sums", () => {
+  it("should not render the period-independent prepaid card", () => {
+    render(<IncomeCards statistics={statistics} />);
+
+    expect(screen.queryByText("Предоплата")).toBeNull();
+  });
+
+  it("should fall back to zero for missing payments sums", () => {
     render(
       <IncomeCards
         statistics={{
           ...statistics,
-          prepaidIncome: undefined,
           paymentsInRangeSum: undefined,
           paymentsInRangeCount: undefined,
         }}
