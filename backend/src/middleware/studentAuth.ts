@@ -55,5 +55,5 @@ export const authenticateStudent = async (
   }
 
   req.studentUser = payload;
-  next();
+  return next();
 };

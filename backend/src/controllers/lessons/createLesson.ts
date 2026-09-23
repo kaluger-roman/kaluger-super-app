@@ -41,11 +41,12 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     const lesson = await createSingleLesson(userId, data, student);
     res.status(201).json({ lesson });
     notifyLessonsCreated(userId, [lesson], lesson);
+    return;
   } catch (error) {
     if (error instanceof SchedulingConflictError) {
       return res.status(400).json({ error: error.message });
     }
     console.error("Create lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

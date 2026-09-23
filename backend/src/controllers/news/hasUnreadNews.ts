@@ -21,9 +21,9 @@ export const hasUnreadNews = async (req: AuthRequest, res: Response) => {
 
     const hasUnread = !readStatus || readStatus.lastReadAt < latestNews.publishedAt;
 
-    res.json({ hasUnread });
+    return res.json({ hasUnread });
   } catch (error) {
     console.error("Has unread news error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

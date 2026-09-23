@@ -38,7 +38,7 @@ Three biggest gaps driving this work:
 | 0.1 | Scaffold ESLint (flat config + `typescript-eslint`) + `lint` script + CI step | backend | ✅ PR3 | eslint 9 + `typescript-eslint` 8 + `eslint-plugin-import`; non-type-aware (no `project`) so CI lint needs no `prisma generate` |
 | 0.2 | Remove duplicate `plugins` key (`.eslintrc.js` lines 9–10) | frontend | ✅ PR1 | first line was dead |
 | 0.3 | `husky` + `lint-staged` on commit | repo | ✅ PR7 | done as #27: `lint-staged` from a committed `.githooks/pre-commit`, no husky (see Milestone 6 notes) |
-| 0.4 | tsconfig: `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch` | both | TODO | compiler-level guarantees |
+| 0.4 | tsconfig: `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch` | both | ✅ PR9 | frontend **0** violations (`noFallthroughCasesInSwitch` came with CRA); backend **33** `noImplicitReturns` errors in 25 files, all the same shape (see Milestone 8 notes). `noUnusedLocals` was already satisfied in both packages |
 
 ---
 
@@ -186,6 +186,25 @@ Notes:
 
 ---
 
+## Milestone 8 — Leftovers (0.4 and three review-checked rules)
+
+| # | Rule | Convention | Status | Violations |
+| --- | --- | --- | --- | --- |
+| 31 | `no-restricted-syntax` → `.on()` called on a `$store`, on `createStore(...)` or on `restore(...)` | `.on()` is forbidden, stores are updated with `sample` | ✅ PR9 | **0** |
+| 32 | `effector/keep-options-order` | `sample` option order `{ clock, source, filter, fn, target }` | ✅ PR9 | **0** |
+| 33 | `no-restricted-syntax` → a Cyrillic-free string literal under `error:` inside a `.json(...)` payload | Error messages in Russian | ✅ PR9 | **6**: `Internal server error` ×3 (`statistics/getLessonStats`, `getStudentStats`), `Something went wrong!` and `Route not found` (`index.ts`), `no mail` (`routes/testSupport.ts`) — all translated |
+
+**PR9 (branch `worktree-chore-lint-m8-leftovers`): 0.4, #31, #32, #33.** Milestone 8 closed.
+
+Notes:
+- **0.4** — the frontend only needed the two missing flags. The backend's 33 `noImplicitReturns` errors were all one shape: a handler whose early exits are `return res.status(4xx).json(...)` while its success path and `catch` end with a bare `res.…` call; those got `return`. Three handlers keep working after responding (`createLesson`, `deleteLesson`, `updateLesson` notify over WebSocket afterwards) and end with a plain `return;`, and the three auth middlewares end with `return next();`.
+- **#31** — the plugin has no `.on()` rule, so it is three selectors: `$store.on(...)`, `model.$store.on(...)` and `createStore(...).on(...)` / `restore(...).on(...)`. A bare `something.on(...)` is deliberately not matched — there are no event emitters in `frontend/src`, and the `$` prefix is itself enforced (`effector/enforce-store-naming-convention`). Applies to tests as well, like the other Effector bans.
+- **#32** — `keep-options-order` ships with the already installed `eslint-plugin-effector@0.16.0`; the roadmap had listed the option order as not lintable by mistake. The rule's canonical order (`clock → source → filter → fn → target → greedy`) is exactly what `frontend.md` prescribes.
+- **#33** — the selector sees string literals only, so a template literal or a message built inside a service still passes; `backend.md` says so. `error:` inside a `.json(...)` payload is the API's error contract, which is what the user ends up reading. `src/__tests__/errorResponses.test.ts` covers the two app-level handlers the rule caught (unknown route, malformed JSON body).
+- Each of the three rules was verified with a throwaway probe file, and `npx tsc --noEmit` is clean in both packages with the new flags.
+
+---
+
 ## Not practically lintable (stays in CLAUDE.md / review)
 
-No props drilling · business logic in models · "no logic in `.map()`" · atomic stores vs. object stores · model section order · `sample` arg order · `useEffect` for data fetching · "extract a function only if reused 2+ times" · minimal comments · Russian error messages · timezone helper usage · "every folder has `index.ts`" (no standard rule — would need a custom script/test) · loading via global overlay · controllers wrapped in try-catch · return-early · Prisma-generated types reuse.
+No props drilling · business logic in models · "no logic in `.map()`" · atomic stores vs. object stores · model section order · `useEffect` for data fetching · "extract a function only if reused 2+ times" · minimal comments · Russian error text outside `res.json({ error: "…" })` literals · timezone helper usage · "every folder has `index.ts`" (no standard rule — would need a custom script/test) · loading via global overlay · controllers wrapped in try-catch · return-early · Prisma-generated types reuse.

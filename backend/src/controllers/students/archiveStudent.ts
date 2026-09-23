@@ -61,10 +61,10 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
       return student;
     });
 
-    res.json({ student: result });
+    return res.json({ student: result });
   } catch (error) {
     console.error("Archive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -91,9 +91,9 @@ export const unarchiveStudent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ student });
+    return res.json({ student });
   } catch (error) {
     console.error("Unarchive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

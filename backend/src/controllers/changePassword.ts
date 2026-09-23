@@ -19,7 +19,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     const result = await changePasswordService(userId!, currentPassword, newPassword);
 
-    res.json({
+    return res.json({
       message: "Пароль успешно изменён",
       token: result.token,
       user: result.user,
@@ -32,6 +32,6 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Ошибка при смене пароля" });
+    return res.status(500).json({ error: "Ошибка при смене пароля" });
   }
 };

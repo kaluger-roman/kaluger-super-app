@@ -30,9 +30,9 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
 testRouter.get("/mailbox/:email", (req: Request, res: Response) => {
   const entry = findLatestMailFor(req.params.email);
   if (!entry) {
-    return res.status(404).json({ error: "no mail" });
+    return res.status(404).json({ error: "Письмо не найдено" });
   }
-  res.json(entry);
+  return res.json(entry);
 });
 
 testRouter.delete("/mailbox", (_req: Request, res: Response) => {

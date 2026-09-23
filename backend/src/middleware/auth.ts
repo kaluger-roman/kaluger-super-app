@@ -72,5 +72,5 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       });
   }
 
-  next();
+  return next();
 };

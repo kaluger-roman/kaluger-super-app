@@ -24,10 +24,10 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       orderBy: { name: "asc" },
     });
 
-    res.json({ students });
+    return res.json({ students });
   } catch (error) {
     console.error("Get students error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -53,9 +53,9 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Ученик не найден" });
     }
 
-    res.json({ student });
+    return res.json({ student });
   } catch (error) {
     console.error("Get student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

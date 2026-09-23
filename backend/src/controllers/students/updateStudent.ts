@@ -37,7 +37,7 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       data: preparedData,
     });
 
-    res.json({
+    return res.json({
       message: "Ученик успешно обновлен",
       student,
     });
@@ -48,6 +48,6 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

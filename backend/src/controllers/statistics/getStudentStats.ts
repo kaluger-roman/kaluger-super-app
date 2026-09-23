@@ -45,6 +45,6 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
     res.json({ studentStatistics: enrichedStats });
   } catch (error) {
     console.error("Get student statistics error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

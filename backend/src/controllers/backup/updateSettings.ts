@@ -22,7 +22,7 @@ export const updateSettings = async (req: AdminRequest, res: Response) => {
       maxStorageMb,
     });
 
-    res.json({
+    return res.json({
       enabled: settings.enabled,
       intervalHours: settings.intervalHours,
       maxStorageMb: settings.maxStorageMb,
@@ -30,6 +30,6 @@ export const updateSettings = async (req: AdminRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Error updating backup settings:", error);
-    res.status(500).json({ error: "Ошибка обновления настроек бэкапов" });
+    return res.status(500).json({ error: "Ошибка обновления настроек бэкапов" });
   }
 };

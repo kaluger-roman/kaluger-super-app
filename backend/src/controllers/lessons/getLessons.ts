@@ -37,7 +37,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       }
     );
 
-    res.json({
+    return res.json({
       lessons,
       pagination: pagination
         ? {
@@ -51,7 +51,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Get lessons error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -74,9 +74,9 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    res.json({ lesson });
+    return res.json({ lesson });
   } catch (error) {
     console.error("Get lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

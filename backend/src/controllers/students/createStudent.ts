@@ -33,7 +33,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Ученик успешно создан",
       student,
     });
@@ -44,6 +44,6 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

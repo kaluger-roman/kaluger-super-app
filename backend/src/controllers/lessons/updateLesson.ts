@@ -84,11 +84,13 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
       updateResult.lesson,
       updateResult.plannedShift
     );
+
+    return;
   } catch (error) {
     if (error instanceof SchedulingConflictError || error instanceof RecurringShiftConflictError) {
       return res.status(409).json({ error: error.message });
     }
     console.error("Update lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

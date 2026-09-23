@@ -25,7 +25,7 @@ export const getLessonsBySubject = async (req: AuthRequest, res: Response) => {
     res.json({ lessonsBySubject });
   } catch (error) {
     console.error("Get lessons by subject error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -51,6 +51,6 @@ export const getLessonsByType = async (req: AuthRequest, res: Response) => {
     res.json({ lessonsByType });
   } catch (error) {
     console.error("Get lessons by type error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

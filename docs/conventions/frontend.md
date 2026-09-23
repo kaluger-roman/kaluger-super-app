@@ -136,7 +136,7 @@ feature/models/
 - **Named exports only** — no `export default`
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
-- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. `tsconfig.json` also has `noUnusedLocals`, `noImplicitReturns` and `noFallthroughCasesInSwitch` on
 - **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ### Shared utilities
@@ -172,7 +172,7 @@ feature/models/
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
 - `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
 
-`.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced (`eslint-plugin-effector`), including in tests — observe units in tests via `createWatch({ unit, fn, scope })`. `useUnit([...])` and raw `setTimeout` / `setInterval` inside `*.model.ts` are ESLint-enforced via `no-restricted-syntax` (timers are allowed in tests). The rest of the list is review-checked.
+`.on()`, `.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced, including in tests: the `eslint-plugin-effector` rules plus a `no-restricted-syntax` selector for `.on()` called on a `$store` or on `createStore(...)` / `restore(...)` — observe units in tests via `createWatch({ unit, fn, scope })`. `useUnit([...])` and raw `setTimeout` / `setInterval` inside `*.model.ts` are ESLint-enforced via `no-restricted-syntax` (timers are allowed in tests). The rest of the list is review-checked.
 
 **useUnit pattern:**
 
@@ -188,7 +188,7 @@ const actions = useUnit({ save: model.saved, delete: model.deleted });
 const [lessons, students] = useUnit([model.$lessons, model.$students]);
 ```
 
-**sample order:** `{ clock, source, filter, fn, target }`
+**sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last)
 
 **Timers in models (patronum):**
 
