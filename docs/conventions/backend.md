@@ -74,7 +74,7 @@ ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `a
 no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded), camelCase
 file/folder names and the role-suffix allowlist (`eslint-plugin-check-file`), no
 `.only` / `.skip` / `done` callbacks in tests (`eslint-plugin-jest`), Russian text in
-`res.json({ error: "…" })` literals. Formatting is Prettier's (see Code Quality).
+`res.json({ error: "…" })` and `rateLimit({ message: { error: "…" } })` literals. Formatting is Prettier's (see Code Quality).
 `tsconfig.json` additionally has `noUnusedLocals`, `noImplicitReturns` and
 `noFallthroughCasesInSwitch` on. The rest of this doc is review-checked.
 
@@ -94,9 +94,9 @@ file/folder names and the role-suffix allowlist (`eslint-plugin-check-file`), no
 
 - **Named exports only** — no `export default`
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
-- **Error messages in Russian** — ESLint enforced for literals inside `res.json({ error: "…" })`; text built elsewhere (template literals, `err.message`, service errors) stays review-checked
+- **Error messages in Russian** — ESLint enforced for literals inside `res.json({ error: "…" })` and `rateLimit({ message: { error: "…" } })`; text built elsewhere (template literals, `err.message`, service errors) stays review-checked
 - **No ESLint errors** — run lint and fix all errors before finishing
-- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. Handlers that end with a response need `return res...` on every branch (`noImplicitReturns`)
+- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. `noImplicitReturns` fires only where a function already returns a value somewhere, so once one branch of a handler does `return res...`, every branch must return (a handler that never returns a value is fine)
 - **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ## Custom Error Classes

@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "branch": "worktree-chore-lint-m8-leftovers",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-09-23T12:30:00Z",
+  "diff_stats": { "files_changed": 36, "insertions": 172, "deletions": 78 },
+  "note": "All seven findings at or above the threshold were fixed in the iter-1 follow-up commit on this branch. f8 (keep-options-order drops a spread) scored below the threshold but its caveat was documented together with f7, which covers the same rule.",
+  "summary": {
+    "raw_findings": 15,
+    "after_dedup": 10,
+    "after_score_filter": 7,
+    "by_severity": { "critical": 0, "high": 4, "medium": 3 },
+    "by_category": { "claude-md": 1, "convention": 5, "logic": 1 },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Формулировка про noImplicitReturns в backend.md неточна и противоречит оставшимся голым res.*",
+      "category": "claude-md",
+      "file": "docs/conventions/backend.md",
+      "line_start": 99,
+      "line_end": 99,
+      "snippet": "- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. Handlers that end with a response need `return res...` on every branch (`noImplicitReturns`)",
+      "rationale": "Флаг срабатывает только там, где функция уже возвращает значение и конец тела достижим: обработчик вообще без `return` компилируется чисто. В `backend/src/controllers` осталось ~48 голых `res.…`, включая три статистических хендлера, которые этот же коммит правил (also flagged by: cross-file, deep-logic).",
+      "fix_hint": "Переформулировать правило и/или дожать три статистических хендлера до общего стиля.",
+      "score": 85,
+      "verification_note": "Confirmed: the sentence misstates when the flag fires, and the same commit left three touched handlers on the bare style."
+    },
+    {
+      "id": "f2",
+      "agent": "security",
+      "title": "Глобальный error-handler отдаёт 500 на клиентские ошибки body-parser, и новый тест это закрепляет",
+      "category": "logic",
+      "file": "backend/src/index.ts",
+      "line_start": 85,
+      "line_end": 88,
+      "snippet": "app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {\n  console.error(err.stack);\n  res.status(500).json({ error: \"Внутренняя ошибка сервера\" });\n});",
+      "rationale": "`express.json({ limit: \"10mb\" })` передаёт ошибки со `status: 400` (битый JSON) и `413` (слишком большое тело), но обработчик всегда отвечает 500 и пишет стек; фронт показывает `response.data.error` пользователю. Новый тест фиксировал `.expect(500)` как контракт (also flagged by: wrapper-proxy, shallow-bug, type-safety, deep-logic).",
+      "fix_hint": "Брать статус из ошибки, логировать только 5xx, и поправить ожидание в тесте.",
+      "score": 75,
+      "verification_note": "Confirmed: express.json passes a 400 to next(err) and the handler masks it as 500; the new test turned that into an asserted contract."
+    },
+    {
+      "id": "f3",
+      "agent": "removed-behavior",
+      "title": "В roadmap осталась устаревшая заметка: .on() числится кандидатом на Milestone 4",
+      "category": "convention",
+      "file": "docs/lint-roadmap.md",
+      "line_start": 91,
+      "line_end": 91,
+      "snippet": "- `.on()` has no plugin rule — candidate for a Tier B `no-restricted-syntax` selector (Milestone 4).",
+      "rationale": "Диф закрывает `.on()` как #31 в Milestone 8, но заметка Milestone 2 по-прежнему отправляет читателя в Milestone 4, где такого селектора нет.",
+      "fix_hint": "Указать фактическое место реализации (#31, Milestone 8).",
+      "score": 75,
+      "verification_note": "Confirmed: the patch adds #31 in Milestone 8 and leaves the old note pointing at Milestone 4."
+    },
+    {
+      "id": "f4",
+      "agent": "cross-file",
+      "title": "keep-options-order не знает про batch / name из effector 23, а его suggestion молча их удаляет",
+      "category": "convention",
+      "file": "docs/conventions/frontend.md",
+      "line_start": 191,
+      "line_end": 191,
+      "snippet": "**sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last)",
+      "rationale": "Канонический порядок правила — `[clock, source, filter, fn, target, greedy]`, тогда как effector 23.4.2 принимает у `sample` ещё `batch` и `name`; его suggestion пересобирает объект опций только из известных ключей и теряет остальные.",
+      "fix_hint": "Записать оговорку в конвенцию: `batch` / `name` ставить последними, quick-fix правила не применять.",
+      "score": 75,
+      "verification_note": "Confirmed against the plugin's filteredCorrectOrder / sortNodesByName and effector 23 types."
+    },
+    {
+      "id": "f5",
+      "agent": "claude-md",
+      "title": "Таблица Current state (baseline) в lint-roadmap.md не обновлена правилами этого milestone",
+      "category": "convention",
+      "file": "docs/lint-roadmap.md",
+      "line_start": 20,
+      "line_end": 21,
+      "snippet": "| **frontend** | `.eslintrc.js` (legacy): … `jest` focused/disabled tests (#26) | lint + `tsc --noEmit` + `format:check` |",
+      "rationale": "Таблица перечисляет, что реально несёт конфиг каждого пакета, и обновлялась каждым предыдущим майлстоуном; после этого дифа она занижает enforcement (#31–33 и флаги 0.4).",
+      "fix_hint": "Дописать новые правила в обе строки и упомянуть флаги tsconfig.",
+      "score": 65,
+      "verification_note": "Confirmed: the table omits the three new rules and the tsconfig flags, breaking a pattern every earlier milestone followed."
+    },
+    {
+      "id": "f6",
+      "agent": "deep-logic",
+      "title": "Три статистических хендлера, изменённых этим же PR, остались без return",
+      "category": "convention",
+      "file": "backend/src/controllers/statistics/getLessonStats.ts",
+      "line_start": 25,
+      "line_end": 29,
+      "snippet": "    res.json({ lessonsBySubject });\n  } catch (error) {\n    console.error(\"Get lessons by subject error:\", error);\n    res.status(500).json({ error: \"Внутренняя ошибка сервера\" });\n  }",
+      "rationale": "Диф привёл 25 файлов к `return res.…` и записал это в `backend.md`, но три хендлера, которые он же трогал ради перевода сообщения, остались на голых `res.…`; ни компилятор, ни ESLint этого не поймают.",
+      "fix_hint": "Добавить `return` в шести местах — поведение не меняется.",
+      "score": 50,
+      "verification_note": "Confirmed inconsistency introduced by the same commit; harmless at runtime."
+    },
+    {
+      "id": "f7",
+      "agent": "cross-file",
+      "title": "Русские тексты в message: { error } у rate limiter'ов не покрыты новым backend-правилом",
+      "category": "convention",
+      "file": "backend/src/middleware/rateLimit.ts",
+      "line_start": 14,
+      "line_end": 18,
+      "snippet": "export const authRateLimiter = rateLimit({\n  ...baseConfig,\n  max: 20,\n  message: { error: \"Слишком много попыток. Попробуйте позже\" },\n});",
+      "rationale": "Селектор требует предка `.json(...)`, а `express-rate-limit` отдаёт свой `message` как тело ответа напрямую — тот же контракт `{ error: \"…\" }`, который читает пользователь; шесть лимитеров остаются без проверки.",
+      "fix_hint": "Добавить точечный селектор для `rateLimit({ message: { error } })` либо явно оговорить пробел в backend.md.",
+      "score": 50,
+      "verification_note": "Confirmed: all six limiters are Russian today, but the rule does not cover them and the gap was undocumented."
+    }
+  ],
+  "filtered_out": [
+    {
+      "id": "x1",
+      "agent": "deep-logic",
+      "title": "keep-options-order ломается на spread внутри объекта конфига sample",
+      "category": "logic",
+      "file": "frontend/.eslintrc.js",
+      "score": 25,
+      "verification_note": "No current code triggers it; the scorer read the plugin's optional chaining as safe, so the finding stayed below the threshold — the caveat was documented anyway together with f4.",
+      "reason": "below threshold"
+    },
+    {
+      "id": "x2",
+      "agent": "shallow-bug",
+      "title": "Перевод машинной строки no mail в служебном e2e-эндпоинте",
+      "category": "bug",
+      "file": "backend/src/routes/testSupport.ts",
+      "score": 0,
+      "verification_note": "The e2e helpers never read the error text; they match on fields of the parsed entry.",
+      "reason": "below threshold"
+    },
+    {
+      "id": "x3",
+      "agent": "cross-file",
+      "title": "e2e-хелпер fetchLatestMail принимает тело 404 за письмо",
+      "category": "bug",
+      "file": "frontend/e2e/helpers/mailbox.ts",
+      "score": 0,
+      "verification_note": "Pre-existing: the file is not part of this diff, and all current callers pass a predicate that rejects the error object.",
+      "reason": "below threshold"
+    }
+  ]
+}

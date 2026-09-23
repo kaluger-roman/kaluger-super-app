@@ -42,9 +42,9 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
       student: students.find((s) => s.id === stat.studentId),
     }));
 
-    res.json({ studentStatistics: enrichedStats });
+    return res.json({ studentStatistics: enrichedStats });
   } catch (error) {
     console.error("Get student statistics error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

@@ -17,8 +17,8 @@ We adopt **one rule at a time**: enable → measure violations → decide (fix-a
 
 | Area | ESLint | In CI |
 | --- | --- | --- |
-| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23), `check-file` naming (#25), `jest` focused/disabled tests (#26) | lint + `tsc --noEmit` + `format:check` |
-| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) + `check-file` naming (#25) + `jest` test rules (#26) | lint + `tsc` build + `format:check` |
+| **frontend** | `.eslintrc.js` (legacy): `@typescript-eslint/recommended`, `import` (order + FSD `no-restricted-paths`), `unused-imports`, `testing-library`, `effector`, `jsx-a11y/recommended`, `no-explicit-any`, Tier A rules (#1–9), Tier B rules (#19–23), `check-file` naming (#25), `jest` focused/disabled tests (#26), `.on()` ban + `effector/keep-options-order` (#31–32) | lint + `tsc --noEmit` (with `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch`) + `format:check` |
+| **backend** | `eslint.config.mjs` (flat): `eslint` + `typescript-eslint` recommended + Tier A rules (#12–17) + Tier B rules (#18, #23, #24) + `check-file` naming (#25) + `jest` test rules (#26) + Russian error literals (#33) | lint + `tsc` build (with `noUnusedLocals`, `noImplicitReturns`, `noFallthroughCasesInSwitch`) + `format:check` |
 | landing | flat config | lint + tsc + test |
 
 Pre-commit (#27): `.githooks/pre-commit` → `lint-staged` runs `prettier --write` + `eslint --fix` on staged `frontend/src` / `backend/src` files.
@@ -88,7 +88,7 @@ Fixes the false "ESLint enforced" claim in `frontend.md`.
 Notes:
 - Pinned `eslint-plugin-effector@0.16.0` — 0.17+ requires `typescript >= 5`, frontend is on 4.9.5 (CRA). Revisit on TS upgrade.
 - The plugin has no `no-useStore` rule; `prefer-useUnit` covers it (flags `useStore`/`useStoreMap`/`useEvent` from `effector-react`).
-- `.on()` has no plugin rule — candidate for a Tier B `no-restricted-syntax` selector (Milestone 4).
+- `.on()` has no plugin rule — implemented as a `no-restricted-syntax` selector in Milestone 8 (#31).
 - The `createWatch` rewrite also fixed a latent test smell: `unit.watch(fn)` watchers are not scope-bound and leaked between tests.
 
 ---
@@ -202,6 +202,7 @@ Notes:
 - **#32** — `keep-options-order` ships with the already installed `eslint-plugin-effector@0.16.0`; the roadmap had listed the option order as not lintable by mistake. The rule's canonical order (`clock → source → filter → fn → target → greedy`) is exactly what `frontend.md` prescribes.
 - **#33** — the selector sees string literals only, so a template literal or a message built inside a service still passes; `backend.md` says so. `error:` inside a `.json(...)` payload is the API's error contract, which is what the user ends up reading. `src/__tests__/errorResponses.test.ts` covers the two app-level handlers the rule caught (unknown route, malformed JSON body).
 - Each of the three rules was verified with a throwaway probe file, and `npx tsc --noEmit` is clean in both packages with the new flags.
+- Follow-up from the local code review (`docs/code-reviews/worktree-chore-lint-m8-leftovers/iter-1.json`): the global error handler no longer answers 500 to a client's own mistake — it takes the status from the error (`express.json` marks a malformed body 400 and an oversized one 413), logs a stack only for 5xx and bails out through `next(err)` when headers are already sent; the new test asserts the 400 case. #33 grew a second selector for `rateLimit({ message: { error: "…" } })`, which `express-rate-limit` sends as the response body without going through `res.json`. The three statistics handlers touched for the translation also return on every branch now, and `backend.md` states when `noImplicitReturns` actually fires. `frontend.md` records the two limits of `keep-options-order`: it knows nothing about effector 23's `batch` / `name`, and its IDE quick fix rebuilds the options object out of the keys it knows, dropping the rest (a spread included).
 
 ---
 

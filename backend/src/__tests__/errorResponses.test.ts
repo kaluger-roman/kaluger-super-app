@@ -13,13 +13,13 @@ describe("App-level error responses", () => {
     expect(response.body).toEqual({ error: "Маршрут не найден" });
   });
 
-  it("should answer a malformed JSON body with a Russian message", async () => {
+  it("should answer a malformed JSON body with 400 and a Russian message", async () => {
     const response = await request(app)
       .post("/api/auth/login")
       .set("Content-Type", "application/json")
       .send('{"email": ')
-      .expect(500);
+      .expect(400);
 
-    expect(response.body).toEqual({ error: "Внутренняя ошибка сервера" });
+    expect(response.body).toEqual({ error: "Некорректный запрос" });
   });
 });

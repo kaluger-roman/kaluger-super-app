@@ -82,10 +82,31 @@ app.get("/health", async (req, res) => {
 });
 
 // Error handling
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Внутренняя ошибка сервера" });
-});
+// Body-parser errors carry their own status (400 for a malformed body, 413 for one over
+// the limit) — answering 500 to those turns a client mistake into a server alert.
+app.use(
+  (
+    err: Error & { status?: number; statusCode?: number },
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    const status = err.statusCode ?? err.status ?? 500;
+
+    if (status >= 500) {
+      console.error(err.stack);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+
+    return res
+      .status(status)
+      .json({ error: status === 413 ? "Тело запроса слишком большое" : "Некорректный запрос" });
+  }
+);
 
 // 404 handler
 app.use("*", (req, res) => {

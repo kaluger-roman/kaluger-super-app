@@ -188,7 +188,7 @@ const actions = useUnit({ save: model.saved, delete: model.deleted });
 const [lessons, students] = useUnit([model.$lessons, model.$students]);
 ```
 
-**sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last)
+**sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last). The rule knows only those keys: put effector 23's `batch` / `name` at the end, and never apply its IDE quick fix — it rebuilds the options object out of the keys it knows and silently drops everything else, a spread inside the config included (so write the config with plain properties).
 
 **Timers in models (patronum):**
 
