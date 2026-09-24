@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-23
+
+### Changed
+- Both `tsconfig.json` files turn on `noUnusedLocals`, `noImplicitReturns` and `noFallthroughCasesInSwitch` (closes 0.4 of `docs/lint-roadmap.md`). The frontend needed no fixes; in the backend 33 handlers across 25 files mixed `return res.…` early exits with a trailing bare `res.…` call and now return on every path — the three that keep notifying over WebSocket after responding (`createLesson`, `deleteLesson`, `updateLesson`) end with `return;`, and the three auth middlewares with `return next();` (bc073a5)
+- Three more conventions moved from review to ESLint (Milestone 8 of `docs/lint-roadmap.md`): `.on()` on a store is rejected by `no-restricted-syntax` (stores are updated with `sample`), `effector/keep-options-order` enforces the `{ clock, source, filter, fn, target }` order that `frontend.md` prescribes, and a Cyrillic-free string literal under `error:` inside a backend `.json(...)` payload is rejected. `frontend.md`, `backend.md` and the roadmap record what is enforced and what stays review-checked (bc073a5)
+
+- Follow-up from the local code review (`docs/code-reviews/worktree-chore-lint-m8-leftovers/iter-1.json`): the Russian-message rule also covers `rateLimit({ message: { error } })`, which `express-rate-limit` sends as the response body without going through `res.json`; the three statistics handlers return on every branch like the other 25 files; `backend.md` states when `noImplicitReturns` actually fires, `frontend.md` records the two limits of `keep-options-order` (it knows nothing about effector 23's `batch` / `name` and its quick fix drops what it does not know), and the roadmap's baseline table and its stale `.on()` note are up to date (5424688)
+
+### Fixed
+- A malformed or oversized request body came back as `500 Внутренняя ошибка сервера`, because the global error handler ignored the status the body parser sets. It now answers `400 Некорректный запрос` / `413 Тело запроса слишком большое`, logs a stack only for real server errors and hands an error raised after the response to `next(err)` (5424688)
+- Six API error messages were still English and reached the user as is: `Internal server error` from the three statistics endpoints, `Something went wrong!` from the global error handler, `Route not found` from the 404 handler and `no mail` from the e2e mailbox route. All are Russian now, and `backend/src/__tests__/errorResponses.test.ts` keeps the two app-level handlers covered (bc073a5)
+
 ## 2026-09-12
 
 ### Changed
