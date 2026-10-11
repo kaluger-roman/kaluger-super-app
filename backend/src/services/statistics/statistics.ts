@@ -104,7 +104,7 @@ export const collectLessonStatistics = async ({
         where: paidInRangeWhere(userId, paymentDateRange),
         // Tax is normally assigned by paymentDate; if it's missing we use
         // startTime as the effective date (legacy lessons fallback).
-        select: { price: true, paymentDate: true, startTime: true },
+        select: { price: true, paymentDate: true, startTime: true, isTaxExempt: true },
       })
     : null;
 

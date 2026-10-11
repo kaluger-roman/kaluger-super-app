@@ -20,6 +20,7 @@ const statistics: Statistics = {
   commissionWrittenOffSum: 4500,
   commissionRemainingTotal: 2500,
   taxAmount: null,
+  taxExemptIncome: null,
   taxBreakdown: null,
 };
 

@@ -16,6 +16,7 @@ export type CreateLessonDto = {
   homework?: string;
   notes?: string;
   isRecurring?: boolean; // Регулярное занятие
+  isTaxExempt?: boolean;
 };
 
 export type UpdateLessonDto = Omit<

@@ -102,6 +102,43 @@ describe("lessonsViewDialog.model", () => {
     expect(scope.getState($viewingLesson)).toEqual(lesson);
   });
 
+  it("should show the saved isTaxExempt in the open lesson after the update succeeds", async () => {
+    const lesson = createLesson({ isTaxExempt: false });
+    const scope = fork({
+      handlers: [[lessonModel.updateLessonFx, async () => ({ ...lesson, isTaxExempt: true })]],
+    });
+
+    await allSettled(viewDialogOpened, { scope, params: lesson });
+    await allSettled(lessonModel.updateLesson, {
+      scope,
+      params: { id: lesson.id, data: { isTaxExempt: true } },
+    });
+
+    expect(scope.getState($viewingLesson)?.isTaxExempt).toBe(true);
+  });
+
+  it("should keep the open lesson unchanged when the isTaxExempt update fails", async () => {
+    const lesson = createLesson({ isTaxExempt: false });
+    const scope = fork({
+      handlers: [
+        [
+          lessonModel.updateLessonFx,
+          async () => {
+            throw new Error("Сеть недоступна");
+          },
+        ],
+      ],
+    });
+
+    await allSettled(viewDialogOpened, { scope, params: lesson });
+    await allSettled(lessonModel.updateLesson, {
+      scope,
+      params: { id: lesson.id, data: { isTaxExempt: true } },
+    });
+
+    expect(scope.getState($viewingLesson)).toEqual(lesson);
+  });
+
   it("should keep confirm dialog title and message after close so the closing animation is not blank (regression: duplicate $confirmDialog reset)", async () => {
     const scope = fork();
 

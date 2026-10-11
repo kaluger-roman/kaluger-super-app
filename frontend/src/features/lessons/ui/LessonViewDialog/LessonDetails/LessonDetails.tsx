@@ -15,6 +15,7 @@ import type { Lesson } from "@shared";
 import * as Styled from "./LessonDetails.styled";
 import { HomeworkSentStatus } from "../../HomeworkSentStatus";
 import { PaymentStatus } from "../../PaymentStatus";
+import { TaxExemptStatus } from "../../TaxExemptStatus";
 
 type LessonDetailsProps = {
   lesson: Lesson;
@@ -46,6 +47,7 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           </Typography>
         )}
         <HomeworkSentStatus needConfirm lesson={lesson} />
+        <TaxExemptStatus lesson={lesson} />
       </Box>
 
       <Divider />

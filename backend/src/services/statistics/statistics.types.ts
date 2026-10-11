@@ -14,6 +14,7 @@ export type LessonStatisticsInput = {
 export type TaxSummary = {
   taxAmount: number | null;
   taxBreakdown: TaxBreakdownEntry[] | null;
+  taxExemptIncome: number | null;
 };
 
 export type TaxUser = {
@@ -25,6 +26,7 @@ export type PaidLessonForTax = {
   price: Prisma.Decimal | null;
   paymentDate: Date | null;
   startTime: Date;
+  isTaxExempt: boolean;
 };
 
 export type LessonStatistics = TaxSummary & {

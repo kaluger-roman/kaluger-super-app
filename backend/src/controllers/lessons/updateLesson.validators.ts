@@ -1,7 +1,7 @@
 import type { Lesson } from "@prisma/client";
 import type { UpdateLessonDto } from "../../types";
 import { truncateToMinute } from "../../utils/time";
-import { CONTACT_METHODS } from "./validators";
+import { CONTACT_METHODS, TAX_EXEMPT_INVALID_ERROR } from "./validators";
 
 export const validateUpdateData = (updateData: UpdateLessonDto, existingLesson: Lesson) => {
   if (updateData.startTime || updateData.endTime) {
@@ -33,6 +33,10 @@ export const validateUpdateData = (updateData: UpdateLessonDto, existingLesson: 
 
   if (updateData.grade && (updateData.grade < 1 || updateData.grade > 5)) {
     return { isValid: false, error: "Оценка должна быть от 1 до 5" };
+  }
+
+  if (updateData.isTaxExempt !== undefined && typeof updateData.isTaxExempt !== "boolean") {
+    return { isValid: false, error: TAX_EXEMPT_INVALID_ERROR };
   }
 
   if ("studentId" in updateData && !updateData.studentId) {

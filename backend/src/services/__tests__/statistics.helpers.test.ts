@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import type { PaidLessonForTax, TaxUser } from "../statistics";
 import { computeTaxSummary } from "../statistics";
 
 const range = {
@@ -6,11 +7,30 @@ const range = {
   lte: new Date("2026-03-31T23:59:59Z"),
 };
 
+const taxUser = (startDate = "2026-01-01T00:00:00Z"): TaxUser => ({
+  taxEnabled: true,
+  taxRatePeriods: [{ id: "p1", startDate: new Date(startDate), rate: new Prisma.Decimal(6) }],
+});
+
+const paid = (
+  price: number,
+  isTaxExempt: boolean,
+  paymentDate: string | null = "2026-03-10T00:00:00Z"
+): PaidLessonForTax => ({
+  price: new Prisma.Decimal(price),
+  paymentDate: paymentDate === null ? null : new Date(paymentDate),
+  startTime: new Date("2026-03-15T00:00:00Z"),
+  isTaxExempt,
+});
+
 describe("computeTaxSummary", () => {
   it("should return nulls when tax is disabled", () => {
-    expect(computeTaxSummary({ taxEnabled: false, taxRatePeriods: [] }, [], range)).toEqual({
+    expect(
+      computeTaxSummary({ taxEnabled: false, taxRatePeriods: [] }, [paid(1000, true)], range)
+    ).toEqual({
       taxAmount: null,
       taxBreakdown: null,
+      taxExemptIncome: null,
     });
   });
 
@@ -18,40 +38,83 @@ describe("computeTaxSummary", () => {
     expect(computeTaxSummary(null, [], range)).toEqual({
       taxAmount: null,
       taxBreakdown: null,
+      taxExemptIncome: null,
     });
     expect(computeTaxSummary({ taxEnabled: true, taxRatePeriods: [] }, null, range)).toEqual({
       taxAmount: null,
       taxBreakdown: null,
+      taxExemptIncome: null,
     });
   });
 
   it("should compute tax from paid lessons using the period rate", () => {
     const summary = computeTaxSummary(
-      {
-        taxEnabled: true,
-        taxRatePeriods: [
-          {
-            id: "p1",
-            startDate: new Date("2026-01-01T00:00:00Z"),
-            rate: new Prisma.Decimal(6),
-          },
-        ],
-      },
-      [
-        {
-          price: new Prisma.Decimal(1000),
-          paymentDate: new Date("2026-03-10T00:00:00Z"),
-          startTime: new Date("2026-03-09T00:00:00Z"),
-        },
-        {
-          price: new Prisma.Decimal(500),
-          paymentDate: null,
-          startTime: new Date("2026-03-15T00:00:00Z"),
-        },
-      ],
+      taxUser(),
+      [paid(1000, false), paid(500, false, null)],
       range
     );
-    expect(summary.taxAmount).toBe(90);
-    expect(summary.taxBreakdown).toEqual([{ rate: 6, earnings: 1500, tax: 90 }]);
+    expect(summary).toEqual({
+      taxAmount: 90,
+      taxBreakdown: [{ rate: 6, earnings: 1500, tax: 90 }],
+      taxExemptIncome: 0,
+    });
+  });
+
+  it("should exclude tax-exempt payments from the tax and report their sum", () => {
+    const summary = computeTaxSummary(taxUser(), [paid(1000, false), paid(2000, true)], range);
+    expect(summary).toEqual({
+      taxAmount: 60,
+      taxBreakdown: [{ rate: 6, earnings: 1000, tax: 60 }],
+      taxExemptIncome: 2000,
+    });
+  });
+
+  it("should keep the rate row with zero earnings when every payment is tax-exempt", () => {
+    const summary = computeTaxSummary(taxUser(), [paid(2000, true)], range);
+    expect(summary).toEqual({
+      taxAmount: 0,
+      taxBreakdown: [{ rate: 6, earnings: 0, tax: 0 }],
+      taxExemptIncome: 2000,
+    });
+  });
+
+  it("should leave tax-exempt payments out of the outside-periods row", () => {
+    const summary = computeTaxSummary(
+      taxUser("2026-03-15T00:00:00Z"),
+      [paid(1000, false, "2026-03-05T00:00:00Z"), paid(2000, true, "2026-03-06T00:00:00Z")],
+      range
+    );
+    expect(summary).toEqual({
+      taxAmount: 0,
+      taxBreakdown: [
+        { rate: 0, earnings: 1000, tax: 0, isOutsidePeriods: true },
+        { rate: 6, earnings: 0, tax: 0 },
+      ],
+      taxExemptIncome: 2000,
+    });
+  });
+
+  it("should count a tax-exempt payment without paymentDate", () => {
+    const summary = computeTaxSummary(
+      taxUser(),
+      [paid(1000, false, null), paid(2000, true, null)],
+      range
+    );
+    expect(summary.taxAmount).toBe(60);
+    expect(summary.taxExemptIncome).toBe(2000);
+  });
+
+  it("should sum tax-exempt payments to the exact kopeck", () => {
+    const summary = computeTaxSummary(taxUser(), [paid(1000.1, true), paid(999.95, true)], range);
+    expect(summary.taxExemptIncome).toBe(2000.05);
+  });
+
+  it("should keep per-payment tax rounding of taxable lessons unchanged", () => {
+    const taxable = [paid(1010, false), paid(1010, false)];
+    const withoutExempt = computeTaxSummary(taxUser(), taxable, range);
+    const withExempt = computeTaxSummary(taxUser(), [...taxable, paid(777, true)], range);
+    expect(withoutExempt.taxAmount).toBe(122);
+    expect(withExempt.taxAmount).toBe(withoutExempt.taxAmount);
+    expect(withExempt.taxBreakdown).toEqual(withoutExempt.taxBreakdown);
   });
 });

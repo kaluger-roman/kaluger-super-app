@@ -1,4 +1,6 @@
+import type { Lesson } from "@prisma/client";
 import { validateLessonData } from "../../lessons/validators";
+import { validateUpdateData } from "../updateLesson.validators";
 import { truncateToMinute } from "../../../utils/time";
 
 type CreateLessonDto = {
@@ -149,6 +151,57 @@ describe("validateLessonData", () => {
         prospectContactMethod: "MAX",
       } as any);
       expect(res.isValid).toBe(true);
+    });
+  });
+});
+
+const TAX_EXEMPT_ERROR = "Некорректное значение признака «Не облагается налогом»";
+const INVALID_TAX_EXEMPT_VALUES: unknown[] = [null, "true", 1, {}];
+
+describe("validateLessonData isTaxExempt", () => {
+  const base = {
+    subject: "MATHEMATICS",
+    lessonType: "EGE",
+    startTime: new Date("2025-01-01T10:00:00Z").toISOString(),
+    endTime: new Date("2025-01-01T11:00:00Z").toISOString(),
+    studentId: "s1",
+  };
+
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({ isValid: true });
+  });
+
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
+    });
+  });
+});
+
+describe("validateUpdateData isTaxExempt", () => {
+  const existingLesson = {
+    id: "lesson-1",
+    studentId: "s1",
+    status: "SCHEDULED",
+    startTime: new Date("2025-01-01T10:00:00Z"),
+    endTime: new Date("2025-01-01T11:00:00Z"),
+  } as Lesson;
+
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({ isValid: true });
+  });
+
+  it("accepts isTaxExempt on a cancelled lesson", () => {
+    expect(
+      validateUpdateData({ isTaxExempt: true }, { ...existingLesson, status: "CANCELLED" })
+    ).toEqual({ isValid: true });
+  });
+
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
     });
   });
 });

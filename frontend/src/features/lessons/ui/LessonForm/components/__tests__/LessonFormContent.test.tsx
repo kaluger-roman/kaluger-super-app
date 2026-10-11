@@ -1,10 +1,13 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, beforeEach, expect, vi } from "vitest";
 
+import { userModel } from "@entities";
 import { theme } from "@shared";
-import type { Lesson } from "@shared";
+import type { Lesson, User } from "@shared";
 
 import type { LessonFormData } from "../../LessonForm.types";
 import { LessonFormContent } from "../LessonFormContent";
@@ -24,6 +27,7 @@ const mockFormData: LessonFormData = {
   isPaid: false,
   paymentDate: undefined,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
   homework: "",
   notes: "",
   isRecurring: false,
@@ -42,6 +46,7 @@ const mockLesson: Lesson = {
   status: "SCHEDULED",
   paymentDate: undefined,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
   createdAt: "2026-01-20T10:00:00",
   updatedAt: "2026-01-20T10:00:00",
 };
@@ -361,6 +366,73 @@ describe("LessonFormContent", () => {
 
       // HomeworkSentStatus component should be rendered
       // This depends on the component implementation
+    });
+  });
+
+  describe("Tax exempt switch", () => {
+    const tutor = (taxEnabled: boolean): User => ({
+      id: "user-1",
+      email: "tutor@test.local",
+      name: "Учитель",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      isEmailVerified: true,
+      taxEnabled,
+    });
+
+    const renderWithTax = (
+      taxEnabled: boolean,
+      props: { formData?: LessonFormData; lesson?: Lesson; setFormData?: typeof mockSetFormData }
+    ) =>
+      render(
+        <Provider value={fork({ values: [[userModel.$user, tutor(taxEnabled)]] })}>
+          <ThemeProvider theme={theme}>
+            <LessonFormContent
+              formData={props.formData ?? mockFormData}
+              errors={{}}
+              isLoading={false}
+              isMobile={false}
+              lesson={props.lesson}
+              handleChange={mockHandleChange}
+              handleDateChange={mockHandleDateChange}
+              setFormData={props.setFormData ?? mockSetFormData}
+            />
+          </ThemeProvider>
+        </Provider>
+      );
+
+    it.each([
+      ["create", undefined],
+      ["edit", mockLesson],
+    ])("should render a switch, not a checkbox, in the %s form", (_mode, lesson) => {
+      renderWithTax(true, { lesson });
+
+      expect(screen.getByRole("switch", { name: "Не облагается налогом" })).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox", { name: "Не облагается налогом" })).toBeNull();
+    });
+
+    it("should take the switch value from formData.isTaxExempt", () => {
+      renderWithTax(true, { formData: { ...mockFormData, isTaxExempt: true } });
+
+      const control = screen.getByRole("switch", { name: "Не облагается налогом" });
+      expect((control as HTMLInputElement).checked).toBe(true);
+    });
+
+    it("should toggle isTaxExempt through setFormData", async () => {
+      const setFormData = vi.fn();
+      renderWithTax(true, { setFormData });
+
+      await userEvent.click(screen.getByRole("switch", { name: "Не облагается налогом" }));
+
+      expect(setFormData).toHaveBeenCalledTimes(1);
+      const updater = setFormData.mock.calls[0][0] as (prev: LessonFormData) => LessonFormData;
+      expect(updater(mockFormData)).toEqual({ ...mockFormData, isTaxExempt: true });
+    });
+
+    it("should hide the switch when tax accounting is disabled", () => {
+      renderWithTax(false, { lesson: mockLesson });
+
+      expect(screen.queryByRole("switch", { name: "Не облагается налогом" })).toBeNull();
+      expect(screen.queryByText("Не облагается налогом")).toBeNull();
     });
   });
 });

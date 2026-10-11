@@ -81,6 +81,7 @@ export const processRecurringLessons = async () => {
             startTime: currentStart,
             endTime: currentEnd,
             price: lastLesson.price,
+            isTaxExempt: lastLesson.isTaxExempt,
             isRecurring: true,
             tutorId: lastLesson.tutorId,
             studentId: lastLesson.studentId,

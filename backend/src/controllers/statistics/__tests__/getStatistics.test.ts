@@ -72,6 +72,7 @@ describe("getStatistics controller", () => {
         expect(res.body.paymentsInRangeCount).toBe(0);
         expect(res.body.taxAmount).toBeNull();
         expect(res.body.taxBreakdown).toBeNull();
+        expect(res.body.taxExemptIncome).toBeNull();
       });
   });
 

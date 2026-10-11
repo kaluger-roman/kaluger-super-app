@@ -130,6 +130,7 @@ testRouter.post("/lessons", async (req: Request, res: Response) => {
       isPaid: Boolean(data.isPaid),
       paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
       isRecurring: Boolean(data.isRecurring),
+      isTaxExempt: Boolean(data.isTaxExempt),
     },
   });
   res.status(201).json({ lesson });
