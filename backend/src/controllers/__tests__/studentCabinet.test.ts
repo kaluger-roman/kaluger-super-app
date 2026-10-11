@@ -163,6 +163,25 @@ describe("studentCabinet controller", () => {
     }
   });
 
+  it("never exposes the tax-exempt flag to the student cabinet", async () => {
+    await prisma.lesson.updateMany({ where: { studentId }, data: { isTaxExempt: true } });
+
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.lessons.length).toBeGreaterThan(0);
+      for (const lesson of res.body.lessons) {
+        expect(lesson).not.toHaveProperty("isTaxExempt");
+      }
+    } finally {
+      await prisma.lesson.updateMany({ where: { studentId }, data: { isTaxExempt: false } });
+    }
+  });
+
   it("does not leak other students' lessons even when querying same week", async () => {
     const res = await request(app)
       .get("/api/student-cabinet/lessons")

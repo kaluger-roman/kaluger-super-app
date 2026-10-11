@@ -391,4 +391,59 @@ describe("lessonForm.model", () => {
       expect(payload.price).toBe(0);
     });
   });
+
+  describe("isTaxExempt field", () => {
+    it("should put isTaxExempt into the form data", async () => {
+      const scope = fork();
+
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      expect(scope.getState($formData).isTaxExempt).toBe(false);
+
+      await allSettled(fieldChanged, { scope, params: { field: "isTaxExempt", value: true } });
+
+      expect(scope.getState($formData).isTaxExempt).toBe(true);
+    });
+
+    it("should send isTaxExempt when a new lesson is created", async () => {
+      const scope = fork();
+      vi.mocked(lessonsApi.create).mockResolvedValueOnce(createMockLesson({ isTaxExempt: true }));
+
+      await allSettled(formOpened, { scope, params: { lesson: undefined, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "studentId", value: "student-1" } });
+      await allSettled(fieldChanged, { scope, params: { field: "isTaxExempt", value: true } });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.create).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(lessonsApi.create).mock.calls[0][0].isTaxExempt).toBe(true);
+    });
+
+    it("should send a cleared isTaxExempt as false when a lesson is edited", async () => {
+      const lesson = createMockLesson({ isTaxExempt: true });
+      const scope = fork();
+      vi.mocked(lessonsApi.update).mockResolvedValueOnce(createMockLesson({ isTaxExempt: false }));
+
+      await allSettled(formOpened, { scope, params: { lesson, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "isTaxExempt", value: false } });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.update).toHaveBeenCalledTimes(1);
+      const [id, payload] = vi.mocked(lessonsApi.update).mock.calls[0];
+      expect(id).toBe(lesson.id);
+      expect(payload).toHaveProperty("isTaxExempt", false);
+    });
+
+    it("should send nothing when the form is closed without saving", async () => {
+      const lesson = createMockLesson({ isTaxExempt: false });
+      const scope = fork();
+
+      await allSettled(formOpened, { scope, params: { lesson, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "isTaxExempt", value: true } });
+      await allSettled(formOpened, { scope, params: { lesson, open: false } });
+      await allSettled(formOpened, { scope, params: { lesson, open: true } });
+
+      expect(lessonsApi.create).not.toHaveBeenCalled();
+      expect(lessonsApi.update).not.toHaveBeenCalled();
+      expect(scope.getState($formData).isTaxExempt).toBe(false);
+    });
+  });
 });

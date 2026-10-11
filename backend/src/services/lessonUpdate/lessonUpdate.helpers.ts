@@ -22,14 +22,14 @@ export const computeUpdatedStatus = (
   if (updateData.status === "CANCELLED") {
     return undefined;
   }
+  if (!updateData.status && existingLesson.status === "CANCELLED") {
+    return "CANCELLED";
+  }
   if (end.getTime() <= now.getTime()) {
     return "COMPLETED";
   }
   if (start.getTime() <= now.getTime() && end.getTime() > now.getTime()) {
     return "IN_PROGRESS";
-  }
-  if (!updateData.status && existingLesson.status === "CANCELLED") {
-    return "CANCELLED";
   }
   return undefined;
 };

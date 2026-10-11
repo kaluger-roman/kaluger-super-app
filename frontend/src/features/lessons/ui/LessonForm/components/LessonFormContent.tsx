@@ -3,6 +3,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 
+import { useIsTaxEnabled } from "@entities";
 import type { Lesson } from "@shared";
 
 import { DateTimeSelector } from "./DateTimeSelector";
@@ -13,6 +14,7 @@ import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
 import { RecurringCheckbox } from "./RecurringCheckbox";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
+import { TaxExemptSwitch, TAX_EXEMPT_HINT } from "../../TaxExemptSwitch";
 import type { LessonFormData } from "../LessonForm.types";
 
 type LessonFormContentProps = {
@@ -36,6 +38,8 @@ export const LessonFormContent = ({
   handleDateChange,
   setFormData,
 }: LessonFormContentProps) => {
+  const isTaxEnabled = useIsTaxEnabled();
+
   return (
     <Styled.StyledDialogContent $isMobile={isMobile}>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
@@ -107,6 +111,14 @@ export const LessonFormContent = ({
           )}
 
           <LessonStatusSection lesson={lesson} formData={formData} setFormData={setFormData} />
+          {isTaxEnabled && (
+            <TaxExemptSwitch
+              checked={formData.isTaxExempt}
+              disabled={isLoading}
+              hint={TAX_EXEMPT_HINT}
+              onChange={(isTaxExempt) => setFormData((prev) => ({ ...prev, isTaxExempt }))}
+            />
+          )}
           {!lesson && !formData.withoutStudent && (
             <RecurringCheckbox
               checked={formData.isRecurring}

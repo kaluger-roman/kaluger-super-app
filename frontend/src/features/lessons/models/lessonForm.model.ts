@@ -39,6 +39,7 @@ export const $formData = createStore<LessonFormData>({
   isRecurring: false,
   isPaid: false,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
   paymentDate: undefined,
 });
 

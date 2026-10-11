@@ -24,6 +24,7 @@ export type Lesson = {
   price?: number;
   isPaid: boolean;
   paymentDate?: string;
+  isTaxExempt?: boolean;
   isHomeworkSentByTeacher?: boolean;
   homework?: string;
   notes?: string;
@@ -66,6 +67,7 @@ export type CreateLessonDto = {
   homework?: string;
   notes?: string;
   isRecurring?: boolean;
+  isTaxExempt?: boolean;
 };
 
 export type UpdateLessonDto = Omit<

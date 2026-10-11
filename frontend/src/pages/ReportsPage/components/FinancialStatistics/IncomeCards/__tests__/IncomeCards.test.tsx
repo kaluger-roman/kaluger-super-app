@@ -23,6 +23,7 @@ const statistics: Statistics = {
   paymentsInRangeCount: 4,
   trialLessonsCount: 1,
   taxAmount: null,
+  taxExemptIncome: null,
   taxBreakdown: null,
 };
 

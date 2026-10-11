@@ -15,6 +15,7 @@ import {
   lessonDeleteRequestedFromDialog,
   lessonPaymentChanged,
   lessonHomeworkSentChanged,
+  lessonTaxExemptChanged,
 } from "../lessonActions.model";
 import { $confirmDialog } from "../lessonsConfirmDialog.model";
 import { $viewingLesson, restoreFromViewRequested } from "../lessonsViewDialog.model";
@@ -419,6 +420,30 @@ describe("lessonActions.model", () => {
         },
       });
     });
+  });
+
+  describe("lessonTaxExemptChanged", () => {
+    it.each([true, false])(
+      "should call lessonModel.updateLesson with isTaxExempt %s and open no confirmation",
+      async (isTaxExempt) => {
+        const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson({ isTaxExempt })));
+        const scope = fork({
+          handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        });
+
+        await allSettled(lessonTaxExemptChanged, {
+          scope,
+          params: { lessonId: "lesson-1", isTaxExempt },
+        });
+
+        expect(updateLessonFn).toHaveBeenCalledTimes(1);
+        expect(updateLessonFn).toHaveBeenCalledWith({
+          id: "lesson-1",
+          data: { isTaxExempt },
+        });
+        expect(scope.getState($confirmDialog).open).toBe(false);
+      }
+    );
   });
 
   describe("restoreFromViewRequested integration", () => {

@@ -16,14 +16,24 @@ export const paidInRangeWhere = (userId: string, range: DateRange): Prisma.Lesso
   OR: [{ paymentDate: range }, { paymentDate: null, startTime: range }],
 });
 
+// Summed in whole kopecks: prices are Decimal(10,2), float addition drifts.
+const sumLessonPrices = (lessons: PaidLessonForTax[]): number =>
+  lessons.reduce(
+    (kopecks, lesson) => kopecks + Math.round(decimalToNumber(lesson.price) * 100),
+    0
+  ) / 100;
+
 export const computeTaxSummary = (
   user: TaxUser | null,
   paidLessons: PaidLessonForTax[] | null,
   range: DateRange
 ): TaxSummary => {
   if (!user?.taxEnabled || !paidLessons) {
-    return { taxAmount: null, taxBreakdown: null };
+    return { taxAmount: null, taxBreakdown: null, taxExemptIncome: null };
   }
+
+  const taxableLessons = paidLessons.filter((lesson) => !lesson.isTaxExempt);
+  const exemptLessons = paidLessons.filter((lesson) => lesson.isTaxExempt);
 
   const periods: TaxRatePeriodDto[] = user.taxRatePeriods.map((period) => ({
     id: period.id,
@@ -32,13 +42,16 @@ export const computeTaxSummary = (
   }));
   // Pass the effective date (paymentDate ?? startTime) so legacy paid
   // lessons without a paymentDate still get a rate assigned.
-  const lessonsForTax = paidLessons.map((lesson) => ({
+  const lessonsForTax = taxableLessons.map((lesson) => ({
     price: lesson.price === null ? null : lesson.price.toNumber(),
     paymentDate: lesson.paymentDate ?? lesson.startTime,
   }));
 
-  return buildTaxBreakdown(lessonsForTax, periods, {
-    start: range.gte,
-    end: range.lte,
-  });
+  return {
+    ...buildTaxBreakdown(lessonsForTax, periods, {
+      start: range.gte,
+      end: range.lte,
+    }),
+    taxExemptIncome: sumLessonPrices(exemptLessons),
+  };
 };

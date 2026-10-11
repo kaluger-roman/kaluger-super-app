@@ -22,6 +22,7 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
       isRecurring: lesson.isRecurring || false,
       isPaid: lesson.isPaid || false,
       isHomeworkSentByTeacher: lesson.isHomeworkSentByTeacher || false,
+      isTaxExempt: lesson.isTaxExempt ?? false,
       paymentDate: lesson.paymentDate ? toDateKey(lesson.paymentDate) : undefined,
     };
   }
@@ -46,6 +47,7 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     paymentDate: undefined,
   };
 };
@@ -124,6 +126,7 @@ export const prepareSubmitData = (
   notes: formData.notes.trim() ? formData.notes : null,
   isPaid: formData.isPaid,
   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
+  isTaxExempt: formData.isTaxExempt,
   paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,
 });
 

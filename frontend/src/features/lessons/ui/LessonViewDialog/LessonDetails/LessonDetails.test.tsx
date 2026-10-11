@@ -1,9 +1,12 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect } from "vitest";
 
+import { userModel } from "@entities";
 import { theme } from "@shared";
-import type { Lesson } from "@shared";
+import type { Lesson, User } from "@shared";
 
 import { LessonDetails } from "./LessonDetails";
 
@@ -163,5 +166,41 @@ describe("LessonDetails", () => {
 
     expect(screen.queryByTestId("HandshakeIcon")).toBeNull();
     expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
+  });
+
+  describe("tax-exempt switch", () => {
+    const tutor = (taxEnabled: boolean): User => ({
+      id: "user-1",
+      email: "tutor@test.local",
+      name: "Учитель",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      isEmailVerified: true,
+      taxEnabled,
+    });
+
+    const renderWithTax = (taxEnabled: boolean, lesson: Lesson) =>
+      render(
+        <Provider value={fork({ values: [[userModel.$user, tutor(taxEnabled)]] })}>
+          <ThemeProvider theme={theme}>
+            <LessonDetails lesson={lesson} />
+          </ThemeProvider>
+        </Provider>
+      );
+
+    it.each([true, false])(
+      "should show the switch with isTaxExempt = %s when tax accounting is enabled",
+      (isTaxExempt) => {
+        renderWithTax(true, { ...mockLesson, isTaxExempt });
+
+        const control = screen.getByRole("switch", { name: "Не облагается налогом" });
+        expect((control as HTMLInputElement).checked).toBe(isTaxExempt);
+      }
+    );
+
+    it("should hide the switch when tax accounting is disabled", () => {
+      renderWithTax(false, { ...mockLesson, isTaxExempt: true });
+
+      expect(screen.queryByRole("switch", { name: "Не облагается налогом" })).toBeNull();
+    });
   });
 });

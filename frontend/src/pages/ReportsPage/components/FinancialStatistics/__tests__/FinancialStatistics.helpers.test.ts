@@ -50,4 +50,24 @@ describe("shouldShowTaxInfoIcon", () => {
   it("hides icon for empty breakdown", () => {
     expect(shouldShowTaxInfoIcon([])).toBe(false);
   });
+
+  it("shows icon for a single rate when there are tax-exempt payments", () => {
+    expect(shouldShowTaxInfoIcon([{ rate: 6, earnings: 1000, tax: 60 }], 2000)).toBe(true);
+  });
+
+  it("hides icon for a single rate when tax-exempt payments sum to zero", () => {
+    expect(shouldShowTaxInfoIcon([{ rate: 6, earnings: 1000, tax: 60 }], 0)).toBe(false);
+  });
+
+  it.each([0, 2000])("shows icon for multiple rates whatever the tax-exempt sum (%s)", (sum) => {
+    expect(
+      shouldShowTaxInfoIcon(
+        [
+          { rate: 4, earnings: 15000, tax: 600 },
+          { rate: 6, earnings: 10000, tax: 600 },
+        ],
+        sum
+      )
+    ).toBe(true);
+  });
 });

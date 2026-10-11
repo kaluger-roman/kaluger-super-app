@@ -2,9 +2,11 @@ import type { FC } from "react";
 
 import { Box, Typography } from "@mui/material";
 
+import { useIsTaxEnabled } from "@entities";
 import type { Lesson } from "@shared";
 import {
   CommissionBadge,
+  TaxExemptBadge,
   SUBJECT_LABELS,
   LESSON_TYPE_LABELS,
   getLessonDisplayName,
@@ -23,6 +25,8 @@ type LessonCellProps = {
 export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = false }) => {
   const startTime = new Date(lesson.startTime);
   const endTime = new Date(lesson.endTime);
+  const isTaxEnabled = useIsTaxEnabled();
+  const isTaxExempt = isTaxEnabled && Boolean(lesson.isTaxExempt);
 
   if (compact) {
     return (
@@ -32,6 +36,7 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
             {lesson.price ? `${lesson.price}₽ ` : ""}
             {getLessonDisplayName(lesson)}
           </Styled.StyledCaption>
+          <TaxExemptBadge isTaxExempt={isTaxExempt} variant="icon" />
           <CommissionBadge credit={lesson.commissionCredit} />
           {lesson.student?.archived && (
             <Styled.StyledCaption variant="caption" color="text.secondary">
@@ -69,10 +74,11 @@ export const LessonCell: FC<LessonCellProps> = ({ lesson, onClick, compact = fal
 
       {lesson.price != null && lesson.price > 0 && (
         <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
-          <Box display="flex" alignItems="center" gap={0.5}>
+          <Box display="flex" alignItems="center" gap={0.5} minWidth={0}>
             <Typography variant="caption" fontWeight="bold">
               {lesson.price}₽
             </Typography>
+            <TaxExemptBadge isTaxExempt={isTaxExempt} variant="icon" />
             <CommissionBadge credit={lesson.commissionCredit} />
           </Box>
           {!lesson.isPaid && (

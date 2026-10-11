@@ -26,6 +26,7 @@ const makeLesson = (overrides: Partial<Lesson> = {}): Lesson =>
     isRecurring: false,
     isPaid: false,
     paymentDate: null,
+    isTaxExempt: false,
     homework: null,
     notes: null,
     isHomeworkSentByTeacher: false,
@@ -95,6 +96,30 @@ describe("computeUpdatedStatus", () => {
     ).toBe("CANCELLED");
   });
 
+  it("should keep a past cancelled lesson cancelled when no status is sent", () => {
+    expect(
+      computeUpdatedStatus({}, makeLesson({ status: "CANCELLED" }), past.start, past.end, now)
+    ).toBe("CANCELLED");
+  });
+
+  it("should keep a running cancelled lesson cancelled when no status is sent", () => {
+    expect(
+      computeUpdatedStatus({}, makeLesson({ status: "CANCELLED" }), running.start, running.end, now)
+    ).toBe("CANCELLED");
+  });
+
+  it("should complete a past cancelled lesson restored with an explicit SCHEDULED status", () => {
+    expect(
+      computeUpdatedStatus(
+        { status: "SCHEDULED" },
+        makeLesson({ status: "CANCELLED" }),
+        past.start,
+        past.end,
+        now
+      )
+    ).toBe("COMPLETED");
+  });
+
   it("should return undefined for a future lesson with an explicit status", () => {
     expect(
       computeUpdatedStatus({ status: "RESCHEDULED" }, makeLesson(), future.start, future.end, now)
@@ -103,6 +128,20 @@ describe("computeUpdatedStatus", () => {
 });
 
 describe("buildLessonUpdateData", () => {
+  it("should pass isTaxExempt through without touching the status of a cancelled lesson", () => {
+    const { dataToUpdate } = buildLessonUpdateData(
+      { isTaxExempt: true },
+      makeLesson({
+        status: "CANCELLED",
+        startTime: new Date("2026-03-01T10:00:00Z"),
+        endTime: new Date("2026-03-01T11:00:00Z"),
+      }),
+      false,
+      now
+    );
+    expect(dataToUpdate).toEqual({ isTaxExempt: true, status: "CANCELLED" });
+  });
+
   it("should pass through fields and override times with truncated dates", () => {
     const { dataToUpdate, start, end } = buildLessonUpdateData(
       {

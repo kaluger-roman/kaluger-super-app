@@ -21,5 +21,6 @@ export type Statistics = {
   commissionWrittenOffSum?: number;
   commissionRemainingTotal?: number;
   taxAmount: number | null;
+  taxExemptIncome: number | null;
   taxBreakdown: TaxBreakdownEntry[] | null;
 };

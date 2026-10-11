@@ -38,6 +38,10 @@ export const lessonHomeworkSentChanged = createEvent<{
   lessonId: string;
   isSent: boolean;
 }>();
+export const lessonTaxExemptChanged = createEvent<{
+  lessonId: string;
+  isTaxExempt: boolean;
+}>();
 
 // Restore lesson with confirmation
 sample({
@@ -131,6 +135,15 @@ sample({
   fn: ({ lessonId, isSent }) => ({
     id: lessonId,
     data: { isHomeworkSentByTeacher: isSent },
+  }),
+  target: lessonModel.updateLesson,
+});
+
+sample({
+  clock: lessonTaxExemptChanged,
+  fn: ({ lessonId, isTaxExempt }) => ({
+    id: lessonId,
+    data: { isTaxExempt },
   }),
   target: lessonModel.updateLesson,
 });

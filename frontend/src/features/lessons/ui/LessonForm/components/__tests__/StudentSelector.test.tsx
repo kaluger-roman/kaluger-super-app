@@ -41,6 +41,7 @@ const baseFormData: LessonFormData = {
   isRecurring: false,
   isPaid: false,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
 };
 
 const renderWith = (

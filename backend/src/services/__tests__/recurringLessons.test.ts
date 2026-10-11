@@ -252,4 +252,57 @@ describe("processRecurringLessons", () => {
     expect(bSlot.length).toBe(1);
     expect(bSlot[0].isRecurring).toBe(true);
   });
+
+  describe("isTaxExempt inheritance", () => {
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+    const createPatternLesson = (
+      tutor: { id: string },
+      student: { id: string },
+      weeksAgo: number,
+      isTaxExempt: boolean
+    ) => {
+      const start = truncateToMinute(new Date(Date.now() - weeksAgo * WEEK_MS));
+      return prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: start,
+          endTime: new Date(start.getTime() + 60 * 60 * 1000),
+          price: 1000,
+          isRecurring: true,
+          isTaxExempt,
+          tutorId: tutor.id,
+          studentId: student.id,
+          status: "SCHEDULED",
+        },
+      });
+    };
+
+    const findCreatedLessons = (tutorId: string, after: Date) =>
+      prisma.lesson.findMany({ where: { tutorId, startTime: { gt: after } } });
+
+    it("should copy isTaxExempt from the last lesson of the pattern", async () => {
+      const { tutor, student } = await createTutorAndStudentTracked();
+      const last = await createPatternLesson(tutor, student, 1, true);
+
+      await processRecurringLessons();
+
+      const created = await findCreatedLessons(tutor.id, last.startTime);
+      expect(created.length).toBeGreaterThan(0);
+      expect(created.every((lesson) => lesson.isTaxExempt)).toBe(true);
+    });
+
+    it("should follow the last lesson when earlier lessons of the pattern were tax-exempt", async () => {
+      const { tutor, student } = await createTutorAndStudentTracked();
+      await createPatternLesson(tutor, student, 2, true);
+      const last = await createPatternLesson(tutor, student, 1, false);
+
+      await processRecurringLessons();
+
+      const created = await findCreatedLessons(tutor.id, last.startTime);
+      expect(created.length).toBeGreaterThan(0);
+      expect(created.some((lesson) => lesson.isTaxExempt)).toBe(false);
+    });
+  });
 });

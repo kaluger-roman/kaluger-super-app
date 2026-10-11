@@ -97,6 +97,15 @@ describe("prepareFormData", () => {
     const duration = result.endTime.getTime() - result.startTime.getTime();
     expect(duration).toBe(60 * 60 * 1000); // 1 hour in milliseconds
   });
+
+  it("should take isTaxExempt from the lesson", () => {
+    expect(prepareFormData(createMockLesson({ isTaxExempt: true })).isTaxExempt).toBe(true);
+  });
+
+  it("should default isTaxExempt to false for a lesson without the field and a new lesson", () => {
+    expect(prepareFormData(createMockLesson()).isTaxExempt).toBe(false);
+    expect(prepareFormData().isTaxExempt).toBe(false);
+  });
 });
 
 describe("validateFormData", () => {
@@ -117,6 +126,7 @@ describe("validateFormData", () => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     ...overrides,
   });
 
@@ -223,6 +233,7 @@ describe("prepareSubmitData", () => {
     isRecurring: true,
     isPaid: true,
     isHomeworkSentByTeacher: true,
+    isTaxExempt: false,
     ...overrides,
   });
 
@@ -289,6 +300,12 @@ describe("prepareSubmitData", () => {
     const result = prepareSubmitData(formData);
 
     expect(result.isRecurring).toBeUndefined();
+  });
+
+  it.each([true, false])("should always send isTaxExempt as a boolean (%s)", (isTaxExempt) => {
+    const result = prepareSubmitData(createValidFormData({ isTaxExempt }));
+
+    expect(result).toHaveProperty("isTaxExempt", isTaxExempt);
   });
 });
 
@@ -730,6 +747,7 @@ describe("validateFormData (prospect mode)", () => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     paymentDate: undefined,
     ...overrides,
   });
@@ -769,6 +787,7 @@ describe("canSubmitLessonForm", () => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     paymentDate: undefined,
   };
 
@@ -802,6 +821,7 @@ describe("applyWithoutStudentRules", () => {
     isRecurring: true,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     paymentDate: undefined,
   };
 
@@ -873,6 +893,7 @@ describe("prepareSubmitData (prospect mode)", () => {
     isRecurring: false,
     isPaid: false,
     isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
     paymentDate: undefined,
   };
 

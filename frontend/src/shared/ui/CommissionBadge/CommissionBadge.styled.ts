@@ -14,6 +14,7 @@ export const Badge = styled(Box)<{ $isForecast: boolean }>(({ theme, $isForecast
   alignItems: "center",
   gap: theme.spacing(0.5),
   maxWidth: "100%",
+  minWidth: 0,
   padding: "1px 6px",
   borderRadius: 8,
   fontSize: "0.8125rem",
