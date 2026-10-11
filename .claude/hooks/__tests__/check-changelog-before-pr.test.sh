@@ -33,12 +33,24 @@ git -C "$repo" checkout -q main
 git -C "$repo" worktree add -q "$tmp/wt-with" with-changelog
 git -C "$repo" worktree add -q "$tmp/wt-without" without-changelog
 
+# Stand-in for `ssh <host> <command>`: drop the host, run the command locally
+# with HOME pointing at a fake dev-machine home where the repo is checked out.
+fake_home="$tmp/devhome"
+mkdir -p "$fake_home"
+ln -s "$repo" "$fake_home/kaluger-super-app"
+mkdir -p "$repo/.claude/hooks"
+cp "$hook" "$repo/.claude/hooks/"
+printf '#!/usr/bin/env bash\nshift\nHOME="%s" bash -c "$*"\n' "$fake_home" >"$tmp/fake-ssh"
+chmod +x "$tmp/fake-ssh"
+git -C "$repo" worktree add -q --detach "$tmp/devhome/wt-ssh-with" with-changelog
+git -C "$repo" worktree add -q --detach "$tmp/devhome/wt-ssh-without" without-changelog
+
 failures=0
 run_hook() {
   # $1 = cwd for the hook, $2 = command string
   local payload
   payload="$(jq -n --arg cwd "$1" --arg cmd "$2" '{cwd: $cwd, tool_name: "Bash", tool_input: {command: $cmd}}')"
-  (cd "$1" && printf '%s' "$payload" | bash "$hook")
+  (cd "$1" && printf '%s' "$payload" | CHANGELOG_GATE_SSH="$tmp/fake-ssh" bash "$hook")
 }
 expect() {
   # $1 = name, $2 = expected ("allow"|"deny"), $3 = cwd, $4 = command
@@ -71,6 +83,16 @@ expect "denies gh pr ready without CHANGELOG" deny "$tmp/wt-without" "gh pr read
 expect "allows gh pr ready with CHANGELOG" allow "$tmp/wt-with" "gh pr ready 73"
 expect "resolves the worktree for gh pr ready from a leading cd" allow "$tmp/wt-without" "cd $tmp/wt-with && gh pr ready"
 expect "ignores the start-of-task draft PR script" allow "$tmp/wt-without" "node scripts/start-task-pr.mjs --title x"
+
+# `ssh <host> '<cmd>'` is gated on the dev machine (HOME and ~ resolve there).
+expect "gates an ssh-wrapped gh pr create from a ~ worktree path (allow)" allow "$tmp/wt-without" "ssh home 'cd ~/wt-ssh-with && ~/.local/bin/gh pr create --title x'"
+expect "gates an ssh-wrapped gh pr create from a ~ worktree path (deny)" deny "$tmp/wt-with" "ssh home 'cd ~/wt-ssh-without && gh pr create --title x'"
+expect "gates an ssh-wrapped gh pr create from a \$HOME worktree path" deny "$tmp/wt-with" "ssh home 'cd \$HOME/wt-ssh-without && gh pr create'"
+expect "handles a double-quoted ssh wrapper and ssh options" deny "$tmp/wt-with" "ssh -t home \"cd ~/wt-ssh-without && gh pr create\""
+expect "resolves --head inside the ssh wrapper (allow)" allow "$tmp/wt-without" "ssh home 'gh pr create --head with-changelog'"
+expect "resolves --head inside the ssh wrapper (deny)" deny "$tmp/wt-with" "ssh home 'gh pr create --head without-changelog'"
+expect "gates an ssh-wrapped gh pr ready" deny "$tmp/wt-with" "ssh home 'cd ~/wt-ssh-without && gh pr ready'"
+expect "ignores ssh-wrapped commands that are not gh pr create" allow "$tmp/wt-without" "ssh home 'gh run list --branch without-changelog'"
 
 if [ "$failures" -ne 0 ]; then
   printf '%s failure(s)\n' "$failures"

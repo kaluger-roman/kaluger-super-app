@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Любое сохранение без явного статуса (переключатель ДЗ в окне урока, форма редактирования) переводило прошедший отменённый урок в «Проведён»: в `computeUpdatedStatus` проверка «урок отменён и статус не передан» стояла после проверок по времени. Теперь отменённый урок остаётся отменённым; восстановление с явным `SCHEDULED` работает как раньше. Регрессионные юнит- и интеграционный тесты
 
+## 2026-10-02
+
+### Infrastructure
+- The changelog gate before `gh pr create` / `gh pr ready` now also covers commands wrapped as `ssh <host> '<cmd>'`, used when a Claude Code session sees the repo through an sshfs mount while git, gh and the worktrees live on the dev machine. Previously the hook never fired for them (its settings filters only matched commands starting with `gh pr`), and on the mount it would have allowed anyway, since git cannot open worktrees whose gitdir points to dev-machine paths. The hook forwards the inner command to the same script on that host (`CHANGELOG_GATE_REMOTE_REPO`, default `~/kaluger-super-app`) and expands `~` / `$HOME` in `cd` targets; eight new scenarios run through a fake ssh (def4b57)
+
 ## 2026-09-22
 
 ### Added
