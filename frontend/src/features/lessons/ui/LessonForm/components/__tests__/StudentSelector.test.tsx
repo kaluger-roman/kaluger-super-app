@@ -41,6 +41,8 @@ const baseFormData: LessonFormData = {
   isRecurring: false,
   isPaid: false,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
+  receivedAmount: "",
 };
 
 const renderWith = (
@@ -153,8 +155,10 @@ describe("StudentSelector", () => {
     expect(screen.queryByText(/класс$/)).not.toBeInTheDocument();
   });
 
-  it("should use archived students when editing a completed lesson", async () => {
-    const user = userEvent.setup();
+  it.each([
+    ["an active", "active-1", "Активный"],
+    ["an archived", "arch-1", "Архивный"],
+  ])("should show %s student of a completed lesson", (_, studentId, name) => {
     const active = makeStudent({ id: "active-1", name: "Активный" });
     const archived = makeStudent({ id: "arch-1", name: "Архивный", archived: true });
 
@@ -171,15 +175,13 @@ describe("StudentSelector", () => {
         isRecurring: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
-        studentId: "arch-1",
+        studentId,
       },
-      formData: { ...baseFormData, studentId: "arch-1" },
+      formData: { ...baseFormData, studentId },
     });
 
     const input = screen.getByRole("combobox", { name: /ученик/i });
     expect(input).toBeDisabled();
-    await user.click(input);
-
-    expect(screen.queryByText("Активный")).not.toBeInTheDocument();
+    expect(input).toHaveValue(name);
   });
 });

@@ -1,5 +1,6 @@
 export {
   getStatistics,
+  getIncomeHistory,
   getLessonsBySubject,
   getLessonsByType,
   getStudentStatistics,

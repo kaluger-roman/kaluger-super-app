@@ -15,6 +15,8 @@ import {
 import { LessonStatusIcons } from "../LessonStatusIcons";
 import * as lessonStatusIconsModel from "../LessonStatusIcons.model";
 
+const PAYMENT_DIALOG = { lessonId: "lesson-1", price: 2000 };
+
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(
     <Provider value={scope}>
@@ -149,7 +151,7 @@ describe("LessonStatusIcons", () => {
 
       await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
         scope,
-        params: "lesson-1",
+        params: { lessonId: "lesson-1", price: 2000 },
       });
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -212,7 +214,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: false });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(screen.getByText("Отметить как оплачено")).toBeInTheDocument();
@@ -223,7 +228,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: false });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByText("Отметить как оплачено")).toBeInTheDocument();
     });
@@ -233,7 +241,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: true });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByText("Отметить как неоплаченное")).toBeInTheDocument();
     });
@@ -243,7 +254,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: false });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByLabelText(/дата оплаты/i)).toBeInTheDocument();
     });
@@ -253,7 +267,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: true });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.queryByLabelText(/дата оплаты/i)).not.toBeInTheDocument();
     });
@@ -273,7 +290,10 @@ describe("LessonStatusIcons", () => {
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       const dateInput = screen.getByLabelText(/дата оплаты/i);
       await userEvent.clear(dateInput);
@@ -286,6 +306,7 @@ describe("LessonStatusIcons", () => {
         lessonId: "lesson-1",
         isPaid: true,
         paymentDate: "2026-02-15",
+        receivedAmount: 2000,
       });
     });
 
@@ -304,7 +325,10 @@ describe("LessonStatusIcons", () => {
 
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       const confirmButton = screen.getByRole("button", { name: /подтвердить/i });
       await userEvent.click(confirmButton);
@@ -320,7 +344,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000 });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByText(/иван иванов/i)).toBeInTheDocument();
     });
@@ -330,7 +357,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000 });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(screen.getByText(/2000 ₽/i)).toBeInTheDocument();
     });
@@ -344,7 +374,10 @@ describe("LessonStatusIcons", () => {
       });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       const dateInput = screen.getByLabelText(/дата оплаты/i) as HTMLInputElement;
       expect(dateInput.value).toBe("2026-02-10");
@@ -355,7 +388,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000, isPaid: false, paymentDate: undefined });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       const dateInput = screen.getByLabelText(/дата оплаты/i) as HTMLInputElement;
       expect(dateInput.value).toBe("2026-02-15");
@@ -586,7 +622,10 @@ describe("LessonStatusIcons", () => {
 
       expect(scope.getState(lessonStatusIconsModel.$openPaymentDialogFor)).toBeNull();
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(scope.getState(lessonStatusIconsModel.$openPaymentDialogFor)).toBe("lesson-1");
     });
@@ -596,7 +635,10 @@ describe("LessonStatusIcons", () => {
       const lesson = createMockLesson({ price: 2000 });
       renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
 
-      await allSettled(lessonStatusIconsModel.paymentDialogOpened, { scope, params: "lesson-1" });
+      await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
+        scope,
+        params: PAYMENT_DIALOG,
+      });
 
       expect(scope.getState(lessonStatusIconsModel.$openPaymentDialogFor)).toBe("lesson-1");
 
@@ -637,15 +679,74 @@ describe("LessonStatusIcons", () => {
 
       await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
         scope: scope1,
-        params: "lesson-1",
+        params: { lessonId: "lesson-1", price: 2000 },
       });
       await allSettled(lessonStatusIconsModel.paymentDialogOpened, {
         scope: scope2,
-        params: "lesson-2",
+        params: { lessonId: "lesson-2", price: 2000 },
       });
 
       expect(scope1.getState(lessonStatusIconsModel.$openPaymentDialogFor)).toBe("lesson-1");
       expect(scope2.getState(lessonStatusIconsModel.$openPaymentDialogFor)).toBe("lesson-2");
+    });
+  });
+
+  describe("Received amount in the payment dialog", () => {
+    const capturePayments = (scope: ReturnType<typeof fork>) => {
+      const payloads: unknown[] = [];
+      createWatch({ unit: lessonPaymentChanged, scope, fn: (payload) => payloads.push(payload) });
+      return payloads;
+    };
+
+    const openPaymentDialog = async (lesson: Lesson, scope = fork()) => {
+      renderWithTheme(<LessonStatusIcons lesson={lesson} />, scope);
+      await userEvent.click(screen.getByRole("button", { name: /оплачено/i }));
+      return scope;
+    };
+
+    it("should prefill the received amount with the lesson price", async () => {
+      await openPaymentDialog(createMockLesson({ price: 2000, isPaid: false }));
+
+      expect(screen.getByLabelText(/получено/i)).toHaveValue(2000);
+    });
+
+    it("should send the edited received amount on confirm", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      await openPaymentDialog(createMockLesson({ price: 2000, isPaid: false }), scope);
+
+      const amountInput = screen.getByLabelText(/получено/i);
+      await userEvent.clear(amountInput);
+      await userEvent.type(amountInput, "1800");
+      await userEvent.click(screen.getByRole("button", { name: /подтвердить/i }));
+
+      expect(payloads).toEqual([
+        { lessonId: "lesson-1", isPaid: true, paymentDate: "2026-02-15", receivedAmount: 1800 },
+      ]);
+    });
+
+    it("should block confirm and Enter while the amount is empty", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      await openPaymentDialog(createMockLesson({ price: 2000, isPaid: false }), scope);
+
+      await userEvent.clear(screen.getByLabelText(/получено/i));
+
+      expect(screen.getByText("Укажите полученную сумму")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /подтвердить/i })).toBeDisabled();
+      await userEvent.type(screen.getByRole("dialog"), "{Enter}");
+      expect(payloads).toEqual([]);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("should not show the amount field when removing the payment", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      await openPaymentDialog(createMockLesson({ price: 2000, isPaid: true }), scope);
+
+      expect(screen.queryByLabelText(/получено/i)).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /подтвердить/i }));
+      expect(payloads).toEqual([{ lessonId: "lesson-1", isPaid: false }]);
     });
   });
 });

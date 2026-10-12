@@ -7,6 +7,7 @@ import { faker } from "@faker-js/faker";
 // Mock wsManager and recurring helpers to control side effects
 import * as wsManager from "../../../lib/wsManager";
 import * as recurringHelpers from "../../../services/recurringHelpers";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("updateLesson controller", () => {
   let authToken: string;
@@ -15,7 +16,7 @@ describe("updateLesson controller", () => {
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "u" },
+      data: { email: uniqueEmail(), password: "x", name: "u" },
     });
     userId = user.id;
     authToken = generateToken({ userId: user.id, email: user.email });
@@ -641,7 +642,7 @@ describe("updateLesson controller", () => {
     });
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "x",
         name: "Shift Student",
         isEmailVerified: true,

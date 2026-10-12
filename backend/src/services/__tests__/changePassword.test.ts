@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
 import { hashPassword, comparePassword } from "../../utils/auth";
 import { changePassword } from "../changePassword";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("changePassword service", () => {
   let userId: string;
@@ -11,7 +12,7 @@ describe("changePassword service", () => {
     const hashedPassword = await hashPassword(originalPassword);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: hashedPassword,
         name: faker.person.fullName(),
       },

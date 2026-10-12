@@ -1,13 +1,6 @@
 import { test, expect } from "../fixtures";
 import { createStudentFor, createLesson } from "../helpers/db";
-import { fillDatePicker } from "../helpers/datepicker";
-
-const formatDdMmYyyy = (date: Date): string => {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = String(date.getFullYear());
-  return `${dd}${mm}${yyyy}`;
-};
+import { fillDatePicker, formatDdMmYyyy } from "../helpers/datepicker";
 
 test.describe(
   "Фильтрация отчёта по периоду",

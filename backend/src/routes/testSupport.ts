@@ -103,6 +103,7 @@ testRouter.post("/users/:userId/students", async (req: Request, res: Response) =
       name: data.name,
       contactMethod: data.contactMethod ?? "WHATSAPP",
       hourlyRate: data.hourlyRate ?? null,
+      commissionAmount: data.commissionAmount ?? 0,
       grade: data.grade ?? null,
       phone: data.phone ?? null,
       notes: data.notes ?? null,
@@ -128,7 +129,9 @@ testRouter.post("/lessons", async (req: Request, res: Response) => {
       status: data.status ?? "SCHEDULED",
       isPaid: Boolean(data.isPaid),
       paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
+      receivedAmount: data.isPaid ? (data.receivedAmount ?? data.price ?? 0) : null,
       isRecurring: Boolean(data.isRecurring),
+      isTaxExempt: Boolean(data.isTaxExempt),
     },
   });
   res.status(201).json({ lesson });
@@ -140,7 +143,19 @@ testRouter.patch("/lessons/:id", async (req: Request, res: Response) => {
   if (req.body.startTime !== undefined) data.startTime = new Date(req.body.startTime);
   if (req.body.endTime !== undefined) data.endTime = new Date(req.body.endTime);
   if (req.body.status !== undefined) data.status = req.body.status;
-  if (req.body.isPaid !== undefined) data.isPaid = req.body.isPaid;
+  if (req.body.isPaid === true) {
+    const current = await prisma.lesson.findUniqueOrThrow({
+      where: { id },
+      select: { price: true },
+    });
+    data.isPaid = true;
+    data.receivedAmount = req.body.receivedAmount ?? current.price ?? 0;
+  } else if (req.body.isPaid === false) {
+    data.isPaid = false;
+    data.receivedAmount = null;
+  } else if (req.body.receivedAmount !== undefined) {
+    data.receivedAmount = req.body.receivedAmount;
+  }
   if (req.body.paymentDate !== undefined) {
     data.paymentDate = req.body.paymentDate ? new Date(req.body.paymentDate) : null;
   }

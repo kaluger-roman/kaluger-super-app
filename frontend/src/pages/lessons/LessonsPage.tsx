@@ -3,13 +3,12 @@ import type { FC } from "react";
 import { Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
-import { lessonsModel } from "@features/lessons";
+import { LessonDialogs, lessonsModel } from "@features/lessons";
 
 import {
   LessonsTabs,
   AddLessonFab,
   LessonsContent,
-  LessonsDialogs,
   LessonsFilters,
   ViewModeToggle,
 } from "./components";
@@ -42,7 +41,7 @@ export const LessonsPage: FC = () => {
 
       <AddLessonFab onClick={() => lessonsModel.dialogOpened(undefined)} />
 
-      <LessonsDialogs />
+      <LessonDialogs />
     </Styled.StyledContainer>
   );
 };

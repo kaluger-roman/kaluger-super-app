@@ -40,6 +40,7 @@ export const createSingleLesson = (
         notes: data.notes,
         ...(computedStatus ? { status: computedStatus } : {}),
         isRecurring: false,
+        isTaxExempt: data.isTaxExempt ?? false,
         tutorId: userId,
         studentId: data.studentId ?? null,
         prospectName: data.prospectName?.trim() ?? null,
@@ -76,6 +77,7 @@ export const createRecurringLessons = (
           homework: slot.isFirst ? data.homework : undefined,
           notes: slot.isFirst ? data.notes : undefined,
           isRecurring: true,
+          isTaxExempt: data.isTaxExempt ?? false,
           tutorId: userId,
           studentId: data.studentId,
         });

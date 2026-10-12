@@ -1,11 +1,14 @@
 import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { lessonModel } from "@entities";
+
 import { WS_RECONNECT_DELAY_MS } from "../webSocket.constants";
 import {
   connectWebSocket,
   connectWebSocketFx,
   disconnectWebSocket,
+  handleLessonStatusUpdate,
   webSocketClosed,
   $isWebSocketEnabled,
 } from "../webSocket.model";
@@ -137,5 +140,26 @@ describe("app/model/webSocket.model — reconnect", () => {
     await Promise.all(runs);
 
     expect(connectHandler).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("app/model/webSocket.model — lesson_status_updated", () => {
+  it("refetches the lesson instead of writing the status back (regression: echo PUT)", async () => {
+    const updateLessonHandler = vi.fn(async () => ({}) as never);
+    const syncLessonHandler = vi.fn(async () => ({}) as never);
+    const scope = fork({
+      handlers: [
+        [lessonModel.updateLessonFx, updateLessonHandler],
+        [lessonModel.syncLessonFx, syncLessonHandler],
+      ],
+    });
+
+    await allSettled(handleLessonStatusUpdate, {
+      scope,
+      params: { lessonId: "lesson-1", status: "COMPLETED" },
+    });
+
+    expect(syncLessonHandler).toHaveBeenCalledWith("lesson-1");
+    expect(updateLessonHandler).not.toHaveBeenCalled();
   });
 });

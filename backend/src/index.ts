@@ -9,7 +9,7 @@ import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
-import { processScheduledReminders, runBackupJob } from "./services";
+import { processScheduledReminders, reconcileReceivedAmounts, runBackupJob } from "./services";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
 if (process.env.NODE_ENV !== "test") {
@@ -135,6 +135,14 @@ if (shouldStartServer) {
       console.log("Cron jobs disabled (test mode)");
       return;
     }
+
+    reconcileReceivedAmounts()
+      .then(({ filled, cleared }) => {
+        if (filled > 0 || cleared > 0) {
+          console.log(`Reconciled received amounts: filled ${filled}, cleared ${cleared}`);
+        }
+      })
+      .catch((error) => console.error("Error reconciling received amounts:", error));
 
     const CRON_TIMEZONE = "Europe/Moscow";
 

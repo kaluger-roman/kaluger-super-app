@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { tryAttachCommissionToLessons } from "../commission";
 import type { LessonsPageOptions, PaymentsSummary } from "./lessonsQuery.types";
 
 export const fetchLessonsPage = async (
   where: Prisma.LessonWhereInput,
-  { orderAsc, pagination, withPaymentsSummary }: LessonsPageOptions
+  { tutorId, orderAsc, pagination, withPaymentsSummary }: LessonsPageOptions
 ) => {
   const [lessons, total, paymentsAggregate] = await Promise.all([
     prisma.lesson.findMany({
@@ -16,8 +17,8 @@ export const fetchLessonsPage = async (
     prisma.lesson.count({ where }),
     withPaymentsSummary
       ? prisma.lesson.aggregate({
-          where: { ...where, isPaid: true, price: { gt: 0 } },
-          _sum: { price: true },
+          where: { ...where, isPaid: true, receivedAmount: { gt: 0 } },
+          _sum: { receivedAmount: true },
           _count: { id: true },
         })
       : Promise.resolve(null),
@@ -25,10 +26,14 @@ export const fetchLessonsPage = async (
 
   const paymentsSummary: PaymentsSummary | null = paymentsAggregate
     ? {
-        sum: paymentsAggregate._sum.price?.toNumber() ?? 0,
+        sum: paymentsAggregate._sum.receivedAmount?.toNumber() ?? 0,
         count: paymentsAggregate._count.id || 0,
       }
     : null;
 
-  return { lessons, total, paymentsSummary };
+  return {
+    lessons: await tryAttachCommissionToLessons(tutorId, lessons),
+    total,
+    paymentsSummary,
+  };
 };

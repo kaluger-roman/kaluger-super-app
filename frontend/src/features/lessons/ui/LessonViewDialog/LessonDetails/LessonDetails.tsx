@@ -8,12 +8,15 @@ import {
   formatDateTimeLong,
   formatDate,
   LessonStudentName,
+  CommissionBadge,
+  ReceivedAmountHint,
 } from "@shared";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonDetails.styled";
 import { HomeworkSentStatus } from "../../HomeworkSentStatus";
 import { PaymentStatus } from "../../PaymentStatus";
+import { TaxExemptStatus } from "../../TaxExemptStatus";
 
 type LessonDetailsProps = {
   lesson: Lesson;
@@ -30,9 +33,19 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
         <Typography variant="body1" color="text.secondary" gutterBottom>
           📚 {SUBJECT_LABELS[lesson.subject]} • {LESSON_TYPE_LABELS[lesson.lessonType]}
         </Typography>
-        <Typography variant="body1" gutterBottom>
-          💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
-        </Typography>
+        <Styled.PriceGroup>
+          <Typography variant="body1">
+            💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
+          </Typography>
+          {lesson.isPaid && (
+            <ReceivedAmountHint
+              receivedAmount={lesson.receivedAmount}
+              price={lesson.price}
+              variant="full"
+            />
+          )}
+          <CommissionBadge credit={lesson.commissionCredit} variant="full" />
+        </Styled.PriceGroup>
         <Styled.PaymentStatusBox>
           <PaymentStatus lesson={lesson} />
         </Styled.PaymentStatusBox>
@@ -42,6 +55,7 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           </Typography>
         )}
         <HomeworkSentStatus needConfirm lesson={lesson} />
+        <TaxExemptStatus lesson={lesson} />
       </Box>
 
       <Divider />

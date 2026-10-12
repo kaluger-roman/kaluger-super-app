@@ -1,3 +1,4 @@
+import "./commissionReload.model";
 import "./lessonsReload.model";
 import "./lessonsNotifications.model";
 import "./lessonsPageLoader.model";
@@ -30,3 +31,8 @@ export const lessonsModel = {
 
 export * as lessonFormModel from "./lessonForm.model";
 export { lessonCancellationModel };
+export {
+  parseReceivedAmount,
+  toReceivedAmountInput,
+  validateReceivedAmount,
+} from "./receivedAmount.helpers";

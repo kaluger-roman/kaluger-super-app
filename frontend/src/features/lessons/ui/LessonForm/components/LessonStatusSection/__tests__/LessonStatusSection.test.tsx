@@ -24,6 +24,8 @@ const formData: LessonFormData = {
   isPaid: false,
   paymentDate: undefined,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
+  receivedAmount: "",
   homework: "",
   notes: "",
   isRecurring: false,
@@ -77,5 +79,81 @@ describe("LessonStatusSection", () => {
     expect(setFormData).toHaveBeenCalledTimes(1);
     const [updater] = setFormData.mock.calls[0];
     expect(updater(formData)).toEqual({ ...formData, isHomeworkSentByTeacher: true });
+  });
+
+  describe("payment in the form", () => {
+    const user = () => userEvent.setup();
+
+    it("should prefill the received amount with the price typed in the form", async () => {
+      const u = user();
+      renderWithTheme(
+        <LessonStatusSection
+          lesson={lesson}
+          formData={{ ...formData, price: "2500" }}
+          setFormData={vi.fn()}
+        />
+      );
+
+      const [paymentToggle] = screen.getAllByRole("checkbox");
+      await u.click(paymentToggle);
+
+      expect(screen.getByText(/2500 ₽/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/получено/i)).toHaveValue(2500);
+      await u.click(screen.getByRole("button", { name: /отмена/i }));
+    });
+
+    it("should write the payment and the received amount into the form data", async () => {
+      const u = user();
+      const setFormData = vi.fn();
+      renderWithTheme(
+        <LessonStatusSection lesson={lesson} formData={formData} setFormData={setFormData} />
+      );
+
+      const [paymentToggle] = screen.getAllByRole("checkbox");
+      await u.click(paymentToggle);
+      const amountInput = screen.getByLabelText(/получено/i);
+      await u.clear(amountInput);
+      await u.type(amountInput, "80");
+      await u.click(screen.getByRole("button", { name: /подтвердить/i }));
+
+      expect(setFormData).toHaveBeenCalledTimes(1);
+      const [updater] = setFormData.mock.calls[0];
+      expect(updater(formData)).toEqual({
+        ...formData,
+        isPaid: true,
+        paymentDate: "2026-01-20",
+        receivedAmount: "80",
+      });
+    });
+
+    it("should clear the received amount when the payment is removed", async () => {
+      const u = user();
+      const setFormData = vi.fn();
+      const paidForm = {
+        ...formData,
+        isPaid: true,
+        paymentDate: "2026-01-20",
+        receivedAmount: "80",
+      };
+      renderWithTheme(
+        <LessonStatusSection
+          lesson={{ ...lesson, isPaid: true }}
+          formData={paidForm}
+          setFormData={setFormData}
+        />
+      );
+
+      const [paymentToggle] = screen.getAllByRole("checkbox");
+      await u.click(paymentToggle);
+      await u.click(screen.getByRole("button", { name: /подтвердить/i }));
+
+      const [updater] = setFormData.mock.calls[0];
+      expect(updater(paidForm)).toEqual({
+        ...paidForm,
+        isPaid: false,
+        paymentDate: undefined,
+        receivedAmount: "",
+      });
+    });
   });
 });

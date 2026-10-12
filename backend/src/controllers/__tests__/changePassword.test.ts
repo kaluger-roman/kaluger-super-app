@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { app } from "../../index";
 import { prisma } from "../../lib/prisma";
 import { generateToken, hashPassword } from "../../utils/auth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("POST /api/auth/change-password", () => {
   let authToken: string;
@@ -13,7 +14,7 @@ describe("POST /api/auth/change-password", () => {
     const hashedPassword = await hashPassword(currentPassword);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: hashedPassword,
         name: faker.person.fullName(),
         isEmailVerified: true,

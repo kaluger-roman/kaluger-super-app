@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "branch": "034-tax-exempt-lessons",
+  "base_ref": "7985323",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-10-11T10:30:00Z",
+  "mode": "main-thread fallback: /code-review-local orchestrator (2 attempts), 8 parallel reviewer subagents and a trivial smoke-test subagent all failed with 'Agent stalled: no progress for 600s'. Review done by the main model over the same roles (conventions, shallow bugs, deep logic incl. callers of computeTaxSummary/computeUpdatedStatus/buildLessonUpdateData and all lesson.create sites, security incl. student cabinet explicit select, types/contracts, removed behavior, wrappers). Scoring done by the main model with the command's rubric.",
+  "diff_stats": {
+    "files_changed": 81,
+    "patch_lines": 3798
+  },
+  "summary": {
+    "raw_findings": 4,
+    "after_dedup": 4,
+    "after_score_filter": 0,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0
+    },
+    "by_category": {}
+  },
+  "findings": [],
+  "filtered_out": [
+    {
+      "agent": "main-thread",
+      "title": "Значок без налога: role=\"img\" у фокусируемого элемента с onClick",
+      "category": "convention",
+      "file": "frontend/src/shared/ui/TaxExemptBadge/TaxExemptBadge.tsx",
+      "line_start": 44,
+      "line_end": 52,
+      "rationale": "Элемент фокусируется и реагирует на клик, но объявлен как img. Скринридер не сообщит, что он интерактивный. Сам тултип доступен по фокусу, поэтому влияние небольшое.",
+      "fix_hint": "Можно поставить role=\"button\" и aria-describedby или оставить как есть: подпись даёт aria-label.",
+      "score": 40,
+      "verification_note": "Реальная, но мелкая проблема доступности. Ни правило проекта, ни линтер её не ловят.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "main-thread",
+      "title": "Тултип налога больше не закрывается повторным кликом",
+      "category": "logic",
+      "file": "frontend/src/features/taxRatePeriods/ui/TaxRateInfoTooltip/TaxRateInfoTooltip.tsx",
+      "line_start": 50,
+      "line_end": 56,
+      "rationale": "Раньше клик переключал тултип, теперь только открывает. Закрыть можно кликом мимо или уводом фокуса.",
+      "fix_hint": "Изменение намеренное и описано в CHANGELOG (Changed), правка не нужна.",
+      "score": 25,
+      "verification_note": "Намеренное изменение поведения, задокументировано.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "main-thread",
+      "title": "TAX_EXEMPT_ARIA_LABEL дублирует текст TAX_EXEMPT_DESCRIPTION",
+      "category": "convention",
+      "file": "frontend/src/shared/ui/TaxExemptBadge/TaxExemptBadge.constants.ts",
+      "line_start": 9,
+      "line_end": 9,
+      "rationale": "Одна и та же фраза записана дважды в разном регистре.",
+      "fix_hint": "Собирать aria-label из TAX_EXEMPT_LABEL и TAX_EXEMPT_DESCRIPTION.",
+      "score": 15,
+      "verification_note": "Стилистика, явного правила нет.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "main-thread",
+      "title": "Переключатель в попапе блокируется во время любого обновления урока",
+      "category": "logic",
+      "file": "frontend/src/features/lessons/ui/TaxExemptStatus/TaxExemptStatus.tsx",
+      "line_start": 17,
+      "line_end": 17,
+      "rationale": "Учитывается глобальный updateLessonFx.pending. Соседние переключатели оплаты и ДЗ работают так же.",
+      "fix_hint": "Править не нужно, так же устроены соседние переключатели, и это защищает от гонки при быстрых кликах.",
+      "score": 10,
+      "verification_note": "Совпадает с существующим паттерном.",
+      "reason": "below threshold"
+    }
+  ]
+}

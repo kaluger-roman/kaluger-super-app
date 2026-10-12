@@ -85,6 +85,7 @@ model Student {
   phone               String?
   notes               String?
   hourlyRate          Decimal?       @db.Decimal(10, 2)
+  commissionAmount    Decimal        @default(0) @db.Decimal(10, 2)
   grade               Int?
   archived            Boolean        @default(false)
   archivedAt          DateTime?
@@ -163,6 +164,8 @@ model Lesson {
   price                   Decimal?     @db.Decimal(10, 2)
   isPaid                  Boolean      @default(false)
   paymentDate             DateTime? // Дата оплаты урока
+  receivedAmount          Decimal?     @db.Decimal(10, 2) // Amount actually received for the lesson; null while unpaid
+  isTaxExempt             Boolean      @default(false) // Не облагается налогом
   isHomeworkSentByTeacher Boolean      @default(false)
   homework                String?
   notes                   String?
@@ -187,6 +190,7 @@ model Lesson {
   @@index([tutorId, startTime])
   @@index([tutorId, status])
   @@index([tutorId, isPaid, status])
+  @@index([studentId, startTime])
   @@map("lessons")
 }
 

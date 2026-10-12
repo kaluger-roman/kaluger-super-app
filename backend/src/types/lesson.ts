@@ -1,3 +1,5 @@
+import type { LessonStatus } from "@prisma/client";
+
 import type { ContactMethod } from "./student";
 
 export type CreateLessonDto = {
@@ -14,6 +16,7 @@ export type CreateLessonDto = {
   homework?: string;
   notes?: string;
   isRecurring?: boolean; // Регулярное занятие
+  isTaxExempt?: boolean;
 };
 
 export type UpdateLessonDto = Omit<
@@ -30,9 +33,40 @@ export type UpdateLessonDto = Omit<
   // treats `undefined` as "no change", so without `null` paymentDate would
   // silently stay set when isPaid flips to false.
   paymentDate?: Date | null;
+  receivedAmount?: number;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
+};
+
+export type { LessonStatus };
+
+export type CommissionCreditState = "FACT" | "FORECAST";
+
+export type CommissionCredit = {
+  amount: number;
+  state: CommissionCreditState;
+};
+
+export type CommissionLessonInput = {
+  id: string;
+  startTime: Date;
+  paymentDate: Date | null;
+  price: number | null;
+  receivedAmount: number | null;
+  status: LessonStatus;
+  isPaid: boolean;
+};
+
+export type AllocateCommissionInput = {
+  commissionAmount: number;
+  lessons: CommissionLessonInput[];
+};
+
+export type CommissionAllocation = {
+  repaid: number;
+  remaining: number;
+  creditByLessonId: Map<string, CommissionCredit>;
 };
 
 export type ShiftResult = {

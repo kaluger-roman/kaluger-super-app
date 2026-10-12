@@ -21,7 +21,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: true,
+      params: { isPaid: true, price: 2000 },
     });
 
     const isOpen = scope.getState(paymentStatusModel.$isOpen);
@@ -53,7 +53,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: true,
+      params: { isPaid: true, price: 2000 },
     });
 
     const pendingStatus = scope.getState(paymentStatusModel.$pendingStatus);
@@ -65,7 +65,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: false,
+      params: { isPaid: false, price: 2000 },
     });
 
     const pendingStatus = scope.getState(paymentStatusModel.$pendingStatus);

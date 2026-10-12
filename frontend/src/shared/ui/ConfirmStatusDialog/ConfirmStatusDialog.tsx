@@ -18,6 +18,7 @@ type Props = {
   confirmLabel?: string;
   cancelLabel?: string;
   confirmColor?: ButtonProps["color"];
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onClose: () => void;
   stopPropagation?: boolean;
@@ -31,6 +32,7 @@ export const ConfirmStatusDialog: FC<Props> = ({
   confirmLabel = "Подтвердить",
   cancelLabel = "Отмена",
   confirmColor = "primary",
+  confirmDisabled = false,
   onConfirm,
   onClose,
   stopPropagation = true,
@@ -42,6 +44,7 @@ export const ConfirmStatusDialog: FC<Props> = ({
 
   const handleConfirm = (e?: SyntheticEvent) => {
     if (stopPropagation && e) e.stopPropagation();
+    if (confirmDisabled) return;
     onConfirm();
   };
 
@@ -62,12 +65,17 @@ export const ConfirmStatusDialog: FC<Props> = ({
     >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        {description && <Typography>{description}</Typography>}
+        {description && <Typography component="div">{description}</Typography>}
         {children}
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>{cancelLabel}</Button>
-        <Button onClick={handleConfirm} variant="contained" color={confirmColor}>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          color={confirmColor}
+          disabled={confirmDisabled}
+        >
           {confirmLabel}
         </Button>
       </DialogActions>

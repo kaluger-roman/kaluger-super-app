@@ -296,6 +296,8 @@ export const $isBlocking = combine(
 );
 ```
 
+**Single exception: incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect stays out of `$isBlocking` and shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+
 `$isBlocking` is the raw "anything loading" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has stayed continuously on for `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `debounce` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
 
 There must be exactly ONE full-screen `Backdrop` instance at runtime — two mounted at once stack their dim layers (0.5 + 0.5 ≈ 0.75) and show doubled spinners. Lazy route chunk loads go through the same overlay: the Suspense fallback renders `null` and mounts `RouteChunkGate` (in `blocking.model.ts`), whose `status` is wired into the `$isBlocking` combine. Never render an extra `Backdrop`/spinner overlay for a new loading state — feed it into `$isBlocking` instead.

@@ -2,6 +2,7 @@ import type { FC } from "react";
 
 import { Box } from "@mui/material";
 
+import { CommissionProgress } from "@shared";
 import type { Student } from "@shared";
 
 import * as Styled from "./StudentViewDialog.styled";
@@ -28,5 +29,6 @@ export const StudentInfo: FC<StudentInfoProps> = ({ student }) => (
         {student.hourlyRate} ₽/урок
       </Styled.IconRow>
     )}
+    <CommissionProgress amount={student.commissionAmount} repaid={student.commissionRepaid} />
   </Box>
 );

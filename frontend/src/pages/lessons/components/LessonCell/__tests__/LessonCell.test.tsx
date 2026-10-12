@@ -1,15 +1,36 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
+import { userModel } from "@entities";
 import { theme } from "@shared";
-import type { Lesson } from "@shared";
+import type { Lesson, User } from "@shared";
 
 import { LessonCell } from "../LessonCell";
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+
+const tutor = (taxEnabled: boolean): User => ({
+  id: "user-1",
+  email: "tutor@test.local",
+  name: "Учитель",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  isEmailVerified: true,
+  taxEnabled,
+});
+
+const BADGE_NAME = "Не облагается налогом: доход по уроку не учитывается в сумме налога";
+
+const renderWithTax = (taxEnabled: boolean, ui: React.ReactElement) =>
+  render(
+    <Provider value={fork({ values: [[userModel.$user, tutor(taxEnabled)]] })}>
+      <ThemeProvider theme={theme}>{ui}</ThemeProvider>
+    </Provider>
+  );
 
 describe("LessonCell", () => {
   const mockLesson: Lesson = {
@@ -178,5 +199,82 @@ describe("LessonCell", () => {
     renderWithTheme(<LessonCell lesson={schoolLesson} onClick={onClick} />);
 
     expect(screen.getByText(/Школа/)).toBeInTheDocument();
+  });
+  it("should render the commission badge in the schedule cell", () => {
+    const onClick = vi.fn();
+    const lesson = {
+      ...mockLesson,
+      commissionCredit: { amount: 1500, state: "FACT" as const },
+    };
+    renderWithTheme(<LessonCell lesson={lesson} onClick={onClick} />);
+
+    expect(screen.getByRole("img", { name: /комисси/i })).toBeInTheDocument();
+  });
+
+  it("should render the commission badge in the compact cell", () => {
+    const onClick = vi.fn();
+    const lesson = {
+      ...mockLesson,
+      commissionCredit: { amount: 500, state: "FORECAST" as const },
+    };
+    renderWithTheme(<LessonCell lesson={lesson} onClick={onClick} compact />);
+
+    expect(screen.getByRole("img", { name: /комисси/i })).toBeInTheDocument();
+  });
+
+  it("should not render a commission badge without a credit", () => {
+    const onClick = vi.fn();
+    renderWithTheme(<LessonCell lesson={mockLesson} onClick={onClick} />);
+
+    expect(screen.queryByRole("img", { name: /комисси/i })).toBeNull();
+  });
+
+  describe("tax-exempt badge", () => {
+    it.each([false, true])(
+      "should render the icon-only badge for a tax-exempt lesson (compact = %s)",
+      (compact) => {
+        renderWithTax(
+          true,
+          <LessonCell
+            lesson={{ ...mockLesson, isTaxExempt: true }}
+            onClick={vi.fn()}
+            compact={compact}
+          />
+        );
+
+        expect(screen.getByRole("img", { name: BADGE_NAME })).toHaveTextContent(/^0%$/);
+        expect(screen.queryByText("без налога")).toBeNull();
+      }
+    );
+
+    it("should render no badge for a taxable lesson", () => {
+      renderWithTax(
+        true,
+        <LessonCell lesson={{ ...mockLesson, isTaxExempt: false }} onClick={vi.fn()} />
+      );
+
+      expect(screen.queryByRole("img", { name: BADGE_NAME })).toBeNull();
+    });
+
+    it("should render no badge when tax accounting is disabled", () => {
+      renderWithTax(
+        false,
+        <LessonCell lesson={{ ...mockLesson, isTaxExempt: true }} onClick={vi.fn()} />
+      );
+
+      expect(screen.queryByRole("img", { name: BADGE_NAME })).toBeNull();
+    });
+
+    it("should not open the lesson when the badge is clicked", async () => {
+      const onClick = vi.fn();
+      renderWithTax(
+        true,
+        <LessonCell lesson={{ ...mockLesson, isTaxExempt: true }} onClick={onClick} />
+      );
+
+      await userEvent.click(screen.getByRole("img", { name: BADGE_NAME }));
+
+      expect(onClick).not.toHaveBeenCalled();
+    });
   });
 });

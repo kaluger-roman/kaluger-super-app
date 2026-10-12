@@ -74,4 +74,27 @@ describe("StudentInfo", () => {
     expect(screen.queryByText(/класс/)).not.toBeInTheDocument();
     expect(screen.queryByText(/₽\/урок/)).not.toBeInTheDocument();
   });
+  it("should render the commission progress block for a partially repaid commission", () => {
+    renderWithTheme(
+      <StudentInfo student={{ ...mockStudent, commissionAmount: 3000, commissionRepaid: 1200 }} />
+    );
+
+    expect(screen.getByText("Погашение комиссии")).toBeInTheDocument();
+    expect(screen.getByText("Осталось")).toBeInTheDocument();
+  });
+
+  it("should render a quiet line when the commission is fully repaid", () => {
+    renderWithTheme(
+      <StudentInfo student={{ ...mockStudent, commissionAmount: 3000, commissionRepaid: 3000 }} />
+    );
+
+    expect(screen.getByText(/выплачена/)).toBeInTheDocument();
+    expect(screen.queryByText("Погашение комиссии")).toBeNull();
+  });
+
+  it("should render nothing about commissions for a student without one", () => {
+    renderWithTheme(<StudentInfo student={mockStudent} />);
+
+    expect(screen.queryByText(/комисси/i)).toBeNull();
+  });
 });

@@ -1,4 +1,3 @@
-import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
 import { verifyToken } from "../../utils/auth";
 import {
@@ -9,6 +8,7 @@ import {
 } from "../../utils";
 import { getUserProfile, loginUser, registerUser, updateUserProfile } from "../auth";
 import { sendVerificationEmail } from "../email";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
@@ -24,7 +24,7 @@ describe("auth service", () => {
   });
 
   const register = async () => {
-    const email = faker.internet.email().toLowerCase();
+    const email = uniqueEmail().toLowerCase();
     const user = await registerUser({ email, password, name: "Тест" });
     createdUserIds.push(user.id);
     return { email, user };

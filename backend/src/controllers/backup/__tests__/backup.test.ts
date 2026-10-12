@@ -6,6 +6,11 @@ import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import * as backupService from "../../../services/backup";
+import {
+  acquireGlobalTestLock,
+  GLOBAL_TEST_LOCK,
+  GLOBAL_TEST_LOCK_TIMEOUT_MS,
+} from "../../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -13,12 +18,14 @@ describe("backup admin integration tests", () => {
   let adminToken: string;
   let tmpDir: string;
   const originalBackupDir = process.env.BACKUP_DIR;
+  let releaseBackupSettingsLock: () => Promise<void>;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.ADMIN_EMAIL = "admin@test.com";
     process.env.ADMIN_PASSWORD = "TestAdmin123";
     adminToken = generateAdminToken({ email: "admin@test.com", isAdmin: true });
-  });
+    releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+  }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "backup-int-test-"));
@@ -37,6 +44,7 @@ describe("backup admin integration tests", () => {
     delete process.env.ADMIN_EMAIL;
     delete process.env.ADMIN_PASSWORD;
     await prisma.backupSettings.deleteMany();
+    await releaseBackupSettingsLock();
   });
 
   describe("GET /api/admin/backup/settings", () => {

@@ -16,7 +16,9 @@ import {
   $isUpdateStudent,
   $isRemoveStudent,
   $isStudentsLoading,
+  $archivedStudents,
 } from "../student.model";
+import { refreshStudentsSilentlyFx, studentsRefreshRequested } from "../studentsRefresh.model";
 
 vi.mock("@shared", () => ({
   studentsApi: {
@@ -218,6 +220,42 @@ describe("student.model", () => {
       await settled;
 
       expect(scope.getState($isStudentsLoading)).toBe(false);
+    });
+  });
+  describe("silent refresh", () => {
+    it("should replace both lists when nothing changed meanwhile", async () => {
+      const active = [mockStudent];
+      const archived = [{ ...mockStudent, id: "2", name: "Архивный", archived: true }];
+      vi.mocked(studentsApi.getAll).mockImplementation((isArchived?: boolean) =>
+        Promise.resolve(isArchived ? archived : active)
+      );
+
+      const scope = fork();
+      await allSettled(studentsRefreshRequested, { scope });
+
+      expect(scope.getState($students)).toEqual(active);
+      expect(scope.getState($archivedStudents)).toEqual(archived);
+    });
+
+    // Regression: the refetch replaces both lists wholesale, so a mutation that
+    // lands while it is in flight must not be overwritten by the stale answer.
+    it("should drop its answer when a mutation landed while it was in flight", async () => {
+      const stale = [{ ...mockStudent, name: "Устаревший" }];
+      const fresh = [{ ...mockStudent, name: "Свежий" }];
+
+      const scope = fork({
+        handlers: [
+          [
+            refreshStudentsSilentlyFx,
+            () => Promise.resolve({ active: stale, archived: [], generation: -1 }),
+          ],
+        ],
+        values: [[$students, fresh]],
+      });
+
+      await allSettled(studentsRefreshRequested, { scope });
+
+      expect(scope.getState($students)).toEqual(fresh);
     });
   });
 });

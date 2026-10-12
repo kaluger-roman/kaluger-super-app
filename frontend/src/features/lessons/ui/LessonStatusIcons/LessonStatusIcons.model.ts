@@ -1,25 +1,50 @@
-import { createStore, createEvent, sample } from "effector";
+import { combine, createEvent, createStore, sample } from "effector";
 
-// Events
-export const paymentDialogOpened = createEvent<string>();
+import { toReceivedAmountInput, validateReceivedAmount } from "../../models";
+
+export const paymentDialogOpened = createEvent<{ lessonId: string; price?: number }>();
 export const paymentDialogClosed = createEvent();
+export const receivedAmountChanged = createEvent<string>();
 export const homeworkDialogOpened = createEvent<string>();
 export const homeworkDialogClosed = createEvent();
 
 export const $openPaymentDialogFor = createStore<string | null>(null);
 export const $openHomeworkDialogFor = createStore<string | null>(null);
+export const $receivedAmountInput = createStore<string>("");
 
-// Logic
+export const $receivedAmountError = combine(
+  $openPaymentDialogFor,
+  $receivedAmountInput,
+  (lessonId, input) => (lessonId === null ? null : validateReceivedAmount(input))
+);
+
 sample({
   clock: paymentDialogOpened,
-  fn: (lessonId: string) => lessonId,
+  fn: ({ lessonId }) => lessonId,
   target: $openPaymentDialogFor,
+});
+
+sample({
+  clock: paymentDialogOpened,
+  fn: ({ price }) => toReceivedAmountInput(price),
+  target: $receivedAmountInput,
+});
+
+sample({
+  clock: receivedAmountChanged,
+  target: $receivedAmountInput,
 });
 
 sample({
   clock: paymentDialogClosed,
   fn: () => null,
   target: $openPaymentDialogFor,
+});
+
+sample({
+  clock: paymentDialogClosed,
+  fn: () => "",
+  target: $receivedAmountInput,
 });
 
 sample({
