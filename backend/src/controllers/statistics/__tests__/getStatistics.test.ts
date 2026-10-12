@@ -90,6 +90,7 @@ describe("getStatistics controller", () => {
         isPaid: true,
         paymentDate: new Date(),
         price: 10000,
+        receivedAmount: 10000,
         status: "COMPLETED",
       },
     });
@@ -128,6 +129,7 @@ describe("getStatistics controller", () => {
         isPaid: true,
         paymentDate: new Date("2025-06-01"),
         price: 50000,
+        receivedAmount: 50000,
         status: "COMPLETED",
       },
     });
@@ -167,6 +169,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2023-09-01"),
           price: 5000,
+          receivedAmount: 5000,
           status: "COMPLETED",
         },
         {
@@ -180,6 +183,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2025-05-15"),
           price: 10000,
+          receivedAmount: 10000,
           status: "COMPLETED",
         },
         {
@@ -193,6 +197,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2025-07-15"),
           price: 15000,
+          receivedAmount: 15000,
           status: "COMPLETED",
         },
       ],
@@ -225,6 +230,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1500,
+        receivedAmount: 1500,
         status: "COMPLETED",
       },
     });
@@ -328,6 +334,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1200,
+        receivedAmount: 1200,
         status: "SCHEDULED",
       },
     });
@@ -360,6 +367,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 300,
+        receivedAmount: 300,
         status: "IN_PROGRESS",
       },
     });
@@ -520,6 +528,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 4321,
+        receivedAmount: 4321,
         status: "COMPLETED",
       },
     });
@@ -551,6 +560,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 999,
+        receivedAmount: 999,
         status: "SCHEDULED",
       },
     });
@@ -567,6 +577,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 111,
+        receivedAmount: 111,
         status: "SCHEDULED",
       },
     });
@@ -605,6 +616,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 2500,
+        receivedAmount: 2500,
         paymentDate: paidEarlierToday,
         status: "COMPLETED",
       },
@@ -622,6 +634,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1500,
+        receivedAmount: 1500,
         paymentDate: new Date(),
         status: "COMPLETED",
       },
@@ -639,6 +652,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 9999,
+        receivedAmount: 9999,
         paymentDate: new Date(today.getFullYear() - 1, 0, 1),
         status: "COMPLETED",
       },
@@ -657,6 +671,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 777,
+        receivedAmount: 777,
         status: "COMPLETED",
       },
     });
@@ -674,6 +689,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 11111,
+        receivedAmount: 11111,
         status: "COMPLETED",
       },
     });
@@ -690,6 +706,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 0,
+        receivedAmount: 0,
         paymentDate: new Date(),
         status: "COMPLETED",
       },
@@ -709,6 +726,38 @@ describe("getStatistics controller", () => {
         expect(res.body.paymentsInRangeSum).toBe(4777);
         expect(res.body.paymentsInRangeCount).toBe(3);
       });
+  });
+
+  it("counts payments by received amount instead of price", async () => {
+    const paymentDate = new Date();
+    const paidLesson = (price: number, receivedAmount: number) => ({
+      tutorId: userId,
+      studentId,
+      subject: "MATHEMATICS" as const,
+      lessonType: "EGE" as const,
+      startTime: new Date(Date.now() - 2 * 3600000),
+      endTime: new Date(Date.now() - 3600000),
+      isPaid: true,
+      price,
+      receivedAmount,
+      paymentDate,
+      status: "COMPLETED" as const,
+    });
+    await prisma.lesson.createMany({
+      data: [paidLesson(2000, 0), paidLesson(0, 1500)],
+    });
+
+    const res = await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .query({
+        startDate: new Date(Date.now() - 24 * 3600000).toISOString(),
+        endDate: new Date(Date.now() + 24 * 3600000).toISOString(),
+      })
+      .expect(200);
+
+    expect(res.body.paymentsInRangeCount).toBe(1);
+    expect(res.body.paymentsInRangeSum).toBe(1500);
   });
 
   it("handles database errors gracefully", async () => {

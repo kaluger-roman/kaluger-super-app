@@ -144,19 +144,22 @@ describe("app/model/webSocket.model — reconnect", () => {
 });
 
 describe("app/model/webSocket.model — lesson_status_updated", () => {
-  it("patches the lesson with the status only, so isTaxExempt is not overwritten", async () => {
-    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  it("refetches the lesson instead of writing the status back (regression: echo PUT)", async () => {
     const updateLessonHandler = vi.fn(async () => ({}) as never);
-    const scope = fork({ handlers: [[lessonModel.updateLessonFx, updateLessonHandler]] });
+    const syncLessonHandler = vi.fn(async () => ({}) as never);
+    const scope = fork({
+      handlers: [
+        [lessonModel.updateLessonFx, updateLessonHandler],
+        [lessonModel.syncLessonFx, syncLessonHandler],
+      ],
+    });
 
     await allSettled(handleLessonStatusUpdate, {
       scope,
       params: { lessonId: "lesson-1", status: "COMPLETED" },
     });
 
-    expect(updateLessonHandler).toHaveBeenCalledWith({
-      id: "lesson-1",
-      data: { status: "COMPLETED" },
-    });
+    expect(syncLessonHandler).toHaveBeenCalledWith("lesson-1");
+    expect(updateLessonHandler).not.toHaveBeenCalled();
   });
 });

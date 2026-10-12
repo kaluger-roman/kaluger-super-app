@@ -2,6 +2,7 @@ import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { studentUserModel } from "@entities/studentUser";
+import { incomeHistoryModel, incomeHistoryReloadModel } from "@pages/ReportsPage";
 
 import { BLOCKING_OVERLAY_DELAY_MS } from "../blocking.constants";
 import { $isBlocking, $isBlockingVisible, RouteChunkGate } from "../blocking.model";
@@ -18,6 +19,47 @@ describe("app/model/blocking.model — $isBlocking", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(scope.getState($isBlocking)).toBe(true);
+  });
+
+  it("blocks while the first income history page is loading", async () => {
+    const scope = fork({
+      handlers: [[incomeHistoryModel.loadIncomeHistoryFx, () => new Promise(() => undefined)]],
+    });
+
+    void allSettled(incomeHistoryModel.loadIncomeHistoryFx, {
+      scope,
+      params: { startDate: "a", endDate: "b", version: 1 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(scope.getState($isBlocking)).toBe(true);
+  });
+
+  it("blocks while a lesson opened from the income history is loading", async () => {
+    const scope = fork({
+      handlers: [[incomeHistoryReloadModel.openLessonFx, () => new Promise(() => undefined)]],
+    });
+
+    void allSettled(incomeHistoryReloadModel.openLessonFx, { scope, params: "lesson-1" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(scope.getState($isBlocking)).toBe(true);
+  });
+
+  it("does not block while the next income history page is loading (FR-013c)", async () => {
+    const scope = fork({
+      values: [[incomeHistoryModel.$historyVersion, 1]],
+      handlers: [[incomeHistoryModel.loadNextPageFx, () => new Promise(() => undefined)]],
+    });
+
+    void allSettled(incomeHistoryModel.loadNextPageFx, {
+      scope,
+      params: { startDate: "a", endDate: "b", before: "2026-09-20", version: 1 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(scope.getState(incomeHistoryModel.$isNextPageLoading)).toBe(true);
+    expect(scope.getState($isBlocking)).toBe(false);
   });
 });
 

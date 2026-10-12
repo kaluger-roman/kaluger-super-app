@@ -63,6 +63,12 @@ export const loadLessonFx = createEffect(async (id: string) => {
   return await lessonsApi.getById(id);
 });
 
+// Refetch after a change made on the server (WebSocket): nothing is sent back, so
+// there is no echo PUT, no "Урок обновлен" toast and no blocking overlay.
+export const syncLessonFx = createEffect(async (id: string) => {
+  return await lessonsApi.getById(id);
+});
+
 export const loadUpcomingLessonsFx = createEffect(async (filters?: LoadPagedFilters) => {
   return await lessonsApi.getUpcoming(filters);
 });
@@ -199,4 +205,12 @@ sample({
 sample({
   clock: removeLesson,
   target: removeLessonFx,
+});
+
+// Fresh server data for one lesson, whether the tutor changed it or the server did.
+export const lessonChanged = createEvent<Lesson>();
+
+sample({
+  clock: [updateLessonFx.doneData, syncLessonFx.doneData],
+  target: lessonChanged,
 });

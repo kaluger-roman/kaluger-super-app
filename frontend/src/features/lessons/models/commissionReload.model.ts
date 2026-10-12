@@ -18,7 +18,7 @@ import * as viewModeModel from "./lessonsViewMode.model";
 // Patching a single item is not enough — the affected lists are refetched.
 const lessonMutated = [
   lessonModel.addLessonFx.doneData,
-  lessonModel.updateLessonFx.doneData,
+  lessonModel.lessonChanged,
   lessonModel.removeLessonFx.doneData,
 ];
 

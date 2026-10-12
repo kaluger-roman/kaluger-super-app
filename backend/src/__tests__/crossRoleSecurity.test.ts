@@ -58,6 +58,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
       ["GET", "/api/students"],
       ["GET", "/api/lessons"],
       ["GET", "/api/statistics"],
+      ["GET", "/api/statistics/income-history"],
       ["GET", "/api/tax-periods"],
       ["GET", "/api/news"],
       ["GET", "/api/reminder-settings"],

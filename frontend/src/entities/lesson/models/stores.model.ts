@@ -70,7 +70,7 @@ sample({
 });
 
 sample({
-  clock: apiModel.updateLessonFx.doneData,
+  clock: apiModel.lessonChanged,
   source: apiModel.$upcomingLessons,
   fn: (lessons, updatedLesson) =>
     lessons.map((lesson) => (lesson.id === updatedLesson.id ? updatedLesson : lesson)),
@@ -105,7 +105,7 @@ sample({
 });
 
 sample({
-  clock: apiModel.updateLessonFx.doneData,
+  clock: apiModel.lessonChanged,
   source: apiModel.$scheduleLessons,
   fn: updateLessonInSchedule,
   target: apiModel.$scheduleLessons,
@@ -124,7 +124,7 @@ sample({
 });
 
 sample({
-  clock: apiModel.updateLessonFx.doneData,
+  clock: apiModel.lessonChanged,
   source: apiModel.$currentLesson,
   fn: (current, updated) => (current?.id === updated.id ? updated : current),
   target: apiModel.$currentLesson,

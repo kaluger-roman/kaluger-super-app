@@ -3,14 +3,17 @@ import type { CommissionLessonInput } from "../../types";
 
 const lesson = (
   overrides: Partial<CommissionLessonInput> & { id: string }
-): CommissionLessonInput => ({
-  startTime: new Date("2026-03-01T10:00:00.000Z"),
-  paymentDate: null,
-  price: 1000,
-  status: "COMPLETED" as const,
-  isPaid: true,
-  ...overrides,
-});
+): CommissionLessonInput => {
+  const base = {
+    startTime: new Date("2026-03-01T10:00:00.000Z"),
+    paymentDate: null,
+    price: 1000,
+    status: "COMPLETED" as const,
+    isPaid: true,
+    ...overrides,
+  };
+  return { receivedAmount: base.isPaid ? base.price : null, ...base };
+};
 
 const paidSeries = (prices: number[]) =>
   prices.map((price, index) =>
@@ -392,5 +395,97 @@ describe("allocateCommission", () => {
       state: "FORECAST",
     });
     expect(allocation.creditByLessonId.get("upcoming-2")).toBeUndefined();
+  });
+
+  describe("received amount", () => {
+    it("should credit a paid lesson with its received amount, not its price", () => {
+      const allocation = allocateCommission({
+        commissionAmount: 3000,
+        lessons: [lesson({ id: "paid", price: 3000, receivedAmount: 1500 })],
+      });
+
+      expect(allocation.creditByLessonId.get("paid")).toEqual({ amount: 1500, state: "FACT" });
+      expect(allocation.repaid).toBe(1500);
+      expect(allocation.remaining).toBe(1500);
+    });
+
+    it("should forecast an unpaid lesson by its price", () => {
+      const allocation = allocateCommission({
+        commissionAmount: 5000,
+        lessons: [
+          lesson({ id: "paid", price: 3000, receivedAmount: 1500 }),
+          lesson({
+            id: "upcoming",
+            price: 3000,
+            status: "SCHEDULED",
+            isPaid: false,
+            startTime: new Date("2026-04-01T10:00:00.000Z"),
+          }),
+        ],
+      });
+
+      expect(allocation.creditByLessonId.get("upcoming")).toEqual({
+        amount: 3000,
+        state: "FORECAST",
+      });
+      expect(allocation.repaid).toBe(1500);
+    });
+
+    it("should give no fact credit to a paid lesson that received nothing", () => {
+      const allocation = allocateCommission({
+        commissionAmount: 3000,
+        lessons: [
+          lesson({ id: "nothing", price: 2000, receivedAmount: 0 }),
+          lesson({
+            id: "next",
+            price: 2000,
+            startTime: new Date("2026-03-02T10:00:00.000Z"),
+          }),
+        ],
+      });
+
+      expect(allocation.creditByLessonId.has("nothing")).toBe(false);
+      expect(allocation.creditByLessonId.get("next")).toEqual({ amount: 2000, state: "FACT" });
+      expect(allocation.repaid).toBe(2000);
+    });
+
+    it("should credit an overpayment by the received amount up to the remaining commission", () => {
+      const allocation = allocateCommission({
+        commissionAmount: 3000,
+        lessons: [
+          lesson({ id: "over", price: 2000, receivedAmount: 2500 }),
+          lesson({
+            id: "next",
+            price: 2000,
+            startTime: new Date("2026-03-02T10:00:00.000Z"),
+          }),
+        ],
+      });
+
+      expect(allocation.creditByLessonId.get("over")).toEqual({ amount: 2500, state: "FACT" });
+      expect(allocation.creditByLessonId.get("next")).toEqual({ amount: 500, state: "FACT" });
+      expect(allocation.remaining).toBe(0);
+    });
+
+    it("should keep repaid plus remaining exact in kopecks with fractional received amounts", () => {
+      const commissionAmount = 1000.01;
+      const allocation = allocateCommission({
+        commissionAmount,
+        lessons: [
+          lesson({ id: "a", price: 500, receivedAmount: 333.33 }),
+          lesson({
+            id: "b",
+            price: 500,
+            receivedAmount: 333.34,
+            startTime: new Date("2026-03-02T10:00:00.000Z"),
+          }),
+        ],
+      });
+
+      expect(allocation.repaid).toBe(666.67);
+      expect(Math.round(allocation.repaid * 100) + Math.round(allocation.remaining * 100)).toBe(
+        Math.round(commissionAmount * 100)
+      );
+    });
   });
 });

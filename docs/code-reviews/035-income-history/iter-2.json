@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-10-12T12:05:49Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 210,
+    "insertions": 11274,
+    "deletions": 271
+  },
+  "reviewed_scope": {
+    "files_changed": 199,
+    "insertions": 8215,
+    "deletions": 271,
+    "excluded": [
+      "docs/mockups/**",
+      "docs/**/screenshots/**",
+      "docs/code-reviews/**",
+      ".claude/auto-feature/**",
+      "specs/**",
+      "**/package-lock.json"
+    ]
+  },
+  "summary": {
+    "raw_findings": 5,
+    "after_dedup": 5,
+    "after_score_filter": 5,
+    "by_severity": {
+      "critical": 0,
+      "high": 3,
+      "medium": 2
+    },
+    "by_category": {
+      "convention": 2,
+      "bug": 1,
+      "logic": 2
+    },
+    "agents_failed": [],
+    "agents_empty": [
+      "security",
+      "type-safety",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy"
+    ],
+    "iteration_1_fixes_verified": "Все 6 исправлений iteration 1 проверены reviewer'ами; ошибок в фиксах не найдено (кроме нарушения порядка секций в фиксе $isNextPageLoading, см. f2)."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Глубокий импорт helper'а дочернего компонента в тесте IncomeHistory",
+      "category": "convention",
+      "file": "frontend/src/pages/ReportsPage/components/IncomeHistory/__tests__/IncomeHistory.test.tsx",
+      "line_start": 20,
+      "line_end": 20,
+      "snippet": "import { formatHistoryDayLabel } from \"../components/IncomeHistoryDay/IncomeHistoryDay.helpers\";",
+      "rationale": "docs/conventions/frontend.md:69 («No deep imports — max 1 level: `import { X } from \"./components\"` not `\"./components/X/X\"`») и :68 (публичный API через `index.ts`). Тест лезет в `components/IncomeHistoryDay/IncomeHistoryDay.helpers` в обход `components/index.ts` и `IncomeHistoryDay/index.ts`, а `formatHistoryDayLabel` ни один из этих index не экспортирует. Исключение для тестов в конвенции есть только для внутренностей моделей (frontend.md:245). На origin/main таких импортов `../components/X/...` в тестах нет.",
+      "fix_hint": "Не импортировать helper, а проверять подпись дня прямо в тесте (например, регэкспом `/^Пятница, 25 сентября/`, как в IncomeHistoryDay.test.tsx), либо экспортировать `formatHistoryDayLabel` через `IncomeHistoryDay/index.ts` и `components/index.ts` и импортировать из `../components`.",
+      "score": 75,
+      "verification_note": "Прямое нарушение явного правила docs/conventions/frontend.md:69: тест импортирует helper из дочерней папки components/IncomeHistoryDay/ в обход index.ts; в origin/main так не делает ни один тест, frontend-testing.md такого исключения не даёт.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Нарушен порядок секций Effector-модели: стор и derived-стор объявлены после эффектов",
+      "category": "convention",
+      "file": "frontend/src/pages/ReportsPage/model/incomeHistory.model.ts",
+      "line_start": 45,
+      "line_end": 53,
+      "snippet": "const $nextPageVersion = createStore<number | null>(null);\n\nexport const $isNextPageLoading = combine(\n  $nextPageVersion,\n  $historyVersion,",
+      "rationale": "docs/conventions/frontend.md:157-163 («Model structure order: 1. Gates 2. Stores 3. Events 4. Effects 5. Samples»). Стор `$nextPageVersion` и производный `$isNextPageLoading`, добавленные фиксом iteration 1, стоят после `loadIncomeHistoryFx` / `loadNextPageFx` (строки 31-43), хотя от эффектов не зависят. Остальные новые модели диффа (`incomeHistoryReload.model.ts`, `reportsTabs.model.ts`) порядок соблюдают.",
+      "fix_hint": "Перенести `$nextPageVersion` вместе с комментарием и `$isNextPageLoading` в блок сторов, сразу после `$historyVersion` (строка 26), до объявления событий.",
+      "score": 75,
+      "verification_note": "Правило порядка секций прямо прописано в docs/conventions/frontend.md:157-163, а $nextPageVersion и $isNextPageLoading стоят после эффектов в новом файле; на функциональность не влияет.",
+      "severity": "high"
+    },
+    {
+      "id": "f3",
+      "agent": "shallow-bug",
+      "title": "ReceivedAmountHint глушит все keydown, включая Escape: попап урока не закрывается по Esc, пока фокус на значке",
+      "category": "bug",
+      "file": "frontend/src/shared/ui/ReceivedAmountHint/ReceivedAmountHint.tsx",
+      "line_start": 60,
+      "line_end": 60,
+      "snippet": "          onKeyDown={(event) => event.stopPropagation()}",
+      "rationale": "Значок фокусируемый (tabIndex=0) и в варианте \"full\" рендерится внутри MUI Dialog (LessonDetails в LessonViewDialog). В MUI 7 Escape у Modal обрабатывается React-обработчиком onKeyDown на корне модалки (useModal.js:105-125, createHandleKeyDown), который выше по дереву. Безусловный stopPropagation глушит любую клавишу, поэтому Esc при фокусе на значке не закрывает попап оплаченного урока. Защищать строку истории от Enter/Space этим не нужно: ButtonBase в ListItemButton активирует клик с клавиатуры только при event.target === event.currentTarget.",
+      "fix_hint": "Останавливать всплытие только для Enter и пробела (`if (event.key === \"Enter\" || event.key === \" \") event.stopPropagation()`) или убрать обработчик. Добавить тест: Escape при фокусе на значке внутри Dialog вызывает onClose.",
+      "score": 75,
+      "verification_note": "Проверено по исходникам MUI 7.2.0: Modal закрывается по Escape через React onKeyDown на корне, значок внутри DialogContent с tabIndex=0 безусловно останавливает всплытие, а существующий тест покрывает только Enter.",
+      "severity": "high"
+    },
+    {
+      "id": "f4",
+      "agent": "deep-logic",
+      "title": "Окно при деплое: урок, отмеченный оплаченным старым процессом после бэкфилла, остаётся с receivedAmount = NULL и выпадает из всех поступлений",
+      "category": "logic",
+      "file": "backend/prisma/migrations/20261012081803_add_lesson_received_amount/migration.sql",
+      "line_start": 4,
+      "line_end": 5,
+      "snippet": "-- Backfill: every already-paid lesson received exactly its price\nUPDATE \"public\".\"lessons\" SET \"receivedAmount\" = COALESCE(\"price\", 0) WHERE \"isPaid\" = true;",
+      "rationale": "В deploy.yml `npx prisma migrate deploy` идёт до `pm2 restart`, и между бэкфиллом и рестартом запросы обслуживает старый процесс: он ставит isPaid=true, не зная колонки receivedAmount. Такой урок нарушает инвариант isPaid ⇒ receivedAmount NOT NULL и молча выпадает из paidInRangeWhere (`receivedAmount: { gt: 0 }`), налога, необлагаемых, истории; FACT-зачёт комиссии считается как 0. Само не чинится: resolveReceivedAmount пишет сумму только при переходе «не оплачен → оплачен». Обратный случай (снятие оплаты старым кодом) оставляет ненулевой receivedAmount у неоплаченного урока.",
+      "fix_hint": "Добавить идемпотентную починку после рестарта (или второй миграцией в следующем релизе): `UPDATE lessons SET \"receivedAmount\" = COALESCE(price,0) WHERE \"isPaid\" AND \"receivedAmount\" IS NULL` и `UPDATE lessons SET \"receivedAmount\" = NULL WHERE NOT \"isPaid\" AND \"receivedAmount\" IS NOT NULL`.",
+      "score": 50,
+      "verification_note": "Окно реально есть (migrate deploy и syncNews до pm2 restart, старый код пишет isPaid=true без receivedAmount), но нужно действие репетитора в узкое окно в секунды, а прецедентов другого подхода к бэкфиллу в миграциях репо нет.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "deep-logic",
+      "title": "Строка «Не облагается налогом» в подсказке карточки налога округляется до рублей, а в итоге истории показывается с копейками",
+      "category": "logic",
+      "file": "frontend/src/features/taxRatePeriods/ui/TaxRateInfoTooltip/TaxRateInfoTooltip.helpers.ts",
+      "line_start": 9,
+      "line_end": 10,
+      "snippet": "export const formatTaxExemptLine = (amount: number): string =>\n  `${TAX_EXEMPT_LABEL}: ${formatCurrency(amount)}`;",
+      "rationale": "FR-028 требует, чтобы сумма необлагаемых оплат в итоге истории совпадала со строкой «Не облагается налогом» в подсказке карточки налога. IncomeHistorySummary.tsx:35 выводит taxExemptTotal с `{ withKopecks: true }`, а подсказка (taxExemptIncome из getStatistics) форматирует без копеек. Поле «Получено» принимает копейки (1500,50), поэтому история покажет «1 500,50 ₽», а подсказка «1 501 ₽». Это та же проблема, что iteration-1 #2 (IncomeCards): там исправили только «Поступления за период». Файл подсказки дифф не трогает, но расхождение вводит новая плитка итога.",
+      "fix_hint": "В formatTaxExemptLine передавать `{ withKopecks: true }`, как в IncomeCards и CommissionCards, и добавить тест с копеечной суммой (обновив существующий тест подсказки).",
+      "score": 50,
+      "verification_note": "Расхождение подтверждено (validateReceivedAmount допускает 2 знака, итог истории с копейками, подсказка округляет), спека требует совпадения, но нужна редкая необлагаемая оплата с дробной суммой, и округление подсказки зафиксировано существующим тестом на main.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": []
+}

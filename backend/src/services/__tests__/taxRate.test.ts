@@ -1,4 +1,10 @@
-import { buildTaxBreakdown, calcLessonTax, computeRatesInRange, resolveRate } from "../taxRate";
+import {
+  buildTaxBreakdown,
+  calcLessonTax,
+  computeRatesInRange,
+  resolveLessonTax,
+  resolveRate,
+} from "../taxRate";
 import type { TaxRatePeriodDto } from "../../types";
 
 const makePeriod = (startDate: string, rate: number, id = startDate): TaxRatePeriodDto => ({
@@ -49,6 +55,71 @@ describe("resolveRate", () => {
     expect(resolveRate(new Date("2025-05-31"), unsorted)).toBe(6);
     expect(resolveRate(new Date("2025-06-01"), unsorted)).toBe(4);
     expect(resolveRate(new Date("2026-06-01"), unsorted)).toBe(13);
+  });
+});
+
+describe("resolveLessonTax", () => {
+  const periods = [makePeriod("2026-01-01", 6), makePeriod("2026-03-15", 4)];
+
+  it("should flag a payment before the first period as outside periods with zero tax", () => {
+    expect(resolveLessonTax(1000, new Date("2025-12-31T23:59:59Z"), periods)).toEqual({
+      rate: 0,
+      isOutsidePeriods: true,
+      tax: 0,
+    });
+  });
+
+  it("should flag every payment as outside periods when no periods are configured", () => {
+    expect(resolveLessonTax(1000, new Date("2026-03-10"), [])).toEqual({
+      rate: 0,
+      isOutsidePeriods: true,
+      tax: 0,
+    });
+  });
+
+  it("should tax at 0% without the outside flag inside a zero-rate period", () => {
+    expect(resolveLessonTax(1000, new Date("2026-05-01"), [makePeriod("2026-01-01", 0)])).toEqual({
+      rate: 0,
+      isOutsidePeriods: false,
+      tax: 0,
+    });
+  });
+
+  it("should apply the rate in force on the payment date when the rate changes", () => {
+    expect(resolveLessonTax(1000, new Date("2026-03-14T23:59:59Z"), periods)).toEqual({
+      rate: 6,
+      isOutsidePeriods: false,
+      tax: 60,
+    });
+    expect(resolveLessonTax(1000, new Date("2026-03-15T00:00:00Z"), periods)).toEqual({
+      rate: 4,
+      isOutsidePeriods: false,
+      tax: 40,
+    });
+  });
+
+  it("should round the tax of each payment", () => {
+    expect(resolveLessonTax(333.34, new Date("2026-02-01"), periods).tax).toBe(20);
+    expect(resolveLessonTax(1010, new Date("2026-02-01"), periods).tax).toBe(61);
+  });
+
+  it("should give the same total as buildTaxBreakdown for the same payments", () => {
+    const payments = [
+      { price: 1010, paymentDate: new Date("2025-12-20") },
+      { price: 1010, paymentDate: new Date("2026-02-01") },
+      { price: 333.34, paymentDate: new Date("2026-03-20") },
+    ];
+    const rowTaxes = payments.map(
+      (payment) => resolveLessonTax(payment.price, payment.paymentDate, periods).tax
+    );
+
+    const { taxAmount } = buildTaxBreakdown(
+      payments,
+      periods,
+      range("2025-12-01", "2026-03-31T23:59:59Z")
+    );
+
+    expect(rowTaxes.reduce((sum, tax) => sum + tax, 0)).toBe(taxAmount);
   });
 });
 

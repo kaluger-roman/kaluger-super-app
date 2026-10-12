@@ -5,7 +5,43 @@ import {
   getCurrentMonthRange,
   getLastMonthBounds,
   isValidTimezone,
+  toDateKeyInTimezone,
 } from "../time";
+
+describe("toDateKeyInTimezone", () => {
+  it("should move a late-evening UTC moment to the next day in Moscow", () => {
+    const date = new Date("2026-10-04T21:30:00Z");
+    expect(toDateKeyInTimezone(date, "Europe/Moscow")).toBe("2026-10-05");
+    expect(toDateKeyInTimezone(date, "UTC")).toBe("2026-10-04");
+  });
+
+  it("should keep UTC midnight on its own day in UTC and the previous day west of UTC", () => {
+    const date = new Date("2026-10-05T00:00:00Z");
+    expect(toDateKeyInTimezone(date, "UTC")).toBe("2026-10-05");
+    expect(toDateKeyInTimezone(date, "America/New_York")).toBe("2026-10-04");
+  });
+
+  it("should follow the daylight saving switch", () => {
+    expect(toDateKeyInTimezone(new Date("2026-03-28T23:30:00Z"), "Europe/Berlin")).toBe(
+      "2026-03-29"
+    );
+    expect(toDateKeyInTimezone(new Date("2026-03-29T21:59:00Z"), "Europe/Berlin")).toBe(
+      "2026-03-29"
+    );
+    expect(toDateKeyInTimezone(new Date("2026-03-29T22:30:00Z"), "Europe/Berlin")).toBe(
+      "2026-03-30"
+    );
+  });
+
+  it("should zero-pad month and day", () => {
+    expect(toDateKeyInTimezone(new Date("2026-01-05T12:00:00Z"), "UTC")).toBe("2026-01-05");
+  });
+
+  it("should reject an invalid timezone so callers must fall back to UTC", () => {
+    expect(isValidTimezone("Mars/Phobos")).toBe(false);
+    expect(() => toDateKeyInTimezone(new Date(), "Mars/Phobos")).toThrow(RangeError);
+  });
+});
 
 describe("truncateToMinute", () => {
   it("should zero seconds and milliseconds", () => {

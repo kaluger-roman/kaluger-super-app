@@ -32,7 +32,9 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   const archivedStudents = useUnit(studentModel.$archivedStudents);
 
   const isCompletedLesson = lesson?.status === "COMPLETED";
-  const availableStudents = isCompletedLesson ? archivedStudents : activeStudents;
+  const availableStudents = isCompletedLesson
+    ? [...activeStudents, ...archivedStudents]
+    : activeStudents;
   const isFieldDisabled = isLoading || isCompletedLesson;
 
   const selectedStudent =

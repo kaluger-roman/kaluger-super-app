@@ -32,7 +32,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
     currentWeek: viewModeModel.$currentWeek,
@@ -50,7 +50,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: viewModeModel.$lessonsViewMode,
   filter: (lessonsViewMode) => lessonsViewMode === "schedule",
   fn: getScheduleDateRange,
@@ -58,7 +58,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
     currentTab: tabsModel.$currentTab,
@@ -80,7 +80,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
     currentTab: tabsModel.$currentTab,
@@ -102,7 +102,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
     currentTab: tabsModel.$currentTab,
@@ -124,7 +124,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: {
     lessonsViewMode: viewModeModel.$lessonsViewMode,
     allPagination: lessonModel.$allPagination,

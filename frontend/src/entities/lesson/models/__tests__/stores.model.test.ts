@@ -3,7 +3,15 @@ import { describe, it, expect } from "vitest";
 
 import type { Lesson } from "@shared";
 
-import { $allLessons, $allPagination, $paymentsSummary, loadAllLessonsFx } from "../api.model";
+import {
+  $allLessons,
+  $allPagination,
+  $currentLesson,
+  $paymentsSummary,
+  $upcomingLessons,
+  loadAllLessonsFx,
+  syncLessonFx,
+} from "../api.model";
 import "../stores.model";
 
 const mockLesson: Lesson = {
@@ -104,5 +112,23 @@ describe("stores.model — allLessons stores", () => {
     await allSettled(loadAllLessonsFx, { scope, params: {} });
 
     expect(scope.getState($paymentsSummary)).toBeNull();
+  });
+});
+
+describe("stores.model — lessons refetched after a server change", () => {
+  it("should patch the upcoming list and the current lesson with the refetched lesson", async () => {
+    const synced = { ...mockLesson, status: "CANCELLED" } as Lesson;
+    const scope = fork({
+      values: [
+        [$upcomingLessons, [mockLesson]],
+        [$currentLesson, mockLesson],
+      ],
+      handlers: [[syncLessonFx, async () => synced]],
+    });
+
+    await allSettled(syncLessonFx, { scope, params: mockLesson.id });
+
+    expect(scope.getState($upcomingLessons)).toEqual([synced]);
+    expect(scope.getState($currentLesson)).toEqual(synced);
   });
 });

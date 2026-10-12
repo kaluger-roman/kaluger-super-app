@@ -12,16 +12,23 @@ export const decimalToNumber = (value: Prisma.Decimal | null | undefined) => val
 export const paidInRangeWhere = (userId: string, range: DateRange): Prisma.LessonWhereInput => ({
   tutorId: userId,
   isPaid: true,
-  price: { gt: 0 },
+  receivedAmount: { gt: 0 },
   OR: [{ paymentDate: range }, { paymentDate: null, startTime: range }],
 });
 
-// Summed in whole kopecks: prices are Decimal(10,2), float addition drifts.
-const sumLessonPrices = (lessons: PaidLessonForTax[]): number =>
+// Summed in whole kopecks: amounts are Decimal(10,2), float addition drifts.
+const sumReceivedAmounts = (lessons: PaidLessonForTax[]): number =>
   lessons.reduce(
-    (kopecks, lesson) => kopecks + Math.round(decimalToNumber(lesson.price) * 100),
+    (kopecks, lesson) => kopecks + Math.round(decimalToNumber(lesson.receivedAmount) * 100),
     0
   ) / 100;
+
+export const toTaxPeriodDtos = (periods: TaxUser["taxRatePeriods"]): TaxRatePeriodDto[] =>
+  periods.map((period) => ({
+    id: period.id,
+    startDate: period.startDate.toISOString(),
+    rate: period.rate.toNumber(),
+  }));
 
 export const computeTaxSummary = (
   user: TaxUser | null,
@@ -35,15 +42,11 @@ export const computeTaxSummary = (
   const taxableLessons = paidLessons.filter((lesson) => !lesson.isTaxExempt);
   const exemptLessons = paidLessons.filter((lesson) => lesson.isTaxExempt);
 
-  const periods: TaxRatePeriodDto[] = user.taxRatePeriods.map((period) => ({
-    id: period.id,
-    startDate: period.startDate.toISOString(),
-    rate: period.rate.toNumber(),
-  }));
+  const periods = toTaxPeriodDtos(user.taxRatePeriods);
   // Pass the effective date (paymentDate ?? startTime) so legacy paid
   // lessons without a paymentDate still get a rate assigned.
   const lessonsForTax = taxableLessons.map((lesson) => ({
-    price: lesson.price === null ? null : lesson.price.toNumber(),
+    price: lesson.receivedAmount === null ? null : lesson.receivedAmount.toNumber(),
     paymentDate: lesson.paymentDate ?? lesson.startTime,
   }));
 
@@ -52,6 +55,6 @@ export const computeTaxSummary = (
       start: range.gte,
       end: range.lte,
     }),
-    taxExemptIncome: sumLessonPrices(exemptLessons),
+    taxExemptIncome: sumReceivedAmounts(exemptLessons),
   };
 };

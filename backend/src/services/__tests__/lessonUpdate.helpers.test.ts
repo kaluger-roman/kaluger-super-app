@@ -4,6 +4,7 @@ import {
   buildLessonUpdateData,
   computeUpdatedStatus,
   isTimeChanging,
+  resolveReceivedAmount,
   resolveUpdatedTimes,
   shouldPropagateRecurringPrice,
   shouldShiftRecurringSeries,
@@ -26,6 +27,7 @@ const makeLesson = (overrides: Partial<Lesson> = {}): Lesson =>
     isRecurring: false,
     isPaid: false,
     paymentDate: null,
+    receivedAmount: null,
     isTaxExempt: false,
     homework: null,
     notes: null,
@@ -193,6 +195,101 @@ describe("buildLessonUpdateData", () => {
     expect(dataToUpdate.prospectName).toBeNull();
     expect(dataToUpdate.prospectPhone).toBeNull();
     expect(dataToUpdate.prospectContactMethod).toBeNull();
+  });
+});
+
+describe("resolveReceivedAmount", () => {
+  const paidLesson = () =>
+    makeLesson({
+      isPaid: true,
+      paymentDate: new Date("2026-03-09T00:00:00Z"),
+      receivedAmount: new Prisma.Decimal(1000),
+    });
+
+  it("should default to the current price when an unpaid lesson becomes paid", () => {
+    expect(resolveReceivedAmount({ isPaid: true }, makeLesson())).toBe(1000);
+  });
+
+  it("should default to the price from the same request when it changes together with payment", () => {
+    expect(resolveReceivedAmount({ isPaid: true, price: 2500 }, makeLesson())).toBe(2500);
+  });
+
+  it("should take the explicit amount when an unpaid lesson becomes paid", () => {
+    expect(resolveReceivedAmount({ isPaid: true, receivedAmount: 1800 }, makeLesson())).toBe(1800);
+  });
+
+  it("should keep an explicit zero amount", () => {
+    expect(resolveReceivedAmount({ isPaid: true, receivedAmount: 0 }, makeLesson())).toBe(0);
+  });
+
+  it("should default to zero for a lesson without a price", () => {
+    expect(resolveReceivedAmount({ isPaid: true }, makeLesson({ price: null }))).toBe(0);
+  });
+
+  it("should clear the amount when the payment is removed", () => {
+    expect(resolveReceivedAmount({ isPaid: false }, paidLesson())).toBeNull();
+  });
+
+  it("should leave the amount untouched when a paid lesson is saved again without it", () => {
+    expect(
+      resolveReceivedAmount(
+        { isPaid: true, paymentDate: new Date("2026-03-09T00:00:00Z") },
+        paidLesson()
+      )
+    ).toBeUndefined();
+  });
+
+  it("should leave the amount untouched when only the price of a paid lesson changes", () => {
+    expect(resolveReceivedAmount({ price: 2500 }, paidLesson())).toBeUndefined();
+  });
+
+  it("should apply a new amount to an already paid lesson", () => {
+    expect(resolveReceivedAmount({ receivedAmount: 2500 }, paidLesson())).toBe(2500);
+  });
+
+  it("should not touch the amount of an unpaid lesson that stays unpaid", () => {
+    expect(resolveReceivedAmount({ price: 100 }, makeLesson())).toBeUndefined();
+    expect(resolveReceivedAmount({ isPaid: false }, makeLesson())).toBeUndefined();
+  });
+});
+
+describe("buildLessonUpdateData receivedAmount", () => {
+  it("should write the resolved default instead of the missing body field", () => {
+    const { dataToUpdate } = buildLessonUpdateData({ isPaid: true }, makeLesson(), false, now);
+    expect(dataToUpdate.isPaid).toBe(true);
+    expect(dataToUpdate.receivedAmount).toBe(1000);
+  });
+
+  it("should not pass a raw receivedAmount through for a lesson that stays unpaid", () => {
+    const { dataToUpdate } = buildLessonUpdateData(
+      { receivedAmount: 1800, notes: "x" },
+      makeLesson(),
+      false,
+      now
+    );
+    expect(dataToUpdate).not.toHaveProperty("receivedAmount");
+    expect(dataToUpdate.notes).toBe("x");
+  });
+
+  it("should omit the key when a paid lesson keeps its amount", () => {
+    const { dataToUpdate } = buildLessonUpdateData(
+      { price: 2500 },
+      makeLesson({ isPaid: true, receivedAmount: new Prisma.Decimal(1000) }),
+      false,
+      now
+    );
+    expect(dataToUpdate).not.toHaveProperty("receivedAmount");
+    expect(dataToUpdate.price).toBe(2500);
+  });
+
+  it("should write null when the payment is removed", () => {
+    const { dataToUpdate } = buildLessonUpdateData(
+      { isPaid: false },
+      makeLesson({ isPaid: true, receivedAmount: new Prisma.Decimal(1000) }),
+      false,
+      now
+    );
+    expect(dataToUpdate.receivedAmount).toBeNull();
   });
 });
 

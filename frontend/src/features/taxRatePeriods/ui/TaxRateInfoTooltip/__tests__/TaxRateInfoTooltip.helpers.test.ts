@@ -7,7 +7,7 @@ describe("formatTaxExemptLine", () => {
     expect(formatTaxExemptLine(2000)).toMatch(/^Не облагается налогом: 2\s000\s₽$/);
   });
 
-  it("rounds kopecks the same way as the rate lines", () => {
-    expect(formatTaxExemptLine(2000.4)).toMatch(/^Не облагается налогом: 2\s000\s₽$/);
+  it("keeps kopecks so the line matches the income history total", () => {
+    expect(formatTaxExemptLine(2000.4)).toMatch(/^Не облагается налогом: 2\s000,40\s₽$/);
   });
 });

@@ -49,6 +49,34 @@ describe("statisticsApi", () => {
     });
   });
 
+  describe("getIncomeHistory", () => {
+    it("should fetch the first page of the income history for a period", async () => {
+      const params = {
+        startDate: "2026-08-31T21:00:00.000Z",
+        endDate: "2026-09-30T20:59:59.999Z",
+        through: "2026-09-20",
+      };
+      const mockResponse = { data: { days: [] } };
+
+      vi.mocked(api.get).mockResolvedValue(mockResponse);
+
+      const result = await statisticsApi.getIncomeHistory(params);
+
+      expect(api.get).toHaveBeenCalledWith("/statistics/income-history", { params });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it("should pass the cursor of the next page", async () => {
+      const params = { startDate: "2026-08-31T21:00:00.000Z", before: "2026-09-20" };
+
+      vi.mocked(api.get).mockResolvedValue({ data: { days: [] } });
+
+      await statisticsApi.getIncomeHistory(params);
+
+      expect(api.get).toHaveBeenCalledWith("/statistics/income-history", { params });
+    });
+  });
+
   describe("getLessonsBySubject", () => {
     it("should fetch lessons grouped by subject", async () => {
       const mockData = {

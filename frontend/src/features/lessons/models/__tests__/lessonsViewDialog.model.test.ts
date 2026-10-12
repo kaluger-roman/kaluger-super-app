@@ -84,6 +84,20 @@ describe("lessonsViewDialog.model", () => {
     expect(scope.getState($viewingLesson)).toEqual(updated);
   });
 
+  it("should sync $viewingLesson with a lesson refetched after a server change", async () => {
+    const lesson = createLesson({ status: "SCHEDULED" });
+    const synced = { ...lesson, status: "COMPLETED" as const };
+
+    const scope = fork({
+      handlers: [[lessonModel.syncLessonFx, async () => synced]],
+    });
+
+    await allSettled(viewDialogOpened, { scope, params: lesson });
+    await allSettled(lessonModel.syncLessonFx, { scope, params: lesson.id });
+
+    expect(scope.getState($viewingLesson)).toEqual(synced);
+  });
+
   it("should ignore updates targeting a different lesson", async () => {
     const lesson = createLesson({ id: "lesson-1" });
     const otherUpdated = createLesson({ id: "other-lesson", description: "x" });

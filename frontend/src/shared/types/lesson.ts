@@ -22,6 +22,7 @@ export type Lesson = {
   startTime: string;
   endTime: string;
   price?: number;
+  receivedAmount?: number | null;
   isPaid: boolean;
   paymentDate?: string;
   isTaxExempt?: boolean;
@@ -82,6 +83,7 @@ export type UpdateLessonDto = Omit<
   notes?: string | null;
   isPaid?: boolean;
   paymentDate?: string;
+  receivedAmount?: number;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: LessonStatus;

@@ -1,5 +1,6 @@
 export { collectLessonStatistics } from "./statistics";
-export { computeTaxSummary } from "./statistics.helpers";
+export { TAX_USER_SELECT } from "./statistics.constants";
+export { computeTaxSummary, paidInRangeWhere, toTaxPeriodDtos } from "./statistics.helpers";
 export type {
   DateRange,
   LessonStatistics,

@@ -23,7 +23,7 @@ export type TaxUser = {
 };
 
 export type PaidLessonForTax = {
-  price: Prisma.Decimal | null;
+  receivedAmount: Prisma.Decimal | null;
   paymentDate: Date | null;
   startTime: Date;
   isTaxExempt: boolean;

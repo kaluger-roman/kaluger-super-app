@@ -20,4 +20,5 @@ export { InfoTooltip } from "./InfoTooltip";
 export { StudentArchivedInfo } from "./StudentArchivedInfo";
 export { CommissionBadge } from "./CommissionBadge";
 export { TaxExemptBadge, TAX_EXEMPT_COLOR, TAX_EXEMPT_LABEL } from "./TaxExemptBadge";
+export { ReceivedAmountHint, isReceivedAmountMismatch } from "./ReceivedAmountHint";
 export { CommissionProgress, isCommissionClosed } from "./CommissionProgress";

@@ -50,17 +50,23 @@ export const updateLesson = async (req: AuthRequest, res: Response) => {
     );
 
     let nextLessonForTransfer: Awaited<ReturnType<typeof findNextUnpaidLesson>> = null;
-    if (updateData.status === "CANCELLED" && existingLesson.isPaid && existingLesson.paymentDate) {
-      // Перенос оплаты возможен только для урока с учеником — у пробного
-      // урока без ученика очереди уроков нет, но сброс оплаты нужен всегда.
-      if (existingLesson.studentId) {
-        nextLessonForTransfer = await findNextUnpaidLesson(userId, existingLesson);
-      }
+    if (
+      updateData.status === "CANCELLED" &&
+      existingLesson.isPaid &&
+      existingLesson.paymentDate &&
+      existingLesson.studentId
+    ) {
+      nextLessonForTransfer = await findNextUnpaidLesson(userId, existingLesson);
+    }
+    // Without a recipient the money stays on the cancelled lesson: it was received,
+    // so it must remain in the income history, the tax and the commission credit.
+    if (nextLessonForTransfer) {
       dataToUpdate.isPaid = false;
       // Prisma treats `undefined` as "do not update this field". Use explicit
       // `null` so paymentDate is actually cleared on the cancelled lesson —
       // otherwise the row ends up with isPaid=false but a stale paymentDate.
       dataToUpdate.paymentDate = null;
+      dataToUpdate.receivedAmount = null;
     }
 
     const updateResult = await applyLessonUpdate({

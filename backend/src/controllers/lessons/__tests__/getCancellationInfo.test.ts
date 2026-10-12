@@ -170,6 +170,44 @@ describe("GET /api/lessons/:id/cancellation-info", () => {
     expect(response.body.cancellationInfo.transferDate).toBeTruthy();
   });
 
+  it("should report the received amount of the cancelled lesson as the transfer amount", async () => {
+    const paidLesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+        price: 2000,
+        tutorId: userId,
+        studentId,
+        status: "SCHEDULED" as const,
+        isPaid: true,
+        paymentDate: new Date(),
+        receivedAmount: 1800,
+      },
+    });
+    await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 49 * 60 * 60 * 1000),
+        price: 2000,
+        tutorId: userId,
+        studentId,
+        status: "SCHEDULED" as const,
+        isPaid: false,
+      },
+    });
+
+    const response = await request(app)
+      .get(`/api/lessons/${paidLesson.id}/cancellation-info`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(response.body.cancellationInfo.transferAmount).toBe(1800);
+  });
+
   it("should not return next lesson with different price", async () => {
     const paymentDate = new Date();
     const paidLesson = await prisma.lesson.create({

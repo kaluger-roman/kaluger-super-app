@@ -5,6 +5,14 @@ export const CONTACT_METHODS: ContactMethod[] = ["WHATSAPP", "TELEGRAM", "MAX"];
 
 export const TAX_EXEMPT_INVALID_ERROR = "Некорректное значение признака «Не облагается налогом»";
 
+export const MAX_RECEIVED_AMOUNT = 99_999_999.99;
+
+export const RECEIVED_AMOUNT_INVALID_ERROR =
+  "Полученная сумма должна быть неотрицательным числом не больше 99 999 999,99 ₽ с точностью до копеек";
+
+export const RECEIVED_AMOUNT_UNPAID_ERROR =
+  "Полученную сумму можно указать только у оплаченного урока";
+
 const validateProspectFields = (data: CreateLessonDto): string | null => {
   const { studentId, prospectName, prospectPhone, prospectContactMethod } = data;
 

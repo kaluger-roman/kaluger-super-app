@@ -79,7 +79,7 @@ describe("lessonCancellation.model", () => {
 
     it("should open confirm dialog with basic message when no cancellation info", async () => {
       const scope = fork();
-      const lesson = createMockLesson();
+      const lesson = createMockLesson({ isPaid: false, paymentDate: undefined });
 
       vi.mocked(lessonsApi.getCancellationInfo).mockResolvedValue(null);
 
@@ -90,6 +90,18 @@ describe("lessonCancellation.model", () => {
       expect(confirmDialog.title).toBe("Отменить урок");
       expect(confirmDialog.message).toBe("Вы уверены, что хотите отменить этот урок?");
       expect(confirmDialog.severity).toBe("warning");
+    });
+
+    it("should tell that a paid lesson keeps its payment when there is nowhere to move it", async () => {
+      const scope = fork();
+
+      vi.mocked(lessonsApi.getCancellationInfo).mockResolvedValue(null);
+
+      await allSettled(lessonCancelRequested, { scope, params: createMockLesson() });
+
+      expect(scope.getState($confirmDialog).message).toBe(
+        "Вы уверены, что хотите отменить этот урок?\n\nОплата останется у этого урока: следующего неоплаченного урока с той же стоимостью нет."
+      );
     });
 
     it("should open confirm dialog with transfer info when cancellation info exists", async () => {

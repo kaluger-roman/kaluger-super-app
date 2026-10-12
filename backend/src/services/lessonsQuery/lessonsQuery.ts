@@ -17,8 +17,8 @@ export const fetchLessonsPage = async (
     prisma.lesson.count({ where }),
     withPaymentsSummary
       ? prisma.lesson.aggregate({
-          where: { ...where, isPaid: true, price: { gt: 0 } },
-          _sum: { price: true },
+          where: { ...where, isPaid: true, receivedAmount: { gt: 0 } },
+          _sum: { receivedAmount: true },
           _count: { id: true },
         })
       : Promise.resolve(null),
@@ -26,7 +26,7 @@ export const fetchLessonsPage = async (
 
   const paymentsSummary: PaymentsSummary | null = paymentsAggregate
     ? {
-        sum: paymentsAggregate._sum.price?.toNumber() ?? 0,
+        sum: paymentsAggregate._sum.receivedAmount?.toNumber() ?? 0,
         count: paymentsAggregate._count.id || 0,
       }
     : null;

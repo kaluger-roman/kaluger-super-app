@@ -48,7 +48,7 @@ export const getLessonCancellationInfo = async (req: AuthRequest, res: Response)
       nextLessonId: nextLesson.id,
       nextLessonStartTime: nextLesson.startTime.toISOString(),
       nextLessonStudentName: nextLesson.student?.name || "",
-      transferAmount: lesson.price?.toNumber() ?? 0,
+      transferAmount: (lesson.receivedAmount ?? lesson.price)?.toNumber() ?? 0,
       transferDate: lesson.paymentDate.toISOString(),
     };
 

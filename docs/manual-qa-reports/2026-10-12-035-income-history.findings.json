@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "feature_id": "035-income-history",
+  "spec_path": "specs/035-income-history/spec.md",
+  "base_url": "http://localhost:32769",
+  "run_at": "2026-10-12T16:20:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-12-035-income-history.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 45,
+    "passed": 40,
+    "failed": 3,
+    "warned": 2,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "AS1.1 Оплаты сгруппированы по дням, дни от новых к старым",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "AS1.2 Содержимое строки оплаты",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "AS1.3 / SC-001 Итог истории = карточка «Поступления за период»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "AS1.4 Смена периода и «Обновить» на вкладке истории",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "AS1.5 Пустой период",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "AS1.6 Строки одного ученика рядом",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "AS1.7 Оплата без даты оплаты",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.8",
+        "title": "AS1.8 / FR-001b / FR-012 Мобильная ширина",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.9",
+        "title": "AS1.9 Вкладка «Сводка» по умолчанию, переключение без загрузки",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.10",
+        "title": "AS1.10 / FR-014 Ссылка «История поступлений по дням»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.11",
+        "title": "AS1.11 Вкладка переживает уход со страницы, не переживает перезагрузку",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.12",
+        "title": "AS1.12 Итог за весь период и «Показать ещё (осталось N)»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.13",
+        "title": "AS1.13 Загрузка порции на кнопке, без оверлея, без двойных запросов",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.14",
+        "title": "AS1.14 Ошибка порции и «Повторить»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.15",
+        "title": "FR-011 Ошибка истории не трогает карточки",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.16",
+        "title": "FR-013a День больше порции приходит целиком",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.17",
+        "title": "Edge: «Обновить» во время подгрузки порции",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.18",
+        "title": "Заголовок вкладки с периодом",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "P1.19",
+        "title": "Изоляция данных между аккаунтами на одном устройстве",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          2
+        ]
+      },
+      {
+        "id": "P2.1",
+        "title": "AS2.1 / FR-016 Поле «Получено» во всех диалогах оплаты",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.2",
+        "title": "AS2.2 Другая полученная сумма учитывается в истории и карточках",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.3",
+        "title": "AS2.3 / FR-020a Валидация поля «Получено»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.4",
+        "title": "AS2.4 / AS4.5 Правка стоимости не меняет полученную сумму",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.5",
+        "title": "AS2.5 / FR-022 Подсказка значка расхождения",
+        "priority": "P2",
+        "status": "warn",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "P2.6",
+        "title": "AS2.6 / FR-023 Значка нет при совпадении",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "AS2.7 / AS2.10 Правка «Получено» в форме",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.8",
+        "title": "AS2.8 Снятие и повторная отметка оплаты",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.9",
+        "title": "AS2.9 Несохранённая цена формы в диалоге оплаты",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.10",
+        "title": "AS2.11 Недоплата не создаёт долг",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.11",
+        "title": "AS2.12 Цена серии и предоплаченный урок",
+        "priority": "P2",
+        "status": "warn"
+      },
+      {
+        "id": "P2.12",
+        "title": "AS2.13 / FR-019 Перенос оплаты при отмене",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.13",
+        "title": "Edge: отмена оплаченного урока без урока-получателя",
+        "priority": "P2",
+        "status": "fail",
+        "finding_ids": [
+          4
+        ]
+      },
+      {
+        "id": "P2.14",
+        "title": "AS2.15 / FR-024 Пометка «получено M ₽» в попапе",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.15",
+        "title": "AS2.16 / FR-026 Кабинет ученика без полученной суммы",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.16",
+        "title": "Edge: полученная сумма 0 и бесплатный урок вне истории",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1",
+        "title": "AS3.1 / AS3.2 Налог и ставка по дате оплаты",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.2",
+        "title": "AS3.3 Вне настроенных периодов",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.3",
+        "title": "AS3.4 / AS3.5 Необлагаемые и итог налога = карточка",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.4",
+        "title": "AS3.7 Учёт налога выключен",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.5",
+        "title": "AS3.8 / AS3.9 Комиссии",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.1",
+        "title": "AS4.1 / AS4.2 Открытие и закрытие попапа из строки",
+        "priority": "P4",
+        "status": "pass"
+      },
+      {
+        "id": "P4.2",
+        "title": "AS4.3–AS4.5 Правки из попапа и формы без перезагрузки",
+        "priority": "P4",
+        "status": "pass"
+      },
+      {
+        "id": "P4.3",
+        "title": "AS4.6 Архивный ученик и пробный урок",
+        "priority": "P4",
+        "status": "pass"
+      },
+      {
+        "id": "P4.4",
+        "title": "AS4.7 / FR-036 Удалённый урок",
+        "priority": "P4",
+        "status": "pass"
+      },
+      {
+        "id": "API",
+        "title": "Контракт GET /api/statistics/income-history: ошибки и курсоры",
+        "priority": "—",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 6,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 2,
+      "low": 4
+    },
+    "by_category": {
+      "spec-mismatch": 1,
+      "bug": 2,
+      "ux": 1,
+      "improvement": 2
+    },
+    "unambiguous_fix_count": 5
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "В заголовке истории теряется год начала периода, если период захватывает два года",
+      "category": "bug",
+      "severity": "low",
+      "scenario_id": "P1.18",
+      "file": "frontend/src/pages/ReportsPage/components/IncomeHistory/IncomeHistory.helpers.ts",
+      "line_hint": 15,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/11-history-rates-outside-periods.png",
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/38-after-fix-cross-year-header.png"
+      ],
+      "expected": "«Оплаты за 1 декабря 2025 г. — 12 августа 2026 г.»",
+      "actual": "«Оплаты за 1 декабря — 12 августа 2026 г.» (год только у конца)",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/pages/ReportsPage/components/IncomeHistory/IncomeHistory.helpers.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/pages/ReportsPage/components/IncomeHistory/__tests__/IncomeHistory.helpers.test.ts"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Печатать год у начала периода, когда годы начала и конца разные"
+    },
+    {
+      "id": 2,
+      "title": "После выхода и входа под другим аккаунтом видна история поступлений предыдущего аккаунта",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "P1.19",
+      "file": "frontend/src/pages/ReportsPage/model/incomeHistory.model.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/35-relogin-stale-history.png",
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/39-after-fix-relogin.png"
+      ],
+      "expected": "Тьютор Б не видит данных тьютора А, вкладка «Сводка»",
+      "actual": "До ответа сервера видны итоги и строки тьютора А (имена учеников, суммы), открыта его вкладка «История поступлений»",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/pages/ReportsPage/model/incomeHistory.model.ts",
+        "frontend/src/pages/ReportsPage/model/reportsTabs.model.ts",
+        "frontend/src/pages/ReportsPage/model/statistics.model.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/pages/ReportsPage/model/__tests__/reportsSessionReset.test.ts"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Сбрасывать сторы отчётов по userModel.logoutUser / tutorSessionCleared и поднимать $historyVersion"
+    },
+    {
+      "id": 3,
+      "title": "Пробел на значке расхождения прокручивает страницу",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P2.5",
+      "file": "frontend/src/shared/ui/ReceivedAmountHint/ReceivedAmountHint.helpers.ts",
+      "line_hint": 25,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/05-mismatch-tooltip-hover.png"
+      ],
+      "expected": "Space на значке не открывает урок и не прокручивает страницу",
+      "actual": "Страница прокручивается на экран вниз на каждое нажатие",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/shared/ui/ReceivedAmountHint/ReceivedAmountHint.helpers.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/shared/ui/ReceivedAmountHint/__tests__/ReceivedAmountHint.test.tsx"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "event.preventDefault() для Space в stopActivationKeyPropagation"
+    },
+    {
+      "id": 4,
+      "title": "Отмена оплаченного урока без урока-получателя стирает оплату из истории поступлений",
+      "category": "spec-mismatch",
+      "severity": "medium",
+      "scenario_id": "P2.13",
+      "file": "backend/src/controllers/lessons/updateLesson.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/36-cancel-paid-no-transfer-dialog.png"
+      ],
+      "expected": "Edge Case: урок остаётся в истории со статусом «отменён», как в карточке «Поступления за период»",
+      "actual": "Урок становится неоплаченным, оплата пропадает из истории, поступлений, налога и комиссий; диалог не предупреждает",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Поведение закреплено FR-018 и было до фичи; спека противоречит сама себе, нужно решение PO",
+      "console_excerpt": null,
+      "network_excerpt": "GET /api/lessons/:id/cancellation-info → {\"cancellationInfo\":null}; PUT /api/lessons/:id {\"status\":\"CANCELLED\"} 200",
+      "fix_suggestion": "PO: либо оставлять урок оплаченным при отмене без получателя, либо предупреждать в диалоге отмены, что оплата N ₽ будет снята, и поправить Edge Case"
+    },
+    {
+      "id": 5,
+      "title": "В карточке «Поступления за период» неверное склонение «3 оплат»",
+      "category": "improvement",
+      "severity": "low",
+      "scenario_id": "P1.3",
+      "file": "frontend/src/pages/ReportsPage/components/FinancialStatistics/IncomeCards/IncomeCards.tsx",
+      "line_hint": 51,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/37-card-payments-plural.png"
+      ],
+      "expected": "«3 оплаты», как в итоге истории",
+      "actual": "«Фактические поступления (3 оплат по дате платежа)»",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/pages/ReportsPage/components/FinancialStatistics/IncomeCards/IncomeCards.tsx",
+        "frontend/src/pages/ReportsPage/components/IncomeHistory/index.ts",
+        "frontend/e2e/reports/income-history.spec.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/pages/ReportsPage/components/FinancialStatistics/IncomeCards/__tests__/IncomeCards.test.tsx"
+      ],
+      "autofix_note": "E2E-строка обновлена, e2e не запускался",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "formatPaymentsCount в карточке"
+    },
+    {
+      "id": 6,
+      "title": "Вкладки «Сводка» / «История поступлений» не связаны со своими панелями",
+      "category": "improvement",
+      "severity": "low",
+      "scenario_id": "P1.9",
+      "file": "frontend/src/pages/ReportsPage/components/ReportsTabs/ReportsTabs.tsx",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-12-035-income-history/screenshots/01-summary-tab-default.png"
+      ],
+      "expected": "role=tab с aria-controls, содержимое в role=tabpanel с aria-labelledby",
+      "actual": "aria-controls нет, tabpanel нет",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/pages/ReportsPage/components/ReportsTabs/ReportsTabs.tsx",
+        "frontend/src/pages/ReportsPage/components/ReportsTabs/ReportsTabs.helpers.ts",
+        "frontend/src/pages/ReportsPage/components/ReportsTabs/index.ts",
+        "frontend/src/pages/ReportsPage/components/index.ts",
+        "frontend/src/pages/ReportsPage/ReportsPage.tsx"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/pages/ReportsPage/components/ReportsTabs/__tests__/ReportsTabs.test.tsx",
+        "frontend/src/pages/ReportsPage/__tests__/ReportsPage.test.tsx"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "id/aria-controls у вкладок, обёртка role=tabpanel"
+    }
+  ]
+}

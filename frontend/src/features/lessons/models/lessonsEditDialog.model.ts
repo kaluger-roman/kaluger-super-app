@@ -46,3 +46,10 @@ sample({
   clock: lessonModel.addLessonFx.done,
   target: dialogClosed,
 });
+
+sample({
+  clock: lessonModel.updateLessonFx.doneData,
+  source: { isOpen: $isDialogOpen, editingLesson: $editingLesson },
+  filter: ({ isOpen, editingLesson }, updated) => isOpen && editingLesson?.id === updated.id,
+  target: dialogClosed,
+});

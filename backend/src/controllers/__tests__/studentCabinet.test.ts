@@ -182,6 +182,31 @@ describe("studentCabinet controller", () => {
     }
   });
 
+  it("never exposes the received amount to the student cabinet", async () => {
+    await prisma.lesson.updateMany({
+      where: { studentId },
+      data: { isPaid: true, receivedAmount: 1800 },
+    });
+
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.lessons.length).toBeGreaterThan(0);
+      for (const lesson of res.body.lessons) {
+        expect(lesson).not.toHaveProperty("receivedAmount");
+      }
+    } finally {
+      await prisma.lesson.updateMany({
+        where: { studentId },
+        data: { isPaid: false, receivedAmount: null },
+      });
+    }
+  });
+
   it("does not leak other students' lessons even when querying same week", async () => {
     const res = await request(app)
       .get("/api/student-cabinet/lessons")

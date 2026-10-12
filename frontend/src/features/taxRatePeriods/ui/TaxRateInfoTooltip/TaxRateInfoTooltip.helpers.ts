@@ -7,4 +7,4 @@ export const formatBreakdownLine = (entry: TaxBreakdownEntry): string => {
 };
 
 export const formatTaxExemptLine = (amount: number): string =>
-  `${TAX_EXEMPT_LABEL}: ${formatCurrency(amount)}`;
+  `${TAX_EXEMPT_LABEL}: ${formatCurrency(amount, { withKopecks: true })}`;
