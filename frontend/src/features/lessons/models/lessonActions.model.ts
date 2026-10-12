@@ -33,10 +33,15 @@ export const lessonPaymentChanged = createEvent<{
   lessonId: string;
   isPaid: boolean;
   paymentDate?: string;
+  receivedAmount?: number;
 }>();
 export const lessonHomeworkSentChanged = createEvent<{
   lessonId: string;
   isSent: boolean;
+}>();
+export const lessonTaxExemptChanged = createEvent<{
+  lessonId: string;
+  isTaxExempt: boolean;
 }>();
 
 // Restore lesson with confirmation
@@ -115,11 +120,12 @@ sample({
 // Update payment status - directly update
 sample({
   clock: lessonPaymentChanged,
-  fn: ({ lessonId, isPaid, paymentDate }) => ({
+  fn: ({ lessonId, isPaid, paymentDate, receivedAmount }) => ({
     id: lessonId,
     data: {
       isPaid,
       paymentDate: paymentDate ? new Date(paymentDate).toISOString() : undefined,
+      ...(isPaid && receivedAmount !== undefined ? { receivedAmount } : {}),
     },
   }),
   target: lessonModel.updateLesson,
@@ -131,6 +137,15 @@ sample({
   fn: ({ lessonId, isSent }) => ({
     id: lessonId,
     data: { isHomeworkSentByTeacher: isSent },
+  }),
+  target: lessonModel.updateLesson,
+});
+
+sample({
+  clock: lessonTaxExemptChanged,
+  fn: ({ lessonId, isTaxExempt }) => ({
+    id: lessonId,
+    data: { isTaxExempt },
   }),
   target: lessonModel.updateLesson,
 });

@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { isValidTimezone } from "../utils/time";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
-import type { PushNotificationPayload } from "../types";
+import type { CronScope, PushNotificationPayload } from "../types";
 
 // Limits per-tick batch size so a backlog after server downtime doesn't
 // hold a long DB transaction or overwhelm the push provider in one minute.
@@ -13,8 +13,9 @@ const REMINDER_BATCH_SIZE = 100;
 // чтобы пользователь увидел напоминание не сильно позже расписанного времени.
 const REMINDER_PROCESSING_TIMEOUT_MS = 10 * 60 * 1000;
 
-export const processScheduledReminders = async () => {
+export const processScheduledReminders = async (scope?: CronScope) => {
   const now = new Date();
+  const scopeWhere = scope ? { userId: { in: scope.tutorIds } } : {};
 
   // Watchdog: возвращаем в PENDING все PROCESSING-записи, claim'нутые более
   // REMINDER_PROCESSING_TIMEOUT_MS назад. Это покрывает случай, когда процесс
@@ -23,6 +24,7 @@ export const processScheduledReminders = async () => {
   const watchdogCutoff = new Date(now.getTime() - REMINDER_PROCESSING_TIMEOUT_MS);
   await prisma.scheduledReminder.updateMany({
     where: {
+      ...scopeWhere,
       status: "PROCESSING",
       claimedAt: { lt: watchdogCutoff },
     },
@@ -33,6 +35,7 @@ export const processScheduledReminders = async () => {
   const reminders = await prisma.$transaction(async (tx) => {
     const pending = await tx.scheduledReminder.findMany({
       where: {
+        ...scopeWhere,
         status: "PENDING",
         scheduledAt: { lte: now },
       },

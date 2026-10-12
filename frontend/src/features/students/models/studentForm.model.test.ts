@@ -96,4 +96,102 @@ describe("studentForm.model", () => {
       );
     });
   });
+  describe("commission", () => {
+    it("should put the typed commission into the form data", async () => {
+      const scope = fork();
+
+      await allSettled(studentFormModel.formOpened, { scope, params: undefined });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "commissionAmount", value: "3000" },
+      });
+
+      expect(scope.getState(studentFormModel.$formData).commissionAmount).toBe("3000");
+    });
+
+    it("should prefill the commission when editing a student", async () => {
+      const scope = fork();
+
+      await allSettled(studentFormModel.formOpened, {
+        scope,
+        params: { ...mockStudent, commissionAmount: 2500 },
+      });
+
+      expect(scope.getState(studentFormModel.$formData).commissionAmount).toBe("2500");
+    });
+
+    it("should not save and should show an error when the commission is negative", async () => {
+      const addStudentFn = vi.fn((_data: CreateStudentDto) => Promise.resolve(mockStudent));
+      const scope = fork({ handlers: [[studentModel.addStudentFx, addStudentFn]] });
+
+      await allSettled(studentFormModel.formOpened, { scope, params: undefined });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "name", value: "Иван" },
+      });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "commissionAmount", value: "-100" },
+      });
+      await allSettled(studentFormModel.formSubmitted, { scope });
+
+      expect(scope.getState(notificationsModel.$notification)).toMatchObject({
+        message: "Комиссия не может быть отрицательной",
+        type: "error",
+      });
+      expect(addStudentFn).not.toHaveBeenCalled();
+    });
+
+    it("should not update a student with a negative commission", async () => {
+      const updateStudentFn = vi.fn((_params: { id: string; data: UpdateStudentDto }) =>
+        Promise.resolve(mockStudent)
+      );
+      const scope = fork({ handlers: [[studentModel.updateStudentFx, updateStudentFn]] });
+
+      await allSettled(studentFormModel.formOpened, { scope, params: mockStudent });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "commissionAmount", value: "-1" },
+      });
+      await allSettled(studentFormModel.formSubmitted, { scope });
+
+      expect(updateStudentFn).not.toHaveBeenCalled();
+    });
+
+    it("should save with an empty commission", async () => {
+      const addStudentFn = vi.fn((_data: CreateStudentDto) => Promise.resolve(mockStudent));
+      const scope = fork({ handlers: [[studentModel.addStudentFx, addStudentFn]] });
+
+      await allSettled(studentFormModel.formOpened, { scope, params: undefined });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "name", value: "Иван" },
+      });
+      await allSettled(studentFormModel.formSubmitted, { scope });
+
+      expect(addStudentFn).toHaveBeenCalledWith(
+        expect.objectContaining({ commissionAmount: undefined })
+      );
+    });
+
+    it("should send the parsed commission when creating a student", async () => {
+      const addStudentFn = vi.fn((_data: CreateStudentDto) => Promise.resolve(mockStudent));
+      const scope = fork({ handlers: [[studentModel.addStudentFx, addStudentFn]] });
+
+      await allSettled(studentFormModel.formOpened, { scope, params: undefined });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "name", value: "Иван" },
+      });
+      await allSettled(studentFormModel.fieldChanged, {
+        scope,
+        params: { field: "commissionAmount", value: "3000" },
+      });
+      await allSettled(studentFormModel.formSubmitted, { scope });
+
+      expect(addStudentFn).toHaveBeenCalledWith(
+        expect.objectContaining({ commissionAmount: 3000 })
+      );
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent } from "@mui/material";
+import { Box, Typography, Card, CardContent, ButtonBase } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -30,29 +30,6 @@ export const GreenAmount = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
-export const BlueCard = styled(Card)({
-  backgroundColor: "#e3f2fd",
-});
-
-export const BlueCardContent = styled(CardContent)(({ theme }) => ({
-  "& .icon": {
-    color: "#1565c0",
-    marginRight: theme.spacing(1),
-  },
-}));
-
-export const BlueTitle = styled(Typography)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  marginBottom: theme.spacing(2),
-}));
-
-export const BlueAmount = styled(Typography)(({ theme }) => ({
-  color: "#1565c0",
-  fontWeight: "bold",
-  marginBottom: theme.spacing(1),
-}));
-
 export const TealCard = styled(Card)({
   backgroundColor: "#e0f2f1",
 });
@@ -74,4 +51,23 @@ export const TealAmount = styled(Typography)(({ theme }) => ({
   color: "#00695c",
   fontWeight: "bold",
   marginBottom: theme.spacing(1),
+}));
+
+export const HistoryLink = styled(ButtonBase)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(0.25),
+  marginTop: theme.spacing(1),
+  padding: theme.spacing(0.25, 0),
+  color: "#00695c",
+  fontSize: "0.875rem",
+  fontWeight: 600,
+  borderRadius: 4,
+  "&:hover": {
+    textDecoration: "underline",
+  },
+  "&.Mui-focusVisible": {
+    outline: "2px solid #00695c",
+    outlineOffset: 2,
+  },
 }));

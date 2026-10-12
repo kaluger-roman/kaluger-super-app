@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@mui/material";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
@@ -21,6 +21,7 @@ const mockFormData: StudentFormData = {
   parentContactMethod: "WHATSAPP",
   parentTelegramNick: "",
   hourlyRate: "1500",
+  commissionAmount: "",
   grade: "5",
   notes: "Хороший ученик",
 };
@@ -531,7 +532,22 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByText(/₽/i)).toBeInTheDocument();
+    const rateField = screen.getByLabelText(/ставка/i).parentElement;
+    expect(within(rateField as HTMLElement).getByText(/₽/i)).toBeInTheDocument();
+  });
+
+  it("should display currency symbol for commission field", () => {
+    renderWithTheme(
+      <StudentFormFields
+        formData={mockFormData}
+        isMobile={false}
+        onChange={mockOnChange}
+        onGradeChange={mockOnGradeChange}
+      />
+    );
+
+    const commissionField = screen.getByLabelText(/комиссия/i).parentElement;
+    expect(within(commissionField as HTMLElement).getByText(/₽/i)).toBeInTheDocument();
   });
 
   it("should render hourly rate as number input", () => {

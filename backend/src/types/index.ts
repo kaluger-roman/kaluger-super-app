@@ -14,13 +14,34 @@ export type {
   UpdateProfileDto,
 } from "./auth";
 export type { ContactMethod, CreateStudentDto, UpdateStudentDto } from "./student";
-export type { CreateLessonDto, UpdateLessonDto, ShiftResult, LessonSlot } from "./lesson";
+export type { CronScope } from "./cron";
+export type {
+  CreateLessonDto,
+  UpdateLessonDto,
+  ShiftResult,
+  LessonSlot,
+  LessonStatus,
+  CommissionCreditState,
+  CommissionCredit,
+  CommissionLessonInput,
+  AllocateCommissionInput,
+  CommissionAllocation,
+} from "./lesson";
 export type {
   TaxRatePeriodDto,
   CreateTaxRatePeriodDto,
   ReplaceTaxRatePeriodsDto,
   TaxBreakdownEntry,
 } from "./taxRate";
+export type {
+  IncomeHistoryTaxDto,
+  IncomeHistoryEntryDto,
+  IncomeHistoryDayDto,
+  IncomeHistorySummaryDto,
+  IncomeHistoryPageDto,
+  IncomeHistoryDto,
+  IncomeHistoryQuery,
+} from "./incomeHistory";
 export type { NewsItemResponse, NewsPaginationResponse } from "./news";
 export type {
   PushSubscriptionDto,

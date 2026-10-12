@@ -188,7 +188,7 @@ sample({
 });
 
 sample({
-  clock: lessonModel.updateLessonFx.doneData,
+  clock: lessonModel.lessonChanged,
   source: $viewingLesson,
   filter: (viewing, updated): viewing is Lesson => Boolean(viewing && viewing.id === updated.id),
   fn: (_viewing, updated) => updated,

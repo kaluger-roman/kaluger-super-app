@@ -1,4 +1,11 @@
-import { validateLessonData } from "../../lessons/validators";
+import type { Lesson } from "@prisma/client";
+import type { UpdateLessonDto } from "../../../types";
+import {
+  RECEIVED_AMOUNT_INVALID_ERROR,
+  RECEIVED_AMOUNT_UNPAID_ERROR,
+  validateLessonData,
+} from "../../lessons/validators";
+import { validateUpdateData } from "../updateLesson.validators";
 import { truncateToMinute } from "../../../utils/time";
 
 type CreateLessonDto = {
@@ -150,5 +157,116 @@ describe("validateLessonData", () => {
       } as any);
       expect(res.isValid).toBe(true);
     });
+  });
+});
+
+const TAX_EXEMPT_ERROR = "Некорректное значение признака «Не облагается налогом»";
+const INVALID_TAX_EXEMPT_VALUES: unknown[] = [null, "true", 1, {}];
+
+describe("validateLessonData isTaxExempt", () => {
+  const base = {
+    subject: "MATHEMATICS",
+    lessonType: "EGE",
+    startTime: new Date("2025-01-01T10:00:00Z").toISOString(),
+    endTime: new Date("2025-01-01T11:00:00Z").toISOString(),
+    studentId: "s1",
+  };
+
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({ isValid: true });
+  });
+
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
+    });
+  });
+});
+
+describe("validateUpdateData isTaxExempt", () => {
+  const existingLesson = {
+    id: "lesson-1",
+    studentId: "s1",
+    status: "SCHEDULED",
+    startTime: new Date("2025-01-01T10:00:00Z"),
+    endTime: new Date("2025-01-01T11:00:00Z"),
+  } as Lesson;
+
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({ isValid: true });
+  });
+
+  it("accepts isTaxExempt on a cancelled lesson", () => {
+    expect(
+      validateUpdateData({ isTaxExempt: true }, { ...existingLesson, status: "CANCELLED" })
+    ).toEqual({ isValid: true });
+  });
+
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
+    });
+  });
+});
+
+describe("validateUpdateData receivedAmount", () => {
+  const INVALID_ERROR = RECEIVED_AMOUNT_INVALID_ERROR;
+  const UNPAID_ERROR = RECEIVED_AMOUNT_UNPAID_ERROR;
+
+  const unpaidLesson = {
+    id: "lesson-1",
+    studentId: "s1",
+    status: "COMPLETED",
+    isPaid: false,
+    startTime: new Date("2025-01-01T10:00:00Z"),
+    endTime: new Date("2025-01-01T11:00:00Z"),
+  } as Lesson;
+  const paidLesson = { ...unpaidLesson, isPaid: true } as Lesson;
+
+  it.each([0, 1800, 1800.5, 0.07, 99999999.99])(
+    "accepts receivedAmount = %p when the lesson is being marked paid",
+    (receivedAmount) => {
+      expect(validateUpdateData({ isPaid: true, receivedAmount }, unpaidLesson)).toEqual({
+        isValid: true,
+      });
+    }
+  );
+
+  it.each([0, 1800, 1800.5, 99999999.99])(
+    "accepts receivedAmount = %p on an already paid lesson",
+    (receivedAmount) => {
+      expect(validateUpdateData({ receivedAmount }, paidLesson)).toEqual({ isValid: true });
+    }
+  );
+
+  it.each([-1, -0.01, 100000000, 1800.123, "1800", null, NaN, Infinity, {}])(
+    "rejects receivedAmount = %p",
+    (receivedAmount) => {
+      const body = { isPaid: true, receivedAmount } as unknown as UpdateLessonDto;
+      expect(validateUpdateData(body, unpaidLesson)).toEqual({
+        isValid: false,
+        error: INVALID_ERROR,
+      });
+    }
+  );
+
+  it("should reject an amount on an unpaid lesson when isPaid is not sent", () => {
+    expect(validateUpdateData({ receivedAmount: 1800 }, unpaidLesson)).toEqual({
+      isValid: false,
+      error: UNPAID_ERROR,
+    });
+  });
+
+  it("should reject an amount sent together with removing the payment", () => {
+    expect(validateUpdateData({ isPaid: false, receivedAmount: 1800 }, paidLesson)).toEqual({
+      isValid: false,
+      error: UNPAID_ERROR,
+    });
+  });
+
+  it("should accept a body without receivedAmount", () => {
+    expect(validateUpdateData({ isPaid: false }, paidLesson)).toEqual({ isValid: true });
   });
 });

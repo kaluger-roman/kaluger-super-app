@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "branch": "034-tax-exempt-lessons",
+  "date": "2026-10-11",
+  "report_md": "docs/manual-qa-reports/2026-10-11-034-tax-exempt-lessons.md",
+  "readiness": "green",
+  "environment": "dev-stack (web :3020, api :3021); qa-stack build failed: @swc/core postinstall Bus error inside docker build",
+  "coverage": { "total": 13, "passed": 13, "failed": 0, "warned": 0, "not_run": ["US1 #4 offline error toast"] },
+  "summary": {
+    "total_findings": 0,
+    "by_severity": {},
+    "autofix_applied": 0,
+    "autofix_failed": 0,
+    "remaining": 0
+  },
+  "autofix": "enabled",
+  "findings": []
+}

@@ -2,6 +2,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import {
+  tryAttachCommissionToLessons,
   buildLessonsWhere,
   fetchLessonsPage,
   parseLessonsPagination,
@@ -31,6 +32,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     const { lessons, total, paymentsSummary } = await fetchLessonsPage(
       buildLessonsWhere(userId, params),
       {
+        tutorId: userId,
         orderAsc: params.upcoming === "true" || isWeekly,
         pagination,
         withPaymentsSummary: Boolean(params.paymentDateFrom || params.paymentDateTo),
@@ -74,7 +76,9 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    res.json({ lesson });
+    const [lessonWithCommission] = await tryAttachCommissionToLessons(userId!, [lesson]);
+
+    res.json({ lesson: lessonWithCommission });
   } catch (error) {
     console.error("Get lesson error:", error);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

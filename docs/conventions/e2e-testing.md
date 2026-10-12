@@ -89,7 +89,7 @@ ESLint enforced: у каждого `test.describe` (включая `.serial`, `.
 
 **Запрещены:** CSS-классы (`.MuiButton-root`), `nth-child`, XPath, селекторы по auto-сгенерированным классам стилей.
 
-ESLint enforced: `playwright/no-raw-locators` не пропускает `locator("…")` со строковым литералом (CSS, XPath, `text=`), `playwright/no-element-handle` и `playwright/no-eval` — `page.$`, `page.$$`, `page.$eval`. Шорткаты `page.click("…")`, `page.fill("…", …)` и `locator(переменная)` линтер не видит, они остаются на ревью. Если у элемента нет ни роли, ни подписи, ни текста, сначала чинить разметку: `aria-label` у поля ввода или кнопки-иконки (это заодно a11y-правило из `frontend.md`). `data-testid` — только когда связи нет и в разметке, например сумма в карточке отчёта (`data-testid="earnings-amount"`). Точечное исключение — опция `allowed` этого правила во `frontend/.eslintrc.js`.
+ESLint enforced: `playwright/no-raw-locators` не пропускает `locator("…")` со строковым литералом (CSS, XPath, `text=`), `playwright/no-element-handle` и `playwright/no-eval` — `page.$`, `page.$$`, `page.$eval`. Шорткаты `page.click("…")`, `page.fill("…", …)` и `locator(переменная)` линтер не видит, они остаются на ревью. Если у элемента нет ни роли, ни подписи, ни текста, сначала чинить разметку: `aria-label` у поля ввода или кнопки-иконки (это заодно a11y-правило из `frontend.md`). `data-testid` — только когда связи нет и в разметке, например сумма в карточке отчёта (`data-testid="earnings"`). Точечное исключение — опция `allowed` этого правила во `frontend/.eslintrc.js`.
 
 ## Тестовые данные
 

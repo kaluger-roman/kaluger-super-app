@@ -56,3 +56,10 @@ export const StudentName = styled(Typography)({
 export const PriceText = styled(Typography)({
   fontWeight: 600,
 });
+
+export const PriceGroup = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: theme.spacing(0.75),
+}));

@@ -39,5 +39,6 @@ module.exports = {
     moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/src/$1",
     },
+    setupFiles: ["<rootDir>/src/__tests__/loadTestEnv.ts"],
     setupFilesAfterEnv: ["<rootDir>/src/__tests__/setup.ts"],
 };

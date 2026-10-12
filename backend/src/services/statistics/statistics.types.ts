@@ -14,6 +14,7 @@ export type LessonStatisticsInput = {
 export type TaxSummary = {
   taxAmount: number | null;
   taxBreakdown: TaxBreakdownEntry[] | null;
+  taxExemptIncome: number | null;
 };
 
 export type TaxUser = {
@@ -22,9 +23,10 @@ export type TaxUser = {
 };
 
 export type PaidLessonForTax = {
-  price: Prisma.Decimal | null;
+  receivedAmount: Prisma.Decimal | null;
   paymentDate: Date | null;
   startTime: Date;
+  isTaxExempt: boolean;
 };
 
 export type LessonStatistics = TaxSummary & {
@@ -44,4 +46,7 @@ export type LessonStatistics = TaxSummary & {
   unpaidDebtOver24hCount: number;
   paymentsInRangeSum: number;
   paymentsInRangeCount: number;
+  hasCommissionStudents: boolean;
+  commissionWrittenOffSum: number;
+  commissionRemainingTotal: number;
 };

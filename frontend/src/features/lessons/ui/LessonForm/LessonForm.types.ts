@@ -17,7 +17,9 @@ export type LessonFormData = {
   isRecurring: boolean;
   isPaid: boolean;
   isHomeworkSentByTeacher: boolean;
+  isTaxExempt: boolean;
   paymentDate?: string;
+  receivedAmount: string;
 };
 
 export type LessonFormProps = {

@@ -1,12 +1,12 @@
 import request from "supertest";
 import express from "express";
-import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../utils/auth";
 import { generateStudentToken } from "../../utils/studentAuth";
 import { authenticateStudent } from "../studentAuth";
 import type { StudentRequest } from "../../types";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 const app = express();
 
@@ -22,7 +22,7 @@ describe("authenticateStudent middleware", () => {
   beforeAll(async () => {
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Test Student",
       },
@@ -116,7 +116,7 @@ describe("authenticateStudent middleware", () => {
   it("rejects token for deleted studentUser (regression: bug-hunt 2026-05-24 #5)", async () => {
     const tempStudent = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Temp Student",
       },

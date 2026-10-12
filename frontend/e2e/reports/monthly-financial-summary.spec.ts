@@ -42,7 +42,7 @@ test.describe("Ежемесячный финансовый отчёт", { tag: [
     await page.goto("/reports");
     await expect(page.getByRole("heading", { name: "Заработок" })).toBeVisible();
 
-    const earningsAmount = page.getByTestId("earnings-amount");
+    const earningsAmount = page.getByTestId("earnings");
     await expect(earningsAmount).toContainText(/4\s*500/);
 
     await expect(page.getByText(/2\s*000/).first()).toBeVisible();

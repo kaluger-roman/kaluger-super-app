@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { app } from "../../index";
 import { generateToken } from "../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("Auth Controller", () => {
   let authToken: string;
@@ -11,7 +12,7 @@ describe("Auth Controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -61,7 +62,7 @@ describe("Auth Controller", () => {
     });
 
     it("creates user and sends verification code", async () => {
-      const email = faker.internet.email();
+      const email = uniqueEmail();
       const res = await request(app)
         .post("/api/auth/register")
         .send({ email, password: "Password1A", name: "User" });
@@ -115,7 +116,7 @@ describe("Auth Controller", () => {
       // Create a user with a different hash so password check fails
       const temp = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "notmatching",
           name: "T",
         },
@@ -129,7 +130,7 @@ describe("Auth Controller", () => {
 
     it("returns token and user on successful login", async () => {
       const password = "Password1A";
-      const email = faker.internet.email();
+      const email = uniqueEmail();
 
       // Create and immediately verify the user
       await request(app)
@@ -189,7 +190,7 @@ describe("Auth Controller", () => {
 
     it("returns 403 when email not verified", async () => {
       const password = "Password1A";
-      const email = faker.internet.email();
+      const email = uniqueEmail();
 
       await request(app)
         .post("/api/auth/register")
@@ -391,7 +392,7 @@ describe("Auth Controller", () => {
       prisma.user.findUnique = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       const res = await request(app).post("/api/auth/register").send({
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "Password1A",
         name: "Test User",
       });

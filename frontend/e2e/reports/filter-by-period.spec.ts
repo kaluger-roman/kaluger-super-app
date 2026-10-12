@@ -1,13 +1,6 @@
 import { test, expect } from "../fixtures";
-import { fillDatePicker } from "../helpers/datepicker";
+import { fillDatePicker, formatDdMmYyyy } from "../helpers/datepicker";
 import { createStudentFor, createLesson } from "../helpers/db";
-
-const formatDdMmYyyy = (date: Date): string => {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = String(date.getFullYear());
-  return `${dd}${mm}${yyyy}`;
-};
 
 test.describe("Фильтрация отчёта по периоду", { tag: ["@regression", "@reports"] }, () => {
   test("данные пересчитываются после нажатия «Обновить» и отражают выбранный период", async ({
@@ -52,7 +45,7 @@ test.describe("Фильтрация отчёта по периоду", { tag: ["
     await page.goto("/reports");
     await expect(page.getByRole("heading", { name: "Заработок" })).toBeVisible();
 
-    const earningsAmount = page.getByTestId("earnings-amount");
+    const earningsAmount = page.getByTestId("earnings");
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);

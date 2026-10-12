@@ -14,6 +14,9 @@ export type CancellationInfo = {
   transferDate: string;
 } | null;
 
+const KEPT_PAYMENT_NOTE =
+  "Оплата останется у этого урока: следующего неоплаченного урока с той же стоимостью нет.";
+
 export const $cancellingLesson = createStore<Lesson | null>(null);
 export const $cancellationInfo = createStore<CancellationInfo>(null);
 
@@ -59,8 +62,12 @@ sample({
   clock: getCancellationInfoFx.done,
   source: $cancellingLesson,
   filter: (cancellingLesson, { params }) => cancellingLesson?.id === params,
-  fn: (_, { result: cancellationInfo }) => {
+  fn: (cancellingLesson, { result: cancellationInfo }) => {
     let message = "Вы уверены, что хотите отменить этот урок?";
+
+    if (!cancellationInfo && cancellingLesson?.isPaid) {
+      message = `${message}\n\n${KEPT_PAYMENT_NOTE}`;
+    }
 
     if (cancellationInfo) {
       const { nextLessonStartTime, nextLessonStudentName, transferAmount, transferDate } =

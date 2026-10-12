@@ -6,6 +6,14 @@ export type Subject = "MATHEMATICS" | "PHYSICS";
 
 export type LessonType = "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
 
+export type CommissionCreditState = "FACT" | "FORECAST";
+
+// One credit per lesson: either already counted (FACT) or a forecast only.
+export type CommissionCredit = {
+  amount: number;
+  state: CommissionCreditState;
+};
+
 export type Lesson = {
   id: string;
   subject: Subject;
@@ -14,14 +22,17 @@ export type Lesson = {
   startTime: string;
   endTime: string;
   price?: number;
+  receivedAmount?: number | null;
   isPaid: boolean;
   paymentDate?: string;
+  isTaxExempt?: boolean;
   isHomeworkSentByTeacher?: boolean;
   homework?: string;
   notes?: string;
   grade?: number;
   status: LessonStatus;
   isRecurring?: boolean;
+  commissionCredit?: CommissionCredit | null;
   createdAt: string;
   updatedAt: string;
   studentId: string | null;
@@ -57,6 +68,7 @@ export type CreateLessonDto = {
   homework?: string;
   notes?: string;
   isRecurring?: boolean;
+  isTaxExempt?: boolean;
 };
 
 export type UpdateLessonDto = Omit<
@@ -71,6 +83,7 @@ export type UpdateLessonDto = Omit<
   notes?: string | null;
   isPaid?: boolean;
   paymentDate?: string;
+  receivedAmount?: number;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: LessonStatus;

@@ -43,6 +43,23 @@ describe("lib.helpers", () => {
       expect(result).toContain("1");
       expect(result).toContain("000");
     });
+
+    it("should show kopecks when explicitly asked", () => {
+      const result = formatCurrency(1500.55, { withKopecks: true });
+      expect(result).toContain("1");
+      expect(result).toContain("500,55");
+    });
+
+    it("should show a remainder below one rouble", () => {
+      const result = formatCurrency(0.55, { withKopecks: true });
+      expect(result).toContain("0,55");
+    });
+
+    it("should keep whole amounts free of trailing zeros even with kopecks enabled", () => {
+      const result = formatCurrency(1000, { withKopecks: true });
+      expect(result).not.toContain(",");
+      expect(result).toContain("000");
+    });
   });
 
   describe("validateEmail", () => {

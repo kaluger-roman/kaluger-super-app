@@ -4,6 +4,7 @@ import type { MouseEvent } from "react";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { Typography, Chip, IconButton } from "@mui/material";
 
+import { useIsTaxEnabled } from "@entities";
 import {
   SUBJECT_LABELS,
   LESSON_TYPE_LABELS,
@@ -14,6 +15,8 @@ import {
   formatDate,
   RecurringLessonBadge,
   LessonStudentName,
+  CommissionBadge,
+  TaxExemptBadge,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -28,6 +31,9 @@ type LessonCardProps = {
 };
 
 export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuClick }) => {
+  const isTaxEnabled = useIsTaxEnabled();
+  const isTaxExempt = isTaxEnabled && Boolean(lesson.isTaxExempt);
+
   const handleCardClick = useCallback(() => {
     onCardClick?.(lesson);
   }, [onCardClick, lesson]);
@@ -66,9 +72,13 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
               <Typography variant="body2" color="text.secondary">
                 ⏰ {formatTimeFromString(lesson.startTime)} - {formatTimeFromString(lesson.endTime)}
               </Typography>
-              <Styled.PriceText variant="body2">
-                💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
-              </Styled.PriceText>
+              <Styled.PriceGroup>
+                <Styled.PriceText variant="body2">
+                  💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
+                </Styled.PriceText>
+                <CommissionBadge credit={lesson.commissionCredit} />
+                <TaxExemptBadge isTaxExempt={isTaxExempt} />
+              </Styled.PriceGroup>
             </Styled.InfoRow>
 
             {lesson.isPaid && lesson.paymentDate && (

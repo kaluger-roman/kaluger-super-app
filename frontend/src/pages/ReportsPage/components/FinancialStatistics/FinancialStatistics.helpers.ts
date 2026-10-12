@@ -7,5 +7,8 @@ export const getTaxLabel = (breakdown: TaxBreakdownEntry[]): string => {
   return "Налоги";
 };
 
-export const shouldShowTaxInfoIcon = (breakdown: TaxBreakdownEntry[]): boolean =>
-  breakdown.length > 1 || breakdown.some((entry) => entry.isOutsidePeriods);
+export const shouldShowTaxInfoIcon = (
+  breakdown: TaxBreakdownEntry[],
+  taxExemptIncome = 0
+): boolean =>
+  breakdown.length > 1 || breakdown.some((entry) => entry.isOutsidePeriods) || taxExemptIncome > 0;

@@ -15,6 +15,7 @@ import {
   lessonDeleteRequestedFromDialog,
   lessonPaymentChanged,
   lessonHomeworkSentChanged,
+  lessonTaxExemptChanged,
 } from "../lessonActions.model";
 import { $confirmDialog } from "../lessonsConfirmDialog.model";
 import { $viewingLesson, restoreFromViewRequested } from "../lessonsViewDialog.model";
@@ -328,6 +329,70 @@ describe("lessonActions.model", () => {
       });
     });
 
+    it("should send the received amount with a payment", async () => {
+      const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
+      const scope = fork({
+        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+      });
+
+      await allSettled(lessonPaymentChanged, {
+        scope,
+        params: {
+          lessonId: "lesson-1",
+          isPaid: true,
+          paymentDate: "2026-01-20",
+          receivedAmount: 1800,
+        },
+      });
+
+      expect(updateLessonFn).toHaveBeenCalledWith({
+        id: "lesson-1",
+        data: {
+          isPaid: true,
+          paymentDate: new Date("2026-01-20").toISOString(),
+          receivedAmount: 1800,
+        },
+      });
+    });
+
+    it("should send a zero received amount", async () => {
+      const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
+      const scope = fork({
+        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+      });
+
+      await allSettled(lessonPaymentChanged, {
+        scope,
+        params: {
+          lessonId: "lesson-1",
+          isPaid: true,
+          paymentDate: "2026-01-20",
+          receivedAmount: 0,
+        },
+      });
+
+      expect(updateLessonFn).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ receivedAmount: 0 }) })
+      );
+    });
+
+    it("should not send a received amount when the payment is removed", async () => {
+      const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
+      const scope = fork({
+        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+      });
+
+      await allSettled(lessonPaymentChanged, {
+        scope,
+        params: { lessonId: "lesson-1", isPaid: false, receivedAmount: 1800 },
+      });
+
+      expect(updateLessonFn).toHaveBeenCalledWith({
+        id: "lesson-1",
+        data: { isPaid: false, paymentDate: undefined },
+      });
+    });
+
     it("should call lessonModel.updateLesson with isPaid false without paymentDate", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
@@ -419,6 +484,30 @@ describe("lessonActions.model", () => {
         },
       });
     });
+  });
+
+  describe("lessonTaxExemptChanged", () => {
+    it.each([true, false])(
+      "should call lessonModel.updateLesson with isTaxExempt %s and open no confirmation",
+      async (isTaxExempt) => {
+        const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson({ isTaxExempt })));
+        const scope = fork({
+          handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        });
+
+        await allSettled(lessonTaxExemptChanged, {
+          scope,
+          params: { lessonId: "lesson-1", isTaxExempt },
+        });
+
+        expect(updateLessonFn).toHaveBeenCalledTimes(1);
+        expect(updateLessonFn).toHaveBeenCalledWith({
+          id: "lesson-1",
+          data: { isTaxExempt },
+        });
+        expect(scope.getState($confirmDialog).open).toBe(false);
+      }
+    );
   });
 
   describe("restoreFromViewRequested integration", () => {

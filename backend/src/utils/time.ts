@@ -38,6 +38,20 @@ export const isValidTimezone = (timezone: string): boolean => {
   }
 };
 
+// Calendar day (YYYY-MM-DD) of the moment as seen in the IANA timezone.
+export const toDateKeyInTimezone = (date: Date, timezone: string): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+
+  return `${part("year")}-${part("month")}-${part("day")}`;
+};
+
 // Get UTC offset (in ms) for a given IANA timezone at a specific moment.
 // Positive offset means timezone is ahead of UTC (e.g. +3h for Moscow).
 const getTimezoneOffsetMs = (date: Date, timezone: string): number => {

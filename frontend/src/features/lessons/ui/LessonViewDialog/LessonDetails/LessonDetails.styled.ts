@@ -16,3 +16,11 @@ export const SectionTitle = styled(Typography)(({ theme }) => ({
 export const PaymentStatusBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
+
+export const PriceGroup = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: theme.spacing(1),
+  marginBottom: theme.spacing(0.5),
+}));

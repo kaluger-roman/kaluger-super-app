@@ -73,7 +73,11 @@ const runLessonUpdateTransaction = ({
       if (nextLessonForTransfer && existingLesson.paymentDate) {
         await tx.lesson.update({
           where: { id: nextLessonForTransfer.id },
-          data: { isPaid: true, paymentDate: existingLesson.paymentDate },
+          data: {
+            isPaid: true,
+            paymentDate: existingLesson.paymentDate,
+            receivedAmount: existingLesson.receivedAmount ?? existingLesson.price ?? 0,
+          },
         });
       }
 

@@ -1,15 +1,36 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
-import type { Lesson } from "@shared";
+import { userModel } from "@entities";
+import type { Lesson, User } from "@shared";
 import { theme } from "@shared";
 
 import { LessonCard } from "../LessonCard";
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+
+const tutor = (taxEnabled: boolean): User => ({
+  id: "user-1",
+  email: "tutor@test.local",
+  name: "Учитель",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  isEmailVerified: true,
+  taxEnabled,
+});
+
+const BADGE_NAME = "Не облагается налогом: доход по уроку не учитывается в сумме налога";
+
+const renderWithTax = (taxEnabled: boolean, ui: React.ReactElement) =>
+  render(
+    <Provider value={fork({ values: [[userModel.$user, tutor(taxEnabled)]] })}>
+      <ThemeProvider theme={theme}>{ui}</ThemeProvider>
+    </Provider>
+  );
 
 const mockLesson: Lesson = {
   id: "lesson-1",
@@ -57,9 +78,9 @@ describe("LessonCard", () => {
 
       expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
       expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === "💰 2000 ₽" || false;
-        })
+        screen.getByText(
+          (content, element) => element?.tagName === "P" && element.textContent === "💰 2000 ₽"
+        )
       ).toBeInTheDocument();
       expect(screen.getByText(/математика/i)).toBeInTheDocument();
       expect(screen.getByText(/егэ/i)).toBeInTheDocument();
@@ -71,9 +92,9 @@ describe("LessonCard", () => {
       renderWithTheme(<LessonCard lesson={freeLesson} />);
 
       expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === "💰 Бесплатно" || false;
-        })
+        screen.getByText(
+          (content, element) => element?.tagName === "P" && element.textContent === "💰 Бесплатно"
+        )
       ).toBeInTheDocument();
     });
 
@@ -261,6 +282,85 @@ describe("LessonCard", () => {
       renderWithTheme(<LessonCard lesson={lessonWithArchivedStudent} />);
 
       expect(screen.getByText("Архив")).toBeInTheDocument();
+    });
+  });
+  describe("Commission credit", () => {
+    it("should render the fact badge next to the price", () => {
+      renderWithTheme(
+        <LessonCard lesson={{ ...mockLesson, commissionCredit: { amount: 1000, state: "FACT" } }} />
+      );
+
+      expect(screen.getByTestId("HandshakeIcon")).toBeInTheDocument();
+      expect(screen.getByText(/^\(.*1.*000.*₽\)$/)).toBeInTheDocument();
+    });
+
+    it("should render the forecast badge with its own icon", () => {
+      renderWithTheme(
+        <LessonCard
+          lesson={{ ...mockLesson, commissionCredit: { amount: 500, state: "FORECAST" } }}
+        />
+      );
+
+      expect(screen.getByTestId("HandshakeOutlinedIcon")).toBeInTheDocument();
+      expect(screen.getByText(/^\(~/)).toBeInTheDocument();
+    });
+
+    it("should render neither badge nor empty block without a credit", () => {
+      renderWithTheme(<LessonCard lesson={mockLesson} />);
+
+      expect(screen.queryByTestId("HandshakeIcon")).toBeNull();
+      expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
+      expect(screen.queryByRole("img")).toBeNull();
+    });
+  });
+
+  describe("Tax-exempt badge", () => {
+    it("should render the badge next to the price for a tax-exempt lesson", () => {
+      renderWithTax(true, <LessonCard lesson={{ ...mockLesson, isTaxExempt: true }} />);
+
+      expect(screen.getByRole("img", { name: BADGE_NAME })).toHaveTextContent("0%без налога");
+    });
+
+    it("should render no badge for a taxable lesson", () => {
+      renderWithTax(true, <LessonCard lesson={{ ...mockLesson, isTaxExempt: false }} />);
+
+      expect(screen.queryByRole("img", { name: BADGE_NAME })).toBeNull();
+    });
+
+    it("should render no badge when tax accounting is disabled", () => {
+      renderWithTax(false, <LessonCard lesson={{ ...mockLesson, isTaxExempt: true }} />);
+
+      expect(screen.queryByRole("img", { name: BADGE_NAME })).toBeNull();
+    });
+
+    it("should not open the lesson when the badge is clicked", async () => {
+      const onCardClick = vi.fn();
+      renderWithTax(
+        true,
+        <LessonCard lesson={{ ...mockLesson, isTaxExempt: true }} onCardClick={onCardClick} />
+      );
+
+      await userEvent.click(screen.getByRole("img", { name: BADGE_NAME }));
+
+      expect(onCardClick).not.toHaveBeenCalled();
+    });
+
+    it("should render the badge together with the commission and recurring marks", () => {
+      renderWithTax(
+        true,
+        <LessonCard
+          lesson={{
+            ...mockLesson,
+            isTaxExempt: true,
+            isRecurring: true,
+            commissionCredit: { amount: 1000, state: "FACT" },
+          }}
+        />
+      );
+
+      expect(screen.getByRole("img", { name: BADGE_NAME })).toBeInTheDocument();
+      expect(screen.getByTestId("HandshakeIcon")).toBeInTheDocument();
+      expect(screen.getByText("Регулярный")).toBeInTheDocument();
     });
   });
 });

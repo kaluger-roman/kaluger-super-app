@@ -4,7 +4,12 @@ import type { CreateLessonDto } from "../../types";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import { SchedulingConflictError } from "../../utils";
-import { createRecurringLessons, createSingleLesson, notifyLessonsCreated } from "../../services";
+import {
+  createRecurringLessons,
+  createSingleLesson,
+  notifyLessonsCreated,
+  tryAttachCommissionToLessons,
+} from "../../services";
 import { validateLessonData } from "./validators";
 
 export const createLesson = async (req: AuthRequest, res: Response) => {
@@ -30,8 +35,11 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
 
     if (data.isRecurring && student) {
       const { created, first } = await createRecurringLessons(userId, data, student);
+      const [firstWithCommission] = first
+        ? await tryAttachCommissionToLessons(userId, [first])
+        : [first];
       res.status(201).json({
-        lesson: first,
+        lesson: firstWithCommission,
         message: `Создано ${created.length} регулярных уроков`,
       });
       notifyLessonsCreated(userId, created, first);
@@ -39,7 +47,8 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     }
 
     const lesson = await createSingleLesson(userId, data, student);
-    res.status(201).json({ lesson });
+    const [lessonWithCommission] = await tryAttachCommissionToLessons(userId, [lesson]);
+    res.status(201).json({ lesson: lessonWithCommission });
     notifyLessonsCreated(userId, [lesson], lesson);
   } catch (error) {
     if (error instanceof SchedulingConflictError) {

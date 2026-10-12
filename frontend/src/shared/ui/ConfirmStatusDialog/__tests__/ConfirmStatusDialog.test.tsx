@@ -48,6 +48,22 @@ describe("ConfirmStatusDialog", () => {
       expect(screen.getByText("Test description text")).toBeInTheDocument();
     });
 
+    it("should not wrap a block description in a paragraph", () => {
+      renderWithTheme(
+        <ConfirmStatusDialog
+          open={true}
+          title="Test Title"
+          description={<div>Block description</div>}
+          onConfirm={mockOnConfirm}
+          onClose={mockOnClose}
+        />
+      );
+
+      const description = screen.getByText("Block description");
+
+      expect(description.closest("p")).toBeNull();
+    });
+
     it("should render dialog with custom confirm and cancel labels", () => {
       renderWithTheme(
         <ConfirmStatusDialog
@@ -505,6 +521,54 @@ describe("ConfirmStatusDialog", () => {
       await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
       expect(mockOnConfirm).toHaveBeenCalledTimes(1);
       expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("confirmDisabled", () => {
+    it("should disable the confirm button", async () => {
+      renderWithTheme(
+        <ConfirmStatusDialog
+          open={true}
+          title="Test Title"
+          confirmDisabled
+          onConfirm={mockOnConfirm}
+          onClose={mockOnClose}
+        />
+      );
+
+      expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDisabled();
+    });
+
+    it("should ignore Enter while confirm is disabled", async () => {
+      renderWithTheme(
+        <ConfirmStatusDialog
+          open={true}
+          title="Test Title"
+          confirmDisabled
+          onConfirm={mockOnConfirm}
+          onClose={mockOnClose}
+        />
+      );
+
+      await userEvent.type(screen.getByRole("dialog"), "{Enter}");
+
+      expect(mockOnConfirm).not.toHaveBeenCalled();
+    });
+
+    it("should keep the cancel button working while confirm is disabled", async () => {
+      renderWithTheme(
+        <ConfirmStatusDialog
+          open={true}
+          title="Test Title"
+          confirmDisabled
+          onConfirm={mockOnConfirm}
+          onClose={mockOnClose}
+        />
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Отмена" }));
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
   });
 });

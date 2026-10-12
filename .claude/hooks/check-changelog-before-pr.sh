@@ -24,11 +24,28 @@ case "$command" in
   *) exit 0 ;;
 esac
 
+# `ssh <host> '<inner command>'`: the repo and its worktrees live on the dev
+# machine (the session only sees a mount, where worktree git dirs do not
+# resolve), so run this same gate there on the inner command.
+if [ -z "${CHANGELOG_GATE_REMOTE:-}" ]; then
+  ssh_prefix="$(printf '%s' "$command" | sed -nE "s/^[[:space:]]*ssh[[:space:]]+([^'\"]*)['\"].*/\1/p")"
+  if [ -n "$ssh_prefix" ]; then
+    ssh_host="$(printf '%s' "$ssh_prefix" | awk '{print $NF}')"
+    inner_command="$(printf '%s' "$command" | sed -E "s/^[[:space:]]*ssh[[:space:]]+[^'\"]*['\"]//; s/['\"][[:space:]]*\$//")"
+    printf '%s' "$input" | jq --arg c "$inner_command" '.tool_input.command = $c' |
+      ${CHANGELOG_GATE_SSH:-ssh} "$ssh_host" "cd ${CHANGELOG_GATE_REMOTE_REPO:-~/kaluger-super-app} && CHANGELOG_GATE_REMOTE=1 bash .claude/hooks/check-changelog-before-pr.sh" ||
+      echo "changelog gate: cannot reach ${ssh_host}, skipping the check" >&2
+    exit 0
+  fi
+fi
+
 # `cd <worktree> && gh pr create …` — take the diff in that worktree.
 target_dir="$(printf '%s' "$command" | sed -nE 's/^[[:space:]]*cd[[:space:]]+"([^"]+)".*/\1/p')"
 if [ -z "$target_dir" ]; then
   target_dir="$(printf '%s' "$command" | sed -nE 's/^[[:space:]]*cd[[:space:]]+([^[:space:];&|]+).*/\1/p')"
 fi
+target_dir="${target_dir/#\~/$HOME}"
+target_dir="${target_dir/#\$HOME/$HOME}"
 if [ -n "$target_dir" ] && [ -d "$target_dir" ]; then
   cd "$target_dir"
 fi

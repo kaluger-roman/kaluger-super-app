@@ -3,6 +3,7 @@ import { app } from "../index";
 import { prisma } from "../lib/prisma";
 import { generateToken } from "../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "./helpers";
 
 describe("getLessons paymentDate filter", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("getLessons paymentDate filter", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -50,6 +51,7 @@ describe("getLessons paymentDate filter", () => {
         isRecurring: false,
         isPaid: true,
         price: 1000,
+        receivedAmount: 1000,
         paymentDate: new Date("2026-03-15T12:00:00Z"),
         status: "COMPLETED",
       },
@@ -66,6 +68,7 @@ describe("getLessons paymentDate filter", () => {
         isRecurring: false,
         isPaid: true,
         price: 1000,
+        receivedAmount: 1000,
         paymentDate: new Date("2026-04-05T12:00:00Z"),
         status: "COMPLETED",
       },

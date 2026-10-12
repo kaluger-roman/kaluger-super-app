@@ -11,6 +11,7 @@ jest.mock("../email", () => ({
 }));
 
 import { sendPasswordResetEmail } from "../email";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 const ORIGINAL_PASSWORD = "OldPassword1";
 const VALID_NEW_PASSWORD = "NewPassword1";
@@ -30,7 +31,7 @@ describe("passwordReset service", () => {
     const hashedPassword = await hashPassword(ORIGINAL_PASSWORD);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: hashedPassword,
         name: faker.person.fullName(),
         isEmailVerified: true,

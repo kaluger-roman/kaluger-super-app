@@ -7,6 +7,7 @@ import {
 } from "../recurringHelpers";
 import { truncateToMinute } from "../../utils/time";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("recurringHelpers", () => {
   let userId: string;
@@ -14,7 +15,7 @@ describe("recurringHelpers", () => {
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "t" },
+      data: { email: uniqueEmail(), password: "x", name: "t" },
     });
     userId = user.id;
 
@@ -35,7 +36,8 @@ describe("recurringHelpers", () => {
   });
 
   it("generates stable recurring key and groups lessons keeping latest", () => {
-    const now = new Date();
+    // Minute-aligned so +1s/+2s never cross into the next minute of the key
+    const now = truncateToMinute(new Date());
     const a = {
       id: "a",
       tutorId: userId,

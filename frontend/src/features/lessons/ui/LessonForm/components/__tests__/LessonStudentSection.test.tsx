@@ -24,6 +24,8 @@ const baseFormData: LessonFormData = {
   isPaid: false,
   paymentDate: undefined,
   isHomeworkSentByTeacher: false,
+  isTaxExempt: false,
+  receivedAmount: "",
   homework: "",
   notes: "",
   isRecurring: false,

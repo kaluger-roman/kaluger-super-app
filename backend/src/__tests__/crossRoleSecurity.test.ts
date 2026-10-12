@@ -1,10 +1,10 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 
 import { app } from "../index";
 import { prisma } from "../lib/prisma";
 import { generateAdminToken, generateToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
+import { uniqueEmail } from "./helpers";
 
 describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
   let tutorId: string;
@@ -16,7 +16,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Tutor",
         isEmailVerified: true,
@@ -27,7 +27,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Student",
       },
@@ -58,6 +58,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
       ["GET", "/api/students"],
       ["GET", "/api/lessons"],
       ["GET", "/api/statistics"],
+      ["GET", "/api/statistics/income-history"],
       ["GET", "/api/tax-periods"],
       ["GET", "/api/news"],
       ["GET", "/api/reminder-settings"],
