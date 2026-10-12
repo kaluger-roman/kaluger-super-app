@@ -5,8 +5,10 @@ import { lessonsApi } from "@shared";
 import type { Lesson } from "@shared";
 
 import {
+  $canSubmit,
   $formData,
   $errors,
+  $receivedAmountError,
   $editingLesson,
   $confirmDialog,
   formOpened,
@@ -444,6 +446,75 @@ describe("lessonForm.model", () => {
       expect(lessonsApi.create).not.toHaveBeenCalled();
       expect(lessonsApi.update).not.toHaveBeenCalled();
       expect(scope.getState($formData).isTaxExempt).toBe(false);
+    });
+  });
+
+  describe("received amount", () => {
+    const paidLesson = createMockLesson({
+      isPaid: true,
+      paymentDate: "2026-01-10T00:00:00.000Z",
+      receivedAmount: 1800,
+    });
+
+    it("should take the received amount of a paid lesson into the form", async () => {
+      const scope = fork();
+
+      await allSettled(formOpened, { scope, params: { lesson: paidLesson, open: true } });
+
+      expect(scope.getState($formData).receivedAmount).toBe("1800");
+      expect(scope.getState($receivedAmountError)).toBeNull();
+      expect(scope.getState($canSubmit)).toBe(true);
+    });
+
+    it("should report an error and block saving when the amount is cleared", async () => {
+      const scope = fork();
+      await allSettled(formOpened, { scope, params: { lesson: paidLesson, open: true } });
+
+      await allSettled(fieldChanged, { scope, params: { field: "receivedAmount", value: "" } });
+
+      expect(scope.getState($receivedAmountError)).toBe("Укажите полученную сумму");
+      expect(scope.getState($canSubmit)).toBe(false);
+
+      await allSettled(formSubmitted, { scope });
+      expect(lessonsApi.update).not.toHaveBeenCalled();
+      expect(scope.getState($errors)).toEqual({ receivedAmount: "Укажите полученную сумму" });
+    });
+
+    it("should not report an error for an unpaid lesson", async () => {
+      const scope = fork();
+
+      await allSettled(formOpened, { scope, params: { lesson: createMockLesson(), open: true } });
+
+      expect(scope.getState($formData).receivedAmount).toBe("");
+      expect(scope.getState($receivedAmountError)).toBeNull();
+    });
+
+    it("should send the edited amount when a paid lesson is saved", async () => {
+      const scope = fork();
+      vi.mocked(lessonsApi.update).mockResolvedValueOnce(paidLesson);
+
+      await allSettled(formOpened, { scope, params: { lesson: paidLesson, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "receivedAmount", value: "2500" } });
+      await allSettled(formSubmitted, { scope });
+
+      expect(lessonsApi.update).toHaveBeenCalledTimes(1);
+      const [id, payload] = vi.mocked(lessonsApi.update).mock.calls[0];
+      expect(id).toBe(paidLesson.id);
+      expect(payload).toMatchObject({ isPaid: true, receivedAmount: 2500 });
+    });
+
+    it("should not send an amount when the payment is removed in the form", async () => {
+      const scope = fork();
+      vi.mocked(lessonsApi.update).mockResolvedValueOnce(createMockLesson());
+
+      await allSettled(formOpened, { scope, params: { lesson: paidLesson, open: true } });
+      await allSettled(fieldChanged, { scope, params: { field: "isPaid", value: false } });
+      await allSettled(fieldChanged, { scope, params: { field: "receivedAmount", value: "" } });
+      await allSettled(formSubmitted, { scope });
+
+      const [, payload] = vi.mocked(lessonsApi.update).mock.calls[0];
+      expect(payload).toHaveProperty("isPaid", false);
+      expect(payload).not.toHaveProperty("receivedAmount");
     });
   });
 });

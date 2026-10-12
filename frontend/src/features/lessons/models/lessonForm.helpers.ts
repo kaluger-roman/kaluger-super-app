@@ -1,6 +1,11 @@
 import type { Lesson, CreateLessonDto, Student, UpdateLessonDto } from "@shared";
 import { toDateKey } from "@shared";
 
+import {
+  parseReceivedAmount,
+  toReceivedAmountInput,
+  validateReceivedAmount,
+} from "./receivedAmount.helpers";
 import type { LessonFormData } from "../ui/LessonForm/LessonForm.types";
 
 export const prepareFormData = (lesson?: Lesson): LessonFormData => {
@@ -24,6 +29,9 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
       isHomeworkSentByTeacher: lesson.isHomeworkSentByTeacher || false,
       isTaxExempt: lesson.isTaxExempt ?? false,
       paymentDate: lesson.paymentDate ? toDateKey(lesson.paymentDate) : undefined,
+      receivedAmount: lesson.isPaid
+        ? toReceivedAmountInput(lesson.receivedAmount ?? lesson.price ?? 0)
+        : "",
     };
   }
 
@@ -49,8 +57,12 @@ export const prepareFormData = (lesson?: Lesson): LessonFormData => {
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
     paymentDate: undefined,
+    receivedAmount: "",
   };
 };
+
+export const getFormReceivedAmountError = (formData: LessonFormData): string | null =>
+  formData.isPaid ? validateReceivedAmount(formData.receivedAmount) : null;
 
 export const validateFormData = (
   formData: LessonFormData
@@ -73,6 +85,11 @@ export const validateFormData = (
     errors.price = "Цена должна быть положительным числом";
   }
 
+  const receivedAmountError = getFormReceivedAmountError(formData);
+  if (receivedAmountError) {
+    errors.receivedAmount = receivedAmountError;
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -80,7 +97,8 @@ export const validateFormData = (
 };
 
 export const canSubmitLessonForm = (formData: LessonFormData): boolean =>
-  formData.withoutStudent ? Boolean(formData.prospectName.trim()) : Boolean(formData.studentId);
+  (formData.withoutStudent ? Boolean(formData.prospectName.trim()) : Boolean(formData.studentId)) &&
+  getFormReceivedAmountError(formData) === null;
 
 export const applyWithoutStudentRules = (
   formData: LessonFormData,
@@ -128,6 +146,7 @@ export const prepareSubmitData = (
   isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
   isTaxExempt: formData.isTaxExempt,
   paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : undefined,
+  ...(formData.isPaid ? { receivedAmount: parseReceivedAmount(formData.receivedAmount) } : {}),
 });
 
 export const hasTimeChanged = (lesson: Lesson, formData: LessonFormData): boolean => {

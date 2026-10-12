@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-10-12T11:26:45Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 198,
+    "insertions": 8131,
+    "deletions": 260
+  },
+  "summary": {
+    "raw_findings": 6,
+    "after_dedup": 6,
+    "after_score_filter": 5,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 5
+    },
+    "by_category": {
+      "claude-md": 1,
+      "logic": 2,
+      "convention": 2
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Новый комментарий к колонке в schema.prisma написан по-русски",
+      "category": "claude-md",
+      "file": "backend/prisma/schema.prisma",
+      "line_start": 167,
+      "line_end": 167,
+      "snippet": "  receivedAmount          Decimal?     @db.Decimal(10, 2) // Сколько реально пришло за урок; null у неоплаченного",
+      "rationale": "CLAUDE.md:133: «CLAUDE.md, convention docs, code comments — English». Добавленный комментарий к коду на русском. У соседних колонок модели Lesson комментарии тоже русские, но они были до этого дифа.",
+      "fix_hint": "Переписать по-английски, например `// Amount actually received for the lesson; null while unpaid`.",
+      "score": 50,
+      "verification_note": "Правило CLAUDE.md «code comments — English» прямо покрывает добавленный русский комментарий в schema.prisma:167, и finding подтверждён, но это косметика, а соседние комментарии той же модели Lesson уже написаны по-русски, поэтому выбрано нижнее значение из-за неоднозначности фактической конвенции файла.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "deep-logic",
+      "title": "Карточка «Поступления за период» округляет до рублей, а итог истории показывает копейки: суммы расходятся визуально",
+      "category": "logic",
+      "file": "frontend/src/pages/ReportsPage/components/FinancialStatistics/IncomeCards/IncomeCards.tsx",
+      "line_start": 48,
+      "line_end": 48,
+      "snippet": "{formatCurrency(statistics.paymentsInRangeSum || 0)}",
+      "rationale": "formatCurrency без withKopecks выставляет maximumFractionDigits: 0, поэтому полученная сумма 1500,50 ₽ (поле «Получено» принимает копейки, FR-020a) выводится в карточке как «1 501 ₽», а итог истории (IncomeHistorySummary.tsx:18, withKopecks: true) и дни показывают «1 500,50 ₽». Это нарушает edge case спеки «суммы … показываются с копейками без расхождения с карточками из-за округления» и FR-008/SC-001. Карточку меняли в этом diff, а соседняя CommissionCards уже передаёт withKopecks.",
+      "fix_hint": "В IncomeCards передавать { withKopecks: true } для paymentsInRangeSum (и проверить «Заработок» и налоговую подсказку taxExemptIncome), чтобы карточка и итог истории форматировали одно и то же значение одинаково.",
+      "score": 50,
+      "verification_note": "Подтверждено: карточка «Поступления за период» форматирует сумму без withKopecks и округляет до рублей, тогда как итог истории и edge case спеки требуют копеек без расхождения; но строка карточки старая, а расхождение возникает только для редких оплат с копейками и касается только отображения.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "claude-md",
+      "title": "Новый компонентный тест IncomeCards рендерит без ThemeProvider",
+      "category": "convention",
+      "file": "frontend/src/pages/ReportsPage/components/FinancialStatistics/IncomeCards/__tests__/IncomeCards.test.tsx",
+      "line_start": 75,
+      "line_end": 79,
+      "snippet": "    render(\n      <EffectorProvider value={scope}>\n        <IncomeCards statistics={statistics} />\n      </EffectorProvider>\n    );",
+      "rationale": "docs/conventions/frontend-testing.md:9: «Components — test with RTL, wrap in theme provider». Добавленный тест ссылки «История поступлений по дням» оборачивает компонент только в EffectorProvider. Остальные новые компонентные тесты дифа (CommissionCards, IncomeHistory* и др.) оборачивают в ThemeProvider с theme из @shared.",
+      "fix_hint": "Обернуть в `<ThemeProvider theme={theme}>` внутри EffectorProvider, как в соседних тестах FinancialStatistics.",
+      "score": 50,
+      "verification_note": "Правило docs/conventions/frontend-testing.md:9 («Components — test with RTL, wrap in theme provider») нарушено новым тестом (строки 67–85), который рендерит IncomeCards только в EffectorProvider, хотя другие новые компонентные тесты дифа оборачивают в ThemeProvider; но файл уже был без ThemeProvider в origin/main и тесты работают с дефолтной темой MUI, так что это конвенционная мелочь.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "claude-md",
+      "title": "Спиннер на кнопке «Показать ещё» вместо глобального оверлея, loadNextPageFx намеренно не добавлен в $isBlocking",
+      "category": "convention",
+      "file": "frontend/src/pages/ReportsPage/components/IncomeHistory/components/IncomeHistoryLoadMore/IncomeHistoryLoadMore.tsx",
+      "line_start": 39,
+      "line_end": 43,
+      "snippet": "          onClick={isLoading ? undefined : onLoadMore}\n          aria-disabled={isLoading}\n          aria-busy={isLoading}\n          $isLoading={isLoading}\n          startIcon={isLoading ? <CircularProgress size={16} color=\"inherit\" /> : undefined}",
+      "rationale": "docs/conventions/frontend.md:285: «Use the global blocking overlay ($isBlocking ...) for all API requests. Do NOT add per-component spinners — add the effect's .pending to the $isBlocking combine instead». Диф добавляет локальный CircularProgress для запроса loadNextPageFx и прямо исключает этот эффект из $isBlocking (frontend/src/app/model/blocking.model.ts:52, комментарий «shows progress on its button only (FR-013c)»). Спека этого требует, но в конвенции такого исключения нет.",
+      "fix_hint": "Либо подключить loadNextPageFx.pending к $isBlocking и убрать спиннер, либо, если по спеке нужен именно индикатор на кнопке, записать это исключение (порционная подгрузка без оверлея) в раздел Loading Indicators файла docs/conventions/frontend.md.",
+      "score": 50,
+      "verification_note": "Отступление от явного правила docs/conventions/frontend.md:285 («Do NOT add per-component spinners») подтверждено: loadNextPageFx исключён из $isBlocking и на кнопке стоит CircularProgress; это сделано сознательно по FR-013c спеки, но в конвенции такого исключения нет, поэтому это мелкое расхождение, которое надо задокументировать или привести к общему правилу.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "deep-logic",
+      "title": "$isNextPageLoading не версионируется: после «Обновить» или перезагрузки во время подгрузки кнопка новой истории висит в состоянии загрузки",
+      "category": "logic",
+      "file": "frontend/src/pages/ReportsPage/model/incomeHistory.model.ts",
+      "line_start": 45,
+      "line_end": 45,
+      "snippet": "export const $isNextPageLoading = loadNextPageFx.pending;",
+      "rationale": "Ответ устаревшего loadNextPageFx отбрасывается по $historyVersion, но pending самого эффекта остаётся true, пока старый запрос не завершится. Поэтому после смены периода или reload через through (правка из попапа) кнопка «Показать ещё» новой истории показывает «Загружаем оплаты…», а isNextPageReady блокирует клик, хотя нужная загрузка не идёт. Спека требует, чтобы при смене периода во время подгрузки «загрузка прерывалась» и история начиналась с первой порции.",
+      "fix_hint": "Хранить версию активного запроса порции и считать загрузку из (pending && params.version === $historyVersion): например, отдельный стор $nextPageVersion, который обновляется при старте loadNextPageFx. Либо сбрасывать флаг загрузки на freshHistoryLoaded.",
+      "score": 50,
+      "verification_note": "Подтверждено по коду: $isNextPageLoading = loadNextPageFx.pending не версионируется, поэтому пока старый запрос порции не завершён, кнопка «Показать ещё» новой истории остаётся в состоянии загрузки и не кликабельна (isNextPageReady), хотя устаревший ответ затем отбрасывается по $historyVersion; это короткая самоустраняющаяся мелочь в редком сценарии смены периода или reload во время подгрузки.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "removed-behavior",
+      "title": "Перенос оплаты при отмене пишет receivedAmount без fallback на price, хотя диалог отмены показывает сумму с fallback",
+      "category": "logic",
+      "file": "backend/src/services/lessonUpdate/lessonUpdate.ts",
+      "line_start": 76,
+      "line_end": 79,
+      "snippet": "          data: {\n            isPaid: true,\n            paymentDate: existingLesson.paymentDate,\n            receivedAmount: existingLesson.receivedAmount,\n          },",
+      "rationale": "Раньше урок-получатель становился оплаченным, и его оплата учитывалась по стоимости. Теперь в него копируется сырой existingLesson.receivedAmount. Если у оплаченного урока receivedAmount = NULL (колонка nullable; так бывает, если строку записал старый бэкенд между `prisma migrate deploy` и `pm2 restart`), получатель станет isPaid=true с NULL и выпадет из «Поступлений», налога, «Оплачено за период» и FACT-зачёта комиссии (paidInRangeWhere / lessonsQuery фильтруют receivedAmount > 0). При этом getCancellationInfo.ts:51 в том же diff показывает пользователю `(lesson.receivedAmount ?? lesson.price)`: диалог обещает перенести N ₽, а фактически переносится ноль.",
+      "fix_hint": "Записывать тот же fallback, что показывает диалог: `receivedAmount: existingLesson.receivedAmount ?? existingLesson.price ?? 0`, и добавить регрессионный тест на отмену оплаченного урока с receivedAmount = null.",
+      "score": 25,
+      "verification_note": "Миграция бэкфилит COALESCE(price, 0) всем isPaid=true, а все живые пути записи isPaid=true (resolveReceivedAmount, testSupport) ставят receivedAmount, создание урока isPaid не задаёт; NULL возможен только у строк, записанных старым бэкендом между migrate deploy и restart, поэтому рассогласование с диалогом реальное, но крайне редкое.",
+      "reason": "below threshold"
+    }
+  ]
+}

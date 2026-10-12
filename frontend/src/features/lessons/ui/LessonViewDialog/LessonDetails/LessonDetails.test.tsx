@@ -168,6 +168,43 @@ describe("LessonDetails", () => {
     expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
   });
 
+  describe("received amount mark", () => {
+    it("should show the received amount next to the price when it differs", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1800 }} />
+      );
+
+      expect(screen.getByText(/^получено 1\s800\s₽$/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: /^Получено 1\s800\s₽, стоимость урока 1\s500\s₽$/ })
+      ).toBeInTheDocument();
+    });
+
+    it("should show nothing received for a paid lesson with zero received amount", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 0 }} />
+      );
+
+      expect(screen.getByText(/^получено 0\s₽$/)).toBeInTheDocument();
+    });
+
+    it("should not show the mark when the received amount equals the price", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1500 }} />
+      );
+
+      expect(screen.queryByText(/получено/i)).not.toBeInTheDocument();
+    });
+
+    it("should not show the mark for an unpaid lesson", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: false, receivedAmount: 1800 }} />
+      );
+
+      expect(screen.queryByText(/получено/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("tax-exempt switch", () => {
     const tutor = (taxEnabled: boolean): User => ({
       id: "user-1",

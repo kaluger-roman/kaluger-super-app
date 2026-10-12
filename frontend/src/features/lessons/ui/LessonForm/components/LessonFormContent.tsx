@@ -10,6 +10,7 @@ import { DateTimeSelector } from "./DateTimeSelector";
 import * as Styled from "./LessonFormContent.styled";
 import { LessonStatusSection } from "./LessonStatusSection";
 import { LessonStudentSection } from "./LessonStudentSection";
+import { PaidDetailsFields } from "./PaidDetailsFields";
 import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
 import { RecurringCheckbox } from "./RecurringCheckbox";
@@ -96,18 +97,12 @@ export const LessonFormContent = ({
           />
 
           {formData.isPaid && (
-            <Styled.DateFieldWrapper>
-              <TextField
-                label="Дата оплаты"
-                type="date"
-                fullWidth
-                value={formData.paymentDate || ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, paymentDate: e.target.value }))}
-                disabled={isLoading}
-                size={isMobile ? "small" : "medium"}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Styled.DateFieldWrapper>
+            <PaidDetailsFields
+              formData={formData}
+              isLoading={isLoading}
+              isMobile={isMobile}
+              setFormData={setFormData}
+            />
           )}
 
           <LessonStatusSection lesson={lesson} formData={formData} setFormData={setFormData} />

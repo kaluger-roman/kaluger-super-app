@@ -59,6 +59,7 @@ describe("GET /api/statistics with tax-exempt lessons", () => {
         status: data.status ?? "COMPLETED",
         isPaid,
         paymentDate: data.paymentDate === undefined && isPaid ? data.startTime : data.paymentDate,
+        receivedAmount: isPaid ? (data.price ?? 1000) : null,
         isTaxExempt: data.isTaxExempt ?? false,
       },
     });

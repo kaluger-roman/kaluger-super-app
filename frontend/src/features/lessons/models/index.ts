@@ -31,3 +31,8 @@ export const lessonsModel = {
 
 export * as lessonFormModel from "./lessonForm.model";
 export { lessonCancellationModel };
+export {
+  parseReceivedAmount,
+  toReceivedAmountInput,
+  validateReceivedAmount,
+} from "./receivedAmount.helpers";

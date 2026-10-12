@@ -52,6 +52,25 @@ export const shouldPropagateRecurringPrice = (
   existingLesson.status === "SCHEDULED" &&
   updateData.status !== "RESCHEDULED";
 
+export const resolveReceivedAmount = (
+  updateData: UpdateLessonDto,
+  existingLesson: Lesson
+): number | null | undefined => {
+  const wasPaid = existingLesson.isPaid;
+  const willPay = updateData.isPaid ?? wasPaid;
+
+  if (wasPaid && !willPay) {
+    return null;
+  }
+  if (!wasPaid && willPay) {
+    return updateData.receivedAmount ?? updateData.price ?? existingLesson.price?.toNumber() ?? 0;
+  }
+  if (wasPaid && willPay && updateData.receivedAmount !== undefined) {
+    return updateData.receivedAmount;
+  }
+  return undefined;
+};
+
 export const buildLessonUpdateData = (
   updateData: UpdateLessonDto,
   existingLesson: Lesson,
@@ -60,12 +79,15 @@ export const buildLessonUpdateData = (
 ): PreparedLessonUpdate => {
   const { start, end } = resolveUpdatedTimes(updateData, existingLesson);
   const computedStatus = computeUpdatedStatus(updateData, existingLesson, start, end, now);
+  const receivedAmount = resolveReceivedAmount(updateData, existingLesson);
+  const { receivedAmount: _rawReceivedAmount, ...fields } = updateData;
 
   return {
     start,
     end,
     dataToUpdate: {
-      ...updateData,
+      ...fields,
+      ...(receivedAmount !== undefined ? { receivedAmount } : {}),
       ...(updateData.startTime ? { startTime: start } : {}),
       ...(updateData.endTime ? { endTime: end } : {}),
       ...(computedStatus ? { status: computedStatus } : {}),

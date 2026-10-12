@@ -9,6 +9,7 @@ import {
   formatDate,
   LessonStudentName,
   CommissionBadge,
+  ReceivedAmountHint,
 } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -36,6 +37,13 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           <Typography variant="body1">
             💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
           </Typography>
+          {lesson.isPaid && (
+            <ReceivedAmountHint
+              receivedAmount={lesson.receivedAmount}
+              price={lesson.price}
+              variant="full"
+            />
+          )}
           <CommissionBadge credit={lesson.commissionCredit} variant="full" />
         </Styled.PriceGroup>
         <Styled.PaymentStatusBox>

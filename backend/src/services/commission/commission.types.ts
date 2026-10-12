@@ -12,6 +12,7 @@ export type CommissionLessonRow = {
   studentId: string | null;
   startTime: Date;
   price: Prisma.Decimal | null;
+  receivedAmount: Prisma.Decimal | null;
   status: LessonStatus;
   isPaid: boolean;
   paymentDate: Date | null;

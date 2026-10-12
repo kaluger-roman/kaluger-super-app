@@ -22,7 +22,7 @@ import { studentScheduleModel } from "@features/studentSchedule";
 import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
 import { tutorStudentInvitationModel } from "@features/tutorStudentInvitation";
 import { financesModel, profileModel } from "@pages/profile";
-import { statisticsModel } from "@pages/ReportsPage";
+import { incomeHistoryModel, incomeHistoryReloadModel, statisticsModel } from "@pages/ReportsPage";
 
 import { BLOCKING_OVERLAY_DELAY_MS } from "./blocking.constants";
 
@@ -49,6 +49,9 @@ export const $isBlocking = combine(
     updateStudent: studentModel.updateStudentFx.pending,
     removeStudent: studentModel.removeStudentFx.pending,
     loadStatistics: statisticsModel.loadStatisticsFx.pending,
+    // The «Показать ещё» page (loadNextPageFx) shows progress on its button only (FR-013c).
+    loadIncomeHistory: incomeHistoryModel.loadIncomeHistoryFx.pending,
+    openIncomeHistoryLesson: incomeHistoryReloadModel.openLessonFx.pending,
     updateProfile: profileModel.updateProfileFx.pending,
     subscribePush: notificationsModel.subscribePushFx.pending,
     unsubscribePush: notificationsModel.unsubscribePushFx.pending,

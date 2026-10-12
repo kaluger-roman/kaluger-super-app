@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { truncateToMinute } from "../../utils/time";
 import { collectCommissionStatistics } from "../commission";
-import { ACTIVE_STATUSES, DAY_MS } from "./statistics.constants";
+import { ACTIVE_STATUSES, DAY_MS, TAX_USER_SELECT } from "./statistics.constants";
 import { computeTaxSummary, decimalToNumber, paidInRangeWhere } from "./statistics.helpers";
 import type { LessonStatistics, LessonStatisticsInput } from "./statistics.types";
 
@@ -43,11 +43,11 @@ export const collectLessonStatistics = async ({
     prisma.lesson.count({ where }),
     prisma.lesson.aggregate({
       where: { ...where, isPaid: true, status: "COMPLETED" },
-      _sum: { price: true },
+      _sum: { receivedAmount: true },
     }),
     prisma.lesson.aggregate({
       where: { tutorId: userId, startTime: lastMonthRange, isPaid: true },
-      _sum: { price: true },
+      _sum: { receivedAmount: true },
     }),
     prisma.lesson.count({
       where: { ...where, status: { in: [...ACTIVE_STATUSES] } },
@@ -58,7 +58,7 @@ export const collectLessonStatistics = async ({
         isPaid: true,
         status: { in: [...ACTIVE_STATUSES] },
       },
-      _sum: { price: true },
+      _sum: { receivedAmount: true },
     }),
     prisma.lesson.aggregate({
       where: { ...where, tutorId: userId, status: { in: [...ACTIVE_STATUSES] } },
@@ -68,7 +68,7 @@ export const collectLessonStatistics = async ({
       where: { ...where, OR: [{ price: 0 }, { price: null }] },
     }),
     prisma.lesson.aggregate({
-      where: { ...where, status: "CANCELLED" },
+      where: { ...where, status: "CANCELLED", isPaid: false },
       _sum: { price: true },
     }),
     prisma.lesson.aggregate({
@@ -84,18 +84,9 @@ export const collectLessonStatistics = async ({
     prisma.lesson.aggregate({
       where: paidInRangeWhere(userId, paymentDateRange),
       _count: { id: true },
-      _sum: { price: true },
+      _sum: { receivedAmount: true },
     }),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        taxEnabled: true,
-        taxRatePeriods: {
-          orderBy: { startDate: "asc" },
-          select: { id: true, startDate: true, rate: true },
-        },
-      },
-    }),
+    prisma.user.findUnique({ where: { id: userId }, select: TAX_USER_SELECT }),
     collectCommissionStatistics(userId, paymentDateRange),
   ]);
 
@@ -104,7 +95,7 @@ export const collectLessonStatistics = async ({
         where: paidInRangeWhere(userId, paymentDateRange),
         // Tax is normally assigned by paymentDate; if it's missing we use
         // startTime as the effective date (legacy lessons fallback).
-        select: { price: true, paymentDate: true, startTime: true, isTaxExempt: true },
+        select: { receivedAmount: true, paymentDate: true, startTime: true, isTaxExempt: true },
       })
     : null;
 
@@ -113,17 +104,17 @@ export const collectLessonStatistics = async ({
     cancelledLessons,
     totalLessons,
     upcomingLessons,
-    earnings: decimalToNumber(earnings._sum.price),
-    lastMonthEarnings: decimalToNumber(lastMonthEarnings._sum.price),
+    earnings: decimalToNumber(earnings._sum.receivedAmount),
+    lastMonthEarnings: decimalToNumber(lastMonthEarnings._sum.receivedAmount),
     lostEarnings: decimalToNumber(lostEarnings._sum.price),
-    prepaidIncome: decimalToNumber(prepaidIncome._sum.price),
+    prepaidIncome: decimalToNumber(prepaidIncome._sum.receivedAmount),
     upcomingIncome: decimalToNumber(upcomingIncome._sum.price),
     trialLessonsCount: trialLessonsCount || 0,
     unpaidDebtSum: decimalToNumber(unpaid._sum.price),
     unpaidDebtCount: unpaid._count.id || 0,
     unpaidDebtOver24hSum: decimalToNumber(unpaidOver24h._sum.price),
     unpaidDebtOver24hCount: unpaidOver24h._count.id || 0,
-    paymentsInRangeSum: decimalToNumber(paymentsInRange._sum.price),
+    paymentsInRangeSum: decimalToNumber(paymentsInRange._sum.receivedAmount),
     paymentsInRangeCount: paymentsInRange._count.id || 0,
     ...commission,
     ...computeTaxSummary(currentUser, paidLessonsForTax, paymentDateRange),

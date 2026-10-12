@@ -1,0 +1,1 @@
+export { IncomeHistoryRow } from "./IncomeHistoryRow";

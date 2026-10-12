@@ -28,6 +28,7 @@ const mockFormData: LessonFormData = {
   paymentDate: undefined,
   isHomeworkSentByTeacher: false,
   isTaxExempt: false,
+  receivedAmount: "",
   homework: "",
   notes: "",
   isRecurring: false,

@@ -60,6 +60,7 @@ export type LessonSeed = {
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
   isPaid?: boolean;
   paymentDate?: string | Date | null;
+  receivedAmount?: number;
   isRecurring?: boolean;
   isTaxExempt?: boolean;
   subject?: "MATHEMATICS" | "PHYSICS";
@@ -97,6 +98,7 @@ export const patchLesson = async (
     status: string;
     isPaid: boolean;
     paymentDate: string | Date | null;
+    receivedAmount: number;
   }>
 ): Promise<void> => {
   await apiRequest(`/api/__test__/lessons/${id}`, {
@@ -168,6 +170,7 @@ export const getLessonsFor = async (
     isPaid: boolean;
     paymentDate: string | null;
     price: string | number | null;
+    receivedAmount: string | number | null;
     isRecurring: boolean;
     isTaxExempt: boolean;
     studentId: string | null;

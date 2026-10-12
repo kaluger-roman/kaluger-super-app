@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-12T12:17:43Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 206,
+    "insertions": 8394,
+    "deletions": 275
+  },
+  "summary": {
+    "raw_findings": 2,
+    "after_dedup": 2,
+    "after_score_filter": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 1
+    },
+    "by_category": {
+      "claude-md": 1,
+      "type": 1
+    },
+    "agents_failed": [],
+    "agents_empty": [
+      "shallow-bug",
+      "deep-logic",
+      "security",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Новый statisticsApi.getIncomeHistory и тела эффектов loadIncomeHistoryFx/loadNextPageFx не покрыты unit-тестами",
+      "category": "claude-md",
+      "file": "frontend/src/shared/api/statistics.ts",
+      "line_start": 12,
+      "line_end": 17,
+      "snippet": "  getIncomeHistory: (params: {\n    startDate?: string;\n    endDate?: string;\n    before?: string;\n    through?: string;\n  }) => api.get<IncomeHistory>(\"/statistics/income-history\", { params }),",
+      "rationale": "CLAUDE.md:125 («All new code must have full test coverage») и CLAUDE.md:127 («unit tests for Effector models (stores, effects, events)»). В frontend/src/shared/api/__tests__/statistics.test.ts на каждый метод statisticsApi есть тест (getStatistics, getLessonsBySubject и т. д.): проверяются путь и params, которые уходят в api.get. Этот файл в диффе не менялся, поэтому у нового getIncomeHistory теста нет. Тела эффектов в frontend/src/pages/ReportsPage/model/incomeHistory.model.ts:40-52 тоже ни разу не выполняются: во всех тестах моделей и компонентов (incomeHistory.model.test, incomeHistoryReload.model.test, ReportsPage.test, blocking.model.test, IncomeHistory.test) loadIncomeHistoryFx и loadNextPageFx подменены через fork handlers. Не проверено, что первая порция отправляет только startDate/endDate/through, а «Показать ещё» отправляет только startDate/endDate/before, без version и без пары before+through. Пара before+through даёт на бэкенде 400 «Некорректная позиция продолжения истории». То же с openLessonFx в incomeHistoryReload.model.ts: в тестах он тоже всегда замокан.",
+      "fix_hint": "Добавить describe(\"getIncomeHistory\") в frontend/src/shared/api/__tests__/statistics.test.ts по образцу соседних: проверить вызов api.get с \"/statistics/income-history\" и { params }. В incomeHistory.model.test.ts добавить тесты эффектов с vi.mock статистического API (или vi.spyOn(statisticsApi, \"getIncomeHistory\")): loadIncomeHistoryFx передаёт { startDate, endDate, through } без version, loadNextPageFx передаёт { startDate, endDate, before } без through и возвращает response.data.",
+      "score": 75,
+      "verification_note": "Подтверждено в worktree: в frontend/src/shared/api/__tests__/statistics.test.ts есть describe для getStatistics, getLessonsBySubject, getLessonsByType и getStudentStatistics, но нет getIncomeHistory, и нигде в тестах он не вызывается и не подменяется через spyOn; тела loadIncomeHistoryFx/loadNextPageFx (incomeHistory.model.ts:40-52) во всех тестах заменены fork-обработчиками, поэтому пара params (through для первой порции, before без through для «Показать ещё») не проверяется; openLessonFx в incomeHistoryReload.model.ts тоже подменяется везде; это явное нарушение правила CLAUDE.md «All new code must have full test coverage», хотя текущий код выглядит корректным, поэтому не 100.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "type-safety",
+      "title": "Несостоятельный type predicate `receivedAmount is number` в публичном isReceivedAmountMismatch",
+      "category": "type",
+      "file": "frontend/src/shared/ui/ReceivedAmountHint/ReceivedAmountHint.helpers.ts",
+      "line_start": 7,
+      "line_end": 13,
+      "snippet": "export const isReceivedAmountMismatch = (\n  receivedAmount: number | null | undefined,\n  price: number | null | undefined\n): receivedAmount is number =>\n  receivedAmount !== null &&",
+      "rationale": "Функция возвращает false и тогда, когда receivedAmount является числом, равным price. TypeScript же в ветке false сужает receivedAmount до `null | undefined`, то есть предикат лжёт компилятору. Сейчас единственный вызов (ReceivedAmountHint.tsx:33, `if (!isReceivedAmountMismatch(...)) return null;`) использует только ветку true, поэтому бага в рантайме нет. Но хелпер экспортирован как публичный API `@shared/ui` (shared/ui/index.ts:23), и любой будущий код вида `if (!isReceivedAmountMismatch(a, p)) { ... a ... }` или `else if (a != null)` получит неверный тип (never или null|undefined) у реальной суммы. Проблема латентная, impact низкий.",
+      "fix_hint": "Вернуть обычный `boolean` и сузить тип на месте вызова (`if (receivedAmount == null || !isReceivedAmountMismatch(receivedAmount, price)) return null;` с сигнатурой `(receivedAmount: number, price?: number | null) => boolean`), либо не экспортировать хелпер из `@shared/ui`, раз снаружи он не используется.",
+      "score": 50,
+      "verification_note": "Предикат действительно лжив: при receivedAmount, равном price (число), функция возвращает false, и TS сужает значение в ветке false до null|undefined; единственный вызов ReceivedAmountHint.tsx:33 использует только ветку true, поэтому рантайм-бага нет, а хелпер экспортирован через @shared/ui (shared/ui/index.ts:23), что делает проблему латентной и редкой по последствиям.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": []
+}

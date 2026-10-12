@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 4,
+  "timestamp": "2026-10-12T15:32:10Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 208,
+    "insertions": 8500,
+    "deletions": 275
+  },
+  "summary": {
+    "raw_findings": 3,
+    "after_dedup": 3,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 1
+    },
+    "by_category": {
+      "bug": 1,
+      "claude-md": 1,
+      "logic": 1
+    },
+    "agents_failed": [],
+    "agents_empty": [
+      "security",
+      "shallow-bug",
+      "type-safety",
+      "removed-behavior",
+      "wrapper-proxy"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Тест blocking.model «does not block while the next income history page is loading» сломан версионированием $isNextPageLoading (фикс итерации 1)",
+      "category": "bug",
+      "file": "frontend/src/app/model/__tests__/blocking.model.test.ts",
+      "line_start": 49,
+      "line_end": 62,
+      "snippet": "      params: { startDate: \"a\", endDate: \"b\", before: \"2026-09-20\", version: 1 },\n    });\n    await new Promise((resolve) => setTimeout(resolve, 0));\n\n    expect(scope.getState(incomeHistoryModel.$isNextPageLoading)).toBe(true);",
+      "rationale": "После фикса #5 $isNextPageLoading = combine($nextPageVersion, $historyVersion, (pageVersion, version) => pageVersion === version) (incomeHistory.model.ts:31-35). В этом тесте fork создаётся без values, поэтому $historyVersion остаётся 0 (createStore(0)), а loadNextPageFx вызывается с version: 1. sample по клику loadNextPageFx пишет 1 в $nextPageVersion, и выходит 1 === 0, то есть false. Утверждение toBe(true) в строке 60 падает, и npm test во frontend краснеет. Остальные тесты под новую семантику обновлены: IncomeHistory.test.tsx задаёт [$historyVersion, 1], incomeHistory.model.test.ts передаёт version: 1 в createScope. Этот файл (mtime 10:02, раньше правок модели) остался на старой семантике. Заодно проверка $isBlocking === false теряет смысл: она проходила бы и при неактивной загрузке.",
+      "fix_hint": "В fork этого теста добавить values: [[incomeHistoryModel.$historyVersion, 1]] (или передавать version: 0), чтобы версия запроса совпадала с текущей версией истории. После этого $isNextPageLoading действительно будет true и тест проверит, что подгрузка порции не включает $isBlocking.",
+      "score": 80,
+      "severity": "high",
+      "verification_note": "В fork без values $historyVersion остаётся createStore(0), а sample с clock: loadNextPageFx пишет version: 1 в $nextPageVersion synchronously при вызове эффекта в scope, поэтому $isNextPageLoading = (1 === 0) = false и toBe(true) в строке 60 падает; это детерминированный провал теста ветки, но не прод-баг, поэтому оценка ниже 100."
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Исправление вложенного <p> в описании ConfirmStatusDialog без регрессионного теста",
+      "category": "claude-md",
+      "file": "frontend/src/shared/ui/ConfirmStatusDialog/ConfirmStatusDialog.tsx",
+      "line_start": 68,
+      "line_end": 68,
+      "snippet": "        {description && <Typography component=\"div\">{description}</Typography>}",
+      "rationale": "Диф чинит существующий баг с недопустимой вложенностью DOM. LessonStatusIcons передаёт в description фрагмент с Styled.DialogContent (div) и Typography (p), а ConfirmStatusDialog оборачивал его в Typography, то есть в <p>. Отсюда <p>/<div> внутри <p> и предупреждение React validateDOMNesting. CHANGELOG прямо записывает это как исправление: «описание рендерится в `div`, без вложенного `<p>` в `<p>`». CLAUDE.md:126 требует: «Bug fixes: always add a regression test covering the specific scenario being fixed». В ConfirmStatusDialog.test.tsx добавлены только тесты для confirmDisabled. Ни один тест в ConfirmStatusDialog, LessonStatusIcons или PaymentStatus не проверяет, что описание рендерится не в <p> (grep по tagName/nodeName/closest(\"p\")/validateDOMNesting ничего не находит). Если component=\"div\" уберут, ни один тест не упадёт.",
+      "fix_hint": "Добавить в ConfirmStatusDialog.test.tsx регрессионный тест. Например, отрендерить диалог с description, содержащим блочный элемент (<div>/Typography), и проверить, что screen.getByText(...).closest(\"p\") равно null или что обёртка описания является DIV. Как вариант, проверить, что console.error не вызывается с validateDOMNesting.",
+      "score": 75,
+      "severity": "high",
+      "verification_note": "Фикс реален: в diff `<Typography>` заменён на `<Typography component=\"div\">` и CHANGELOG.md (строка 21) записывает это как исправление вложенного `<p>`, а CLAUDE.md (Testing Requirements) прямо требует регрессионный тест для багфиксов; в ConfirmStatusDialog.test.tsx добавлены только тесты confirmDisabled, в LessonStatusIcons и PaymentStatus добавленные строки diff не содержат проверок вложенности DOM (validateDOMNesting, closest('p'), tagName), поэтому тест на сценарий отсутствует и откат component=\"div\" ни один тест не уронит."
+    },
+    {
+      "id": "f3",
+      "agent": "cross-file",
+      "title": "Перезагрузка отчётов по updateLessonFx.done срабатывает и от WebSocket-эха статуса: карточки и вся загруженная глубина истории перезапрашиваются при каждом старте или завершении урока кроном",
+      "category": "logic",
+      "file": "frontend/src/pages/ReportsPage/model/incomeHistoryReload.model.ts",
+      "line_start": 44,
+      "line_end": 48,
+      "snippet": "const reloadRequested = sample({\n  clock: [reportsReloadRequested, lessonModel.updateLessonFx.done, lessonModel.removeLessonFx.done],\n  source: statisticsModel.ReportsPageGate.status,\n  filter: Boolean,\n});",
+      "rationale": "Перезагрузка подписана на lessonModel.updateLessonFx.done в расчёте, что этот эффект запускают только действия из попапа и формы (research R12). Но тот же эффект запускает и app/model/webSocket.model.ts:112-122: на каждое lesson_status_updated фронт сам шлёт PUT /lessons/:id { status }. Такое событие backend рассылает в двух местах. Первое: lessonStatusUpdater.ts:98/102, на каждый переход урока в IN_PROGRESS и COMPLETED, кроном раз в минуту. Второе: notifyLessonUpdated (lessonUpdate.ts:153), на любую смену статуса самим репетитором, в том числе в эту же вкладку. Итог: пока открыта страница отчётов, каждое начало и окончание любого урока запускает loadStatisticsFx и loadIncomeHistoryFx с through, то есть все дни до последнего загруженного. Оба эффекта входят в $isBlocking (blocking.model.ts), так что на длинной истории (SC-009, год и 1000 оплат) запрос дольше BLOCKING_OVERLAY_DELAY_MS = 300 мс, и общий оверлей закрывает список, который репетитор листает. FR-013c прямо запрещает такой оверлей при листании, а R19 заявляет, что «Отчёты не подписаны на WS». Отмена или восстановление урока из попапа дают две перезагрузки подряд: от своего PUT и от WS-эха.",
+      "fix_hint": "Перезагружать только по действиям пользователя. Вариант 1: вынести обработку WS-статуса в webSocket.model.ts в отдельный эффект или событие, а не в общий lessonModel.updateLesson. Вариант 2: завести в features/lessons отдельное событие «урок изменён пользователем» (оплата, форма, отмена, восстановление, перенос, удаление) и подписать incomeHistoryReload на него, а не на updateLessonFx.done. Добавить тест модели: handleLessonStatusUpdate при открытом ReportsPageGate не вызывает loadIncomeHistoryFx и loadStatisticsFx.",
+      "score": 70,
+      "severity": "medium",
+      "verification_note": "Механика подтверждена по коду: WS-обработчик webSocket.model.ts передаёт статус в lessonModel.updateLesson, а тот через api.model.ts:195-197 запускает updateLessonFx, и на его .done срабатывает reloadRequested, пока ReportsPageGate открыт; backend шлёт lesson_status_updated тьютору и по крону при переходах IN_PROGRESS/COMPLETED (lessonStatusUpdater), и на собственную смену статуса (notifyLessonUpdated), так что эхо на той же вкладке реально приходит и даёт двойной PUT с перезагрузкой; loadStatisticsFx и loadIncomeHistoryFx входят в $isBlocking (blocking.model.ts:51,53). Но тяжесть частично завышена: оверлей появляется только если перезагрузка длится дольше 300 мс, то есть на длинной истории, а FR-013c относится к кнопке «Показать ещё», а не к фоновой перезагрузке, поэтому утверждение о прямом нарушении спеки опирается на натяжку; R19 в research.md действительно противоречит глобальному WS-обработчику, что тоже стоит отметить."
+    }
+  ],
+  "filtered_out": []
+}

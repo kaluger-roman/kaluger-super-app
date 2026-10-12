@@ -13,6 +13,7 @@ const LESSON_SELECT = {
   studentId: true,
   startTime: true,
   price: true,
+  receivedAmount: true,
   status: true,
   isPaid: true,
   paymentDate: true,
@@ -25,6 +26,7 @@ const toAllocatorInput = (lesson: CommissionLessonRow): CommissionLessonInput =>
   startTime: lesson.startTime,
   paymentDate: lesson.paymentDate,
   price: toAmount(lesson.price),
+  receivedAmount: toAmount(lesson.receivedAmount),
   status: lesson.status,
   isPaid: lesson.isPaid,
 });

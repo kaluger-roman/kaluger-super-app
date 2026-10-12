@@ -34,6 +34,7 @@ describe("commission statistics", () => {
     month,
     day,
     price = 1000,
+    receivedAmount = price,
     isPaid = true,
     paymentMonth,
     paymentDay,
@@ -42,6 +43,7 @@ describe("commission statistics", () => {
     month: number;
     day: number;
     price?: number;
+    receivedAmount?: number;
     isPaid?: boolean;
     paymentMonth?: number;
     paymentDay?: number;
@@ -55,6 +57,7 @@ describe("commission statistics", () => {
         price,
         status: isPaid ? "COMPLETED" : "SCHEDULED",
         isPaid,
+        receivedAmount: isPaid ? receivedAmount : null,
         ...(isPaid
           ? {
               paymentDate: new Date(
@@ -213,6 +216,39 @@ describe("commission statistics", () => {
       await prisma.taxRatePeriod.delete({ where: { id: period.id } });
       await prisma.user.update({ where: { id: userId }, data: { taxEnabled: false } });
     }
+  });
+
+  it("should write off the commission by the received amount, not the price", async () => {
+    const student = await createStudent(3000);
+    await createLesson({
+      studentId: student.id,
+      month: 2,
+      day: 5,
+      price: 3000,
+      receivedAmount: 1500,
+    });
+
+    const statistics = await getStatistics(MARCH_RANGE);
+    const studentsResponse = await request(app)
+      .get("/api/students")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(statistics.commissionWrittenOffSum).toBe(1500);
+    expect(statistics.commissionRemainingTotal).toBe(1500);
+    const [body] = studentsResponse.body.students;
+    expect(body.commissionRepaid).toBe(1500);
+    expect(body.commissionRemaining).toBe(1500);
+  });
+
+  it("should not write off anything for a paid lesson that received nothing", async () => {
+    const student = await createStudent(3000);
+    await createLesson({ studentId: student.id, month: 2, day: 5, price: 3000, receivedAmount: 0 });
+
+    const statistics = await getStatistics(MARCH_RANGE);
+
+    expect(statistics.commissionWrittenOffSum).toBe(0);
+    expect(statistics.commissionRemainingTotal).toBe(3000);
   });
 
   it("should sum the remaining commission over non-archived students only", async () => {

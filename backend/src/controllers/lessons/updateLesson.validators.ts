@@ -1,7 +1,20 @@
 import type { Lesson } from "@prisma/client";
 import type { UpdateLessonDto } from "../../types";
 import { truncateToMinute } from "../../utils/time";
-import { CONTACT_METHODS, TAX_EXEMPT_INVALID_ERROR } from "./validators";
+import {
+  CONTACT_METHODS,
+  MAX_RECEIVED_AMOUNT,
+  RECEIVED_AMOUNT_INVALID_ERROR,
+  RECEIVED_AMOUNT_UNPAID_ERROR,
+  TAX_EXEMPT_INVALID_ERROR,
+} from "./validators";
+
+const isValidReceivedAmount = (value: unknown): boolean =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 0 &&
+  value <= MAX_RECEIVED_AMOUNT &&
+  Math.abs(Math.round(value * 100) - value * 100) <= 1e-6;
 
 export const validateUpdateData = (updateData: UpdateLessonDto, existingLesson: Lesson) => {
   if (updateData.startTime || updateData.endTime) {
@@ -37,6 +50,15 @@ export const validateUpdateData = (updateData: UpdateLessonDto, existingLesson: 
 
   if (updateData.isTaxExempt !== undefined && typeof updateData.isTaxExempt !== "boolean") {
     return { isValid: false, error: TAX_EXEMPT_INVALID_ERROR };
+  }
+
+  if (updateData.receivedAmount !== undefined) {
+    if (!isValidReceivedAmount(updateData.receivedAmount)) {
+      return { isValid: false, error: RECEIVED_AMOUNT_INVALID_ERROR };
+    }
+    if ((updateData.isPaid ?? existingLesson.isPaid) !== true) {
+      return { isValid: false, error: RECEIVED_AMOUNT_UNPAID_ERROR };
+    }
   }
 
   if ("studentId" in updateData && !updateData.studentId) {

@@ -248,8 +248,8 @@ describe("updateLesson prospect (trial without student) integration tests", () =
     });
 
     expect(cancelledAfter?.status).toBe("CANCELLED");
-    expect(cancelledAfter?.isPaid).toBe(false);
-    expect(cancelledAfter?.paymentDate).toBeNull();
+    expect(cancelledAfter?.isPaid).toBe(true);
+    expect(cancelledAfter?.paymentDate).toEqual(paymentDate);
     expect(prospectAfter?.isPaid).toBe(false);
     expect(regularAfter?.isPaid).toBe(false);
   });

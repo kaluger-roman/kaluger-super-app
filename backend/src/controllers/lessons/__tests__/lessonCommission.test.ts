@@ -41,6 +41,7 @@ describe("lesson commission credit", () => {
         price,
         status,
         isPaid,
+        receivedAmount: isPaid ? (price ?? 0) : null,
         ...(isPaid ? { paymentDate: new Date(Date.UTC(2026, 2, day, 12, 0, 0)) } : {}),
         ...(studentId ? {} : { prospectName: "Кандидат" }),
       },
