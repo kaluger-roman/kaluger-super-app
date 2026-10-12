@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateAdminToken, generateToken, hashPassword } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -94,7 +95,7 @@ describe("admin integration tests", () => {
     beforeAll(async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },

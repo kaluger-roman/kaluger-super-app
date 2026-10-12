@@ -3,6 +3,7 @@ import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("deleteLesson controller", () => {
   let authToken: string;
@@ -13,7 +14,7 @@ describe("deleteLesson controller", () => {
     // create test user
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed_password",
         name: faker.person.fullName(),
       },

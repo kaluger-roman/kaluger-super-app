@@ -26,6 +26,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - На каждое начало и окончание урока и на собственную смену статуса фронт отправлял обратно `PUT {status}`: отсюда второй одинаковый запрос при отмене урока, лишнее уведомление «Урок обновлен» и общий оверлей
 - Форма «Редактировать урок» не закрывалась после успешного «Обновить урок»
 - В форме завершённого урока поле «Ученик» было пустым, если ученик не в архиве
+- Параллельный первый вызов `getBackupSettings` мог упасть с `P2002`: `upsert` в Prisma 6 делает select-then-insert и не атомарен. Проигравший гонку вызов теперь перечитывает строку-синглтон, как уже сделано в `getReminderSettings`
+
+### Infrastructure
+- Локальный backend `npm test` ходил в dev-базу из `backend/.env`, а не в `tutor_test`: импорты в `setup.ts` поднимаются выше вызова dotenv, Prisma-клиент успевал загрузить `backend/.env`, а `.env.test` грузился без `override`. Тесты зависели от состояния dev-базы (после новых миграций падали десятки сьютов) и чистили в ней `news` и `backup_settings`. Env теперь грузится в jest `setupFiles` (`src/__tests__/loadTestEnv.ts`) с `override`; регрессионный тест `testEnv.test.ts` сверяет базу подключения с `.env.test`. CI не затронут: там `.env.test` нет и `DATABASE_URL` задаёт workflow
+- Правила параллельно-безопасных тестов (`uniqueEmail`, `CronScope`, `acquireGlobalTestLock`, явный период, отдельная тестовая база) записаны в `docs/conventions/backend-testing.md`, шаблон интеграционного теста больше не использует `faker.internet.email()`
+- Флакающие backend-тесты стабилизированы (5 полных параллельных прогонов подряд без падений):
+  - кроны `processRecurringLessons`, `updateLessonStatuses` и `processScheduledReminders` принимают необязательный `CronScope` (`{ tutorIds }`). Тесты передают свои id, поэтому крон из одного файла больше не достраивает серии, не переключает статусы и не забирает напоминания у уроков соседних файлов (так падал `deleteLesson` «deleteAllFuture…»). Продовые cron-тики работают без scope, как раньше;
+  - три файла, которые делят строку `backup_settings`, сериализуются через Postgres advisory lock (`acquireGlobalTestLock` в `backend/src/__tests__/helpers`);
+  - в `NODE_ENV=test` bcrypt хеширует с cost 4 вместо 12. Под параллельной нагрузкой это снимает таймауты bcrypt-сьютов и `reminderProcessor`;
+  - тестовые email генерируются через `uniqueEmail()` со случайным доменом: глобально уникальные `User.email` и `StudentUser.email` больше не ловят коллизии faker;
+  - `getStatistics` «unpaid over 24h» и «upcoming» передают явный период и больше не падают 1–2 числа и вечером последнего дня месяца; `recurringHelpers` «stable recurring key» выравнивает `now` по минуте; `lessonReminders` ждёт асинхронного создания напоминаний опросом, а не фиксированной паузой 200 мс; тест батча из 100 напоминаний получил таймаут 30 с
 
 ## 2026-10-11
 

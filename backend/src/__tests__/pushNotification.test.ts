@@ -6,6 +6,7 @@ import {
   formatReminderTitle,
   formatReminderBody,
 } from "../services/pushNotification";
+import { uniqueEmail } from "./helpers";
 
 jest.mock("web-push", () => ({
   setVapidDetails: jest.fn(),
@@ -22,7 +23,7 @@ describe("pushNotification service", () => {
 
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },

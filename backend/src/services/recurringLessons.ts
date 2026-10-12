@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { groupRecurringLessonsByPattern } from "./recurringHelpers";
-import type { LessonSlot } from "../types";
+import type { CronScope, LessonSlot } from "../types";
 import { truncateToMinute } from "../utils/time";
 
 // Module-level guard prevents two ticks (manual trigger overlapping the
@@ -11,7 +11,7 @@ let recurringRunning = false;
 const overlaps = (slots: LessonSlot[], start: Date, end: Date): boolean =>
   slots.some((s) => s.startTime < end && s.endTime > start);
 
-export const processRecurringLessons = async () => {
+export const processRecurringLessons = async (scope?: CronScope) => {
   if (recurringRunning) {
     console.log("Skipping recurring lessons run: previous tick still active");
     return;
@@ -25,6 +25,7 @@ export const processRecurringLessons = async () => {
       where: {
         isRecurring: true,
         status: "SCHEDULED",
+        ...(scope && { tutorId: { in: scope.tutorIds } }),
       },
       include: {
         student: true,

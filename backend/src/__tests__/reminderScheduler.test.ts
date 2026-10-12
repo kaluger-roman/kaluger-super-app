@@ -6,6 +6,7 @@ import {
   recalculateRemindersForUser,
   cancelAllPendingReminders,
 } from "../services/reminderScheduler";
+import { uniqueEmail } from "./helpers";
 
 describe("reminderScheduler service", () => {
   let userId: string;
@@ -14,7 +15,7 @@ describe("reminderScheduler service", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },

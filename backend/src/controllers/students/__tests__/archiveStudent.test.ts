@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("Student Archiving", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("Student Archiving", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed_password",
         name: faker.person.fullName(),
       },

@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 const MARCH_RANGE = {
   startDate: new Date(Date.UTC(2026, 2, 1, 0, 0, 0)).toISOString(),
@@ -80,7 +81,7 @@ describe("commission statistics", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },

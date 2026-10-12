@@ -1,11 +1,11 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 
 import { app } from "../../index";
 import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils";
 import { generateToken } from "../../utils/auth";
 import { issueInvitation } from "../../services/studentInvitation";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../../services/email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -25,7 +25,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     if (!process.env.FRONTEND_URL) process.env.FRONTEND_URL = "http://localhost:3000";
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: await hashPassword(VALID_PASSWORD),
         name: "Тутор Тестов",
         isEmailVerified: true,
@@ -67,7 +67,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("rejects non-owner tutor with 403", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Другой",
           isEmailVerified: true,
@@ -87,7 +87,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("rejects with 409 if student already has an account", async () => {
       await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Реги",
           studentId,
@@ -139,7 +139,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("returns 403 for non-owner tutor", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Чужой",
           isEmailVerified: true,
@@ -178,7 +178,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns registered when student already has an account", async () => {
-      const email = faker.internet.email().toLowerCase();
+      const email = uniqueEmail().toLowerCase();
       await prisma.studentUser.create({
         data: { email, password: "hash", name: "Реги", studentId },
       });
@@ -209,7 +209,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("returns 403 for non-owner tutor", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Чужой",
           isEmailVerified: true,
@@ -254,7 +254,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       const issued = await issueInvitation(tutorId, studentId);
       if (!issued.ok) throw new Error("issue failed");
       const token = issued.inviteUrl.split("/").pop();
-      const email = faker.internet.email().toLowerCase();
+      const email = uniqueEmail().toLowerCase();
 
       const res = await request(app).post("/api/student-auth/register").send({
         token,
@@ -276,7 +276,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       await request(app).post("/api/student-auth/register").send({
         token,
         name: "Петя",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -284,7 +284,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       const res = await request(app).post("/api/student-auth/register").send({
         token,
         name: "Петя2",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -347,7 +347,7 @@ describe("studentAuth + studentInvitations controllers", () => {
 
       await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Реги",
           studentId,

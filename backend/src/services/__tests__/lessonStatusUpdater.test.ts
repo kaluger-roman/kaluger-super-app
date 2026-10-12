@@ -34,6 +34,48 @@ describe("updateLessonStatuses", () => {
     jest.clearAllMocks();
   });
 
+  it("should not touch lessons of tutors outside the scope", async () => {
+    const now = truncateToMinute(new Date());
+    const [inScope, outOfScope] = await Promise.all(
+      ["in", "out"].map((tag) =>
+        prisma.user.create({
+          data: {
+            email: `test+scope-${tag}+${Date.now()}@example.com`,
+            password: "test",
+            name: "Test User",
+          },
+        })
+      )
+    );
+    createdUserIds.push(inScope.id, outOfScope.id);
+    mockedGetWs.mockReturnValue({ broadcastLessonStatusUpdate: jest.fn() } as any);
+
+    const [inScopeLesson, outOfScopeLesson] = await Promise.all(
+      [inScope, outOfScope].map((tutor) =>
+        prisma.lesson.create({
+          data: {
+            tutorId: tutor.id,
+            subject: "MATHEMATICS",
+            lessonType: "EGE",
+            status: "SCHEDULED",
+            startTime: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+            endTime: new Date(now.getTime() - 60 * 60 * 1000),
+          },
+        })
+      )
+    );
+
+    await updateLessonStatuses({ tutorIds: [inScope.id] });
+
+    const [inScopeAfter, outOfScopeAfter] = await Promise.all(
+      [inScopeLesson, outOfScopeLesson].map((lesson) =>
+        prisma.lesson.findUniqueOrThrow({ where: { id: lesson.id } })
+      )
+    );
+    expect(inScopeAfter.status).toBe("COMPLETED");
+    expect(outOfScopeAfter.status).toBe("SCHEDULED");
+  });
+
   it("should move SCHEDULED lesson to IN_PROGRESS and broadcast", async () => {
     const now = truncateToMinute(new Date());
 
@@ -74,7 +116,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    const result = await updateLessonStatuses();
+    const result = await updateLessonStatuses({ tutorIds: createdUserIds });
 
     expect(result.startedLessons).toBeGreaterThanOrEqual(1);
 
@@ -149,7 +191,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    const result = await updateLessonStatuses();
+    const result = await updateLessonStatuses({ tutorIds: createdUserIds });
 
     expect(result.completedLessons).toBeGreaterThanOrEqual(2);
 
@@ -207,7 +249,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    const result = await updateLessonStatuses();
+    const result = await updateLessonStatuses({ tutorIds: createdUserIds });
 
     expect(result.startedLessons).toBeGreaterThanOrEqual(1);
 
@@ -256,7 +298,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    const result = await updateLessonStatuses();
+    const result = await updateLessonStatuses({ tutorIds: createdUserIds });
 
     expect(result.completedLessons).toBeGreaterThanOrEqual(1);
 
@@ -317,7 +359,7 @@ describe("updateLessonStatuses", () => {
       broadcastLessonStatusUpdate: broadcastMock,
     } as any);
 
-    await updateLessonStatuses();
+    await updateLessonStatuses({ tutorIds: createdUserIds });
 
     // completedLessons and startedLessons should not count these
     const updatedCancelled = await prisma.lesson.findUnique({
@@ -402,7 +444,7 @@ describe("updateLessonStatuses", () => {
       return exec();
     }) as never);
 
-    await updateLessonStatuses();
+    await updateLessonStatuses({ tutorIds: createdUserIds });
 
     updateManySpy.mockRestore();
 
@@ -449,7 +491,7 @@ describe("updateLessonStatuses", () => {
     // Simulate no WS manager
     mockedGetWs.mockReturnValue(undefined as any);
 
-    await updateLessonStatuses();
+    await updateLessonStatuses({ tutorIds: createdUserIds });
 
     const updated = await prisma.lesson.findUnique({
       where: { id: lesson.id },

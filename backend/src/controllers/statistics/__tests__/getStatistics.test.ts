@@ -3,6 +3,7 @@ import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("getStatistics controller", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("getStatistics controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -301,8 +302,13 @@ describe("getStatistics controller", () => {
       },
     });
 
+    // Explicit range: the default current-month range misses a lesson from two days ago on the 1st-2nd
     await request(app)
       .get(`/api/statistics`)
+      .query({
+        startDate: new Date(twoDaysAgoStart.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+        endDate: now.toISOString(),
+      })
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
@@ -366,8 +372,13 @@ describe("getStatistics controller", () => {
       },
     });
 
+    // Explicit range: late on the last day of a month the +2h lesson falls outside the default month range
     await request(app)
       .get(`/api/statistics`)
+      .query({
+        startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        endDate: new Date(inTwoHoursStart.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      })
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {

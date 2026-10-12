@@ -1,10 +1,10 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 
 import { app } from "../../index";
 import { prisma } from "../../lib/prisma";
 import { generateToken } from "../../utils/auth";
 import { generateStudentToken } from "../../utils/studentAuth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../../services/email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -24,7 +24,7 @@ describe("studentCabinet controller", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Учитель",
         isEmailVerified: true,
@@ -40,7 +40,7 @@ describe("studentCabinet controller", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Ученик",
         studentId,
@@ -60,7 +60,7 @@ describe("studentCabinet controller", () => {
     });
     const otherStudentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Другой",
         studentId: otherStudent.id,

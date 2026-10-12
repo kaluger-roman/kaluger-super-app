@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
 import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
+import type { CronScope } from "../types";
 
 // Module-level guard prevents two overlapping cron ticks (e.g. tick N still
 // running due to DB latency when tick N+1 fires) from both broadcasting the
@@ -9,7 +10,7 @@ import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
 // services/recurringLessons.ts and `backupRunning` in services/backup.ts.
 let statusUpdaterRunning = false;
 
-export const updateLessonStatuses = async () => {
+export const updateLessonStatuses = async (scope?: CronScope) => {
   if (statusUpdaterRunning) {
     console.log("Skipping lesson status update: previous tick still active");
     return { startedLessons: 0, completedLessons: 0 };
@@ -18,11 +19,13 @@ export const updateLessonStatuses = async () => {
 
   const now = truncateToMinute(new Date());
   const wsManager = getWebSocketManager();
+  const scopeWhere = scope ? { tutorId: { in: scope.tutorIds } } : {};
 
   try {
     // Получаем уроки, которые должны стать IN_PROGRESS
     const lessonsToStart = await prisma.lesson.findMany({
       where: {
+        ...scopeWhere,
         status: { in: ["SCHEDULED", "RESCHEDULED"] },
         startTime: {
           lte: now,
@@ -37,6 +40,7 @@ export const updateLessonStatuses = async () => {
     // Получаем уроки, которые должны стать COMPLETED
     const lessonsToComplete = await prisma.lesson.findMany({
       where: {
+        ...scopeWhere,
         status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
         endTime: {
           lte: now,

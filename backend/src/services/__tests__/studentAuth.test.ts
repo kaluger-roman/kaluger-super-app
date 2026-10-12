@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
-import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils";
 import { issueInvitation } from "../studentInvitation";
 import { getStudentSettings, loginStudent, registerStudentByInvite } from "../studentAuth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -26,7 +26,7 @@ describe("studentAuth service", () => {
 
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Анна Петрова",
         isEmailVerified: true,
@@ -61,7 +61,7 @@ describe("studentAuth service", () => {
       return {
         token: extractTokenFromUrl(issued.inviteUrl),
         name: "Пётр Сидоров",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       };
@@ -148,7 +148,7 @@ describe("studentAuth service", () => {
       expect(first.ok).toBe(true);
       const second = await registerStudentByInvite({
         ...dto,
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
       });
       expect(second.ok).toBe(false);
       if (!second.ok) expect(second.status).toBe(410);
@@ -162,7 +162,7 @@ describe("studentAuth service", () => {
       const buildConcurrentDto = () => ({
         token,
         name: "Гонка",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -207,7 +207,7 @@ describe("studentAuth service", () => {
     });
 
     it("returns 409 when email already exists in student_users", async () => {
-      const existingEmail = faker.internet.email().toLowerCase();
+      const existingEmail = uniqueEmail().toLowerCase();
       await prisma.studentUser.create({
         data: {
           email: existingEmail,
@@ -235,7 +235,7 @@ describe("studentAuth service", () => {
       const dto = {
         token: "",
         name: "Тест",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       };
@@ -287,7 +287,7 @@ describe("studentAuth service", () => {
       const result = await registerStudentByInvite({
         token: extractTokenFromUrl(issued.inviteUrl),
         name: "Пётр",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });

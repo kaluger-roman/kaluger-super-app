@@ -1,13 +1,13 @@
 import request from "supertest";
 import type { Response } from "express";
 import express from "express";
-import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
 import { __clearTokenVersionCacheForTests } from "../../lib/tokenVersionCache";
 import { generateToken } from "../../utils/auth";
 import type { AuthRequest } from "../auth";
 import { authenticateToken } from "../auth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 const app = express();
 
@@ -42,7 +42,7 @@ describe("authenticateToken middleware", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Auth Middleware User",
         isEmailVerified: true,

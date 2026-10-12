@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils/auth";
 import { initiateEmailChange, verifyEmailChange, resendEmailChangeCode } from "../changeEmail";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
@@ -14,7 +15,7 @@ describe("changeEmail service", () => {
 
   beforeAll(async () => {
     const hashedPassword = await hashPassword(password);
-    userEmail = faker.internet.email().toLowerCase();
+    userEmail = uniqueEmail().toLowerCase();
     const user = await prisma.user.create({
       data: {
         email: userEmail,
@@ -79,7 +80,7 @@ describe("changeEmail service", () => {
     it("should throw 409 when email already taken", async () => {
       const otherUser = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Other",
         },
@@ -95,7 +96,7 @@ describe("changeEmail service", () => {
     });
 
     it("should set pendingEmail and verificationCode", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -120,7 +121,7 @@ describe("changeEmail service", () => {
     });
 
     it("should throw 400 when code is wrong", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       await expect(verifyEmailChange(userId, "000000")).rejects.toMatchObject({
@@ -134,7 +135,7 @@ describe("changeEmail service", () => {
     });
 
     it("should invalidate code after 5 wrong attempts", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       for (let i = 0; i < 4; i++) {
@@ -156,7 +157,7 @@ describe("changeEmail service", () => {
     });
 
     it("should count concurrent wrong-code submits atomically (regression: bug-hunt 2026-05-24 #1)", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       const PARALLEL_REQUESTS = 4;
@@ -173,7 +174,7 @@ describe("changeEmail service", () => {
     });
 
     it("should suggest requesting a new code after the code was invalidated", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       // Force the locked-out state: code cleared, pendingEmail preserved
@@ -193,7 +194,7 @@ describe("changeEmail service", () => {
     });
 
     it("should throw 400 when code is expired", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       // Expire the code
@@ -210,7 +211,7 @@ describe("changeEmail service", () => {
     });
 
     it("should change email successfully", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       const userBefore = await prisma.user.findUnique({ where: { id: userId } });
@@ -238,7 +239,7 @@ describe("changeEmail service", () => {
     });
 
     it("should generate new code", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       const userBefore = await prisma.user.findUnique({ where: { id: userId } });
@@ -258,7 +259,7 @@ describe("changeEmail service", () => {
     });
 
     it("should throw 429 when called within 60s cooldown", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       await expect(resendEmailChangeCode(userId)).rejects.toMatchObject({
@@ -268,7 +269,7 @@ describe("changeEmail service", () => {
     });
 
     it("should reset verificationAttempts on resend", async () => {
-      const newEmail = faker.internet.email().toLowerCase();
+      const newEmail = uniqueEmail().toLowerCase();
       await initiateEmailChange(userId, newEmail, password);
 
       await prisma.user.update({

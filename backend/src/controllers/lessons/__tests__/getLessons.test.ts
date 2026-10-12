@@ -3,6 +3,7 @@ import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("getLessons controller", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("getLessons controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -64,7 +65,7 @@ describe("getLessons controller", () => {
 
     // other user cannot access
     const other = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "o" },
+      data: { email: uniqueEmail(), password: "x", name: "o" },
     });
     const otherToken = generateToken({ userId: other.id, email: other.email });
 
@@ -895,7 +896,7 @@ describe("getLessons controller", () => {
     beforeAll(async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },

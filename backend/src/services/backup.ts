@@ -2,6 +2,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 const execAsync = promisify(exec);
@@ -16,20 +17,28 @@ const getBackupDir = (): string => {
 
 // Singleton id used for the one-and-only BackupSettings row. The
 // 20260509100000_backup_settings_singleton migration consolidates any pre-
-// existing rows onto this id so concurrent first-time access is race-free.
+// existing rows onto this id.
 const BACKUP_SETTINGS_ID = "backup-settings-singleton";
 
 export const getBackupSettings = async () => {
-  return prisma.backupSettings.upsert({
-    where: { id: BACKUP_SETTINGS_ID },
-    update: {},
-    create: {
-      id: BACKUP_SETTINGS_ID,
-      enabled: true,
-      intervalHours: 6,
-      maxStorageMb: 300,
-    },
-  });
+  try {
+    return await prisma.backupSettings.upsert({
+      where: { id: BACKUP_SETTINGS_ID },
+      update: {},
+      create: {
+        id: BACKUP_SETTINGS_ID,
+        enabled: true,
+        intervalHours: 6,
+        maxStorageMb: 300,
+      },
+    });
+  } catch (err) {
+    // Prisma 6 upsert is select-then-insert: a parallel first call can lose the INSERT race
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return prisma.backupSettings.findUniqueOrThrow({ where: { id: BACKUP_SETTINGS_ID } });
+    }
+    throw err;
+  }
 };
 
 export const updateBackupSettings = async (data: {

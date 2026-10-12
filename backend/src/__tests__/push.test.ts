@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { app } from "../index";
 import { prisma } from "../lib/prisma";
 import { generateToken } from "../utils/auth";
+import { uniqueEmail } from "./helpers";
 
 describe("push subscription integration tests", () => {
   let authToken: string;
@@ -15,7 +16,7 @@ describe("push subscription integration tests", () => {
 
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -121,7 +122,7 @@ describe("push subscription integration tests", () => {
     it("should reject subscribe when endpoint belongs to another user", async () => {
       const otherUser = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },
@@ -310,7 +311,7 @@ describe("push subscription integration tests", () => {
     it("should return only current user subscriptions", async () => {
       const otherUser = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },

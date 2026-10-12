@@ -1,7 +1,6 @@
-import { faker } from "@faker-js/faker";
-
 import { prisma } from "../../lib/prisma";
 import { getStudentLessonsByWeek, getStudentUserIdByLessonId } from "../studentCabinet";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -24,7 +23,7 @@ describe("studentCabinet service", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Учитель",
         isEmailVerified: true,
@@ -44,7 +43,7 @@ describe("studentCabinet service", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Ученик",
         studentId,
@@ -114,7 +113,7 @@ describe("studentCabinet service", () => {
     it("returns empty array when studentUser is detached from a Student", async () => {
       const orphan = await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Без карточки",
           studentId: null,
