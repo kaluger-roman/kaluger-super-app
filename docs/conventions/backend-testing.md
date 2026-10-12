@@ -14,6 +14,17 @@ Stack: Jest + Supertest + Faker + test database
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
 - **No ESLint errors** — run lint and fix all errors before finishing
 
+## Parallel-Safe Tests
+
+Jest runs files in parallel workers against one shared test database, so a test may only see and change its own rows.
+
+- **Test database** — `src/__tests__/loadTestEnv.ts` (jest `setupFiles`) loads `backend/.env.test` with `override`, so a local run never falls back to `backend/.env` (the dev database). Keep env loading there: anything in `setup.ts` runs after the Prisma client is required
+- **Emails** — `uniqueEmail()` from `src/__tests__/helpers`, never `faker.internet.email()`: `User.email` and `StudentUser.email` are globally unique and faker collides across a parallel run
+- **Global cron services** (`processRecurringLessons`, `updateLessonStatuses`, `processScheduledReminders`) — always pass `{ tutorIds: [userId] }` (`CronScope`). Unscoped they process every tutor and mutate other files' data
+- **Global singleton rows** (`backup_settings`) — serialize through `acquireGlobalTestLock(GLOBAL_TEST_LOCK.X)` in the top `beforeAll` (timeout `GLOBAL_TEST_LOCK_TIMEOUT_MS`) and call the returned release in `afterAll`. Add a new key to `GLOBAL_TEST_LOCK` for a new shared table
+- **Time** — statistics fixtures pass an explicit `startDate`/`endDate` instead of relying on the default current month; minute-sensitive tests truncate `now` to the minute; wait for async side effects by polling with a deadline, not a fixed `setTimeout`
+- **Don't rerun a failure** — a red test is a bug in the code or the test; find the shared state or time dependency
+
 ## Test Naming
 
 ```typescript
@@ -28,10 +39,10 @@ it("test validation", async () => {});
 
 ```typescript
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("POST /api/students", () => {
   let authToken: string;
@@ -39,7 +50,7 @@ describe("POST /api/students", () => {
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "hash", name: "Test" },
+      data: { email: uniqueEmail(), password: "hash", name: "Test" },
     });
     userId = user.id;
     authToken = generateToken({ userId: user.id, email: user.email });
