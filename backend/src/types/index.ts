@@ -14,6 +14,7 @@ export type {
   UpdateProfileDto,
 } from "./auth";
 export type { ContactMethod, CreateStudentDto, UpdateStudentDto } from "./student";
+export type { CronScope } from "./cron";
 export type {
   CreateLessonDto,
   UpdateLessonDto,

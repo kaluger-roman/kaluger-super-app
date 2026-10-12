@@ -3,6 +3,11 @@ import path from "path";
 import os from "os";
 import { prisma } from "../../lib/prisma";
 import { getTotalSizeMb, cleanupOldBackups, getBackupSettings, runBackupJob } from "../backup";
+import {
+  acquireGlobalTestLock,
+  GLOBAL_TEST_LOCK,
+  GLOBAL_TEST_LOCK_TIMEOUT_MS,
+} from "../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -14,6 +19,11 @@ jest.mock("child_process", () => ({
 describe("backup service", () => {
   let tmpDir: string;
   const originalEnv = process.env.BACKUP_DIR;
+  let releaseBackupSettingsLock: () => Promise<void>;
+
+  beforeAll(async () => {
+    releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+  }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "backup-test-"));
@@ -30,6 +40,7 @@ describe("backup service", () => {
 
   afterAll(async () => {
     await prisma.backupSettings.deleteMany();
+    await releaseBackupSettingsLock();
   });
 
   describe("getTotalSizeMb", () => {

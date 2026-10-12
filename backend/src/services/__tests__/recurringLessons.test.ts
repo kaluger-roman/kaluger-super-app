@@ -2,12 +2,13 @@ import { prisma } from "../../lib/prisma";
 import { processRecurringLessons } from "../recurringLessons";
 import { truncateToMinute } from "../../utils/time";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 // Helpers to create test data
 const createTutorAndStudent = async () => {
   const tutor = await prisma.user.create({
     data: {
-      email: faker.internet.email(),
+      email: uniqueEmail(),
       password: "test_password",
       name: faker.person.fullName(),
     },
@@ -58,8 +59,36 @@ describe("processRecurringLessons", () => {
   });
 
   it("should do nothing when no recurring lessons exist", async () => {
-    const created = await processRecurringLessons();
+    const created = await processRecurringLessons({ tutorIds: createdTutorIds });
     expect(created === 0 || created === undefined).toBeTruthy();
+  });
+
+  it("should not extend series of tutors outside the scope", async () => {
+    const inScope = await createTutorAndStudentTracked();
+    const outOfScope = await createTutorAndStudentTracked();
+
+    const lastStart = truncateToMinute(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const lastEnd = truncateToMinute(new Date(lastStart.getTime() + 60 * 60 * 1000));
+    for (const { tutor, student } of [inScope, outOfScope]) {
+      await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: lastStart,
+          endTime: lastEnd,
+          price: 1000,
+          isRecurring: true,
+          tutorId: tutor.id,
+          studentId: student.id,
+          status: "SCHEDULED",
+        },
+      });
+    }
+
+    await processRecurringLessons({ tutorIds: [inScope.tutor.id] });
+
+    expect(await prisma.lesson.count({ where: { tutorId: inScope.tutor.id } })).toBeGreaterThan(1);
+    expect(await prisma.lesson.count({ where: { tutorId: outOfScope.tutor.id } })).toBe(1);
   });
 
   it("should create weekly lessons for the next 3 months when recurring exists", async () => {
@@ -86,7 +115,7 @@ describe("processRecurringLessons", () => {
       },
     });
 
-    const created = await processRecurringLessons();
+    const created = await processRecurringLessons({ tutorIds: createdTutorIds });
     expect(typeof created).toBe("number");
     expect(created).toBeGreaterThan(0);
 
@@ -119,7 +148,10 @@ describe("processRecurringLessons", () => {
       },
     });
 
-    await Promise.all([processRecurringLessons(), processRecurringLessons()]);
+    await Promise.all([
+      processRecurringLessons({ tutorIds: createdTutorIds }),
+      processRecurringLessons({ tutorIds: createdTutorIds }),
+    ]);
 
     const lessons = await prisma.lesson.findMany({
       where: { tutorId: tutor.id, isRecurring: true },
@@ -171,7 +203,7 @@ describe("processRecurringLessons", () => {
       },
     });
 
-    const created = await processRecurringLessons();
+    const created = await processRecurringLessons({ tutorIds: createdTutorIds });
     expect(typeof created).toBe("number");
 
     // Ensure that no duplicate lesson was created for the conflicting slot
@@ -237,7 +269,7 @@ describe("processRecurringLessons", () => {
       },
     });
 
-    await processRecurringLessons();
+    await processRecurringLessons({ tutorIds: createdTutorIds });
 
     // Tutor A: conflict slot must remain unique (no duplicate from recurring)
     const aSlot = await prisma.lesson.findMany({
@@ -286,7 +318,7 @@ describe("processRecurringLessons", () => {
       const { tutor, student } = await createTutorAndStudentTracked();
       const last = await createPatternLesson(tutor, student, 1, true);
 
-      await processRecurringLessons();
+      await processRecurringLessons({ tutorIds: createdTutorIds });
 
       const created = await findCreatedLessons(tutor.id, last.startTime);
       expect(created.length).toBeGreaterThan(0);
@@ -298,7 +330,7 @@ describe("processRecurringLessons", () => {
       await createPatternLesson(tutor, student, 2, true);
       const last = await createPatternLesson(tutor, student, 1, false);
 
-      await processRecurringLessons();
+      await processRecurringLessons({ tutorIds: createdTutorIds });
 
       const created = await findCreatedLessons(tutor.id, last.startTime);
       expect(created.length).toBeGreaterThan(0);

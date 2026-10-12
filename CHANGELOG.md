@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-10-12
+
+### Fixed
+- Параллельный первый вызов `getBackupSettings` мог упасть с `P2002`: `upsert` в Prisma 6 делает select-then-insert и не атомарен. Проигравший гонку вызов теперь перечитывает строку-синглтон, как уже сделано в `getReminderSettings`
+
+### Infrastructure
+- Флакающие backend-тесты стабилизированы (5 полных параллельных прогонов подряд без падений):
+  - кроны `processRecurringLessons`, `updateLessonStatuses` и `processScheduledReminders` принимают необязательный `CronScope` (`{ tutorIds }`). Тесты передают свои id, поэтому крон из одного файла больше не достраивает серии, не переключает статусы и не забирает напоминания у уроков соседних файлов (так падал `deleteLesson` «deleteAllFuture…»). Продовые cron-тики работают без scope, как раньше;
+  - три файла, которые делят строку `backup_settings`, сериализуются через Postgres advisory lock (`acquireGlobalTestLock` в `backend/src/__tests__/helpers`);
+  - в `NODE_ENV=test` bcrypt хеширует с cost 4 вместо 12. Под параллельной нагрузкой это снимает таймауты bcrypt-сьютов и `reminderProcessor`;
+  - тестовые email генерируются через `uniqueEmail()` со случайным доменом: глобально уникальные `User.email` и `StudentUser.email` больше не ловят коллизии faker;
+  - `getStatistics` «unpaid over 24h» и «upcoming» передают явный период и больше не падают 1–2 числа и вечером последнего дня месяца; `recurringHelpers` «stable recurring key» выравнивает `now` по минуте; `lessonReminders` ждёт асинхронного создания напоминаний опросом, а не фиксированной паузой 200 мс; тест батча из 100 напоминаний получил таймаут 30 с
+
 ## 2026-10-11
 
 ### Added

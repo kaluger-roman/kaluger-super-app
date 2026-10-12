@@ -4,6 +4,7 @@ import type { LessonStatus } from "@prisma/client";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("lesson commission credit", () => {
   let authToken: string;
@@ -61,7 +62,7 @@ describe("lesson commission credit", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
