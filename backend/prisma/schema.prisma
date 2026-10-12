@@ -164,6 +164,7 @@ model Lesson {
   price                   Decimal?     @db.Decimal(10, 2)
   isPaid                  Boolean      @default(false)
   paymentDate             DateTime? // Дата оплаты урока
+  receivedAmount          Decimal?     @db.Decimal(10, 2) // Amount actually received for the lesson; null while unpaid
   isTaxExempt             Boolean      @default(false) // Не облагается налогом
   isHomeworkSentByTeacher Boolean      @default(false)
   homework                String?

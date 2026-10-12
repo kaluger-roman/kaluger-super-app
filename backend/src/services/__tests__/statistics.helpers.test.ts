@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { PaidLessonForTax, TaxUser } from "../statistics";
-import { computeTaxSummary } from "../statistics";
+import { computeTaxSummary, paidInRangeWhere } from "../statistics";
 
 const range = {
   gte: new Date("2026-03-01T00:00:00Z"),
@@ -13,14 +13,29 @@ const taxUser = (startDate = "2026-01-01T00:00:00Z"): TaxUser => ({
 });
 
 const paid = (
-  price: number,
+  receivedAmount: number,
   isTaxExempt: boolean,
   paymentDate: string | null = "2026-03-10T00:00:00Z"
 ): PaidLessonForTax => ({
-  price: new Prisma.Decimal(price),
+  receivedAmount: new Prisma.Decimal(receivedAmount),
   paymentDate: paymentDate === null ? null : new Date(paymentDate),
   startTime: new Date("2026-03-15T00:00:00Z"),
   isTaxExempt,
+});
+
+describe("paidInRangeWhere", () => {
+  it("should select paid lessons with a positive received amount by payment date or start time", () => {
+    expect(paidInRangeWhere("tutor-1", range)).toEqual({
+      tutorId: "tutor-1",
+      isPaid: true,
+      receivedAmount: { gt: 0 },
+      OR: [{ paymentDate: range }, { paymentDate: null, startTime: range }],
+    });
+  });
+
+  it("should not filter by price", () => {
+    expect(paidInRangeWhere("tutor-1", range)).not.toHaveProperty("price");
+  });
 });
 
 describe("computeTaxSummary", () => {

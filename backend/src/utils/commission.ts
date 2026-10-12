@@ -46,10 +46,17 @@ const isForecastEligible = (lesson: CommissionLessonInput) =>
   lesson.status === "IN_PROGRESS" ||
   (lesson.status === "COMPLETED" && !lesson.isPaid);
 
+// A paid lesson repays the commission with the money that actually arrived;
+// the forecast can only assume the lesson price.
+const getReceivedAmount = (lesson: CommissionLessonInput) => lesson.receivedAmount ?? 0;
+
+const getPrice = (lesson: CommissionLessonInput) => lesson.price ?? 0;
+
 const runPass = (
   lessons: CommissionLessonInput[],
   startRemainingKop: number,
   isEligible: (lesson: CommissionLessonInput) => boolean,
+  getAmount: (lesson: CommissionLessonInput) => number,
   state: CommissionCreditState,
   creditByLessonId: Map<string, CommissionCredit>
 ) => {
@@ -58,10 +65,10 @@ const runPass = (
   for (const lesson of lessons) {
     if (remainingKop <= 0) break;
 
-    const priceKop = toKopecks(lesson.price ?? 0);
-    if (priceKop <= 0 || !isEligible(lesson)) continue;
+    const amountKop = toKopecks(getAmount(lesson));
+    if (amountKop <= 0 || !isEligible(lesson)) continue;
 
-    const creditKop = Math.min(remainingKop, priceKop);
+    const creditKop = Math.min(remainingKop, amountKop);
     creditByLessonId.set(lesson.id, { amount: creditKop / 100, state });
     remainingKop -= creditKop;
   }
@@ -86,6 +93,7 @@ export const allocateCommission = ({
     [...lessons].sort(compareByPaymentThenId),
     commissionKop,
     isFactEligible,
+    getReceivedAmount,
     "FACT",
     creditByLessonId
   );
@@ -93,6 +101,7 @@ export const allocateCommission = ({
     [...lessons].sort(compareByStartTimeThenId),
     factRemainingKop,
     isForecastEligible,
+    getPrice,
     "FORECAST",
     creditByLessonId
   );

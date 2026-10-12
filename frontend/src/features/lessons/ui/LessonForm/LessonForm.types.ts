@@ -19,6 +19,7 @@ export type LessonFormData = {
   isHomeworkSentByTeacher: boolean;
   isTaxExempt: boolean;
   paymentDate?: string;
+  receivedAmount: string;
 };
 
 export type LessonFormProps = {

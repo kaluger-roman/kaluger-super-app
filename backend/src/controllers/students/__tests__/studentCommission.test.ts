@@ -28,6 +28,7 @@ describe("student commission API", () => {
         price,
         status: "COMPLETED",
         isPaid: true,
+        receivedAmount: price,
         paymentDate: new Date(Date.UTC(2026, 2, dayOfMonth, 12, 0, 0)),
       },
     });

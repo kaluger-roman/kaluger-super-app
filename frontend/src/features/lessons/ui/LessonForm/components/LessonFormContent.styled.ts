@@ -14,7 +14,3 @@ export const FormContainer = styled(Box)<{ $isMobile: boolean }>(({ theme, $isMo
   flexDirection: "column",
   gap: $isMobile ? theme.spacing(2) : theme.spacing(3),
 }));
-
-export const DateFieldWrapper = styled(Box)(({ theme }) => ({
-  marginTop: theme.spacing(0.5),
-}));

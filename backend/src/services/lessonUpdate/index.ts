@@ -3,6 +3,7 @@ export {
   buildLessonUpdateData,
   computeUpdatedStatus,
   isTimeChanging,
+  resolveReceivedAmount,
   resolveUpdatedTimes,
   shouldPropagateRecurringPrice,
   shouldShiftRecurringSeries,

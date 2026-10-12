@@ -176,6 +176,8 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - PostgreSQL через Prisma. Одна новая колонка: (033-commission-tracking)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, Material UI (styled API) — frontend; Express, Prisma — backend. Новых зависимостей нет (034-tax-exempt-lessons)
 - PostgreSQL через Prisma. Одна новая колонка `lessons."isTaxExempt" BOOLEAN NOT NULL DEFAULT false` (034-tax-exempt-lessons)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, effector-react, Material UI (styled API), axios — frontend; Express, Prisma — backend. Новых зависимостей нет (035-income-history)
+- PostgreSQL через Prisma. Одна новая колонка `lessons."receivedAmount" DECIMAL(10,2) NULL` + бэкфилл в миграции; новых таблиц и индексов нет (035-income-history)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

@@ -8,6 +8,7 @@ import {
   applyHourlyRateAutofill,
   applyWithoutStudentRules,
   canSubmitLessonForm,
+  getFormReceivedAmountError,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -41,11 +42,14 @@ export const $formData = createStore<LessonFormData>({
   isHomeworkSentByTeacher: false,
   isTaxExempt: false,
   paymentDate: undefined,
+  receivedAmount: "",
 });
 
 export const $errors = createStore<Record<string, string>>({});
 
 export const $canSubmit = $formData.map(canSubmitLessonForm);
+
+export const $receivedAmountError = $formData.map(getFormReceivedAmountError);
 
 export const $confirmDialog = createStore<ConfirmDialogData>({
   open: false,

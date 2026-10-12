@@ -7,6 +7,7 @@ import {
   applyHourlyRateAutofill,
   applyWithoutStudentRules,
   canSubmitLessonForm,
+  getFormReceivedAmountError,
   prepareFormData,
   validateFormData,
   prepareSubmitData,
@@ -127,6 +128,7 @@ describe("validateFormData", () => {
     isPaid: false,
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
+    receivedAmount: "",
     ...overrides,
   });
 
@@ -234,6 +236,7 @@ describe("prepareSubmitData", () => {
     isPaid: true,
     isHomeworkSentByTeacher: true,
     isTaxExempt: false,
+    receivedAmount: "",
     ...overrides,
   });
 
@@ -748,6 +751,7 @@ describe("validateFormData (prospect mode)", () => {
     isPaid: false,
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
+    receivedAmount: "",
     paymentDate: undefined,
     ...overrides,
   });
@@ -788,6 +792,7 @@ describe("canSubmitLessonForm", () => {
     isPaid: false,
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
+    receivedAmount: "",
     paymentDate: undefined,
   };
 
@@ -822,6 +827,7 @@ describe("applyWithoutStudentRules", () => {
     isPaid: false,
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
+    receivedAmount: "",
     paymentDate: undefined,
   };
 
@@ -894,6 +900,7 @@ describe("prepareSubmitData (prospect mode)", () => {
     isPaid: false,
     isHomeworkSentByTeacher: false,
     isTaxExempt: false,
+    receivedAmount: "",
     paymentDate: undefined,
   };
 
@@ -957,5 +964,75 @@ describe("prepareFormData (prospect lesson)", () => {
     expect(result.prospectName).toBe("Пётр (пробный)");
     expect(result.prospectPhone).toBe("+79990000000");
     expect(result.prospectContactMethod).toBe("MAX");
+  });
+});
+
+describe("received amount in the lesson form", () => {
+  const paidLesson = (overrides: Partial<Lesson> = {}) =>
+    createMockLesson({
+      isPaid: true,
+      price: 1500,
+      paymentDate: "2026-01-10T00:00:00.000Z",
+      receivedAmount: 1800,
+      ...overrides,
+    });
+
+  it("should take the received amount of a paid lesson", () => {
+    expect(prepareFormData(paidLesson()).receivedAmount).toBe("1800");
+  });
+
+  it("should fall back to the price when a paid lesson has no received amount", () => {
+    expect(prepareFormData(paidLesson({ receivedAmount: null })).receivedAmount).toBe("1500");
+  });
+
+  it("should fall back to zero for a paid lesson without price and amount", () => {
+    expect(
+      prepareFormData(paidLesson({ receivedAmount: null, price: undefined })).receivedAmount
+    ).toBe("0");
+  });
+
+  it("should leave the field empty for an unpaid lesson and a new lesson", () => {
+    expect(prepareFormData(createMockLesson({ price: 1500 })).receivedAmount).toBe("");
+    expect(prepareFormData().receivedAmount).toBe("");
+  });
+
+  it("should send the received amount as a number only for a paid lesson", () => {
+    const paidForm = { ...prepareFormData(paidLesson()), receivedAmount: "1800,5" };
+    expect(prepareSubmitData(paidForm)).toMatchObject({ isPaid: true, receivedAmount: 1800.5 });
+
+    const unpaidForm = { ...paidForm, isPaid: false, receivedAmount: "" };
+    expect(prepareSubmitData(unpaidForm)).not.toHaveProperty("receivedAmount");
+  });
+
+  it("should send zero when nothing was received", () => {
+    const form = { ...prepareFormData(paidLesson()), receivedAmount: "0" };
+    expect(prepareSubmitData(form).receivedAmount).toBe(0);
+  });
+
+  it.each([
+    ["", "Укажите полученную сумму"],
+    ["-5", "Сумма должна быть неотрицательным числом"],
+    ["10.555", "Не больше двух знаков после запятой"],
+  ])("should block saving a paid lesson with amount %p", (receivedAmount, error) => {
+    const form = { ...prepareFormData(paidLesson()), receivedAmount };
+
+    expect(getFormReceivedAmountError(form)).toBe(error);
+    expect(validateFormData(form)).toEqual({ isValid: false, errors: { receivedAmount: error } });
+    expect(canSubmitLessonForm(form)).toBe(false);
+  });
+
+  it("should ignore the field of an unpaid lesson", () => {
+    const form = { ...prepareFormData(createMockLesson({ price: 1500 })), receivedAmount: "" };
+
+    expect(getFormReceivedAmountError(form)).toBeNull();
+    expect(validateFormData(form).isValid).toBe(true);
+    expect(canSubmitLessonForm(form)).toBe(true);
+  });
+
+  it("should allow saving a paid lesson with a valid amount", () => {
+    const form = prepareFormData(paidLesson());
+
+    expect(validateFormData(form).isValid).toBe(true);
+    expect(canSubmitLessonForm(form)).toBe(true);
   });
 });

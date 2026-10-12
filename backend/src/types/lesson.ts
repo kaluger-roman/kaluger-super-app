@@ -33,6 +33,7 @@ export type UpdateLessonDto = Omit<
   // treats `undefined` as "no change", so without `null` paymentDate would
   // silently stay set when isPaid flips to false.
   paymentDate?: Date | null;
+  receivedAmount?: number;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
@@ -52,6 +53,7 @@ export type CommissionLessonInput = {
   startTime: Date;
   paymentDate: Date | null;
   price: number | null;
+  receivedAmount: number | null;
   status: LessonStatus;
   isPaid: boolean;
 };

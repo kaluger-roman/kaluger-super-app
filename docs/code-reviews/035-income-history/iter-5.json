@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "branch": "035-income-history",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 5,
+  "timestamp": "2026-10-12T16:08:36Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 208,
+    "insertions": 8517,
+    "deletions": 275
+  },
+  "summary": {
+    "raw_findings": 2,
+    "after_dedup": 1,
+    "after_score_filter": 1,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1
+    },
+    "by_category": {
+      "logic": 1
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "cross-file",
+      "title": "Перезагрузка истории берёт курсор `through` из истории прошлого периода: после смены периода список может прийти пустым с кнопкой «Показать ещё»",
+      "category": "logic",
+      "file": "frontend/src/pages/ReportsPage/model/incomeHistory.helpers.ts",
+      "line_start": 46,
+      "line_end": 49,
+      "snippet": "export const buildReloadRequest = ({ history, range }: ReadyReloadSource): IncomeHistoryRequest => {\n  const through = getLastLoadedDayKey(history);\n  return through ? { ...range, through } : range;\n};",
+      "rationale": "Сторы `$appliedRange` и `$incomeHistory` относятся к одному периоду только после успешной загрузки. `periodApplied` (statistics.model.ts) сразу записывает новый период в `$appliedRange`, а `$incomeHistory` до ответа или при ошибке загрузки хранит историю старого периода. В incomeHistoryReload.model.ts (строки 44-65) `reloadRequested` срабатывает на `lessonModel.updateLessonFx.done`, в том числе от WebSocket-эха статуса из крона, которое $isBlocking не блокирует. Тогда `$reloadSource` даёт `{ history: старая, range: новый }`, и запрос уходит с `through` = последний день старой истории. Его версия новее, поэтому корректный ответ отбрасывается. На сервере `slicePage` при `through` берёт только дни `>= through`. Пример: старый период октябрь, `through` = \"2026-10-01\", новый период сентябрь. Все дни сентября меньше `through`, поэтому `taken = []`, `nextCursor = through`, а `remainingCount` равен всем оплатам. UI показывает итог (count > 0), пустой список дней и «Показать ещё (осталось N)». Тот же сценарий возникает, если загрузка нового периода упала с ошибкой и затем пришло обновление урока. Окно узкое, но дефект реальный, и с декларированной перезагрузкой «слишком часто» он не связан. (also flagged by: shallow-bug)",
+      "fix_hint": "Хранить период, к которому относится загруженная история: например, `$historyRange` из `params` в `freshHistoryLoaded`. В `buildReloadRequest` передавать `through` только когда этот период совпадает с текущим `$appliedRange`, иначе запрашивать первую страницу без `through`. Альтернатива: не добавлять `through`, пока `loadIncomeHistoryFx.pending` или `$incomeHistoryError` не null. Добавить регрессионный тест в incomeHistoryReload.model.test.ts: смена периода, затем `updateLessonFx.done` до ответа, ожидание запроса без `through`.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Код подтверждён: `buildReloadRequest` берёт `through` из `$incomeHistory`, а `$reloadSource` сочетает его с `$appliedRange`, который `periodApplied` меняет сразу, а история обновляется только по ответу; `slicePage` при `through` отбрасывает дни меньше курсора, так что для более раннего периода получается пустой список с `nextCursor = through`. Дефект реален, но срабатывает узко: нужна перезагрузка от `updateLessonFx.done` до ответа на смену периода или после неудачной загрузки нового периода, и пользователь может вернуть данные кнопкой «Показать ещё» (before=through даёт первую страницу нового периода), поэтому это редкий случай, а не частый прод-сбой."
+    }
+  ],
+  "filtered_out": []
+}

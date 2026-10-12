@@ -14,6 +14,7 @@ export type {
   UpdateProfileDto,
 } from "./auth";
 export type { ContactMethod, CreateStudentDto, UpdateStudentDto } from "./student";
+export type { CronScope } from "./cron";
 export type {
   CreateLessonDto,
   UpdateLessonDto,
@@ -32,6 +33,15 @@ export type {
   ReplaceTaxRatePeriodsDto,
   TaxBreakdownEntry,
 } from "./taxRate";
+export type {
+  IncomeHistoryTaxDto,
+  IncomeHistoryEntryDto,
+  IncomeHistoryDayDto,
+  IncomeHistorySummaryDto,
+  IncomeHistoryPageDto,
+  IncomeHistoryDto,
+  IncomeHistoryQuery,
+} from "./incomeHistory";
 export type { NewsItemResponse, NewsPaginationResponse } from "./news";
 export type {
   PushSubscriptionDto,

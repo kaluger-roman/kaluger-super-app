@@ -738,6 +738,7 @@ describe("getLessons controller", () => {
             isRecurring: false,
             isPaid: true,
             price: 1000,
+            receivedAmount: 1000,
             paymentDate: yesterday,
             status: "COMPLETED",
           },
@@ -756,6 +757,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 5000,
+          receivedAmount: 5000,
           paymentDate: lastWeek,
           status: "COMPLETED",
         },
@@ -796,6 +798,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 1234,
+          receivedAmount: 1234,
           paymentDate: new Date(),
           status: "COMPLETED",
         },
@@ -824,6 +827,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 700,
+          receivedAmount: 700,
           paymentDate: new Date(),
           status: "COMPLETED",
         },
@@ -840,6 +844,46 @@ describe("getLessons controller", () => {
         .then((res) => {
           expect(res.body.paymentsSummary).toEqual({ sum: 700, count: 1 });
         });
+    });
+
+    it("sums received amounts and skips payments that received nothing", async () => {
+      const paymentDate = new Date();
+      const base = {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS" as const,
+        lessonType: "SCHOOL" as const,
+        isPaid: true,
+        price: 2000,
+        paymentDate,
+        status: "COMPLETED" as const,
+      };
+      await prisma.lesson.create({
+        data: {
+          ...base,
+          startTime: new Date(Date.now() - 3 * 3600000),
+          endTime: new Date(Date.now() - 2 * 3600000),
+          receivedAmount: 1800,
+        },
+      });
+      await prisma.lesson.create({
+        data: {
+          ...base,
+          startTime: new Date(Date.now() - 5 * 3600000),
+          endTime: new Date(Date.now() - 4 * 3600000),
+          receivedAmount: 0,
+        },
+      });
+
+      const from = new Date(paymentDate.getTime() - 24 * 60 * 60 * 1000);
+
+      const res = await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .query({ paymentDateFrom: from.toISOString() })
+        .expect(200);
+
+      expect(res.body.paymentsSummary).toEqual({ sum: 1800, count: 1 });
     });
   });
 

@@ -3,7 +3,6 @@ import { delay } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
 import { resolveWsUrl } from "@shared";
-import type { LessonStatus } from "@shared/types";
 
 import { WS_RECONNECT_DELAY_MS } from "./webSocket.constants";
 
@@ -109,16 +108,11 @@ sample({
   target: disconnectWebSocketFx,
 });
 // Handle lesson status updates from WebSocket
+// The server already saved the status; refetch the lesson instead of writing it back.
 sample({
   clock: handleLessonStatusUpdate,
-  fn: ({ lessonId, status }: { lessonId: string; status: string }) => {
-    console.log(`Lesson ${lessonId} status updated to ${status} via WebSocket`);
-    return {
-      id: lessonId,
-      data: { status: status as LessonStatus },
-    };
-  },
-  target: lessonModel.updateLesson,
+  fn: ({ lessonId }) => lessonId,
+  target: lessonModel.syncLessonFx,
 });
 
 // Reconnect after WS_RECONNECT_DELAY_MS if WebSocket is still enabled.

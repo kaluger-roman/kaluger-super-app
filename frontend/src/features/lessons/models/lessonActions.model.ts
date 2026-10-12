@@ -33,6 +33,7 @@ export const lessonPaymentChanged = createEvent<{
   lessonId: string;
   isPaid: boolean;
   paymentDate?: string;
+  receivedAmount?: number;
 }>();
 export const lessonHomeworkSentChanged = createEvent<{
   lessonId: string;
@@ -119,11 +120,12 @@ sample({
 // Update payment status - directly update
 sample({
   clock: lessonPaymentChanged,
-  fn: ({ lessonId, isPaid, paymentDate }) => ({
+  fn: ({ lessonId, isPaid, paymentDate, receivedAmount }) => ({
     id: lessonId,
     data: {
       isPaid,
       paymentDate: paymentDate ? new Date(paymentDate).toISOString() : undefined,
+      ...(isPaid && receivedAmount !== undefined ? { receivedAmount } : {}),
     },
   }),
   target: lessonModel.updateLesson,
