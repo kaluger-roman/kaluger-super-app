@@ -22,8 +22,6 @@ test.describe("Пагинация ленты новостей", { tag: ["@regres
 
     // После дозагрузки появляется старая запись, кнопка исчезает (последняя страница).
     await expect(page.getByText(/Новость №25/)).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Загрузить ещё" }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Загрузить ещё" })).toHaveCount(0);
   });
 });

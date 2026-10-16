@@ -8,14 +8,10 @@ export const formatDdMmYyyy = (date: Date): string => {
   return `${dd}${mm}${String(date.getFullYear())}`;
 };
 
-export const fillDatePicker = async (
-  page: Page,
-  label: string,
-  digits: string,
-): Promise<void> => {
+export const fillDatePicker = async (page: Page, label: string, digits: string): Promise<void> => {
   const group = page.getByRole("group", { name: label });
   // MUI X v8: each editable section has role="spinbutton"
-  const firstSection = group.locator('[role="spinbutton"]').first();
+  const firstSection = group.getByRole("spinbutton").first();
   await firstSection.waitFor({ state: "attached", timeout: 5000 });
   await firstSection.click();
   // Type digits — MUI X auto-advances between sections (DD MM YYYY)
@@ -31,10 +27,10 @@ export const fillDatePicker = async (
 export const fillDateTimePicker = async (
   page: Page,
   label: string,
-  digits: string,
+  digits: string
 ): Promise<void> => {
   const group = page.getByRole("group", { name: label });
-  const firstSection = group.locator('[role="spinbutton"]').first();
+  const firstSection = group.getByRole("spinbutton").first();
   await firstSection.waitFor({ state: "attached", timeout: 5000 });
   await firstSection.click();
   await page.keyboard.type(digits, { delay: 30 });

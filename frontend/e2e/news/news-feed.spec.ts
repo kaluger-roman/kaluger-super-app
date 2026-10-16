@@ -15,16 +15,13 @@ test.describe("Лента новостей", { tag: ["@regression", "@news"] }, 
 
     await page.goto("/");
 
-    const hasUnreadBefore = await apiRequest<{ hasUnread: boolean }>(
-      "/api/news/has-unread",
-      { token: tutor.token },
-    );
+    const hasUnreadBefore = await apiRequest<{ hasUnread: boolean }>("/api/news/has-unread", {
+      token: tutor.token,
+    });
     expect(hasUnreadBefore.hasUnread).toBe(true);
 
     const markReadDone = page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/news/mark-read") &&
-        resp.request().method() === "POST",
+      (resp) => resp.url().includes("/news/mark-read") && resp.request().method() === "POST"
     );
 
     await page.goto("/news");
@@ -34,10 +31,9 @@ test.describe("Лента новостей", { tag: ["@regression", "@news"] }, 
     await expect(page.getByText("Релиз 1.1").first()).toBeVisible();
     await expect(page.getByText("Релиз 1.0").first()).toBeVisible();
 
-    const hasUnreadAfter = await apiRequest<{ hasUnread: boolean }>(
-      "/api/news/has-unread",
-      { token: tutor.token },
-    );
+    const hasUnreadAfter = await apiRequest<{ hasUnread: boolean }>("/api/news/has-unread", {
+      token: tutor.token,
+    });
     expect(hasUnreadAfter.hasUnread).toBe(false);
   });
 });

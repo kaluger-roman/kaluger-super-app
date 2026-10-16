@@ -1,2 +1,5 @@
 # Prettier 3 reformat of frontend/src and backend/src (lint Milestone 6, PR #77)
 4c0d5380d6e052ebce3f3a0b6e55b4e6008434f3
+
+# Prettier 3 reformat of frontend/e2e (lint Milestone 7, PR #78)
+f107631087fd0a47c3b64580c8c26d4f54c08a66

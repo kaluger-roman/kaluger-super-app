@@ -9,7 +9,7 @@ type RequestOptions = {
 
 export const apiRequest = async <T = unknown>(
   path: string,
-  options: RequestOptions = {},
+  options: RequestOptions = {}
 ): Promise<T> => {
   const { method = "GET", body, token, expectStatus } = options;
   const url = path.startsWith("http") ? path : `${API_URL}${path}`;
@@ -25,7 +25,7 @@ export const apiRequest = async <T = unknown>(
   if (expectStatus !== undefined && response.status !== expectStatus) {
     const text = await response.text();
     throw new Error(
-      `Expected ${expectStatus} from ${method} ${path}, got ${response.status}: ${text}`,
+      `Expected ${expectStatus} from ${method} ${path}, got ${response.status}: ${text}`
     );
   }
   if (response.status === 204) {

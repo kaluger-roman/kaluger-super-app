@@ -3,7 +3,7 @@
 # backend/.lintstagedrc.json. Enabled by `npm install` at the repo root
 # (scripts/install-git-hooks.mjs). Skip once with `git commit --no-verify`.
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR -- frontend/src backend/src)
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- frontend/src frontend/e2e frontend/playwright.config.ts backend/src)
 [ -n "$staged" ] || exit 0
 
 for pkg in frontend backend; do

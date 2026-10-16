@@ -1,7 +1,7 @@
 import { test, expect } from "../fixtures";
 import { apiRequest } from "../helpers/api";
-import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import { generateCredentials } from "../helpers/auth";
+import { createLesson, createStudentFor, createVerifiedUser } from "../helpers/db";
 import {
   currentWeekSlot,
   registerStudentDirect,
@@ -13,9 +13,7 @@ test.describe(
   { tag: ["@regression", "@pwa"] },
   () => {
     const setup = async () => {
-      const { user, token: tutorToken } = await createVerifiedUser(
-        generateCredentials("tutor"),
-      );
+      const { user, token: tutorToken } = await createVerifiedUser(generateCredentials("tutor"));
       const { student } = await createStudentFor(user.id, {
         name: "Пётр Сидоров",
         hourlyRate: 1500,
@@ -28,9 +26,7 @@ test.describe(
       return { tutorId: user.id, tutorToken, studentId: student.id, registered };
     };
 
-    test("учитель создаёт урок — у ученика он появляется без перезагрузки", async ({
-      browser,
-    }) => {
+    test("учитель создаёт урок — у ученика он появляется без перезагрузки", async ({ browser }) => {
       const { tutorId, tutorToken, studentId, registered } = await setup();
 
       const studentContext = await browser.newContext();
@@ -38,9 +34,7 @@ test.describe(
       try {
         await seedStudentAuthInBrowser(studentPage, registered.token);
         await studentPage.goto("/student/cabinet/schedule");
-        await expect(
-          studentPage.getByRole("heading", { name: "Расписание" }),
-        ).toBeVisible();
+        await expect(studentPage.getByRole("heading", { name: "Расписание" })).toBeVisible();
         await expect(studentPage.getByText("Физика")).toHaveCount(0);
 
         const slot = currentWeekSlot(13);
@@ -67,9 +61,7 @@ test.describe(
       }
     });
 
-    test("учитель удаляет урок — у ученика он исчезает без перезагрузки", async ({
-      browser,
-    }) => {
+    test("учитель удаляет урок — у ученика он исчезает без перезагрузки", async ({ browser }) => {
       const { tutorId, tutorToken, studentId, registered } = await setup();
 
       const slot = currentWeekSlot(13);
@@ -102,5 +94,5 @@ test.describe(
         await studentContext.close();
       }
     });
-  },
+  }
 );
