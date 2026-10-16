@@ -68,6 +68,8 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src"
+    "src",
+    "e2e",
+    "playwright.config.ts"
   ]
 }

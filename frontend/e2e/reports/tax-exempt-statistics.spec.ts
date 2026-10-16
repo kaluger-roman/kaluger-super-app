@@ -44,14 +44,9 @@ test.describe("Налог без необлагаемых уроков", { tag: 
       page.getByRole("button", { name: "Обновить" }).click(),
     ]);
 
-    const cardOf = (title: RegExp) =>
-      page
-        .locator("div")
-        .filter({ has: page.getByRole("heading", { name: title }) })
-        .last();
-
-    await expect(cardOf(/^Налоги \(6%\)/)).toContainText(/60\s₽/);
-    await expect(cardOf(/^Поступления за период$/)).toContainText(/3\s000\s₽/);
+    await expect(page.getByRole("heading", { name: /^Налоги \(6%\)/ })).toBeVisible();
+    await expect(page.getByTestId("tax-amount")).toContainText(/60\s₽/);
+    await expect(page.getByTestId("payments-in-range")).toContainText(/3\s000\s₽/);
 
     await page.getByRole("button", { name: "Подробности расчёта налога" }).hover();
     const tooltip = page.getByRole("tooltip");

@@ -72,8 +72,8 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-test("does nothing when no frontend/src or backend/src file is staged", () => {
-  stage(repo, "docs/readme.md");
+test("does nothing when no linted package file is staged", () => {
+  stage(repo, "docs/readme.md", "frontend/package.json");
 
   assert.equal(runHook().status, 0);
   assert.deepEqual(lintStagedCalls(), []);
@@ -87,6 +87,17 @@ test("runs lint-staged with --no-stash for staged package sources", () => {
   assert.equal(res.status, 0, res.stderr);
   assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
 });
+
+for (const file of ["frontend/e2e/auth/login.spec.ts", "frontend/playwright.config.ts"]) {
+  test(`runs lint-staged for a staged ${file}`, () => {
+    stage(repo, file);
+
+    const res = runHook();
+
+    assert.equal(res.status, 0, res.stderr);
+    assert.deepEqual(lintStagedCalls(), ["[--no-stash]"]);
+  });
+}
 
 test("fails the commit when lint-staged fails", () => {
   env.LINT_STAGED_EXIT = "1";

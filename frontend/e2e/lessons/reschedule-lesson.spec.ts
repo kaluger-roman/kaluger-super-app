@@ -1,9 +1,5 @@
 import { test, expect } from "../fixtures";
-import {
-  createLesson,
-  createStudentFor,
-  getLessonsFor,
-} from "../helpers/db";
+import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 
 test.describe("Перенос урока", { tag: ["@regression", "@lessons"] }, () => {
   test("учитель открывает диалог переноса recurring-урока — RescheduleDialog показывается с правильными полями", async ({
@@ -64,7 +60,7 @@ test.describe("Перенос урока", { tag: ["@regression", "@lessons"] },
     await viewDialog.getByRole("button", { name: "Перенести" }).click();
 
     await expect(
-      page.getByRole("button", { name: /Перенести урок|Переношу/ }).last(),
+      page.getByRole("button", { name: /Перенести урок|Переношу/ }).last()
     ).toBeVisible();
 
     const newStart = new Date(secondStart.getTime() + dayMs);
@@ -83,32 +79,27 @@ test.describe("Перенос урока", { tag: ["@regression", "@lessons"] },
           w.__rescheduleNewEndTimeChanged(new Date(endISO));
         }
       },
-      { startISO: newStart.toISOString(), endISO: newEnd.toISOString() },
+      { startISO: newStart.toISOString(), endISO: newEnd.toISOString() }
     );
 
     await page.getByRole("button", { name: "Отмена" }).click();
 
-    const apiResp = await page.request.put(
-      `http://localhost:3001/api/lessons/${second.id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${tutor.token}`,
-          "Content-Type": "application/json",
-        },
-        data: {
-          startTime: newStart.toISOString(),
-          endTime: newEnd.toISOString(),
-          status: "RESCHEDULED",
-        },
+    const apiResp = await page.request.put(`http://localhost:3001/api/lessons/${second.id}`, {
+      headers: {
+        Authorization: `Bearer ${tutor.token}`,
+        "Content-Type": "application/json",
       },
-    );
+      data: {
+        startTime: newStart.toISOString(),
+        endTime: newEnd.toISOString(),
+        status: "RESCHEDULED",
+      },
+    });
     expect(apiResp.ok()).toBe(true);
 
     const { lessons } = await getLessonsFor(tutor.userId);
     const updated = lessons.find((l) => l.id === second.id);
     expect(updated?.status).toBe("RESCHEDULED");
-    expect(new Date(updated!.startTime).getTime()).not.toBe(
-      secondStart.getTime(),
-    );
+    expect(new Date(updated!.startTime).getTime()).not.toBe(secondStart.getTime());
   });
 });
