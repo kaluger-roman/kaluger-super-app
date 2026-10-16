@@ -2,6 +2,8 @@ import { createEffect, createEvent, createStore, sample } from "effector";
 import { delay } from "patronum";
 
 import { studentScheduleModel } from "@features/studentSchedule";
+import { dispatchCallSignal, isCallSignalOutbound, setCallTransport } from "@features/videoCall";
+import type { CallSignalingOutbound } from "@features/videoCall";
 import type { StudentLessonWsEvent } from "@shared";
 import { getStudentToken, resolveWsUrl } from "@shared";
 
@@ -34,7 +36,11 @@ const $reconnectGeneration = createStore(0);
 // etc.) is a single new `if (data.type === ...)` branch here.
 const dispatchMessage = (raw: string): void => {
   try {
-    const data = JSON.parse(raw) as StudentLessonWsEvent;
+    const data = JSON.parse(raw) as StudentLessonWsEvent | CallSignalingOutbound;
+    if (isCallSignalOutbound(data.type)) {
+      dispatchCallSignal(data as CallSignalingOutbound);
+      return;
+    }
     if (data.type === "lesson_created") {
       studentScheduleModel.lessonCreated(data.lesson);
     } else if (data.type === "lesson_updated") {
@@ -60,6 +66,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
 
   ws.onopen = () => {
     console.log("Student WS connected");
+    setCallTransport((message) => ws.send(JSON.stringify(message)));
     studentWebSocketOpened();
   };
 
@@ -69,6 +76,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
 
   ws.onclose = () => {
     console.log("Student WS disconnected");
+    setCallTransport(null);
     setStudentWebSocketConnection(null);
     studentWebSocketClosed();
   };

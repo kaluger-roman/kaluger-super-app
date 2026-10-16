@@ -22,6 +22,14 @@ export const StyledToolbar = styled(Toolbar)({
 export const HeaderTitle = styled(Typography)(({ theme }) => ({
   color: theme.palette.primary.contrastText,
   fontWeight: 600,
+  flexGrow: 1,
+}));
+
+export const HeaderCallButton = styled(Box)(({ theme }) => ({
+  "& .MuiButton-root": {
+    color: theme.palette.primary.contrastText,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+  },
 }));
 
 export const MenuButton = styled(IconButton)(({ theme }) => ({

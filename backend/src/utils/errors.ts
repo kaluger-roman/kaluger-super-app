@@ -52,3 +52,24 @@ export class TaxPeriodsRequiredError extends Error {
     this.name = "TaxPeriodsRequiredError";
   }
 }
+
+export class CallAuthorizationError extends Error {
+  constructor(message = "Звонок этому собеседнику недоступен") {
+    super(message);
+    this.name = "CallAuthorizationError";
+  }
+}
+
+export class CallPeerOfflineError extends Error {
+  constructor(message = "Собеседник сейчас не в сети") {
+    super(message);
+    this.name = "CallPeerOfflineError";
+  }
+}
+
+export class CallPeerBusyError extends Error {
+  constructor(message = "Абонент занят") {
+    super(message);
+    this.name = "CallPeerBusyError";
+  }
+}
