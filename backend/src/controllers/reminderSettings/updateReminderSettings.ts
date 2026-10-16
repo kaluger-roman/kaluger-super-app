@@ -100,13 +100,13 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
       }
     }
 
-    res.json({
+    return res.json({
       enabled: settings.enabled,
       intervals: settings.intervals,
       muteWhenInLesson: settings.muteWhenInLesson,
     });
   } catch (error) {
     console.error("Update reminder settings error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

@@ -63,10 +63,10 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
 
     const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [result]);
 
-    res.json({ student: studentWithCommission });
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Archive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -95,9 +95,9 @@ export const unarchiveStudent = async (req: AuthRequest, res: Response) => {
 
     const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
 
-    res.json({ student: studentWithCommission });
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Unarchive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

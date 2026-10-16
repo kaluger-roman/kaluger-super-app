@@ -52,9 +52,9 @@ export const getLessonCancellationInfo = async (req: AuthRequest, res: Response)
       transferDate: lesson.paymentDate.toISOString(),
     };
 
-    res.json({ cancellationInfo });
+    return res.json({ cancellationInfo });
   } catch (error) {
     console.error("Get cancellation info error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

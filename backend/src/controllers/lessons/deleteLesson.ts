@@ -86,8 +86,10 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
 
       void broadcastStudentLessonDeleted(id, studentUserId);
     }
+
+    return;
   } catch (error) {
     console.error("Delete lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

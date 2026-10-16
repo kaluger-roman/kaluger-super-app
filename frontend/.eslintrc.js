@@ -24,6 +24,22 @@ const useUnitArrayRule = {
     selector: 'CallExpression[callee.name="useUnit"][arguments.0.type="ArrayExpression"]',
     message: "No useUnit([...]) — call useUnit per store, or pass an object of events.",
 };
+const storeOnMessage = "No `.on()` — update stores with `sample`.";
+const storeOnRules = [
+    {
+        selector: 'CallExpression[callee.property.name="on"][callee.object.name=/^\\$/]',
+        message: storeOnMessage,
+    },
+    {
+        selector: 'CallExpression[callee.property.name="on"][callee.object.property.name=/^\\$/]',
+        message: storeOnMessage,
+    },
+    {
+        selector:
+            'CallExpression[callee.property.name="on"][callee.object.callee.name=/^(createStore|restore)$/]',
+        message: storeOnMessage,
+    },
+];
 const emptyFileRules = [
     { selector: "Program[body.length=0]", message: "Empty file — delete it instead." },
     {
@@ -46,7 +62,13 @@ const timerRules = [
         message: timerMessage,
     },
 ];
-const restrictedSyntax = [enumRule, useUnitArrayRule, ...emptyFileRules, modelNamedImportRule];
+const restrictedSyntax = [
+    enumRule,
+    useUnitArrayRule,
+    ...storeOnRules,
+    ...emptyFileRules,
+    modelNamedImportRule,
+];
 
 // react-app/jest turns Jest and Testing Library rules on for every *.spec.* file; e2e runs on Playwright.
 const disableAllRules = (prefix, plugin) =>
@@ -259,6 +281,7 @@ module.exports = {
         "effector/enforce-store-naming-convention": "error",
         "effector/enforce-effect-naming-convention": "error",
         "effector/enforce-gate-naming-convention": "error",
+        "effector/keep-options-order": "error",
         "effector/no-watch": "error",
         "effector/no-getState": "error",
         "effector/no-forward": "error",
@@ -401,7 +424,13 @@ module.exports = {
             rules: {
                 "jsx-a11y/click-events-have-key-events": "off",
                 "jsx-a11y/no-static-element-interactions": "off",
-                "no-restricted-syntax": ["error", enumRule, useUnitArrayRule, ...emptyFileRules],
+                "no-restricted-syntax": [
+                    "error",
+                    enumRule,
+                    useUnitArrayRule,
+                    ...storeOnRules,
+                    ...emptyFileRules,
+                ],
                 "jest/no-focused-tests": "error",
                 "jest/no-disabled-tests": "error",
             },

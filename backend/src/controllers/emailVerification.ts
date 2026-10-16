@@ -87,7 +87,7 @@ export const verifyEmail = async (
 
     const token = generateToken({ userId: user.id, email: user.email });
 
-    res.json({
+    return res.json({
       message: "Email успешно подтвержден",
       token,
       user: {
@@ -100,7 +100,7 @@ export const verifyEmail = async (
     });
   } catch (error) {
     console.error("Verify email error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -153,9 +153,9 @@ export const resendVerification = async (
       return res.status(500).json({ error: "Ошибка отправки письма. Попробуйте позже" });
     }
 
-    res.json(RESEND_NEUTRAL_RESPONSE);
+    return res.json(RESEND_NEUTRAL_RESPONSE);
   } catch (error) {
     console.error("Resend verification error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

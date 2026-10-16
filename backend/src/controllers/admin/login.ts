@@ -32,9 +32,9 @@ export const adminLogin = async (req: Request, res: Response) => {
 
     const token = generateAdminToken({ email: normalizedEmail, isAdmin: true });
 
-    res.json({ token });
+    return res.json({ token });
   } catch (error) {
     console.error("Admin login error:", error);
-    res.status(500).json({ error: "Ошибка авторизации" });
+    return res.status(500).json({ error: "Ошибка авторизации" });
   }
 };

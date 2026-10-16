@@ -59,7 +59,7 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
       create: subscriptionData,
     });
 
-    res.status(existing ? 200 : 201).json({
+    return res.status(existing ? 200 : 201).json({
       id: subscription.id,
       endpoint: subscription.endpoint,
       deviceName: subscription.deviceName,
@@ -67,6 +67,6 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Subscribe error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

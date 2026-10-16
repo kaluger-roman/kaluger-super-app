@@ -16,5 +16,5 @@ export const authenticateAdmin = (req: AdminRequest, res: Response, next: NextFu
   }
 
   req.admin = payload;
-  next();
+  return next();
 };

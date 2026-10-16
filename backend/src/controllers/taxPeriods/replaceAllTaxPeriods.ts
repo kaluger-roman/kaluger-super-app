@@ -56,7 +56,7 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: result.error });
     }
 
-    res.json(
+    return res.json(
       result.stored.map((p) => ({
         id: p.id,
         startDate: p.startDate.toISOString(),
@@ -65,6 +65,6 @@ export const replaceAllTaxPeriods = async (req: AuthRequest, res: Response) => {
     );
   } catch (error) {
     console.error("Replace tax periods error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
