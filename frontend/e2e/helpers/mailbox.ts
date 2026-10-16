@@ -11,7 +11,9 @@ export type MailboxEntry = {
 
 export const fetchLatestMail = async (email: string): Promise<MailboxEntry | null> => {
   try {
-    return await apiRequest<MailboxEntry>(`/api/__test__/mailbox/${encodeURIComponent(email)}`);
+    return await apiRequest<MailboxEntry>(`/api/__test__/mailbox/${encodeURIComponent(email)}`, {
+      expectStatus: 200,
+    });
   } catch {
     return null;
   }

@@ -5,7 +5,9 @@
 # own Docker Postgres with two databases (tutor_app + tutor_app_test). Dev
 # servers run on the HOST (fast HMR, worktree node_modules symlinks keep
 # working) on the branch's ports; the wrapper commands export the right env, so
-# personal backend/.env is never touched (exported vars beat dotenv-loaded ones).
+# personal backend/.env is never touched. The backend does not read .env itself:
+# run-backend loads it with dotenv-cli, which keeps the exported ports and DB;
+# run-backend-e2e uses the fixed E2E_* values below instead.
 #
 # Port slots: idx per branch from the registry; web=3000+idx*10,
 # api=3001+idx*10, db=15432+idx. Branch "main" is reserved slot 0 → the
@@ -31,6 +33,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.dev.yml"
 # The registry lives in the shared .git dir so all worktrees see one allocation.
 REGISTRY="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)/dev-stack-ports.json"
+
+# Test-only credentials for the e2e backend: e2e/admin specs sign in with these, and the
+# test routes mint admin tokens for E2E_ADMIN_EMAIL. Never used outside NODE_ENV=test.
+E2E_ADMIN_EMAIL="admin@e2e.local"
+# bcrypt of the password `E2eAdmin!2026` — single-quoted so the $ segments stay literal.
+E2E_ADMIN_PASSWORD_HASH='$2b$10$bh0KSxPLTBEwZJlmikbYauZdELBjCDPXcpe9vCds2KUZ6RRjCV3su'
 
 sanitize() {
   echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##'
@@ -112,8 +120,10 @@ cmd_migrate_inner() {
 cmd_run_backend() {
   load_ports
   cd "$REPO_ROOT/backend"
+  local load_env=()
+  [ -f .env ] && load_env=(./node_modules/.bin/dotenv -e .env --)
   PORT="$API_PORT" DATABASE_URL="$DEV_DB_URL" FRONTEND_URL="http://localhost:$WEB_PORT" \
-    exec npm run dev
+    exec ${load_env[@]+"${load_env[@]}"} npm run dev
 }
 
 cmd_run_backend_e2e() {
@@ -121,6 +131,9 @@ cmd_run_backend_e2e() {
   cd "$REPO_ROOT/backend"
   NODE_ENV=test E2E=1 PORT="$API_PORT" DATABASE_URL="$TEST_DB_URL" \
     FRONTEND_URL="http://localhost:$WEB_PORT" \
+    JWT_SECRET=e2e-jwt-secret ADMIN_JWT_SECRET=e2e-admin-jwt-secret \
+    STUDENT_JWT_SECRET=e2e-student-jwt-secret \
+    ADMIN_EMAIL="$E2E_ADMIN_EMAIL" ADMIN_PASSWORD_HASH="$E2E_ADMIN_PASSWORD_HASH" \
     exec npm run dev
 }
 

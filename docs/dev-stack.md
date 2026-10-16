@@ -42,9 +42,16 @@ bash scripts/dev-stack.sh down-all         # снести все dev-* стек�
 ## Как это работает
 
 - **Личный `backend/.env` не трогается.** Обёртки `run-*`/`test-backend`/`e2e` экспортируют
-  `PORT`, `DATABASE_URL`, `FRONTEND_URL` (CORS), `REACT_APP_API_URL` поверх — dotenv-загрузчики
-  (Prisma, jest `setup.ts`) не перекрывают уже выставленные переменные окружения, поэтому секреты
-  (JWT, Resend, VAPID) продолжают браться из твоего `.env`, а порты/БД — из слота ветки.
+  `PORT`, `DATABASE_URL`, `FRONTEND_URL` (CORS), `REACT_APP_API_URL` поверх. Сам backend `.env`
+  не читает, поэтому `run-backend` запускает его через `dotenv-cli` (`dotenv -e .env`): секреты
+  (JWT, Resend, VAPID) берутся из твоего `.env`, а порты/БД — из слота ветки, потому что dotenv не
+  перекрывает уже выставленные переменные.
+- **`run-backend-e2e` от `.env` не зависит.** Он выставляет фиксированные тестовые секреты и
+  тестового админа: `admin@e2e.local` / `E2eAdmin!2026` (хеш — `E2E_ADMIN_PASSWORD_HASH` в
+  `scripts/dev-stack.sh`). Ими пользуются `e2e/admin/*` и тестовый роут `/api/__test__/admin/token`.
+- **`pg_dump` на хосте должен быть не старше Postgres стенда (16).** Бэкап (`e2e/admin/create-backup`)
+  зовёт `pg_dump` с хоста; на Ubuntu 22.04 из apt ставится 14, и он отказывается работать с сервером
+  16 (`server version mismatch`). Нужен `postgresql-client-16` из репозитория PGDG.
 - **WebSocket в dev** выводится из `REACT_APP_API_URL` (`resolveWsUrl` в
   `frontend/src/shared/config/index.ts`) — realtime ветки ходит в бэк своей же ветки.
 - **Playwright** читает `E2E_BASE_URL`/`PORT` (`frontend/playwright.config.ts`), API-хелперы e2e —

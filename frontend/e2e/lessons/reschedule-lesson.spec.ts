@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures";
+import { API_URL } from "../helpers/api";
 import { createLesson, createStudentFor, getLessonsFor } from "../helpers/db";
 
 test.describe("Перенос урока", { tag: ["@regression", "@lessons"] }, () => {
@@ -84,7 +85,7 @@ test.describe("Перенос урока", { tag: ["@regression", "@lessons"] },
 
     await page.getByRole("button", { name: "Отмена" }).click();
 
-    const apiResp = await page.request.put(`http://localhost:3001/api/lessons/${second.id}`, {
+    const apiResp = await page.request.put(`${API_URL}/api/lessons/${second.id}`, {
       headers: {
         Authorization: `Bearer ${tutor.token}`,
         "Content-Type": "application/json",
