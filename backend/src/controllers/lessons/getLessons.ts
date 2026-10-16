@@ -39,7 +39,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
       }
     );
 
-    res.json({
+    return res.json({
       lessons,
       pagination: pagination
         ? {
@@ -53,7 +53,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Get lessons error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -78,9 +78,9 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
 
     const [lessonWithCommission] = await tryAttachCommissionToLessons(userId!, [lesson]);
 
-    res.json({ lesson: lessonWithCommission });
+    return res.json({ lesson: lessonWithCommission });
   } catch (error) {
     console.error("Get lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

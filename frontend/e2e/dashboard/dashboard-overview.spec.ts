@@ -10,10 +10,7 @@ const makeFutureSlot = (daysAhead: number): { start: Date; end: Date } => {
 };
 
 test.describe("Обзор дашборда", { tag: ["@regression", "@dashboard"] }, () => {
-  test("учитель видит ближайшие уроки и обзор учеников после загрузки", async ({
-    page,
-    tutor,
-  }) => {
+  test("учитель видит ближайшие уроки и обзор учеников после загрузки", async ({ page, tutor }) => {
     const { student: studentA } = await createStudentFor(tutor.userId, {
       name: "Алексей Смирнов",
     });
@@ -41,15 +38,11 @@ test.describe("Обзор дашборда", { tag: ["@regression", "@dashboard"
 
     await page.goto("/");
 
-    await expect(
-      page.getByRole("button", { name: /Посмотреть все уроки/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Посмотреть все уроки/ })).toBeVisible();
     await expect(page.getByText("Алексей Смирнов").first()).toBeVisible();
     await expect(page.getByText("Мария Иванова").first()).toBeVisible();
 
-    await expect(
-      page.getByRole("button", { name: /Посмотреть всех учеников/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Посмотреть всех учеников/ })).toBeVisible();
   });
 
   test("учитель кликает «Ученики» в QuickActions и попадает на список учеников", async ({
@@ -59,9 +52,7 @@ test.describe("Обзор дашборда", { tag: ["@regression", "@dashboard"
     await createStudentFor(tutor.userId, { name: "Демо Ученик" });
 
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /Посмотреть всех учеников/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Посмотреть всех учеников/ })).toBeVisible();
 
     await page.getByRole("heading", { name: "Ученики", exact: true }).click();
 

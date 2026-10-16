@@ -25,6 +25,22 @@ const prismaMockRule = {
     'CallExpression[callee.object.name="jest"][callee.property.name=/^(mock|doMock|unstable_mockModule)$/][arguments.0.value=/prisma/i]',
   message: "Do NOT mock Prisma — run against the test database.",
 };
+// Cyrillic-free literal in a response payload: `res.json({ error })` and the `message`
+// object express-rate-limit sends as the body. Messages built elsewhere (template
+// literals, service errors) stay review-checked.
+const russianErrorMessage = "Error messages are in Russian (docs/conventions/backend.md).";
+const cyrillicFreeErrorLiteral =
+  'Property[key.name="error"] > Literal[value=/^[^\\u0400-\\u04FF]*$/]';
+const russianErrorRules = [
+  {
+    selector: `CallExpression[callee.property.name="json"] ${cyrillicFreeErrorLiteral}`,
+    message: russianErrorMessage,
+  },
+  {
+    selector: `CallExpression[callee.name="rateLimit"] ${cyrillicFreeErrorLiteral}`,
+    message: russianErrorMessage,
+  },
+];
 const roleSuffixes = "types,helpers,constants,validators";
 
 export default tseslint.config(
@@ -63,6 +79,7 @@ export default tseslint.config(
         ...emptyFileRules,
         errorClassRule,
         prismaMockRule,
+        ...russianErrorRules,
       ],
       "check-file/filename-naming-convention": [
         "error",
@@ -98,6 +115,7 @@ export default tseslint.config(
         enumRule,
         ...emptyFileRules,
         prismaMockRule,
+        ...russianErrorRules,
       ],
     },
   },

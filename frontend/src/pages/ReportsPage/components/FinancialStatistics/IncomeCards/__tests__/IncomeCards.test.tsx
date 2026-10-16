@@ -55,6 +55,12 @@ describe("IncomeCards", () => {
     expect(screen.getByText(/4 оплаты по дате платежа/)).toBeInTheDocument();
   });
 
+  it("should mark the earnings amount with the test id used by e2e", () => {
+    renderCards(statistics);
+
+    expect(screen.getByTestId("earnings")).toHaveTextContent(/50\s*000/);
+  });
+
   it("should not render the period-independent prepaid card", () => {
     renderCards(statistics);
 

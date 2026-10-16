@@ -25,10 +25,10 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       orderBy: { name: "asc" },
     });
 
-    res.json({ students: await tryAttachCommissionToStudents(userId!, students) });
+    return res.json({ students: await tryAttachCommissionToStudents(userId!, students) });
   } catch (error) {
     console.error("Get students error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -56,9 +56,9 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
 
     const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
 
-    res.json({ student: studentWithCommission });
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Get student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

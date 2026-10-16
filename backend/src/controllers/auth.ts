@@ -40,7 +40,7 @@ export const register = async (
       name,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Пользователь успешно создан. Проверьте email для подтверждения регистрации",
       user,
     });
@@ -49,7 +49,7 @@ export const register = async (
       return res.status(409).json({ error: error.message });
     }
     console.error("Registration error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -69,7 +69,7 @@ export const login = async (
       password,
     });
 
-    res.json({ message: "Вход выполнен успешно", token, user });
+    return res.json({ message: "Вход выполнен успешно", token, user });
   } catch (error) {
     if (error instanceof InvalidCredentialsError) {
       return res.status(401).json({ error: error.message });
@@ -78,7 +78,7 @@ export const login = async (
       return res.status(403).json({ error: error.message });
     }
     console.error("Login error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -90,10 +90,10 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Пользователь не найден" });
     }
 
-    res.json({ user });
+    return res.json({ user });
   } catch (error) {
     console.error("Get profile error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -114,12 +114,12 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       ...(taxEnabled !== undefined ? { taxEnabled } : {}),
     });
 
-    res.json({ message: "Профиль успешно обновлен", user });
+    return res.json({ message: "Профиль успешно обновлен", user });
   } catch (error) {
     if (error instanceof TaxPeriodsRequiredError) {
       return res.status(400).json({ error: error.message });
     }
     console.error("Update profile error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

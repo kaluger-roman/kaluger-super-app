@@ -40,7 +40,7 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
 
     const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
 
-    res.json({
+    return res.json({
       message: "Ученик успешно обновлен",
       student: studentWithCommission,
     });
@@ -51,6 +51,6 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

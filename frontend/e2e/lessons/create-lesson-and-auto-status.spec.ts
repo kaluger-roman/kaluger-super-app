@@ -1,10 +1,5 @@
 import { test, expect } from "../fixtures";
-import {
-  createStudentFor,
-  getLessonsFor,
-  patchLesson,
-  runLessonStatusTick,
-} from "../helpers/db";
+import { createStudentFor, getLessonsFor, patchLesson, runLessonStatusTick } from "../helpers/db";
 
 test.describe(
   "Создание урока и автоматическая смена статуса",
@@ -48,9 +43,7 @@ test.describe(
       await runLessonStatusTick();
       await page.reload();
 
-      await expect(
-        page.getByText("В процессе", { exact: false }).first(),
-      ).toBeVisible();
+      await expect(page.getByText("В процессе", { exact: false }).first()).toBeVisible();
 
       const completedEnd = new Date(Date.now() - 60 * 1000);
       await patchLesson(lessonId, { endTime: completedEnd });
@@ -64,5 +57,5 @@ test.describe(
         })
         .toBe("COMPLETED");
     });
-  },
+  }
 );

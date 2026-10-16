@@ -25,9 +25,9 @@ export const getIncomeHistory = async (req: AuthRequest, res: Response) => {
       through,
     });
 
-    res.json(history);
+    return res.json(history);
   } catch (error) {
     console.error("Get income history error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
