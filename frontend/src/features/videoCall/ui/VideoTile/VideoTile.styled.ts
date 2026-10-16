@@ -35,16 +35,14 @@ export const FakeVideoPattern = styled(Box)({
     "radial-gradient(circle at 30% 25%, rgba(129, 199, 132, 0.45) 0, transparent 38%), radial-gradient(circle at 75% 70%, rgba(76, 175, 80, 0.35) 0, transparent 42%)",
 });
 
-export const VideoElement = styled("video")<{ $hidden: boolean }>(
-  ({ $hidden }) => ({
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    visibility: $hidden ? "hidden" : "visible",
-  })
-);
+export const VideoElement = styled("video")<{ $hidden: boolean }>(({ $hidden }) => ({
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  visibility: $hidden ? "hidden" : "visible",
+}));
 
 export const ScreenMock = styled(Box)({
   position: "absolute",

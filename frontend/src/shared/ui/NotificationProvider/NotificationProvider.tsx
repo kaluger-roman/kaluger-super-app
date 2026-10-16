@@ -1,6 +1,6 @@
 import type { FC } from "react";
 
-import { AlertColor } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import * as Styled from "./NotificationProvider.styled";

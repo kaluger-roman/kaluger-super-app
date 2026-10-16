@@ -9,22 +9,29 @@ import {
   Button,
   Typography,
   Box,
-  TextField,
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
+import { getLessonDisplayName } from "@shared";
 
-import * as paymentStatusModel from "./payment-status.model";
 import { usePaymentDate } from "./PaymentStatus.hooks";
+import * as paymentStatusModel from "./PaymentStatus.model";
 import * as Styled from "./PaymentStatus.styled";
-import { lessonPaymentChanged } from "../../models/lesson-actions.model";
+import { parseReceivedAmount } from "../../models";
+import * as lessonActionsModel from "../../models/lessonActions.model";
+import { PaymentFields } from "../PaymentFields";
 
 type PaymentStatusProps = {
   lesson: Lesson;
   size?: "small" | "medium";
   showLabel?: boolean;
-  onPaymentChange?: (lessonId: string, isPaid: boolean, paymentDate?: string) => void;
+  onPaymentChange?: (
+    lessonId: string,
+    isPaid: boolean,
+    paymentDate?: string,
+    receivedAmount?: number
+  ) => void;
 };
 
 export const PaymentStatus: FC<PaymentStatusProps> = ({
@@ -35,38 +42,48 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
 }) => {
   const confirmDialogOpen = useUnit(paymentStatusModel.$isOpen);
   const pendingPaymentStatus = useUnit(paymentStatusModel.$pendingStatus);
+  const receivedAmountInput = useUnit(paymentStatusModel.$receivedAmountInput);
+  const receivedAmountError = useUnit(paymentStatusModel.$receivedAmountError);
 
-  const actions = useUnit({ lessonPaymentChanged });
+  const actions = useUnit({
+    lessonPaymentChanged: lessonActionsModel.lessonPaymentChanged,
+    confirmDialogOpened: paymentStatusModel.confirmDialogOpened,
+    confirmDialogClosed: paymentStatusModel.confirmDialogClosed,
+    receivedAmountChanged: paymentStatusModel.receivedAmountChanged,
+  });
 
   const { paymentDate, setPaymentDate } = usePaymentDate(lesson, confirmDialogOpen);
+  const isConfirmBlocked = Boolean(receivedAmountError);
 
   if (!lesson.price) return null;
 
   const handlePaymentToggle = (newStatus: boolean) => {
-    paymentStatusModel.confirmDialogOpened(newStatus);
+    actions.confirmDialogOpened({ isPaid: newStatus, price: lesson.price });
   };
 
   const handleConfirmPayment = () => {
+    if (isConfirmBlocked) return;
     if (pendingPaymentStatus !== null) {
+      const receivedAmount = pendingPaymentStatus
+        ? parseReceivedAmount(receivedAmountInput)
+        : undefined;
+      const date = pendingPaymentStatus ? paymentDate : undefined;
       if (onPaymentChange) {
-        onPaymentChange(
-          lesson.id,
-          pendingPaymentStatus,
-          pendingPaymentStatus ? paymentDate : undefined
-        );
+        onPaymentChange(lesson.id, pendingPaymentStatus, date, receivedAmount);
       } else {
         actions.lessonPaymentChanged({
           lessonId: lesson.id,
           isPaid: pendingPaymentStatus,
-          paymentDate: pendingPaymentStatus ? paymentDate : undefined,
+          paymentDate: date,
+          receivedAmount,
         });
       }
     }
-    paymentStatusModel.confirmDialogClosed();
+    actions.confirmDialogClosed();
   };
 
   const handleCancelPayment = () => {
-    paymentStatusModel.confirmDialogClosed();
+    actions.confirmDialogClosed();
   };
 
   return (
@@ -111,17 +128,15 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
               <strong>{pendingPaymentStatus ? "оплаченный" : "неоплаченный"}</strong>?
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+              Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
             </Typography>
             {pendingPaymentStatus && (
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Дата оплаты"
-                type="date"
-                fullWidth
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
+              <PaymentFields
+                paymentDate={paymentDate}
+                receivedAmount={receivedAmountInput}
+                receivedAmountError={receivedAmountError}
+                onPaymentDateChange={setPaymentDate}
+                onReceivedAmountChange={actions.receivedAmountChanged}
               />
             )}
           </Box>
@@ -132,6 +147,7 @@ export const PaymentStatus: FC<PaymentStatusProps> = ({
             onClick={handleConfirmPayment}
             color={pendingPaymentStatus ? "success" : "warning"}
             variant="contained"
+            disabled={isConfirmBlocked}
           >
             Подтвердить
           </Button>

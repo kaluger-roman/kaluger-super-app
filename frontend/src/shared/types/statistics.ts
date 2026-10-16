@@ -17,6 +17,10 @@ export type Statistics = {
   paymentsInRangeSum?: number;
   paymentsInRangeCount?: number;
   trialLessonsCount?: number;
+  hasCommissionStudents?: boolean;
+  commissionWrittenOffSum?: number;
+  commissionRemainingTotal?: number;
   taxAmount: number | null;
+  taxExemptIncome: number | null;
   taxBreakdown: TaxBreakdownEntry[] | null;
 };

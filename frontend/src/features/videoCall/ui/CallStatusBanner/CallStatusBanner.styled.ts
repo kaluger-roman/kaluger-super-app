@@ -13,8 +13,7 @@ export const BannerBox = styled(Box)<BannerBoxProps>(({ $variant }) => ({
   padding: "10px 16px",
   borderRadius: 12,
   color: "#ffffff",
-  background:
-    $variant === "error" ? "rgba(211, 47, 47, 0.92)" : "rgba(245, 124, 0, 0.92)",
+  background: $variant === "error" ? "rgba(211, 47, 47, 0.92)" : "rgba(245, 124, 0, 0.92)",
 }));
 
 export const BannerText = styled(Typography)({

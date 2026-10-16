@@ -1,8 +1,4 @@
-export type {
-  CallHistoryRecord,
-  CallStatus,
-  CallDirection,
-} from "@entities/callRecord";
+export type { CallHistoryRecord, CallStatus, CallDirection } from "@entities/callRecord";
 
 export type CallMediaState = {
   micOn: boolean;

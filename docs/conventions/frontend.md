@@ -30,10 +30,18 @@ import { Button } from "../../shared/ui";
 
 ## File Naming
 
-**PascalCase** — components: `StudentCard/StudentCard.tsx`, `StudentCard.styled.ts`
-**camelCase** — everything else: `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`
+Covers `frontend/src/**`. E2E specs follow `docs/conventions/e2e-testing.md` and stay kebab-case (`create-student.spec.ts`).
 
-**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts`, `.helpers.ts`, `.hooks.ts`
+**PascalCase** — components and their companion files: `StudentCard/StudentCard.tsx`, `StudentCard.styled.ts`, `StudentCard.model.ts`
+**camelCase** — everything else: `lessons.model.ts`, `lessons.api.ts`, `lessons.types.ts`. Files directly inside `api/`, `model/`, `models/`, `types/` are always camelCase
+**Folders** — camelCase, or PascalCase for a component folder. No kebab-case or snake_case in file or folder names
+**Exceptions** — names fixed by CRA: `src/index.tsx`, `src/react-app-env.d.ts`
+
+**Only these extensions:** `.tsx`, `.model.ts`, `.api.ts`, `.types.ts`, `.styled.ts`, `.constants.ts(x)`, `.helpers.ts`, `.hooks.ts` (plus `index.ts`, `*.test.ts(x)`, `*.d.ts`, and test support files under `__tests__/` such as `src/__tests__/setup.ts`). A plain `<name>.ts` is allowed only inside `api/` and `types/`, where the folder already names the role (`shared/api/lessons.ts`, `shared/types/auth.ts`)
+
+ESLint enforced (`eslint-plugin-check-file`): PascalCase for `*.tsx`; camelCase for `.ts` directly inside `api/`, `model/`, `models/`, `types/`; letters and digits only, starting with a letter, for every other `.ts` name and every folder (`__tests__` aside); the extension allowlist. Test files may carry an extra qualifier (`PaymentStatus.component.test.tsx`) — they are outside the allowlist, and only the name before the first dot is checked.
+
+Review-checked: a glob cannot tell a companion from a standalone module, so PascalCase vs camelCase for the remaining `.ts` files (`StudentCard.styled.ts` vs `dateFormat.helpers.ts`) and for folders (`StudentCard/` vs `lessons/`) is not linted.
 
 **Folder structure:**
 
@@ -61,8 +69,8 @@ feature/models/
 - **No deep imports** — max 1 level: `import { X } from "./components"` not `"./components/X/X"`
 - **Separate files for:** constants, helpers, hooks, types — never mix in one file. Никаких `const X = ...` или вспомогательных функций в файле компонента — только сам компонент и его props-тип. Всё остальное → `*.constants.ts(x)` / `*.helpers.ts` / `*.types.ts` рядом
 - **Shared types split by domain.** Один большой `shared/types/index.ts` не масштабируется — разнеси по `types/auth.ts`, `types/student.ts`, `types/lesson.ts`, …, а `index.ts` оставь barrel'ом из `export type`
-- **Components < 150 lines** — split if larger
-- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}`
+- **Components < 150 lines** — split if larger (ESLint enforced: `max-lines` on `*.tsx`, blank lines and comments not counted, tests excluded)
+- **No empty files** — if a file is no longer needed, delete it completely. Never leave stub files with only `export {}` (ESLint enforced: `no-restricted-syntax`, `*.d.ts` excluded)
 
 ### Types
 
@@ -74,9 +82,9 @@ feature/models/
 
 ### Styles
 
-- **No inline styles** — no `style={{}}`, no `sx={{}}`
+- **No inline styles** — no `style={{}}`, no `sx={{}}` (ESLint enforced: `react/forbid-component-props`, `react/forbid-dom-props`)
 
-- **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering:
+- **Styled props with `$` prefix** for dynamic values, **Use `styled` from `@shared`** — for correct `$` props filtering (ESLint enforced: `no-restricted-imports` bans `styled` from `@mui/material`, `@mui/material/styles`, `@mui/system`, `@emotion/styled`, `styled-components`; inside `shared` import it relatively from `shared/lib`):
 
   ```typescript
   import { styled } from "@shared";
@@ -97,6 +105,8 @@ feature/models/
 - **No `<form>` tags** — use explicit `onClick` handlers on buttons instead of `onSubmit`
 
 ### Accessibility (a11y)
+
+`plugin:jsx-a11y/recommended` is ESLint enforced (`alt-text`, `label-has-associated-control`, `no-static-element-interactions`, `click-events-have-key-events`, …). Two deliberate exceptions: `jsx-a11y/no-autofocus` is off (`autoFocus` on the first field of a form/dialog is the intended focus management), and the static-element interaction rules are off inside `__tests__` (a `<div onClick>` wrapper is the standard event-propagation probe). The `aria-label` rule below is **not** covered by the plugin — it is review-checked.
 
 - **Icon-only buttons must have `aria-label`** — every `IconButton` (or styled `IconButton`) whose only visible content is an icon must include a Russian `aria-label` describing its action. `<Tooltip>` does NOT replace this — it sets `title`, which screen readers (notably VoiceOver) ignore on interactive elements.
   ```tsx
@@ -126,12 +136,13 @@ feature/models/
 - **Named exports only** — no `export default`
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
-- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. `tsconfig.json` also has `noUnusedLocals`, `noImplicitReturns` and `noFallthroughCasesInSwitch` on
+- **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ### Shared utilities
 
 - **Дата/время** — все примитивы (`addDays`, `getWeekStart`, `getWeekEnd`, `groupByDay`, `formatTime`, `formatDuration`, `formatTimeRange`, `toDateKey`) живут в `shared/lib/date.helpers.ts`. Не объявлять локальные `setDate(getDate() + n)` в компонентах/моделях — импортировать из `@shared`.
-- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.ts`. Тоже импортировать через `@shared`.
+- **Локализованные форматтеры** (`formatDate`, `formatWeekRange`, `formatMonth`, `formatDay`) — в `shared/lib/dateFormat.helpers.ts`. Тоже импортировать через `@shared`.
 - **Ошибки axios** — единый `extractAxiosError(err, fallback?)` в `shared/lib/error.helpers.ts`. Не дублировать `axiosError?.response?.data?.error || axiosError?.message || "..."` в каждой модели. При необходимости фолбэк — вторым аргументом.
 
 ## Effector Conventions
@@ -161,6 +172,8 @@ feature/models/
 - `useEffect` for initial data fetching — use `createGate` + `sample({ clock: Gate.open, target: fetchFx })` instead
 - `useEffect` + `setInterval`/`setTimeout` для таймеров, дёргающих события модели — таймер живёт **внутри модели**. Для периодических тиков используем `interval` из `patronum` (`{ tick, isRunning }`), для одиночной задержки — `delay` из `patronum`. Не свой `createEffect(() => setTimeout(...))` с `scopeBind` — `patronum` уже сделал scope-safe реализацию
 
+`.on()`, `.watch()`, `getState()`, `forward()`, `guard()` and `useStore` are ESLint-enforced, including in tests: the `eslint-plugin-effector` rules plus a `no-restricted-syntax` selector for `.on()` called on a `$store` or on `createStore(...)` / `restore(...)` — observe units in tests via `createWatch({ unit, fn, scope })`. `useUnit([...])` and raw `setTimeout` / `setInterval` inside `*.model.ts` are ESLint-enforced via `no-restricted-syntax` (timers are allowed in tests). The rest of the list is review-checked.
+
 **useUnit pattern:**
 
 ```typescript
@@ -175,7 +188,7 @@ const actions = useUnit({ save: model.saved, delete: model.deleted });
 const [lessons, students] = useUnit([model.$lessons, model.$students]);
 ```
 
-**sample order:** `{ clock, source, filter, fn, target }`
+**sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last). The rule knows only those keys: put effector 23's `batch` / `name` at the end, and never apply its IDE quick fix — it rebuilds the options object out of the keys it knows and silently drops everything else, a spread inside the config included (so write the config with plain properties).
 
 **Timers in models (patronum):**
 
@@ -194,11 +207,13 @@ sample({ clock: tick, target: cooldownTick });
 
 Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
+Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/__tests__/webSocket.model.test.ts`.
+
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
 **Atomic stores:** Avoid large object stores. Instead of `$uiState: { isOpen, selected, anchor }` use separate `$isOpen`, `$selected`, `$anchor`.
 
-**Models < 200 lines** — split into smaller models if larger.
+**Models < 200 lines** — split into smaller models if larger (ESLint enforced: `max-lines` on `*.model.ts`, blank lines and comments not counted).
 
 **Split models by domain** — separate models by logical responsibility (e.g., `list.model.ts`, `form.model.ts`, `dialogs.model.ts`).
 
@@ -227,7 +242,7 @@ sample({
 });
 ```
 
-**Export and import models as namespace:**
+**Export and import models as namespace** (ESLint enforced: `no-restricted-syntax` bans named value imports from `*.model` files in prod code; `import type { … }` is fine, tests may import model internals directly):
 
 ```typescript
 // ✅ Export in index.ts
@@ -281,6 +296,12 @@ export const $isBlocking = combine(
 );
 ```
 
+**Single exception: incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect stays out of `$isBlocking` and shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+
+`$isBlocking` is the raw "anything loading" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has stayed continuously on for `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `debounce` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
+
+There must be exactly ONE full-screen `Backdrop` instance at runtime — two mounted at once stack their dim layers (0.5 + 0.5 ≈ 0.75) and show doubled spinners. Lazy route chunk loads go through the same overlay: the Suspense fallback renders `null` and mounts `RouteChunkGate` (in `blocking.model.ts`), whose `status` is wired into the `$isBlocking` combine. Never render an extra `Backdrop`/spinner overlay for a new loading state — feed it into `$isBlocking` instead.
+
 ## Timezone Handling
 
 User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), sent automatically as `X-Timezone` header on every API request (`shared/api/base.ts`).
@@ -288,8 +309,8 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 **Rules:**
 
 - **Date display** — use `toLocaleDateString("ru-RU")` / `toLocaleTimeString("ru-RU")` which automatically use browser timezone
-- **Date formatting** — use helpers from `shared/lib/dateFormat.ts`
-- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessons-filters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
+- **Date formatting** — use helpers from `shared/lib/dateFormat.helpers.ts`
+- **Sending date ranges to API** — convert to UTC boundaries via `toLocalStartOfDay(date)` / `toLocalEndOfDay(date)` from `features/lessons/models/lessonsFilters.helpers.ts`. These set 00:00/23:59:59 in browser local time then `.toISOString()` to UTC
 - **Never send raw `Date` objects** — always convert through `toLocalStartOfDay`/`toLocalEndOfDay` or `.toISOString()`
 - **MUI DatePicker values** are in browser local time — no extra conversion needed before passing to `toLocalStartOfDay`/`toLocalEndOfDay`
 
@@ -299,4 +320,4 @@ User's timezone is the browser's timezone (`Intl.DateTimeFormat().resolvedOption
 - **Minimal comments — default zero.** Перед написанием комментария спросить себя: «без него читатель ошибётся / потеряет важный контекст?» Если нет — удалить. Не писать «// эта функция делает X», «// Form fields», «// Effects», «// Reactions», «// Создаём store», «Регрессия #N» — имена/структура и git blame уже это говорят. Оставлять только: скрытые инварианты, обходы багов (с источником), неинтуитивные side-effects, спорные «почему именно так». Это применяется и к тестам — описательное `it("...")` уже даёт контекст
 - Use `attach` for feature-specific API effects
 - Backend errors are in Russian
-- Use `frontend/src/shared/lib/dateFormat.ts` for date formatting
+- Use `frontend/src/shared/lib/dateFormat.helpers.ts` for date formatting

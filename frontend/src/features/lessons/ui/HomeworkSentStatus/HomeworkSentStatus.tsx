@@ -13,10 +13,11 @@ import {
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
+import { getLessonDisplayName } from "@shared";
 
-import * as homeworkSentStatusModel from "./homework-sent-status.model";
+import * as homeworkSentStatusModel from "./HomeworkSentStatus.model";
 import * as Styled from "./HomeworkSentStatus.styled";
-import { lessonHomeworkSentChanged } from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lessonActions.model";
 
 type HomeworkSentStatusProps = {
   lesson: Lesson;
@@ -36,7 +37,9 @@ export const HomeworkSentStatus: FC<HomeworkSentStatusProps> = ({
   const confirmOpen = useUnit(homeworkSentStatusModel.$isOpen);
   const pendingStatus = useUnit(homeworkSentStatusModel.$pendingStatus);
 
-  const actions = useUnit({ lessonHomeworkSentChanged });
+  const actions = useUnit({
+    lessonHomeworkSentChanged: lessonActionsModel.lessonHomeworkSentChanged,
+  });
 
   const handleToggle = (newStatus: boolean) => {
     if (needConfirm) {
@@ -112,7 +115,7 @@ export const HomeworkSentStatus: FC<HomeworkSentStatusProps> = ({
               <strong>{pendingStatus ? "отправленное" : "неотправленное"}</strong>?
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Урок: <strong>{lesson.student?.name}</strong>
+              Урок: <strong>{getLessonDisplayName(lesson)}</strong>
             </Typography>
           </Box>
         </DialogContent>

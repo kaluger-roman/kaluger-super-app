@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и manual-qa с автофиксом — с двумя human checkpoint'ами (после спеки и после макетов).
 ---
 
@@ -36,7 +36,7 @@ description: Сквозной оркестратор разработки фич
         ✋ stop: пользователь решает что делать дальше (фиксить, коммитить, PR)
 ```
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 5 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Все git/PR операции — **только по команде пользователя в Фазе 7**, никаких commit/push автоматически.
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 5 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Все git/PR операции — **только по команде пользователя в Фазе 7**, никаких commit/push автоматически. Единственное исключение — стартовый draft PR в Фазе 1 (`scripts/start-task-pr.mjs`).
 
 ---
 
@@ -137,7 +137,7 @@ description: Сквозной оркестратор разработки фич
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, текущее состояние (релевантный кусок state.json), ожидаемый формат ответа (JSON или короткий текст).
 4. **Возврат от sub-agent — структурированный.** Каждая фаза описывает свой контракт. Текстовые отчёты — короткие, чтобы не съедать контекст Main.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
-6. **Никаких автоматических git-операций** (commit / push / branch создание вручную). Worktree-создание делается через `EnterWorktree`, ветку для фичи делает `/speckit.specify` своим скриптом.
+6. **Никаких автоматических git-операций** (commit / push / branch создание вручную). Worktree-создание делается через `EnterWorktree`, ветку для фичи делает `/speckit.specify` своим скриптом. Исключение — стартовый draft PR сразу после создания ветки (Фаза 1, `node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт.
 7. **При ошибке любой фазы** — записать `phases[i].status = "blocked"`, в `notes` положить причину, прервать pipeline, вывести пользователю сообщение и ждать решений.
 
 ---
@@ -228,8 +228,9 @@ Do NOT invent. If something failed, return:
 
 1. Если в ответе `error` — записать в state.json (`phases.spec.status="blocked"`, `notes=error`), вывести пользователю, остановить pipeline.
 2. **Переименовать state-директорию** (см. примечание про worktree в Фазе 0): `mv .claude/auto-feature/<временный>/ .claude/auto-feature/<branch>/`. Обновить state.json (`feature_slug`, `branch`, `phases.spec`).
-3. Записать в `phases.spec` фактические артефакты.
-4. **Human checkpoint** через `AskUserQuestion`:
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»), если sub-agent его ещё не открыл: `node scripts/start-task-pr.mjs --title "feat: <короткое название фичи>" --summary "<1–2 предложения из описания>"`. Скрипт идемпотентен (при уже открытом PR только допишет сессию), сам делает пустой стартовый коммит и push. `url` из JSON-ответа записать в state.json (`pr_url`) и показать пользователю одной строкой. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+4. Записать в `phases.spec` фактические артефакты.
+5. **Human checkpoint** через `AskUserQuestion`:
 
    ```
    Вопрос: "Спека готова: specs/<branch>/spec.md (M user stories, K acceptance, L edge cases, J вопросов NEEDS_CLARIFICATION). Что дальше?"
@@ -277,11 +278,12 @@ Steps:
    - Use the project's existing UI kit (frontend/src/shared/ui/...) wherever possible — do not invent new primitives at this stage.
    - DO NOT write Effector models, DO NOT touch backend, DO NOT write tests yet.
 
-3. **Start dev server.** Use Bash with `run_in_background: true`:
+3. **Start dev server on the BRANCH ports** (parallel auto-features must not fight over :3000). Get the branch's port slot, then start CRA via the dev-stack wrapper with `run_in_background: true`:
    ```
-   cd frontend && npm start
+   bash scripts/dev-stack.sh ports          # → JSON with webUrl (e.g. http://localhost:3010)
+   bash scripts/dev-stack.sh run-frontend   # run_in_background; CRA on the branch's web port
    ```
-   Then poll `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` until 200 (max ~60 seconds). If npm start fails — return error JSON immediately.
+   Then poll `curl -s -o /dev/null -w "%{http_code}" <webUrl>` until 200 (max ~120 seconds). Use `<webUrl>` as the base URL for all Playwright navigation below. Mockups use mocks (no API), so neither backend nor Docker is needed at this phase. If the server fails — return error JSON immediately.
 
 4. **Screenshots via Playwright MCP.** For EACH screen and EACH important state, do this sequence:
    a. `mcp__playwright__browser_navigate` to the route.
@@ -292,7 +294,7 @@ Steps:
       - Take desktop + mobile screenshots.
    e. Save all screenshots to `docs/mockups/<branch>/screenshots/`.
 
-5. **Stop dev server** when done: find PID via `lsof -i :3000` and kill, or use the run_in_background's KillShell.
+5. **Stop dev server** when done: find PID via `lsof -i :<web port>` and kill, or use the run_in_background's KillShell.
 
 6. **Write index file** `docs/mockups/<branch>/index.md` with a list of all screenshots and a brief description of each.
 
@@ -460,6 +462,8 @@ On failure: { "error": "...", "step_failed": "implement|wiring|tests|lint|tsc|ch
 
 **Цель:** прогнать `/code-review-local --threshold 50` в цикле, фиксить findings в основном потоке, до пустого результата или convergence detector. Cap = 5 итераций.
 
+> **БЕЗ КОММИТОВ.** `/code-review-local` сам автоопределяет режим: если на ветке нет коммитов (как здесь — `/auto-feature` не коммитит до Фазы 7), он ревьюит **рабочее дерево** (`git add -N` + `git diff <base>` + `git reset`). Поэтому Main в Фазе 5 **НЕ** делает `git commit`/`git amend` между итерациями — фиксы просто остаются в рабочем дереве, и следующая итерация ревьюит их как есть. Это убирает permission-промпты на `git commit`. (Если в main-сессии нужны команды вроде `curl`/`lsof` — делегируй сабагенту: changelog-hook может ложно блокировать их в main-сессии, пока CHANGELOG не в коммите; npm/git/node/echo работают.)
+
 **Логика цикла (в Main):**
 
 ```
@@ -529,16 +533,14 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 Operate at MAXIMUM reasoning effort. Single task: invoke /manual-qa skill with argument `--fix` and let it do the full run.
 
 Pre-checks:
-- Ensure backend dev server is running on :3001 and frontend on :3000.
-  Probe with curl. If either is down, START them in background:
-    cd backend && npm run dev   (run_in_background)
-    cd frontend && npm start    (run_in_background)
-  Wait until both respond. If they don't come up in 90s — abort and report.
+- Ensure Docker is running (`docker info`). /manual-qa boots its own isolated per-branch QA stack
+  (`bash scripts/qa-stack.sh up`) — do NOT start dev servers on :3000/:3001 for it.
+  If Docker is down — abort and report (the user must start Docker Desktop).
 
 After /manual-qa completes:
 - It writes both an MD report and a findings.json next to it.
 - Read the findings.json.
-- Stop the dev servers if you started them (kill the background processes).
+- Leave the QA stack up (default /manual-qa behaviour) — the user may want to re-check by hand.
 
 Return JSON ONLY:
 
@@ -617,7 +619,7 @@ Main делает:
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Фикс остатков: дать мне инструкцию какие пункты выше править
 - Коммит: `/commit-commands:commit` (внутри worktree)
-- PR: `/commit-commands:commit-push-pr`
+- PR: draft уже открыт (<pr_url>). Довести: push, `/changelog` + `/news`, `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
 - Очистка mockup-кода: если фаза 2 запускалась, убедись что нет оставшихся `TODO(auto-feature)` (проверь grep — у меня в state.implement.todo_markers_remaining = X)
 - State: .claude/auto-feature/<slug>/state.json
 
@@ -647,12 +649,13 @@ Main делает:
    - Если фаза `blocked` — показать `notes` ошибки и спросить "Попробовать снова или пропустить?".
    - Если все фазы `completed` — показать финальный отчёт ещё раз.
 3. Перед резумом — проверить, что мы в правильном worktree (`pwd` vs `worktree_path`). Если нет — `EnterWorktree` с `path: <worktree_path>`.
+4. Если ветка уже `NNN-name` (Фаза 1 пройдена) — `node scripts/start-task-pr.mjs --title "feat: <название>"`: откроет PR, если его нет, или допишет текущую сессию в существующий.
 
 ---
 
 ## Ограничения
 
-- **Не запускать `git commit`, `git push`, `gh pr create`.** Эти действия только по явной команде пользователя в Фазе 7 или после.
+- **Не запускать `git commit`, `git push`, `gh pr create`.** Эти действия только по явной команде пользователя в Фазе 7 или после. Исключение — `node scripts/start-task-pr.mjs` (стартовый draft PR, Фаза 1 и Resume).
 - **Не запускать `/news`.** Его делает пользователь перед PR (т.к. /news пишет в БД и это побочный эффект, который должен быть осознанным).
 - **Не запускать deploy** (`/deploy`, GH Actions trigger).
 - **Не удалять worktree.** Это решение пользователя после мержа.

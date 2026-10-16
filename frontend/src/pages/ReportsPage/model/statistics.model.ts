@@ -1,15 +1,19 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 import { createGate } from "effector-react";
 
+import { userModel } from "@entities";
 import { toLocalStartOfDay, toLocalEndOfDay } from "@features";
 import type { Statistics } from "@shared";
 import { statisticsApi } from "@shared";
+
+import type { ReportsPeriod } from "./statistics.types";
 
 export const ReportsPageGate = createGate();
 
 export const startDateChanged = createEvent<Date | null>();
 export const endDateChanged = createEvent<Date | null>();
 export const statisticsLoadRequested = createEvent();
+export const periodApplied = createEvent<ReportsPeriod>();
 
 export const $statistics = createStore<Statistics | null>(null);
 export const $startDate = createStore<Date>(
@@ -18,6 +22,9 @@ export const $startDate = createStore<Date>(
 export const $endDate = createStore<Date>(new Date());
 export const $isLoading = createStore<boolean>(false);
 export const $error = createStore<string | null>(null);
+// The period the cards and the history were loaded for; the date fields may
+// already differ until «Обновить» is pressed.
+export const $appliedRange = createStore<ReportsPeriod | null>(null);
 
 export const loadStatisticsFx = createEffect(
   async (params: { startDate?: string; endDate?: string }) => {
@@ -74,5 +81,13 @@ sample({
     startDate: toLocalStartOfDay(startDate),
     endDate: toLocalEndOfDay(endDate),
   }),
-  target: loadStatisticsFx,
+  target: periodApplied,
+});
+
+sample({ clock: periodApplied, target: [$appliedRange, loadStatisticsFx] });
+
+sample({
+  clock: [userModel.logoutUser, userModel.tutorSessionCleared],
+  fn: () => null,
+  target: [$statistics, $appliedRange, $error],
 });

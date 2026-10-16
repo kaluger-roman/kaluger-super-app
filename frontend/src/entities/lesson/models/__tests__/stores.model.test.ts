@@ -6,8 +6,11 @@ import type { Lesson } from "@shared";
 import {
   $allLessons,
   $allPagination,
+  $currentLesson,
   $paymentsSummary,
+  $upcomingLessons,
   loadAllLessonsFx,
+  syncLessonFx,
 } from "../api.model";
 import "../stores.model";
 
@@ -38,10 +41,13 @@ describe("stores.model — allLessons stores", () => {
   it("should populate $allLessons from loadAllLessonsFx.doneData", async () => {
     const scope = fork({
       handlers: [
-        [loadAllLessonsFx, () => ({
-          lessons: [mockLesson],
-          pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },
-        })],
+        [
+          loadAllLessonsFx,
+          () => ({
+            lessons: [mockLesson],
+            pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },
+          }),
+        ],
       ],
     });
 
@@ -54,10 +60,13 @@ describe("stores.model — allLessons stores", () => {
     const pagination = { total: 25, page: 2, limit: 10, totalPages: 3 };
     const scope = fork({
       handlers: [
-        [loadAllLessonsFx, () => ({
-          lessons: [],
-          pagination,
-        })],
+        [
+          loadAllLessonsFx,
+          () => ({
+            lessons: [],
+            pagination,
+          }),
+        ],
       ],
     });
 
@@ -70,11 +79,14 @@ describe("stores.model — allLessons stores", () => {
     const summary = { sum: 42000, count: 7 };
     const scope = fork({
       handlers: [
-        [loadAllLessonsFx, () => ({
-          lessons: [],
-          pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
-          paymentsSummary: summary,
-        })],
+        [
+          loadAllLessonsFx,
+          () => ({
+            lessons: [],
+            pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+            paymentsSummary: summary,
+          }),
+        ],
       ],
     });
 
@@ -87,15 +99,36 @@ describe("stores.model — allLessons stores", () => {
     const scope = fork({
       values: [[$paymentsSummary, { sum: 1000, count: 1 }]],
       handlers: [
-        [loadAllLessonsFx, () => ({
-          lessons: [],
-          pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
-        })],
+        [
+          loadAllLessonsFx,
+          () => ({
+            lessons: [],
+            pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+          }),
+        ],
       ],
     });
 
     await allSettled(loadAllLessonsFx, { scope, params: {} });
 
     expect(scope.getState($paymentsSummary)).toBeNull();
+  });
+});
+
+describe("stores.model — lessons refetched after a server change", () => {
+  it("should patch the upcoming list and the current lesson with the refetched lesson", async () => {
+    const synced = { ...mockLesson, status: "CANCELLED" } as Lesson;
+    const scope = fork({
+      values: [
+        [$upcomingLessons, [mockLesson]],
+        [$currentLesson, mockLesson],
+      ],
+      handlers: [[syncLessonFx, async () => synced]],
+    });
+
+    await allSettled(syncLessonFx, { scope, params: mockLesson.id });
+
+    expect(scope.getState($upcomingLessons)).toEqual([synced]);
+    expect(scope.getState($currentLesson)).toEqual(synced);
   });
 });

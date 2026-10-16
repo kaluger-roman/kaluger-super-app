@@ -1,9 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 
-import { componentOverrides } from "./components";
-import { moreComponentOverrides } from "./moreComponents";
-import { palette } from "./palette";
-import { typography } from "./typography";
+import { componentOverrides } from "./components.constants";
+import { moreComponentOverrides } from "./moreComponents.constants";
+import { palette } from "./palette.constants";
+import { typography } from "./typography.constants";
 
 export const theme = createTheme({
   palette,

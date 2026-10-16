@@ -45,7 +45,7 @@ describe("entities/verification/verification.model", () => {
   describe("$verificationEmail", () => {
     it("should initialize from localStorage", async () => {
       localStorage.setItem(VERIFICATION_EMAIL_KEY, "test@example.com");
-      
+
       // Since the store initializes from localStorage on module load,
       // we need to test this by setting verification email manually
 

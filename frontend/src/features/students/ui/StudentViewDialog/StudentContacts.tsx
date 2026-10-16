@@ -3,6 +3,7 @@ import type { FC } from "react";
 import { Box, Typography } from "@mui/material";
 
 import type { Student } from "@shared";
+import { CONTACT_METHOD_LABELS } from "@shared";
 
 import * as Styled from "./StudentViewDialog.styled";
 
@@ -23,15 +24,16 @@ export const StudentContacts: FC<StudentContactsProps> = ({ student }) => (
     )}
     {student.contactMethod && (
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        {student.contactMethod === "WHATSAPP" ? "WhatsApp" : `Telegram (${student.telegramNick})`}
+        {student.contactMethod === "TELEGRAM"
+          ? `Telegram (${student.telegramNick})`
+          : CONTACT_METHOD_LABELS[student.contactMethod]}
       </Typography>
     )}
 
     {student.parentPhone && (
       <Typography variant="body2" color="text.secondary">
         Родители: {student.parentName ? `${student.parentName} — ` : ""}
-        {student.parentPhone} (
-        {student.parentContactMethod === "WHATSAPP" ? "WhatsApp" : "Telegram"})
+        {student.parentPhone} ({CONTACT_METHOD_LABELS[student.parentContactMethod ?? "WHATSAPP"]})
       </Typography>
     )}
     {student.parentContactMethod === "TELEGRAM" && student.parentTelegramNick && (

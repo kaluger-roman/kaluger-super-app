@@ -9,21 +9,13 @@ import {
   studentVerifyEmail,
 } from "../controllers";
 import { authenticateStudent } from "../middleware/studentAuth";
-import {
-  studentAuthRateLimiter,
-  studentRegistrationRateLimiter,
-} from "../middleware/rateLimit";
+import { studentAuthRateLimiter, studentRegistrationRateLimiter } from "../middleware/rateLimit";
 
 const router: Router = Router();
 
 router.post("/register", studentRegistrationRateLimiter, studentRegister);
 router.post("/login", studentAuthRateLimiter, studentLogin);
-router.post(
-  "/verify-email",
-  studentAuthRateLimiter,
-  authenticateStudent,
-  studentVerifyEmail
-);
+router.post("/verify-email", studentAuthRateLimiter, authenticateStudent, studentVerifyEmail);
 router.post(
   "/resend-verification",
   studentAuthRateLimiter,

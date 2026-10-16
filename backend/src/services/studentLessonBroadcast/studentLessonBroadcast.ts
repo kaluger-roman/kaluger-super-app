@@ -1,18 +1,13 @@
 import { getWebSocketManager } from "../../lib/wsManager";
 import type { StudentLessonWsEvent } from "../../types";
-import {
-  getStudentUserIdByLessonId,
-  toStudentLessonPayload,
-} from "../studentCabinet";
+import { getStudentUserIdByLessonId, toStudentLessonPayload } from "../studentCabinet";
 import type { LessonForBroadcast } from "./studentLessonBroadcast.types";
 
 // Centralized broadcasts to a student client when a lesson changes.
 // Caller is responsible for awaiting (or fire-and-forget) — мы никогда не
 // бросаем наружу, чтобы WS-сбой не ломал основной flow мутации урока.
 
-export const broadcastStudentLessonCreated = async (
-  lesson: LessonForBroadcast
-): Promise<void> => {
+export const broadcastStudentLessonCreated = async (lesson: LessonForBroadcast): Promise<void> => {
   try {
     const wsManager = getWebSocketManager();
     if (!wsManager) return;
@@ -28,9 +23,7 @@ export const broadcastStudentLessonCreated = async (
   }
 };
 
-export const broadcastStudentLessonUpdated = async (
-  lesson: LessonForBroadcast
-): Promise<void> => {
+export const broadcastStudentLessonUpdated = async (lesson: LessonForBroadcast): Promise<void> => {
   try {
     const wsManager = getWebSocketManager();
     if (!wsManager) return;

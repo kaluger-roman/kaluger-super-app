@@ -1,4 +1,6 @@
-import { combine } from "effector";
+import { combine, createStore, sample } from "effector";
+import { createGate } from "effector-react";
+import { debounce } from "patronum";
 
 import { callHistoryModel } from "@entities/callRecord";
 import { lessonModel } from "@entities/lesson";
@@ -21,11 +23,21 @@ import { studentScheduleModel } from "@features/studentSchedule";
 import { taxRatePeriodsModalModel } from "@features/taxRatePeriods";
 import { tutorStudentInvitationModel } from "@features/tutorStudentInvitation";
 import { financesModel, profileModel } from "@pages/profile";
-import { statisticsModel } from "@pages/ReportsPage";
+import { incomeHistoryModel, incomeHistoryReloadModel, statisticsModel } from "@pages/ReportsPage";
+
+import { BLOCKING_OVERLAY_DELAY_MS } from "./blocking.constants";
+
+// Mounted by the Suspense route fallback, so a lazy-chunk load goes through
+// the same single overlay as API requests — a second Backdrop instance would
+// stack its dim layer on top of this one.
+export const RouteChunkGate = createGate();
 
 export const $isBlocking = combine(
   {
+    routeChunkLoading: RouteChunkGate.status,
     loadCompletedLessons: lessonModel.loadCompletedLessonsFx.pending,
+    loadCancelledLessons: lessonModel.loadCancelledLessonsFx.pending,
+    loadAllLessons: lessonModel.loadAllLessonsFx.pending,
     loadLesson: lessonModel.loadLessonFx.pending,
     loadUpcomingLessons: lessonModel.loadUpcomingLessonsFx.pending,
     addLesson: lessonModel.addLessonFx.pending,
@@ -38,6 +50,9 @@ export const $isBlocking = combine(
     updateStudent: studentModel.updateStudentFx.pending,
     removeStudent: studentModel.removeStudentFx.pending,
     loadStatistics: statisticsModel.loadStatisticsFx.pending,
+    // The «Показать ещё» page (loadNextPageFx) shows progress on its button only (FR-013c).
+    loadIncomeHistory: incomeHistoryModel.loadIncomeHistoryFx.pending,
+    openIncomeHistoryLesson: incomeHistoryReloadModel.openLessonFx.pending,
     updateProfile: profileModel.updateProfileFx.pending,
     subscribePush: notificationsModel.subscribePushFx.pending,
     unsubscribePush: notificationsModel.unsubscribePushFx.pending,
@@ -61,19 +76,38 @@ export const $isBlocking = combine(
     studentLogout: studentUserModel.studentLogoutFx.pending,
     studentGetCurrent: studentUserModel.getCurrentStudentFx.pending,
     studentVerifyEmail: studentEmailVerificationModel.verifyEmailFx.pending,
-    studentResendVerification:
-      studentEmailVerificationModel.resendVerificationFx.pending,
-    studentValidateInvitation:
-      studentInviteModel.validateInvitationTokenFx.pending,
+    studentResendVerification: studentEmailVerificationModel.resendVerificationFx.pending,
+    studentValidateInvitation: studentInviteModel.validateInvitationTokenFx.pending,
     studentRegister: studentInviteModel.registerStudentByInviteFx.pending,
     studentLoadLessons: studentScheduleModel.loadLessonsFx.pending,
-    tutorInvitationLoadStatus:
-      tutorStudentInvitationModel.loadStatusFx.pending,
-    tutorInvitationIssue:
-      tutorStudentInvitationModel.issueInvitationFx.pending,
-    tutorInvitationRevoke:
-      tutorStudentInvitationModel.revokeInvitationFx.pending,
+    tutorInvitationLoadStatus: tutorStudentInvitationModel.loadStatusFx.pending,
+    tutorInvitationIssue: tutorStudentInvitationModel.issueInvitationFx.pending,
+    tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
     loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );
+
+// Overlay shows only when blocking stays continuously on past the threshold —
+// requests faster than this must not flash a full-screen spinner. `debounce`
+// (not `delay`): its timer resets on every $isBlocking change, so a timer
+// scheduled by a finished fast request can never reveal the overlay early
+// for the next one.
+export const $isBlockingVisible = createStore(false);
+
+const blockingSettled = debounce({
+  source: $isBlocking.updates,
+  timeout: BLOCKING_OVERLAY_DELAY_MS,
+});
+
+sample({
+  clock: blockingSettled,
+  filter: Boolean,
+  target: $isBlockingVisible,
+});
+
+sample({
+  clock: $isBlocking.updates,
+  filter: (isBlocking) => !isBlocking,
+  target: $isBlockingVisible,
+});

@@ -1,10 +1,6 @@
 import type { Request, Response } from "express";
 
-import {
-  getStudentSettings,
-  loginStudent,
-  registerStudentByInvite,
-} from "../services/studentAuth";
+import { getStudentSettings, loginStudent, registerStudentByInvite } from "../services/studentAuth";
 import {
   resendStudentVerificationCode,
   verifyStudentEmailCode,
@@ -17,7 +13,7 @@ import type {
 } from "../types";
 
 export const studentRegister = async (
-  req: Request<{}, {}, StudentRegisterByInviteDto>,
+  req: Request<Record<string, never>, unknown, StudentRegisterByInviteDto>,
   res: Response
 ) => {
   try {
@@ -33,7 +29,7 @@ export const studentRegister = async (
 };
 
 export const studentLogin = async (
-  req: Request<{}, {}, StudentLoginDto>,
+  req: Request<Record<string, never>, unknown, StudentLoginDto>,
   res: Response
 ) => {
   try {
@@ -49,7 +45,7 @@ export const studentLogin = async (
 };
 
 export const studentVerifyEmail = async (
-  req: StudentRequest & Request<{}, {}, StudentVerifyEmailDto>,
+  req: StudentRequest & Request<Record<string, never>, unknown, StudentVerifyEmailDto>,
   res: Response
 ) => {
   try {
@@ -60,9 +56,7 @@ export const studentVerifyEmail = async (
 
     const { code } = req.body;
     if (!code || !/^[0-9]{6}$/.test(code)) {
-      return res
-        .status(400)
-        .json({ error: "Код подтверждения должен состоять из 6 цифр" });
+      return res.status(400).json({ error: "Код подтверждения должен состоять из 6 цифр" });
     }
 
     const result = await verifyStudentEmailCode(studentUserId, code);
@@ -91,10 +85,7 @@ export const studentVerifyEmail = async (
   }
 };
 
-export const studentResendVerification = async (
-  req: StudentRequest,
-  res: Response
-) => {
+export const studentResendVerification = async (req: StudentRequest, res: Response) => {
   try {
     const studentUserId = req.studentUser?.studentUserId;
     if (!studentUserId) {
@@ -109,9 +100,7 @@ export const studentResendVerification = async (
         });
       }
       if (result.reason === "send_failed") {
-        return res
-          .status(500)
-          .json({ error: "Ошибка отправки письма. Попробуйте позже" });
+        return res.status(500).json({ error: "Ошибка отправки письма. Попробуйте позже" });
       }
       return res.status(400).json({ error: "Email уже подтверждён" });
     }

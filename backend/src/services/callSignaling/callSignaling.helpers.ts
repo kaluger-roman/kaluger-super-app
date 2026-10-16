@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { CallAuthorizationError } from "../../utils";
 import type { ResolvedPair } from "./callSignaling.types";
 
@@ -33,9 +33,7 @@ export const resolvePairForTutor = async (
   };
 };
 
-export const resolvePairForStudent = async (
-  studentUserId: string
-): Promise<ResolvedPair> => {
+export const resolvePairForStudent = async (studentUserId: string): Promise<ResolvedPair> => {
   const studentUser = await prisma.studentUser.findUnique({
     where: { id: studentUserId },
     select: {

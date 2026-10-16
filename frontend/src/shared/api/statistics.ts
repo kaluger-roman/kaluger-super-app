@@ -1,4 +1,4 @@
-import { Statistics } from "../types";
+import type { IncomeHistory, Statistics } from "../types";
 import { api } from "./base";
 import type { LessonsBySubject, LessonsByType, StudentStatistics } from "./statistics.types";
 
@@ -8,6 +8,13 @@ export const statisticsApi = {
   // Основная статистика
   getStatistics: (params?: { startDate?: string; endDate?: string }) =>
     api.get<Statistics>("/statistics", { params }),
+
+  getIncomeHistory: (params: {
+    startDate?: string;
+    endDate?: string;
+    before?: string;
+    through?: string;
+  }) => api.get<IncomeHistory>("/statistics/income-history", { params }),
 
   // Статистика по предметам
   getLessonsBySubject: (params?: { startDate?: string; endDate?: string }) =>

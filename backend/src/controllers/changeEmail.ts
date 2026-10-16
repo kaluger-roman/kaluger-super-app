@@ -14,14 +14,12 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
     const { newEmail, password } = req.body as ChangeEmailDto;
 
     if (!newEmail || !password) {
-      return res
-        .status(400)
-        .json({ error: "Все поля обязательны для заполнения" });
+      return res.status(400).json({ error: "Все поля обязательны для заполнения" });
     }
 
     await initiateEmailChange(userId!, newEmail, password);
 
-    res.json({ message: "Код верификации отправлен на новый email" });
+    return res.json({ message: "Код верификации отправлен на новый email" });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
     console.error("Change email error:", error);
@@ -30,7 +28,7 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Ошибка при инициировании смены email" });
+    return res.status(500).json({ error: "Ошибка при инициировании смены email" });
   }
 };
 
@@ -45,7 +43,7 @@ export const verifyEmailChange = async (req: AuthRequest, res: Response) => {
 
     const result = await verifyEmailChangeService(userId!, code);
 
-    res.json({
+    return res.json({
       message: "Email успешно изменён",
       token: result.token,
       user: result.user,
@@ -58,7 +56,7 @@ export const verifyEmailChange = async (req: AuthRequest, res: Response) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Ошибка при подтверждении смены email" });
+    return res.status(500).json({ error: "Ошибка при подтверждении смены email" });
   }
 };
 
@@ -68,7 +66,7 @@ export const resendEmailChangeCode = async (req: AuthRequest, res: Response) => 
 
     await resendEmailChangeCodeService(userId!);
 
-    res.json({ message: "Код верификации повторно отправлен" });
+    return res.json({ message: "Код верификации повторно отправлен" });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
     console.error("Resend email change code error:", error);
@@ -77,6 +75,6 @@ export const resendEmailChangeCode = async (req: AuthRequest, res: Response) => 
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Ошибка при отправке кода" });
+    return res.status(500).json({ error: "Ошибка при отправке кода" });
   }
 };

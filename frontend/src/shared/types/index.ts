@@ -11,6 +11,7 @@ export type {
   CreateStudentDto,
   UpdateStudentDto,
   ArchiveReason,
+  ContactMethod,
 } from "./student";
 export type {
   Lesson,
@@ -19,13 +20,19 @@ export type {
   LessonType,
   CreateLessonDto,
   UpdateLessonDto,
+  CommissionCredit,
+  CommissionCreditState,
 } from "./lesson";
-export type {
-  TaxRatePeriod,
-  CreateTaxRatePeriodDto,
-  TaxBreakdownEntry,
-} from "./taxRate";
+export type { TaxRatePeriod, CreateTaxRatePeriodDto, TaxBreakdownEntry } from "./taxRate";
 export type { Statistics } from "./statistics";
+export type {
+  IncomeHistory,
+  IncomeHistoryDay,
+  IncomeHistoryEntry,
+  IncomeHistoryPage,
+  IncomeHistorySummary,
+  IncomeHistoryTax,
+} from "./incomeHistory";
 export type { NewsItem, NewsPagination, NewsListResponse } from "./news";
 export type {
   StudentSession,

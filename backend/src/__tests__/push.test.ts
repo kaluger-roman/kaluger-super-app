@@ -1,8 +1,9 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../index";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { generateToken } from "../utils/auth";
+import { uniqueEmail } from "./helpers";
 
 describe("push subscription integration tests", () => {
   let authToken: string;
@@ -15,7 +16,7 @@ describe("push subscription integration tests", () => {
 
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -37,9 +38,7 @@ describe("push subscription integration tests", () => {
 
   describe("GET /api/push/vapid-key", () => {
     it("should return VAPID public key", async () => {
-      const res = await request(app)
-        .get("/api/push/vapid-key")
-        .expect(200);
+      const res = await request(app).get("/api/push/vapid-key").expect(200);
 
       expect(res.body).toHaveProperty("vapidPublicKey");
       expect(typeof res.body.vapidPublicKey).toBe("string");
@@ -52,9 +51,7 @@ describe("push subscription integration tests", () => {
       delete process.env.VAPID_PUBLIC_KEY;
 
       try {
-        const res = await request(app)
-          .get("/api/push/vapid-key")
-          .expect(200);
+        const res = await request(app).get("/api/push/vapid-key").expect(200);
 
         expect(res.body.vapidPublicKey).toBeNull();
         expect(res.body.configured).toBe(false);
@@ -125,7 +122,7 @@ describe("push subscription integration tests", () => {
     it("should reject subscribe when endpoint belongs to another user", async () => {
       const otherUser = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },
@@ -314,7 +311,7 @@ describe("push subscription integration tests", () => {
     it("should return only current user subscriptions", async () => {
       const otherUser = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },

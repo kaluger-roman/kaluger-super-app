@@ -10,16 +10,12 @@ const mintTurnCredentials = (
 ): { username: string; credential: string } => {
   const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
   const username = String(expiry);
-  const credential = createHmac("sha1", secret)
-    .update(username)
-    .digest("base64");
+  const credential = createHmac("sha1", secret).update(username).digest("base64");
   return { username, credential };
 };
 
 export const buildIceServers = (): IceServer[] => {
-  const iceServers: IceServer[] = [
-    { urls: process.env.STUN_URL || DEFAULT_STUN_URL },
-  ];
+  const iceServers: IceServer[] = [{ urls: process.env.STUN_URL || DEFAULT_STUN_URL }];
 
   const turnUrl = process.env.TURN_URL;
   const turnSecret = process.env.TURN_SECRET;

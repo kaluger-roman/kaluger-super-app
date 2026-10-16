@@ -3,9 +3,14 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import * as backupService from "../../../services/backup";
+import {
+  acquireGlobalTestLock,
+  GLOBAL_TEST_LOCK,
+  GLOBAL_TEST_LOCK_TIMEOUT_MS,
+} from "../../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -13,12 +18,14 @@ describe("backup admin integration tests", () => {
   let adminToken: string;
   let tmpDir: string;
   const originalBackupDir = process.env.BACKUP_DIR;
+  let releaseBackupSettingsLock: () => Promise<void>;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.ADMIN_EMAIL = "admin@test.com";
     process.env.ADMIN_PASSWORD = "TestAdmin123";
     adminToken = generateAdminToken({ email: "admin@test.com", isAdmin: true });
-  });
+    releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+  }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "backup-int-test-"));
@@ -37,6 +44,7 @@ describe("backup admin integration tests", () => {
     delete process.env.ADMIN_EMAIL;
     delete process.env.ADMIN_PASSWORD;
     await prisma.backupSettings.deleteMany();
+    await releaseBackupSettingsLock();
   });
 
   describe("GET /api/admin/backup/settings", () => {
@@ -138,9 +146,7 @@ describe("backup admin integration tests", () => {
         .send({ intervalHours: 0 })
         .expect(400);
 
-      expect(res.body.error).toBe(
-        "Интервал должен быть от 1 до 168 часов"
-      );
+      expect(res.body.error).toBe("Интервал должен быть от 1 до 168 часов");
     });
 
     it("should return 400 when maxStorageMb is too small", async () => {
@@ -150,16 +156,11 @@ describe("backup admin integration tests", () => {
         .send({ maxStorageMb: 5 })
         .expect(400);
 
-      expect(res.body.error).toBe(
-        "Максимальный размер должен быть от 10 до 10000 МБ"
-      );
+      expect(res.body.error).toBe("Максимальный размер должен быть от 10 до 10000 МБ");
     });
 
     it("should return 401 without auth token", async () => {
-      await request(app)
-        .put("/api/admin/backup/settings")
-        .send({ enabled: false })
-        .expect(401);
+      await request(app).put("/api/admin/backup/settings").send({ enabled: false }).expect(401);
     });
   });
 
@@ -170,9 +171,7 @@ describe("backup admin integration tests", () => {
         sizeMb: 1.5,
         createdAt: new Date("2026-03-30T12:00:00Z"),
       };
-      jest
-        .spyOn(backupService, "createManualBackup")
-        .mockResolvedValue(mockResult);
+      jest.spyOn(backupService, "createManualBackup").mockResolvedValue(mockResult);
 
       const res = await request(app)
         .post("/api/admin/backup/create")

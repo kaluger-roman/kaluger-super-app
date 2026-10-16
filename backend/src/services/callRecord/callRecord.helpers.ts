@@ -19,18 +19,12 @@ const STATUS_TO_VALUE: Record<CallStatus, CallStatusValue> = {
   FAILED: "failed",
 };
 
-const directionFor = (
-  callerKind: CallerKind,
-  viewer: "tutor" | "student"
-): CallDirection => {
-  const initiatedByViewer =
-    viewer === "tutor" ? callerKind === "TUTOR" : callerKind === "STUDENT";
+const directionFor = (callerKind: CallerKind, viewer: "tutor" | "student"): CallDirection => {
+  const initiatedByViewer = viewer === "tutor" ? callerKind === "TUTOR" : callerKind === "STUDENT";
   return initiatedByViewer ? "outgoing" : "incoming";
 };
 
-export const toCallHistoryItemForTutor = (
-  record: CallRecordForView
-): CallHistoryItem => ({
+export const toCallHistoryItemForTutor = (record: CallRecordForView): CallHistoryItem => ({
   id: record.id,
   peerName: record.student.name,
   direction: directionFor(record.callerKind, "tutor"),
@@ -39,9 +33,7 @@ export const toCallHistoryItemForTutor = (
   status: STATUS_TO_VALUE[record.status],
 });
 
-export const toCallHistoryItemForStudent = (
-  record: CallRecordForView
-): CallHistoryItem => ({
+export const toCallHistoryItemForStudent = (record: CallRecordForView): CallHistoryItem => ({
   id: record.id,
   peerName: record.tutor.name,
   direction: directionFor(record.callerKind, "student"),

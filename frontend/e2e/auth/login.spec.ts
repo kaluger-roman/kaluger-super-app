@@ -1,12 +1,10 @@
 import { test, expect } from "../fixtures";
+import { apiRequest } from "../helpers/api";
 import { generateCredentials } from "../helpers/auth";
 import { createVerifiedUser, resetDatabase } from "../helpers/db";
-import { apiRequest } from "../helpers/api";
 
 test.describe("Вход в аккаунт", { tag: ["@regression", "@auth"] }, () => {
-  test("учитель вводит верные учётные данные и попадает на дашборд", async ({
-    page,
-  }) => {
+  test("учитель вводит верные учётные данные и попадает на дашборд", async ({ page }) => {
     const credentials = generateCredentials("login-happy");
     await createVerifiedUser(credentials);
 
@@ -16,9 +14,7 @@ test.describe("Вход в аккаунт", { tag: ["@regression", "@auth"] }, (
     await page.getByRole("button", { name: "Войти" }).click();
 
     await expect(page).toHaveURL(/\/(dashboard)?$/);
-    await expect(
-      page.getByRole("heading", { name: /Добро пожаловать/i }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /Добро пожаловать/i })).toHaveCount(0);
   });
 
   test("учитель вводит неверный пароль и видит ошибку", async ({ page }) => {
@@ -34,9 +30,7 @@ test.describe("Вход в аккаунт", { tag: ["@regression", "@auth"] }, (
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("учитель с неподтверждённым email направляется на верификацию", async ({
-    page,
-  }) => {
+  test("учитель с неподтверждённым email направляется на верификацию", async ({ page }) => {
     const credentials = generateCredentials("login-unverified");
     await resetDatabase();
     await apiRequest("/api/auth/register", {

@@ -19,19 +19,17 @@ type DirectionIconBoxProps = {
   $incoming: boolean;
 };
 
-export const DirectionIconBox = styled(Box)<DirectionIconBoxProps>(
-  ({ theme, $incoming }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 40,
-    height: 40,
-    flexShrink: 0,
-    borderRadius: "50%",
-    color: $incoming ? theme.palette.primary.main : theme.palette.text.secondary,
-    background: theme.palette.grey[100],
-  }),
-);
+export const DirectionIconBox = styled(Box)<DirectionIconBoxProps>(({ theme, $incoming }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 40,
+  height: 40,
+  flexShrink: 0,
+  borderRadius: "50%",
+  color: $incoming ? theme.palette.primary.main : theme.palette.text.secondary,
+  background: theme.palette.grey[100],
+}));
 
 export const RowMain = styled(Box)({
   flex: 1,

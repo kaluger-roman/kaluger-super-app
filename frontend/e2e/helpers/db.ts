@@ -31,6 +31,7 @@ export type StudentSeed = {
   name: string;
   contactMethod?: "WHATSAPP" | "TELEGRAM";
   hourlyRate?: number;
+  commissionAmount?: number;
   grade?: number;
   phone?: string;
   notes?: string;
@@ -40,8 +41,10 @@ export type StudentSeed = {
 
 export const createStudentFor = async (
   userId: string,
-  data: StudentSeed,
-): Promise<{ student: { id: string; name: string; hourlyRate: number | null } }> =>
+  data: StudentSeed
+): Promise<{
+  student: { id: string; name: string; hourlyRate: number | null; commissionAmount: number };
+}> =>
   apiRequest(`/api/__test__/users/${userId}/students`, {
     method: "POST",
     body: data,
@@ -57,13 +60,15 @@ export type LessonSeed = {
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
   isPaid?: boolean;
   paymentDate?: string | Date | null;
+  receivedAmount?: number;
   isRecurring?: boolean;
+  isTaxExempt?: boolean;
   subject?: "MATHEMATICS" | "PHYSICS";
   lessonType?: "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
 };
 
 export const createLesson = async (
-  data: LessonSeed,
+  data: LessonSeed
 ): Promise<{
   lesson: {
     id: string;
@@ -77,14 +82,10 @@ export const createLesson = async (
     method: "POST",
     body: {
       ...data,
-      startTime:
-        data.startTime instanceof Date ? data.startTime.toISOString() : data.startTime,
-      endTime:
-        data.endTime instanceof Date ? data.endTime.toISOString() : data.endTime,
+      startTime: data.startTime instanceof Date ? data.startTime.toISOString() : data.startTime,
+      endTime: data.endTime instanceof Date ? data.endTime.toISOString() : data.endTime,
       paymentDate:
-        data.paymentDate instanceof Date
-          ? data.paymentDate.toISOString()
-          : data.paymentDate,
+        data.paymentDate instanceof Date ? data.paymentDate.toISOString() : data.paymentDate,
     },
     expectStatus: 201,
   });
@@ -97,20 +98,17 @@ export const patchLesson = async (
     status: string;
     isPaid: boolean;
     paymentDate: string | Date | null;
-  }>,
+    receivedAmount: number;
+  }>
 ): Promise<void> => {
   await apiRequest(`/api/__test__/lessons/${id}`, {
     method: "PATCH",
     body: {
       ...patch,
-      startTime:
-        patch.startTime instanceof Date ? patch.startTime.toISOString() : patch.startTime,
-      endTime:
-        patch.endTime instanceof Date ? patch.endTime.toISOString() : patch.endTime,
+      startTime: patch.startTime instanceof Date ? patch.startTime.toISOString() : patch.startTime,
+      endTime: patch.endTime instanceof Date ? patch.endTime.toISOString() : patch.endTime,
       paymentDate:
-        patch.paymentDate instanceof Date
-          ? patch.paymentDate.toISOString()
-          : patch.paymentDate,
+        patch.paymentDate instanceof Date ? patch.paymentDate.toISOString() : patch.paymentDate,
     },
   });
 };
@@ -118,14 +116,13 @@ export const patchLesson = async (
 export const setTaxPeriodsFor = async (
   userId: string,
   periods: Array<{ startDate: string | Date; rate: number }>,
-  taxEnabled = true,
+  taxEnabled = true
 ): Promise<void> => {
   await apiRequest(`/api/__test__/users/${userId}/tax-periods`, {
     method: "POST",
     body: {
       periods: periods.map((p) => ({
-        startDate:
-          p.startDate instanceof Date ? p.startDate.toISOString() : p.startDate,
+        startDate: p.startDate instanceof Date ? p.startDate.toISOString() : p.startDate,
         rate: p.rate,
       })),
       taxEnabled,
@@ -139,7 +136,7 @@ export const seedNews = async (
     content: string;
     publishedAt?: string | Date;
     version?: string;
-  }>,
+  }>
 ): Promise<void> => {
   await apiRequest("/api/__test__/news", {
     method: "POST",
@@ -147,9 +144,7 @@ export const seedNews = async (
       items: items.map((item) => ({
         ...item,
         publishedAt:
-          item.publishedAt instanceof Date
-            ? item.publishedAt.toISOString()
-            : item.publishedAt,
+          item.publishedAt instanceof Date ? item.publishedAt.toISOString() : item.publishedAt,
       })),
     },
   });
@@ -166,7 +161,7 @@ export const runRecurringLessonsTick = async (): Promise<void> => {
 };
 
 export const getLessonsFor = async (
-  tutorId: string,
+  tutorId: string
 ): Promise<{
   lessons: Array<{
     id: string;
@@ -175,25 +170,28 @@ export const getLessonsFor = async (
     isPaid: boolean;
     paymentDate: string | null;
     price: string | number | null;
+    receivedAmount: string | number | null;
     isRecurring: boolean;
+    isTaxExempt: boolean;
+    studentId: string | null;
+    prospectName: string | null;
   }>;
-}> =>
-  apiRequest(
-    `/api/__test__/lessons?tutorId=${encodeURIComponent(tutorId)}`,
-  );
+}> => apiRequest(`/api/__test__/lessons?tutorId=${encodeURIComponent(tutorId)}`);
 
 export const getStudentsFor = async (
   userId: string,
-  archived = false,
+  archived = false
 ): Promise<{
-  students: Array<{ id: string; name: string; archived: boolean }>;
-}> =>
-  apiRequest(
-    `/api/__test__/users/${userId}/students?archived=${archived}`,
-  );
+  students: Array<{
+    id: string;
+    name: string;
+    archived: boolean;
+    commissionAmount: number;
+  }>;
+}> => apiRequest(`/api/__test__/users/${userId}/students?archived=${archived}`);
 
 export const getScheduledReminders = async (
-  userId: string,
+  userId: string
 ): Promise<{
   reminders: Array<{
     id: string;
@@ -204,14 +202,14 @@ export const getScheduledReminders = async (
 }> => apiRequest(`/api/__test__/users/${userId}/scheduled-reminders`);
 
 export const getPushSubscriptionsFor = async (
-  userId: string,
+  userId: string
 ): Promise<{
   subscriptions: Array<{ id: string; endpoint: string }>;
 }> => apiRequest(`/api/__test__/users/${userId}/push-subscriptions`);
 
 export const issueStudentInvitation = async (
   tutorToken: string,
-  studentId: string,
+  studentId: string
 ): Promise<{ inviteUrl: string; expiresAt: string }> =>
   apiRequest(`/api/students/${studentId}/invitations`, {
     method: "POST",

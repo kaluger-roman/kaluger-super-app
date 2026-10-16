@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import type { StudentLessonsByWeekResponse } from "../../types";
 import { addDays, parseWeekStart } from "../../utils/time";
 import { toStudentLessonResponse } from "./studentCabinet.helpers";
@@ -42,9 +42,7 @@ export const getStudentLessonsByWeek = async (
 
 // Резолвит studentUserId по lessonId — для WS-broadcast.
 // Возвращает null если у урока нет связи с зарегистрированным аккаунтом.
-export const getStudentUserIdByLessonId = async (
-  lessonId: string
-): Promise<string | null> => {
+export const getStudentUserIdByLessonId = async (lessonId: string): Promise<string | null> => {
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     select: {

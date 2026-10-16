@@ -5,18 +5,13 @@ import {
   ContentCopy as CopyIcon,
   Link as LinkIcon,
 } from "@mui/icons-material";
-import {
-  Alert,
-  Button,
-  IconButton,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Alert, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
+import { InvitationActions } from "./InvitationActions";
 import * as Styled from "./InvitationManager.styled";
 import { tutorStudentInvitationModel } from "../../model";
-import { formatDate } from "../../model/tutor-student-invitation.helpers";
+import { formatDate } from "../../model/tutorStudentInvitation.helpers";
 
 type InvitationManagerProps = {
   studentId: string;
@@ -30,9 +25,7 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
   useGate(tutorStudentInvitationModel.InvitationManagerGate, { studentId });
 
   const status = useUnit(tutorStudentInvitationModel.$status);
-  const ephemeralInviteUrl = useUnit(
-    tutorStudentInvitationModel.$ephemeralInviteUrl
-  );
+  const ephemeralInviteUrl = useUnit(tutorStudentInvitationModel.$ephemeralInviteUrl);
   const error = useUnit(tutorStudentInvitationModel.$error);
   const isIssuing = useUnit(tutorStudentInvitationModel.$isIssuing);
   const isRevoking = useUnit(tutorStudentInvitationModel.$isRevoking);
@@ -100,8 +93,8 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
             Статус: ожидает регистрации.
           </Typography>
           <Styled.InfoAlert severity="info">
-            Скопируйте ссылку и отправьте ученику. Повторно посмотреть её
-            будет нельзя — только создать новую.
+            Скопируйте ссылку и отправьте ученику. Повторно посмотреть её будет нельзя — только
+            создать новую.
           </Styled.InfoAlert>
           <Styled.UrlBox>
             <Styled.ReadonlyField
@@ -111,7 +104,7 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
               onFocus={(e) => e.target.select()}
             />
             <Tooltip title={copySuccess ? "Скопировано" : "Копировать"}>
-              <IconButton onClick={handleCopy} color="primary">
+              <IconButton aria-label="Копировать ссылку" onClick={handleCopy} color="primary">
                 <CopyIcon />
               </IconButton>
             </Tooltip>
@@ -119,60 +112,31 @@ export const InvitationManager: FC<InvitationManagerProps> = ({
           <Typography variant="caption" color="text.secondary">
             Действительна до {formatDate(status.expiresAt)} или до первой регистрации.
           </Typography>
-          {studentArchived && (
-            <Alert severity="warning">
-              Ученик в архиве — новую ссылку выдать нельзя. Можно только отозвать текущую.
-            </Alert>
-          )}
-          <Styled.ButtonsRow>
-            <Button
-              variant="outlined"
-              onClick={handleIssue}
-              disabled={isIssuing || studentArchived}
-            >
-              Создать новую (отозвать текущую)
-            </Button>
-            <Button
-              variant="text"
-              color="warning"
-              onClick={handleRevoke}
-              disabled={isRevoking}
-            >
-              Отозвать
-            </Button>
-          </Styled.ButtonsRow>
+          <InvitationActions
+            issueVariant="outlined"
+            studentArchived={studentArchived}
+            isIssuing={isIssuing}
+            isRevoking={isRevoking}
+            onIssue={handleIssue}
+            onRevoke={handleRevoke}
+          />
         </>
       )}
 
       {status?.status === "pending" && !ephemeralInviteUrl && (
         <>
           <Alert severity="info">
-            Ссылка создана и ожидает регистрации ученика (с {formatDate(status.createdAt)}).
-            Если ссылка потеряна, создайте новую — старая станет недействительной.
+            Ссылка создана и ожидает регистрации ученика (с {formatDate(status.createdAt)}). Если
+            ссылка потеряна, создайте новую — старая станет недействительной.
           </Alert>
-          {studentArchived && (
-            <Alert severity="warning">
-              Ученик в архиве — новую ссылку выдать нельзя. Можно только отозвать текущую.
-            </Alert>
-          )}
-          <Styled.ButtonsRow>
-            <Button
-              variant="contained"
-              startIcon={<LinkIcon />}
-              onClick={handleIssue}
-              disabled={isIssuing || studentArchived}
-            >
-              Создать новую (отозвать текущую)
-            </Button>
-            <Button
-              variant="text"
-              color="warning"
-              onClick={handleRevoke}
-              disabled={isRevoking}
-            >
-              Отозвать
-            </Button>
-          </Styled.ButtonsRow>
+          <InvitationActions
+            issueVariant="contained"
+            studentArchived={studentArchived}
+            isIssuing={isIssuing}
+            isRevoking={isRevoking}
+            onIssue={handleIssue}
+            onRevoke={handleRevoke}
+          />
         </>
       )}
     </Styled.Wrapper>

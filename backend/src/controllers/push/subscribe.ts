@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { PushSubscriptionDto } from "../../types";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 const validateSubscriptionData = (data: PushSubscriptionDto) => {
   if (!data.subscription?.endpoint) {
@@ -40,9 +40,7 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
     });
 
     if (existing && existing.userId !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Подписка принадлежит другому пользователю" });
+      return res.status(403).json({ error: "Подписка принадлежит другому пользователю" });
     }
 
     const subscriptionData = {
@@ -61,7 +59,7 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
       create: subscriptionData,
     });
 
-    res.status(existing ? 200 : 201).json({
+    return res.status(existing ? 200 : 201).json({
       id: subscription.id,
       endpoint: subscription.endpoint,
       deviceName: subscription.deviceName,
@@ -69,6 +67,6 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Subscribe error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

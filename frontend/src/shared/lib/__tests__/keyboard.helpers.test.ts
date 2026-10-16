@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 import { handleActivationKey } from "../keyboard.helpers";
 
 const makeEvent = (key: string): KeyboardEvent<HTMLElement> =>
-  ({ key, preventDefault: vi.fn() } as unknown as KeyboardEvent<HTMLElement>);
+  ({ key, preventDefault: vi.fn() }) as unknown as KeyboardEvent<HTMLElement>;
 
 describe("handleActivationKey", () => {
   it("should call handler and preventDefault on Enter", () => {

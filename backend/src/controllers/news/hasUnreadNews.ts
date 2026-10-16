@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const hasUnreadNews = async (req: AuthRequest, res: Response) => {
   try {
@@ -21,9 +21,9 @@ export const hasUnreadNews = async (req: AuthRequest, res: Response) => {
 
     const hasUnread = !readStatus || readStatus.lastReadAt < latestNews.publishedAt;
 
-    res.json({ hasUnread });
+    return res.json({ hasUnread });
   } catch (error) {
     console.error("Has unread news error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

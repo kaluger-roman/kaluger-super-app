@@ -1,20 +1,7 @@
 import type { CallMediaState } from "../videoCall.types";
-import { getUserMediaSafe } from "./webrtc";
-
-export const VIDEO_AUDIO_CONSTRAINTS: MediaStreamConstraints = {
-  video: true,
-  audio: true,
-};
-
-export const AUDIO_ONLY_CONSTRAINTS: MediaStreamConstraints = {
-  video: false,
-  audio: true,
-};
-
-export type LocalMediaResult = {
-  stream: MediaStream;
-  cameraOn: boolean;
-};
+import type { LocalMediaResult } from "./call.types";
+import { AUDIO_ONLY_CONSTRAINTS, VIDEO_AUDIO_CONSTRAINTS } from "./negotiation.constants";
+import { getUserMediaSafe } from "./webrtc.helpers";
 
 export const acquireLocalMedia = async (): Promise<LocalMediaResult> => {
   try {
@@ -26,10 +13,7 @@ export const acquireLocalMedia = async (): Promise<LocalMediaResult> => {
   }
 };
 
-export const mediaStateOf = (
-  stream: MediaStream,
-  cameraOn: boolean
-): CallMediaState => ({
+export const mediaStateOf = (stream: MediaStream, cameraOn: boolean): CallMediaState => ({
   micOn: stream.getAudioTracks().some((track) => track.enabled),
   cameraOn,
   screenSharing: false,

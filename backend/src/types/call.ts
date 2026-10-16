@@ -1,9 +1,4 @@
-export type CallStatusValue =
-  | "completed"
-  | "missed"
-  | "rejected"
-  | "canceled"
-  | "failed";
+export type CallStatusValue = "completed" | "missed" | "rejected" | "canceled" | "failed";
 
 export type CallDirection = "outgoing" | "incoming";
 

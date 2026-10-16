@@ -29,8 +29,7 @@ const CALL_STATUS_LABELS: Record<CallStatus, string> = {
   failed: "Не удалось соединиться",
 };
 
-export const getCallStatusLabel = (status: CallStatus): string =>
-  CALL_STATUS_LABELS[status];
+export const getCallStatusLabel = (status: CallStatus): string => CALL_STATUS_LABELS[status];
 
 export const getCallDirectionLabel = (direction: CallDirection): string =>
   direction === "outgoing" ? "Исходящий" : "Входящий";

@@ -1,15 +1,16 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Lesson } from "@shared";
 import { theme } from "@shared";
 
-import * as paymentStatusModel from "../payment-status.model";
+import { lessonPaymentChanged } from "../../../models/lessonActions.model";
 import { PaymentStatus } from "../PaymentStatus";
+import * as paymentStatusModel from "../PaymentStatus.model";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>
   render(
@@ -122,8 +123,10 @@ describe("PaymentStatus Component", () => {
     it("should render confirmation dialog when open", async () => {
       const scope = fork();
 
-      await allSettled(paymentStatusModel.$isOpen, { scope, params: true });
-      await allSettled(paymentStatusModel.$pendingStatus, { scope, params: true });
+      await allSettled(paymentStatusModel.confirmDialogOpened, {
+        scope,
+        params: { isPaid: true, price: 2000 },
+      });
 
       renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
 
@@ -134,8 +137,10 @@ describe("PaymentStatus Component", () => {
       const scope = fork();
       const mockOnPaymentChange = vi.fn();
 
-      await allSettled(paymentStatusModel.$isOpen, { scope, params: true });
-      await allSettled(paymentStatusModel.$pendingStatus, { scope, params: true });
+      await allSettled(paymentStatusModel.confirmDialogOpened, {
+        scope,
+        params: { isPaid: true, price: 2000 },
+      });
 
       renderWithTheme(
         <PaymentStatus lesson={mockLesson} onPaymentChange={mockOnPaymentChange} />,
@@ -145,14 +150,21 @@ describe("PaymentStatus Component", () => {
       const confirmButton = screen.getByRole("button", { name: /подтвердить/i });
       await userEvent.click(confirmButton);
 
-      expect(mockOnPaymentChange).toHaveBeenCalledWith(mockLesson.id, true, expect.any(String));
+      expect(mockOnPaymentChange).toHaveBeenCalledWith(
+        mockLesson.id,
+        true,
+        expect.any(String),
+        2000
+      );
     });
 
     it("should render cancel button in dialog", async () => {
       const scope = fork();
 
-      await allSettled(paymentStatusModel.$isOpen, { scope, params: true });
-      await allSettled(paymentStatusModel.$pendingStatus, { scope, params: true });
+      await allSettled(paymentStatusModel.confirmDialogOpened, {
+        scope,
+        params: { isPaid: true, price: 2000 },
+      });
 
       renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
 
@@ -184,8 +196,10 @@ describe("PaymentStatus Component", () => {
     it("should allow setting payment date in dialog", async () => {
       const scope = fork();
 
-      await allSettled(paymentStatusModel.$isOpen, { scope, params: true });
-      await allSettled(paymentStatusModel.$pendingStatus, { scope, params: true });
+      await allSettled(paymentStatusModel.confirmDialogOpened, {
+        scope,
+        params: { isPaid: true, price: 2000 },
+      });
 
       renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
 
@@ -212,8 +226,10 @@ describe("PaymentStatus Component", () => {
       const scope = fork();
       const mockOnPaymentChange = vi.fn();
 
-      await allSettled(paymentStatusModel.$isOpen, { scope, params: true });
-      await allSettled(paymentStatusModel.$pendingStatus, { scope, params: false });
+      await allSettled(paymentStatusModel.confirmDialogOpened, {
+        scope,
+        params: { isPaid: false, price: 2000 },
+      });
 
       renderWithTheme(
         <PaymentStatus lesson={mockLesson} onPaymentChange={mockOnPaymentChange} />,
@@ -223,7 +239,88 @@ describe("PaymentStatus Component", () => {
       const confirmButton = screen.getByRole("button", { name: /подтвердить/i });
       await userEvent.click(confirmButton);
 
-      expect(mockOnPaymentChange).toHaveBeenCalledWith(mockLesson.id, false, undefined);
+      expect(mockOnPaymentChange).toHaveBeenCalledWith(mockLesson.id, false, undefined, undefined);
+    });
+  });
+
+  describe("Received amount", () => {
+    const capturePayments = (scope: ReturnType<typeof fork>) => {
+      const payloads: unknown[] = [];
+      createWatch({ unit: lessonPaymentChanged, scope, fn: (payload) => payloads.push(payload) });
+      return payloads;
+    };
+
+    const toggleSwitch = () => userEvent.click(screen.getByRole("checkbox"));
+
+    it("should show the payment date and the price as the received amount", async () => {
+      renderWithTheme(<PaymentStatus lesson={mockLesson} />, fork());
+
+      await toggleSwitch();
+
+      expect(screen.getByLabelText(/дата оплаты/i)).toHaveValue("2026-02-15");
+      expect(screen.getByLabelText(/получено/i)).toHaveValue(2000);
+    });
+
+    it("should send the edited received amount on confirm", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
+
+      await toggleSwitch();
+      const amountInput = screen.getByLabelText(/получено/i);
+      await userEvent.clear(amountInput);
+      await userEvent.type(amountInput, "1800");
+      await userEvent.click(screen.getByRole("button", { name: /подтвердить/i }));
+
+      expect(payloads).toEqual([
+        { lessonId: "lesson-1", isPaid: true, paymentDate: "2026-02-15", receivedAmount: 1800 },
+      ]);
+      expect(scope.getState(paymentStatusModel.$isOpen)).toBe(false);
+    });
+
+    it("should block confirm and Enter while the amount is empty", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
+
+      await toggleSwitch();
+      await userEvent.clear(screen.getByLabelText(/получено/i));
+
+      expect(screen.getByText("Укажите полученную сумму")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /подтвердить/i })).toBeDisabled();
+      await userEvent.type(screen.getByRole("dialog"), "{Enter}");
+      expect(payloads).toEqual([]);
+      expect(scope.getState(paymentStatusModel.$isOpen)).toBe(true);
+    });
+
+    it("should not show the amount field when removing the payment", async () => {
+      const scope = fork();
+      const payloads = capturePayments(scope);
+      renderWithTheme(
+        <PaymentStatus lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1800 }} />,
+        scope
+      );
+
+      await toggleSwitch();
+
+      expect(screen.queryByLabelText(/получено/i)).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /подтвердить/i }));
+      expect(payloads).toEqual([
+        { lessonId: "lesson-1", isPaid: false, paymentDate: undefined, receivedAmount: undefined },
+      ]);
+    });
+
+    it("should pass the received amount to onPaymentChange as the fourth argument", async () => {
+      const onPaymentChange = vi.fn();
+      renderWithTheme(
+        <PaymentStatus lesson={{ ...mockLesson, price: 2500 }} onPaymentChange={onPaymentChange} />,
+        fork()
+      );
+
+      await toggleSwitch();
+      await userEvent.click(screen.getByRole("button", { name: /подтвердить/i }));
+
+      expect(onPaymentChange).toHaveBeenCalledWith("lesson-1", true, "2026-02-15", 2500);
     });
   });
 });

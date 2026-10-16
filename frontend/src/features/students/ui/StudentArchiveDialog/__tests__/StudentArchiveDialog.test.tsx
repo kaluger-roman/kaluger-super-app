@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Student } from "@shared";
 import { theme } from "@shared";
 
-import * as studentsArchiveModel from "../../../models/students-archive.model";
+import * as studentsArchiveModel from "../../../models/studentsArchive.model";
 import { StudentArchiveDialog } from "../StudentArchiveDialog";
 
 const renderWithTheme = (ui: React.ReactElement, scope = fork()) =>

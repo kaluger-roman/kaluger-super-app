@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "branch": "032-lesson-notes-in-card",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-09-04T00:00:00Z",
+  "diff_mode": "working-tree",
+  "diff_stats": { "files_changed": 23, "insertions": 1311, "deletions": 0 },
+  "summary": {
+    "raw_findings": 0,
+    "after_dedup": 0,
+    "after_score_filter": 0,
+    "by_severity": { "critical": 0, "high": 0, "medium": 0 },
+    "by_category": {},
+    "agents_failed": []
+  },
+  "findings": [],
+  "filtered_out": []
+}

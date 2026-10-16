@@ -1,11 +1,12 @@
 import { faker } from "@faker-js/faker";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import {
   scheduleRemindersForLesson,
   cancelRemindersForLesson,
   recalculateRemindersForUser,
   cancelAllPendingReminders,
 } from "../services/reminderScheduler";
+import { uniqueEmail } from "./helpers";
 
 describe("reminderScheduler service", () => {
   let userId: string;
@@ -14,7 +15,7 @@ describe("reminderScheduler service", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },

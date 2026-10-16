@@ -1,7 +1,8 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { truncateToMinute } from "../utils/time";
 import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
+import type { CronScope } from "../types";
 
 // Module-level guard prevents two overlapping cron ticks (e.g. tick N still
 // running due to DB latency when tick N+1 fires) from both broadcasting the
@@ -9,7 +10,7 @@ import { broadcastStudentLessonStatusUpdated } from "./studentLessonBroadcast";
 // services/recurringLessons.ts and `backupRunning` in services/backup.ts.
 let statusUpdaterRunning = false;
 
-export const updateLessonStatuses = async () => {
+export const updateLessonStatuses = async (scope?: CronScope) => {
   if (statusUpdaterRunning) {
     console.log("Skipping lesson status update: previous tick still active");
     return { startedLessons: 0, completedLessons: 0 };
@@ -18,11 +19,13 @@ export const updateLessonStatuses = async () => {
 
   const now = truncateToMinute(new Date());
   const wsManager = getWebSocketManager();
+  const scopeWhere = scope ? { tutorId: { in: scope.tutorIds } } : {};
 
   try {
     // Получаем уроки, которые должны стать IN_PROGRESS
     const lessonsToStart = await prisma.lesson.findMany({
       where: {
+        ...scopeWhere,
         status: { in: ["SCHEDULED", "RESCHEDULED"] },
         startTime: {
           lte: now,
@@ -37,6 +40,7 @@ export const updateLessonStatuses = async () => {
     // Получаем уроки, которые должны стать COMPLETED
     const lessonsToComplete = await prisma.lesson.findMany({
       where: {
+        ...scopeWhere,
         status: { in: ["IN_PROGRESS", "SCHEDULED", "RESCHEDULED"] },
         endTime: {
           lte: now,
@@ -95,27 +99,17 @@ export const updateLessonStatuses = async () => {
 
     if (wsManager) {
       for (const lesson of startedLessons) {
-        wsManager.broadcastLessonStatusUpdate(
-          lesson.id,
-          "IN_PROGRESS",
-          lesson.tutorId
-        );
+        wsManager.broadcastLessonStatusUpdate(lesson.id, "IN_PROGRESS", lesson.tutorId);
         void broadcastStudentLessonStatusUpdated(lesson.id, "IN_PROGRESS");
       }
       for (const lesson of completedLessons) {
-        wsManager.broadcastLessonStatusUpdate(
-          lesson.id,
-          "COMPLETED",
-          lesson.tutorId
-        );
+        wsManager.broadcastLessonStatusUpdate(lesson.id, "COMPLETED", lesson.tutorId);
         void broadcastStudentLessonStatusUpdated(lesson.id, "COMPLETED");
       }
     }
 
     if (startedCount > 0 || completedCount > 0) {
-      console.log(
-        `Updated ${startedCount} lessons to IN_PROGRESS, ${completedCount} to COMPLETED`
-      );
+      console.log(`Updated ${startedCount} lessons to IN_PROGRESS, ${completedCount} to COMPLETED`);
     }
 
     return {

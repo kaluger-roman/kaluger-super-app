@@ -10,11 +10,12 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material";
 
 import { useDisableNumberScroll } from "@shared";
 
-import type { StudentFormFieldsProps } from "../types";
+import { CommissionField } from "../CommissionField";
+import { ContactMethodSelect } from "../ContactMethodSelect";
+import type { StudentFormFieldsProps } from "../StudentForm.types";
 
 export const StudentFormFields: FC<StudentFormFieldsProps> = ({
   formData,
@@ -28,13 +29,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
   return (
     <Box display="flex" flexDirection="column" gap={isMobile ? 2 : 3} pt={1}>
       <TextField
-        label="Имя студента"
+        label="Имя ученика"
         value={formData.name}
         onChange={onChange("name")}
         fullWidth
         required
         autoFocus
-        placeholder="Введите имя студента"
+        placeholder="Введите имя ученика"
         size={isMobile ? "small" : "medium"}
       />
 
@@ -47,19 +48,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         size={isMobile ? "small" : "medium"}
       />
 
-      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel>Способ связи</InputLabel>
-        <Select
-          value={formData.contactMethod || "WHATSAPP"}
-          onChange={(e: SelectChangeEvent<string>) =>
-            onChange("contactMethod")({ target: { value: e.target.value } })
-          }
-          label="Способ связи"
-        >
-          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
-          <MenuItem value="TELEGRAM">Telegram</MenuItem>
-        </Select>
-      </FormControl>
+      <ContactMethodSelect
+        id="student-contact-method-label"
+        label="Способ связи"
+        value={formData.contactMethod}
+        isMobile={isMobile}
+        onChange={(value) => onChange("contactMethod")({ target: { value } })}
+      />
 
       {formData.contactMethod === "TELEGRAM" && (
         <TextField
@@ -90,19 +85,13 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         size={isMobile ? "small" : "medium"}
       />
 
-      <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-        <InputLabel>Способ связи (родители)</InputLabel>
-        <Select
-          value={formData.parentContactMethod || "WHATSAPP"}
-          onChange={(e: SelectChangeEvent<string>) =>
-            onChange("parentContactMethod")({ target: { value: e.target.value } })
-          }
-          label="Способ связи (родители)"
-        >
-          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
-          <MenuItem value="TELEGRAM">Telegram</MenuItem>
-        </Select>
-      </FormControl>
+      <ContactMethodSelect
+        id="parent-contact-method-label"
+        label="Способ связи (родители)"
+        value={formData.parentContactMethod}
+        isMobile={isMobile}
+        onChange={(value) => onChange("parentContactMethod")({ target: { value } })}
+      />
 
       {formData.parentContactMethod === "TELEGRAM" && (
         <TextField
@@ -129,6 +118,12 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         size={isMobile ? "small" : "medium"}
       />
 
+      <CommissionField
+        value={formData.commissionAmount}
+        isMobile={isMobile}
+        onChange={onChange("commissionAmount")}
+      />
+
       <FormControl fullWidth size={isMobile ? "small" : "medium"}>
         <InputLabel>Класс</InputLabel>
         <Select
@@ -152,7 +147,7 @@ export const StudentFormFields: FC<StudentFormFieldsProps> = ({
         fullWidth
         multiline
         rows={isMobile ? 2 : 3}
-        placeholder="Дополнительная информация о студенте"
+        placeholder="Дополнительная информация об ученике"
         size={isMobile ? "small" : "medium"}
       />
     </Box>

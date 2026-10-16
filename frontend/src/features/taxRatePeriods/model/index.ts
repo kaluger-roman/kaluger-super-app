@@ -1,3 +1,3 @@
-export * as taxRatePeriodsModalModel from "./tax-rate-periods-modal.model";
-export { todayIso } from "./tax-rate-periods-modal.helpers";
-export type { DraftPeriod } from "./tax-rate-periods-modal.types";
+export * as taxRatePeriodsModalModel from "./taxRatePeriodsModal.model";
+export { todayIso } from "./taxRatePeriodsModal.helpers";
+export type { DraftPeriod } from "./taxRatePeriodsModal.types";

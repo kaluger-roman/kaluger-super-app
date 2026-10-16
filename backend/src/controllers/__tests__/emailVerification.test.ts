@@ -1,16 +1,16 @@
 import request from "supertest";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { app } from "../../index";
 import { faker } from "@faker-js/faker";
 import * as emailService from "../../services/email";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../../services/email");
 
 describe("Email Verification Controller", () => {
-  const mockSendVerificationEmail =
-    emailService.sendVerificationEmail as jest.MockedFunction<
-      typeof emailService.sendVerificationEmail
-    >;
+  const mockSendVerificationEmail = emailService.sendVerificationEmail as jest.MockedFunction<
+    typeof emailService.sendVerificationEmail
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -32,9 +32,7 @@ describe("Email Verification Controller", () => {
     });
 
     it("should return 400 when only code is provided", async () => {
-      const res = await request(app)
-        .post("/api/auth/verify-email")
-        .send({ code: "123456" });
+      const res = await request(app).post("/api/auth/verify-email").send({ code: "123456" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Email и код подтверждения обязательны");
@@ -54,7 +52,7 @@ describe("Email Verification Controller", () => {
     it("should return generic 400 for already-verified email (regression: email enumeration)", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -74,7 +72,7 @@ describe("Email Verification Controller", () => {
     it("should return generic 400 when verification code not yet requested", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -97,7 +95,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -111,9 +109,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "123456" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Срок действия кода истек. Запросите новый код",
-      );
+      expect(res.body.error).toBe("Срок действия кода истек. Запросите новый код");
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -124,7 +120,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -155,7 +151,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -170,9 +166,7 @@ describe("Email Verification Controller", () => {
         .send({ email: user.email, code: "000000" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Превышено количество попыток. Запросите новый код",
-      );
+      expect(res.body.error).toBe("Превышено количество попыток. Запросите новый код");
 
       const updatedUser = await prisma.user.findUnique({
         where: { id: user.id },
@@ -192,7 +186,7 @@ describe("Email Verification Controller", () => {
 
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -230,9 +224,7 @@ describe("Email Verification Controller", () => {
 
   describe("POST /api/auth/resend-verification", () => {
     it("should return 400 when email is missing", async () => {
-      const res = await request(app)
-        .post("/api/auth/resend-verification")
-        .send({});
+      const res = await request(app).post("/api/auth/resend-verification").send({});
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Email обязателен");
@@ -251,7 +243,7 @@ describe("Email Verification Controller", () => {
     it("should return neutral 200 for already-verified email (regression: email enumeration)", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: true,
@@ -272,7 +264,7 @@ describe("Email Verification Controller", () => {
     it("should generate new code and send email successfully (still using neutral 200)", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
@@ -287,10 +279,7 @@ describe("Email Verification Controller", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toMatch(/Если такой email/);
 
-      expect(mockSendVerificationEmail).toHaveBeenCalledWith(
-        user.email,
-        expect.any(String),
-      );
+      expect(mockSendVerificationEmail).toHaveBeenCalledWith(user.email, expect.any(String));
 
       const updatedUser = await prisma.user.findUnique({
         where: { id: user.id },
@@ -307,16 +296,14 @@ describe("Email Verification Controller", () => {
     it("should return 500 when email sending fails", async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hashed",
           name: faker.person.fullName(),
           isEmailVerified: false,
         },
       });
 
-      mockSendVerificationEmail.mockRejectedValueOnce(
-        new Error("Email service error"),
-      );
+      mockSendVerificationEmail.mockRejectedValueOnce(new Error("Email service error"));
 
       const res = await request(app)
         .post("/api/auth/resend-verification")

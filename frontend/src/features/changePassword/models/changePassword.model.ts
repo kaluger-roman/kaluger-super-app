@@ -24,7 +24,7 @@ export const formReset = createEvent();
 export const changePasswordFx = createEffect(
   async (data: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
     return await authApi.changePassword(data);
-  },
+  }
 );
 
 // Persist the fresh JWT returned by the backend after tokenVersion bump. Without

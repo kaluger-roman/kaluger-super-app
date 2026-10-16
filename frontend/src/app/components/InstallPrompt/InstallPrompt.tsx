@@ -47,11 +47,7 @@ export const InstallPrompt = () => {
         </Styled.InstallButton>
       )}
       <Styled.CloseButtonWrapper>
-        <IconButton
-          size="small"
-          aria-label="Закрыть баннер установки"
-          onClick={handleDismiss}
-        >
+        <IconButton size="small" aria-label="Закрыть баннер установки" onClick={handleDismiss}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </Styled.CloseButtonWrapper>

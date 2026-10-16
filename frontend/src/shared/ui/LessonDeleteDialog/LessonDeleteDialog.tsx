@@ -13,9 +13,9 @@ import {
 } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import * as lessonDeleteDialogModel from "./lesson-delete-dialog.model";
+import * as lessonDeleteDialogModel from "./LessonDeleteDialog.model";
 import * as Styled from "./LessonDeleteDialog.styled";
-import { SUBJECT_LABELS } from "../../constants";
+import { SUBJECT_LABELS } from "../../domain.constants";
 import { formatDate, formatTimeRange } from "../../lib";
 
 type LessonDeleteDialogProps = {

@@ -1,11 +1,11 @@
 import { ThemeProvider } from "@mui/material";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
 import { theme } from "@shared";
 
-import type { StudentFormData } from "../../types";
+import type { StudentFormData } from "../../StudentForm.types";
 import { StudentFormFields } from "../StudentFormFields";
 
 const renderWithTheme = (ui: React.ReactElement) =>
@@ -21,6 +21,7 @@ const mockFormData: StudentFormData = {
   parentContactMethod: "WHATSAPP",
   parentTelegramNick: "",
   hourlyRate: "1500",
+  commissionAmount: "",
   grade: "5",
   notes: "Хороший ученик",
 };
@@ -39,7 +40,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByLabelText(/имя студента/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/имя ученика/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^телефон$/i)).toBeInTheDocument();
     expect(screen.getAllByRole("combobox")[0]).toBeInTheDocument();
     expect(screen.getByLabelText(/имя родителя/i)).toBeInTheDocument();
@@ -60,7 +61,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByLabelText(/имя студента/i)).toHaveValue("Иван Петров");
+    expect(screen.getByLabelText(/имя ученика/i)).toHaveValue("Иван Петров");
     expect(screen.getByLabelText(/^телефон$/i)).toHaveValue("+7 (999) 123-45-67");
     expect(screen.getByLabelText(/имя родителя/i)).toHaveValue("Мария Петрова");
     expect(screen.getByLabelText(/телефон родителя/i)).toHaveValue("+7 (999) 987-65-43");
@@ -73,8 +74,7 @@ describe("StudentFormFields", () => {
     const onChange = vi.fn((_field: string) => {
       return (
         _event:
-          | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-          | { target: { value: unknown } }
+          React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
       ) => {
         // mock implementation
       };
@@ -89,7 +89,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     await user.type(nameInput, "Test");
 
     expect(onChange).toHaveBeenCalledWith("name");
@@ -311,6 +311,20 @@ describe("StudentFormFields", () => {
 
     expect(screen.getByRole("option", { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /telegram/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "MAX" })).toBeInTheDocument();
+  });
+
+  it("should hide telegram nick field when contactMethod is MAX", () => {
+    renderWithTheme(
+      <StudentFormFields
+        formData={{ ...mockFormData, contactMethod: "MAX" }}
+        isMobile={false}
+        onChange={mockOnChange}
+        onGradeChange={mockOnGradeChange}
+      />
+    );
+
+    expect(screen.queryByLabelText(/telegram ник/i)).not.toBeInTheDocument();
   });
 
   it("should render parent contact method select with WHATSAPP and TELEGRAM options", async () => {
@@ -330,6 +344,7 @@ describe("StudentFormFields", () => {
 
     expect(screen.getByRole("option", { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /telegram/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "MAX" })).toBeInTheDocument();
   });
 
   it("should render grade select with all grade options", async () => {
@@ -363,7 +378,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -377,7 +392,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -391,7 +406,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeRequired();
   });
 
@@ -405,7 +420,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByLabelText(/имя студента/i);
+    const nameInput = screen.getByLabelText(/имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -419,7 +434,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const nameInput = screen.getByPlaceholderText(/введите имя студента/i);
+    const nameInput = screen.getByPlaceholderText(/введите имя ученика/i);
     expect(nameInput).toBeInTheDocument();
   });
 
@@ -503,7 +518,7 @@ describe("StudentFormFields", () => {
       />
     );
 
-    const notesInput = screen.getByPlaceholderText(/дополнительная информация о студенте/i);
+    const notesInput = screen.getByPlaceholderText(/дополнительная информация об ученике/i);
     expect(notesInput).toBeInTheDocument();
   });
 
@@ -517,7 +532,22 @@ describe("StudentFormFields", () => {
       />
     );
 
-    expect(screen.getByText(/₽/i)).toBeInTheDocument();
+    const rateField = screen.getByLabelText(/ставка/i).parentElement;
+    expect(within(rateField as HTMLElement).getByText(/₽/i)).toBeInTheDocument();
+  });
+
+  it("should display currency symbol for commission field", () => {
+    renderWithTheme(
+      <StudentFormFields
+        formData={mockFormData}
+        isMobile={false}
+        onChange={mockOnChange}
+        onGradeChange={mockOnGradeChange}
+      />
+    );
+
+    const commissionField = screen.getByLabelText(/комиссия/i).parentElement;
+    expect(within(commissionField as HTMLElement).getByText(/₽/i)).toBeInTheDocument();
   });
 
   it("should render hourly rate as number input", () => {

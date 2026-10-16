@@ -1,6 +1,6 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { groupRecurringLessonsByPattern } from "./recurringHelpers";
-import type { LessonSlot } from "../types";
+import type { CronScope, LessonSlot } from "../types";
 import { truncateToMinute } from "../utils/time";
 
 // Module-level guard prevents two ticks (manual trigger overlapping the
@@ -11,7 +11,7 @@ let recurringRunning = false;
 const overlaps = (slots: LessonSlot[], start: Date, end: Date): boolean =>
   slots.some((s) => s.startTime < end && s.endTime > start);
 
-export const processRecurringLessons = async () => {
+export const processRecurringLessons = async (scope?: CronScope) => {
   if (recurringRunning) {
     console.log("Skipping recurring lessons run: previous tick still active");
     return;
@@ -25,6 +25,7 @@ export const processRecurringLessons = async () => {
       where: {
         isRecurring: true,
         status: "SCHEDULED",
+        ...(scope && { tutorId: { in: scope.tutorIds } }),
       },
       include: {
         student: true,
@@ -57,9 +58,7 @@ export const processRecurringLessons = async () => {
     const slotsByTutor = new Map<string, LessonSlot[]>();
     for (const id of tutorIds) slotsByTutor.set(id, []);
     for (const e of existingLessons) {
-      slotsByTutor
-        .get(e.tutorId)!
-        .push({ startTime: e.startTime, endTime: e.endTime });
+      slotsByTutor.get(e.tutorId)!.push({ startTime: e.startTime, endTime: e.endTime });
     }
 
     let createdCount = 0;
@@ -83,6 +82,7 @@ export const processRecurringLessons = async () => {
             startTime: currentStart,
             endTime: currentEnd,
             price: lastLesson.price,
+            isTaxExempt: lastLesson.isTaxExempt,
             isRecurring: true,
             tutorId: lastLesson.tutorId,
             studentId: lastLesson.studentId,
@@ -94,12 +94,8 @@ export const processRecurringLessons = async () => {
           tutorSlots.push({ startTime: currentStart, endTime: currentEnd });
         }
 
-        currentStart = truncateToMinute(
-          new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-        );
-        currentEnd = truncateToMinute(
-          new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
-        );
+        currentStart = truncateToMinute(new Date(currentStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+        currentEnd = truncateToMinute(new Date(currentEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
       }
 
       if (lessonsToCreate.length > 0) {

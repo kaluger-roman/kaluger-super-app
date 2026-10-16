@@ -45,9 +45,7 @@ export const CallControlBar: FC = () => {
         $sharing={selfMedia.screenSharing}
         onClick={() => actions.toggleScreen()}
         aria-label={
-          selfMedia.screenSharing
-            ? "Остановить демонстрацию экрана"
-            : "Демонстрация экрана"
+          selfMedia.screenSharing ? "Остановить демонстрацию экрана" : "Демонстрация экрана"
         }
       >
         {selfMedia.screenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}

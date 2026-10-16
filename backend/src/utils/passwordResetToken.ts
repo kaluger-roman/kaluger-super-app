@@ -18,5 +18,4 @@ export const getResetTokenExpiry = (): Date => {
   return expiry;
 };
 
-export const isResetTokenExpired = (expiry: Date): boolean =>
-  new Date() > expiry;
+export const isResetTokenExpired = (expiry: Date): boolean => new Date() > expiry;

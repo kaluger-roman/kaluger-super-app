@@ -48,15 +48,11 @@ describe("InvitationManager — archived student", () => {
     renderWithScope(scope, { studentId: "stud-1", studentArchived: true });
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Создать ссылку-приглашение" })
-      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Создать ссылку-приглашение" })).toBeDisabled();
     });
 
     expect(
-      screen.getByText(
-        "Архивированному ученику нельзя выдать приглашение — снимите архивацию."
-      )
+      screen.getByText("Архивированному ученику нельзя выдать приглашение — снимите архивацию.")
     ).toBeInTheDocument();
   });
 
@@ -69,14 +65,10 @@ describe("InvitationManager — archived student", () => {
     renderWithScope(scope, { studentId: "stud-2", studentArchived: false });
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Создать ссылку-приглашение" })
-      ).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Создать ссылку-приглашение" })).toBeEnabled();
     });
 
-    expect(
-      screen.queryByText(/Архивированному ученику нельзя/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Архивированному ученику нельзя/i)).not.toBeInTheDocument();
   });
 
   it("disables 'Создать новую (отозвать текущую)' on pending+archived but keeps 'Отозвать' enabled", async () => {
@@ -98,8 +90,6 @@ describe("InvitationManager — archived student", () => {
     });
 
     expect(screen.getByRole("button", { name: "Отозвать" })).toBeEnabled();
-    expect(
-      screen.getByText(/Ученик в архиве — новую ссылку выдать нельзя/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Ученик в архиве — новую ссылку выдать нельзя/i)).toBeInTheDocument();
   });
 });

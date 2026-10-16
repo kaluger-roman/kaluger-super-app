@@ -7,10 +7,7 @@ import {
   revokeInvitation,
 } from "../../services/studentInvitation";
 
-export const tutorIssueInvitation = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const tutorIssueInvitation = async (req: AuthRequest, res: Response) => {
   try {
     const tutorId = req.user?.userId;
     if (!tutorId) {
@@ -28,14 +25,11 @@ export const tutorIssueInvitation = async (
         return res.status(404).json({ error: "Ученик не найден" });
       }
       if (result.reason === "not_owner") {
-        return res
-          .status(403)
-          .json({ error: "Нет доступа к этой карточке ученика" });
+        return res.status(403).json({ error: "Нет доступа к этой карточке ученика" });
       }
       if (result.reason === "archived") {
         return res.status(409).json({
-          error:
-            "Архивированному ученику нельзя выдать приглашение — снимите архивацию",
+          error: "Архивированному ученику нельзя выдать приглашение — снимите архивацию",
         });
       }
       if (result.reason === "already_registered") {
@@ -59,10 +53,7 @@ export const tutorIssueInvitation = async (
   }
 };
 
-export const tutorReadInvitationStatus = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const tutorReadInvitationStatus = async (req: AuthRequest, res: Response) => {
   try {
     const tutorId = req.user?.userId;
     if (!tutorId) {
@@ -80,9 +71,7 @@ export const tutorReadInvitationStatus = async (
         return res.status(404).json({ error: "Ученик не найден" });
       }
       if (result.error === "forbidden") {
-        return res
-          .status(403)
-          .json({ error: "Нет доступа к этой карточке ученика" });
+        return res.status(403).json({ error: "Нет доступа к этой карточке ученика" });
       }
     }
 
@@ -93,10 +82,7 @@ export const tutorReadInvitationStatus = async (
   }
 };
 
-export const tutorRevokeInvitation = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const tutorRevokeInvitation = async (req: AuthRequest, res: Response) => {
   try {
     const tutorId = req.user?.userId;
     if (!tutorId) {
@@ -114,9 +100,7 @@ export const tutorRevokeInvitation = async (
         return res.status(404).json({ error: "Ученик не найден" });
       }
       if (result.reason === "not_owner") {
-        return res
-          .status(403)
-          .json({ error: "Нет доступа к этой карточке ученика" });
+        return res.status(403).json({ error: "Нет доступа к этой карточке ученика" });
       }
     }
 

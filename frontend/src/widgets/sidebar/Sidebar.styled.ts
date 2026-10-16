@@ -6,8 +6,9 @@ import {
   Avatar,
   ListItemButton,
   ListItemIcon,
-  styled,
 } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const StyledDrawer = styled(Drawer)<{ $drawerWidth: number }>(({ $drawerWidth }) => ({
   width: $drawerWidth,

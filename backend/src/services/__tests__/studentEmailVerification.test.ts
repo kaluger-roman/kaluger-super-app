@@ -1,8 +1,7 @@
-import { faker } from "@faker-js/faker";
-
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { verifyStudentEmailCode } from "../studentEmailVerification";
 import { MAX_VERIFICATION_ATTEMPTS } from "../../utils/verification";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendStudentVerificationEmail: jest.fn(async () => undefined),
@@ -21,7 +20,7 @@ describe("studentEmailVerification service", () => {
       // `{ increment: 1 }` сериализует инкременты в БД.
       const studentUser = await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "x",
           name: "Race Test",
           isEmailVerified: false,
@@ -46,9 +45,7 @@ describe("studentEmailVerification service", () => {
 
         expect(after?.verificationCode).toBeNull();
         expect(after?.verificationCodeExpiry).toBeNull();
-        expect(
-          results.some((r) => !r.ok && r.reason === "attempts_exceeded")
-        ).toBe(true);
+        expect(results.some((r) => !r.ok && r.reason === "attempts_exceeded")).toBe(true);
       } finally {
         await prisma.studentUser.delete({ where: { id: studentUser.id } });
       }
@@ -57,7 +54,7 @@ describe("studentEmailVerification service", () => {
     it("returns wrong_code and increments the counter on a single wrong attempt", async () => {
       const studentUser = await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "x",
           name: "Increment Test",
           isEmailVerified: false,
@@ -85,7 +82,7 @@ describe("studentEmailVerification service", () => {
     it("verifies and clears the code on the correct attempt", async () => {
       const studentUser = await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "x",
           name: "Success Test",
           isEmailVerified: false,

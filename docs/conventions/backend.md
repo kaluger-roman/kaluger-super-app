@@ -28,12 +28,17 @@ backend/
 | ---------- | ------------------------- | ----------------------- |
 | Routes     | `[domain].ts`             | `routes/`               |
 | Controller | `[domain]/index.ts`       | `controllers/`          |
-| Validators | `validators.ts`           | `controllers/[domain]/` |
+| Validators | `validators.ts` or `[action].validators.ts` | `controllers/[domain]/` |
 | Services   | `[domain]/index.ts`       | `services/`             |
 | Service constants | `[domain].constants.ts` | `services/[domain]/` |
 | Service helpers | `[domain].helpers.ts`   | `services/[domain]/` |
 | Service types | `[domain].types.ts`       | `services/[domain]/` |
 | Shared types | `[domain].ts` (split) | `types/`                |
+
+**File and folder names are camelCase** (`createLesson.ts`, `lessonCreation/`,
+`webSocketManager.ts`; `__tests__/` is the only exception). Role suffixes come only
+from the table — `.types`, `.helpers`, `.constants`, `.validators` (plus `.test` in
+tests); anything else is a plain `<name>.ts`. ESLint enforced (`eslint-plugin-check-file`).
 
 **Service files split by responsibility.** Each new service lives in its own
 sub-folder. Mixing constants/helpers/types into the entry file is forbidden —
@@ -63,9 +68,19 @@ import { createStudent } from "./controllers/students/createStudent";
 
 ## Strict Rules
 
+ESLint-enforced (`backend/eslint.config.mjs`, `npm run lint`, runs in CI): no `any`
+(prod code; allowed in tests — supertest's `res.body` and hand-rolled mocks are typed
+`any` upstream), named exports only, function expressions only, `type` + `import type`,
+no TS enums, controllers < 150 lines (`max-lines`, `__tests__` excluded), camelCase
+file/folder names and the role-suffix allowlist (`eslint-plugin-check-file`), no
+`.only` / `.skip` / `done` callbacks in tests (`eslint-plugin-jest`), Russian text in
+`res.json({ error: "…" })` and `rateLimit({ message: { error: "…" } })` literals. Formatting is Prettier's (see Code Quality).
+`tsconfig.json` additionally has `noUnusedLocals`, `noImplicitReturns` and
+`noFallthroughCasesInSwitch` on. The rest of this doc is review-checked.
+
 ### Structure
 
-- **Controllers < 150 lines** — extract to services
+- **Controllers < 150 lines** — extract to services (ESLint `max-lines`)
 - **Complex actions (50+ lines)** — separate file
 
 ### Types
@@ -79,9 +94,10 @@ import { createStudent } from "./controllers/students/createStudent";
 
 - **Named exports only** — no `export default`
 - **Function expressions only** — use `const fn = () => {}`, not `function fn() {}`
-- **Error messages in Russian**
+- **Error messages in Russian** — ESLint enforced for literals inside `res.json({ error: "…" })` and `rateLimit({ message: { error: "…" } })`; text built elsewhere (template literals, `err.message`, service errors) stays review-checked
 - **No ESLint errors** — run lint and fix all errors before finishing
-- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
+- **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing. `noImplicitReturns` fires only where a function already returns a value somewhere, so once one branch of a handler does `return res...`, every branch must return (a handler that never returns a value is fine)
+- **Prettier formatting** — config in the root `.prettierrc`. Tool-enforced: the pre-commit hook formats staged files, CI fails on `npm run format:check`. Format by hand with `npm run format`
 
 ## Custom Error Classes
 
@@ -89,7 +105,9 @@ Custom `Error` subclasses used for `instanceof` flow control (e.g. mapping a
 domain exception to an HTTP status) **must** live in `src/utils/errors.ts`
 and be re-exported via `src/utils/index.ts`. Do **not** declare them locally
 inside controllers/services — local declarations duplicate types and make
-the error surface invisible to other modules.
+the error surface invisible to other modules. ESLint enforced: `no-restricted-syntax`
+rejects `class X extends Error` anywhere except `src/utils/errors.ts`. The same
+rule also rejects empty files and `export {}` stubs — delete the file instead.
 
 ```typescript
 // ❌ Bad — local declaration inside the controller
@@ -154,7 +172,7 @@ type AuthRequest = Request & { user?: JwtPayload };
 4. **Отдельный namespace роутов** (`/api/student-auth/*`, `/api/student-cabinet/*`) — токены физически не пересекаются с tutor-эндпоинтами
 5. **Отдельные rate-limiters** для login/register/resend, чтобы не было общего бюджета попыток с другими ролями
 6. **WebSocket**: добавлять отдельный путь (`/ws/student?token=...`) в общем `WebSocketManager`, со своим пулом клиентов и auth-функцией. Не пересекать пулы — broadcast в один пул не должен видеть клиентов другого
-7. **Cross-role security регрессионные тесты** обязательны: tutor JWT отвергается student-эндпоинтами и наоборот; см. `src/__tests__/cross-role-security.test.ts` как пример
+7. **Cross-role security регрессионные тесты** обязательны: tutor JWT отвергается student-эндпоинтами и наоборот; см. `src/__tests__/crossRoleSecurity.test.ts` как пример
 8. **Раздельные хранилища токенов на фронте** (например, ключ `studentToken` vs `authToken` в `localStorage`) и отдельный axios-инстанс (`shared/api/studentBase.ts` — `studentApi`/`publicApi`)
 9. **Раздельные route guards** на фронте — каждый guard проверяет только "свою" сессию из `entities/<role>`
 
@@ -162,7 +180,7 @@ type AuthRequest = Request & { user?: JwtPayload };
 
 1. Define types in `src/types/index.ts`
 2. Create controller in `src/controllers/[feature]/`
-3. Add validators in `controllers/[feature]/validators.ts`
+3. Add validators in `controllers/[feature]/validators.ts` (or `[action].validators.ts` when one action's validation is large enough to stand alone)
 4. Define routes in `src/routes/[feature].ts`
 5. Register routes in `src/index.ts`
 6. Add service if complex logic needed

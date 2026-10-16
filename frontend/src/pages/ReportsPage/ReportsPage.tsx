@@ -6,13 +6,19 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 import { useGate, useUnit } from "effector-react";
 
+import { LessonDialogs } from "@features";
+
 import {
   DateRangeFilter,
   MainStatistics,
   FinancialStatistics,
   PerformanceMetrics,
+  IncomeHistory,
+  ReportsTabs,
+  getReportsTabId,
+  getReportsTabPanelId,
 } from "./components";
-import { statisticsModel } from "./model";
+import { reportsTabsModel, statisticsModel } from "./model";
 import * as Styled from "./ReportsPage.styled";
 
 export const ReportsPage: FC = () => {
@@ -23,6 +29,7 @@ export const ReportsPage: FC = () => {
   const endDate = useUnit(statisticsModel.$endDate);
   const loading = useUnit(statisticsModel.$isLoading);
   const error = useUnit(statisticsModel.$error);
+  const activeTab = useUnit(reportsTabsModel.$activeTab);
 
   if (!statistics && error) {
     return (
@@ -60,11 +67,25 @@ export const ReportsPage: FC = () => {
           onUpdate={statisticsModel.statisticsLoadRequested}
         />
 
-        <MainStatistics statistics={statistics} />
+        <ReportsTabs />
 
-        <FinancialStatistics statistics={statistics} />
+        <div
+          role="tabpanel"
+          id={getReportsTabPanelId(activeTab)}
+          aria-labelledby={getReportsTabId(activeTab)}
+        >
+          {activeTab === "summary" && (
+            <>
+              <MainStatistics statistics={statistics} />
+              <FinancialStatistics statistics={statistics} />
+              <PerformanceMetrics statistics={statistics} />
+            </>
+          )}
 
-        <PerformanceMetrics statistics={statistics} />
+          {activeTab === "history" && <IncomeHistory />}
+        </div>
+
+        <LessonDialogs />
       </Styled.Container>
     </LocalizationProvider>
   );

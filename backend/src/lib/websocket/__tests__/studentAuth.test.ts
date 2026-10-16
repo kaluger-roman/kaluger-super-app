@@ -1,8 +1,8 @@
-import { faker } from "@faker-js/faker";
-import prisma from "../../prisma";
+import { prisma } from "../../prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import { generateStudentToken } from "../../../utils/studentAuth";
 import { authenticateStudentWebSocket } from "../studentAuth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("authenticateStudentWebSocket", () => {
   let studentUserId: string;
@@ -12,7 +12,7 @@ describe("authenticateStudentWebSocket", () => {
   beforeAll(async () => {
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "WS Test Student",
       },

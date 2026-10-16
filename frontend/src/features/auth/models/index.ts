@@ -1,2 +1,2 @@
-export * as loginFormModel from "./login-form.model";
-export * as registerFormModel from "./register-form.model";
+export * as loginFormModel from "./loginForm.model";
+export * as registerFormModel from "./registerForm.model";

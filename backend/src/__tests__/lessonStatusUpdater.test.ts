@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { updateLessonStatuses } from "../services/lessonStatusUpdater";
 
 jest.mock("../lib/wsManager", () => ({
@@ -15,7 +15,7 @@ describe("updateLessonStatuses select-only payload", () => {
   it("should request only id/tutorId columns from lessons.findMany (cron payload optimisation)", async () => {
     const findManySpy = jest.spyOn(prisma.lesson, "findMany");
     try {
-      await updateLessonStatuses();
+      await updateLessonStatuses({ tutorIds: [] });
 
       expect(findManySpy).toHaveBeenCalled();
       for (const call of findManySpy.mock.calls) {

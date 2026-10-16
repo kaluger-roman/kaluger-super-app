@@ -1,14 +1,31 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../index";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { generateToken } from "../utils/auth";
+import { uniqueEmail } from "./helpers";
 
 jest.mock("../lib/wsManager", () => ({
   getWebSocketManager: jest.fn(() => ({
     broadcastLessonStatusUpdate: jest.fn(),
   })),
 }));
+
+// createLesson schedules reminders fire-and-forget; under a loaded parallel run a fixed sleep is not enough
+const REMINDER_WAIT_TIMEOUT_MS = 5000;
+const REMINDER_POLL_INTERVAL_MS = 50;
+
+const waitForPendingReminders = async (lessonId: string) => {
+  const deadline = Date.now() + REMINDER_WAIT_TIMEOUT_MS;
+  let reminders = await prisma.scheduledReminder.findMany({
+    where: { lessonId, status: "PENDING" },
+  });
+  while (reminders.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, REMINDER_POLL_INTERVAL_MS));
+    reminders = await prisma.scheduledReminder.findMany({ where: { lessonId, status: "PENDING" } });
+  }
+  return reminders;
+};
 
 describe("lesson reminder side-effects", () => {
   let authToken: string;
@@ -18,7 +35,7 @@ describe("lesson reminder side-effects", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -76,12 +93,7 @@ describe("lesson reminder side-effects", () => {
         })
         .expect(201);
 
-      // Wait for async reminder creation
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      const reminders = await prisma.scheduledReminder.findMany({
-        where: { lessonId: res.body.lesson.id, status: "PENDING" },
-      });
+      const reminders = await waitForPendingReminders(res.body.lesson.id);
 
       expect(reminders.length).toBeGreaterThanOrEqual(1);
     });

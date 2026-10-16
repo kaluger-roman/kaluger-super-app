@@ -14,11 +14,7 @@ export const addDays = (date: Date, days: number): Date => {
 
 // Понедельник 00:00 локального дня для произвольной даты (ISO-8601 неделя).
 export const getWeekStart = (date: Date): Date => {
-  const start = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = start.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   start.setDate(start.getDate() + diff);
@@ -42,6 +38,20 @@ export const isValidTimezone = (timezone: string): boolean => {
   }
 };
 
+// Calendar day (YYYY-MM-DD) of the moment as seen in the IANA timezone.
+export const toDateKeyInTimezone = (date: Date, timezone: string): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+
+  return `${part("year")}-${part("month")}-${part("day")}`;
+};
+
 // Get UTC offset (in ms) for a given IANA timezone at a specific moment.
 // Positive offset means timezone is ahead of UTC (e.g. +3h for Moscow).
 const getTimezoneOffsetMs = (date: Date, timezone: string): number => {
@@ -51,10 +61,7 @@ const getTimezoneOffsetMs = (date: Date, timezone: string): number => {
 };
 
 // Get year and month (0-based) as they appear in the given timezone
-const getYearMonthInTimezone = (
-  date: Date,
-  timezone: string
-): { year: number; month: number } => {
+const getYearMonthInTimezone = (date: Date, timezone: string): { year: number; month: number } => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",
@@ -68,22 +75,14 @@ const getYearMonthInTimezone = (
 };
 
 // UTC Date representing midnight on the 1st of the given month in the given timezone
-export const startOfMonthInTimezone = (
-  year: number,
-  month: number,
-  timezone: string
-): Date => {
+export const startOfMonthInTimezone = (year: number, month: number, timezone: string): Date => {
   const approx = new Date(Date.UTC(year, month, 1));
   const offset = getTimezoneOffsetMs(approx, timezone);
   return new Date(approx.getTime() + offset);
 };
 
 // UTC Date representing 23:59:59.999 on the last day of the given month in the given timezone
-export const endOfMonthInTimezone = (
-  year: number,
-  month: number,
-  timezone: string
-): Date => {
+export const endOfMonthInTimezone = (year: number, month: number, timezone: string): Date => {
   const approx = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
   const offset = getTimezoneOffsetMs(approx, timezone);
   return new Date(approx.getTime() + offset);
@@ -95,20 +94,8 @@ export const getCurrentMonthRange = (timezone?: string) => {
 
   if (!timezone) {
     return {
-      gte: new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
-      ),
-      lte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999
-        )
-      ),
+      gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)),
+      lte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)),
     };
   }
 
@@ -125,12 +112,8 @@ export const getLastMonthBounds = (timezone?: string) => {
 
   if (!timezone) {
     return {
-      gte: new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0)
-      ),
-      lte: new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999)
-      ),
+      gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0)),
+      lte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999)),
     };
   }
 

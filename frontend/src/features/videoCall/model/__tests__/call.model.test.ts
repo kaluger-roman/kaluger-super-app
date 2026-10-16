@@ -4,8 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { callModel, setCallTransport, stopAllSessions } from "../index";
 
-const settleMicrotasks = () =>
-  new Promise((resolve) => setImmediate(resolve));
+const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
 const startConnectedCall = async (scope: Scope): Promise<void> => {
   await allSettled(callModel.incomingCallReceived, {

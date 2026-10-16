@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("createLesson integration tests", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("createLesson integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -150,7 +151,7 @@ describe("createLesson integration tests", () => {
 
   it("returns 400 when scheduling conflict exists", async () => {
     // create an existing lesson
-    const exist = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -168,9 +169,7 @@ describe("createLesson integration tests", () => {
       studentId,
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
-      startTime: new Date(
-        Date.now() + 24 * 3600 * 1000 + 1800000
-      ).toISOString(),
+      startTime: new Date(Date.now() + 24 * 3600 * 1000 + 1800000).toISOString(),
       endTime: new Date(Date.now() + 24 * 3600 * 1000 + 5400000).toISOString(),
       isRecurring: false,
     };
@@ -181,9 +180,7 @@ describe("createLesson integration tests", () => {
       .send(body)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Временной слот конфликтует с существующим уроком"
-        );
+        expect(res.body.error).toBe("Временной слот конфликтует с существующим уроком");
       });
   });
 
@@ -200,9 +197,7 @@ describe("createLesson integration tests", () => {
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
       startTime: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString(),
-      endTime: new Date(
-        Date.now() + 10 * 24 * 3600 * 1000 + 3600000
-      ).toISOString(),
+      endTime: new Date(Date.now() + 10 * 24 * 3600 * 1000 + 3600000).toISOString(),
       isRecurring: false,
       price: 0,
     };
@@ -231,9 +226,7 @@ describe("createLesson integration tests", () => {
       subject: "MATHEMATICS",
       lessonType: "SCHOOL",
       startTime: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString(),
-      endTime: new Date(
-        Date.now() + 12 * 24 * 3600 * 1000 + 3600000
-      ).toISOString(),
+      endTime: new Date(Date.now() + 12 * 24 * 3600 * 1000 + 3600000).toISOString(),
       isRecurring: false,
       // price omitted
     };

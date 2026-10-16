@@ -7,9 +7,9 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 import { useUnit } from "effector-react";
 
-import * as rescheduleDialogModel from "./reschedule-dialog.model";
+import * as rescheduleDialogModel from "./RescheduleDialog.model";
 import * as Styled from "./RescheduleDialog.styled";
-import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../constants";
+import { SUBJECT_LABELS, LESSON_TYPE_LABELS } from "../../domain.constants";
 import { PastDateNotice } from "../PastDateNotice";
 
 type RescheduleDialogProps = {

@@ -1,0 +1,120 @@
+import { allSettled, createWatch, fork } from "effector";
+import { describe, it, expect, vi } from "vitest";
+
+import { lessonModel } from "@entities";
+import { notificationsModel } from "@shared/model";
+
+import "../lessonsNotifications.model";
+
+const mockLesson = { id: "1" } as never;
+
+describe("lessonsNotifications.model", () => {
+  describe("success notifications", () => {
+    it("should show 'Урок создан' on addLessonFx.done", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [[lessonModel.addLessonFx, () => mockLesson]],
+      });
+
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
+      await allSettled(lessonModel.addLessonFx, { scope, params: {} as never });
+
+      expect(fn).toHaveBeenCalledWith("Урок создан");
+    });
+
+    it("should show 'Урок обновлен' on updateLessonFx.done", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [[lessonModel.updateLessonFx, () => mockLesson]],
+      });
+
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
+      await allSettled(lessonModel.updateLessonFx, {
+        scope,
+        params: { id: "1", data: {} as never },
+      });
+
+      expect(fn).toHaveBeenCalledWith("Урок обновлен");
+    });
+
+    it("should show 'Урок удален' on removeLessonFx.done", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [[lessonModel.removeLessonFx, () => "1"]],
+      });
+
+      createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
+      await allSettled(lessonModel.removeLessonFx, {
+        scope,
+        params: { id: "1" },
+      });
+
+      expect(fn).toHaveBeenCalledWith("Урок удален");
+    });
+  });
+
+  describe("error notifications", () => {
+    it("should show error on addLessonFx.fail", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [
+          [
+            lessonModel.addLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
+        ],
+      });
+
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
+      await allSettled(lessonModel.addLessonFx, { scope, params: {} as never });
+
+      expect(fn).toHaveBeenCalledWith("Ошибка при создании урока");
+    });
+
+    it("should show error on updateLessonFx.fail", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [
+          [
+            lessonModel.updateLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
+        ],
+      });
+
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
+      await allSettled(lessonModel.updateLessonFx, {
+        scope,
+        params: { id: "1", data: {} as never },
+      });
+
+      expect(fn).toHaveBeenCalledWith("Ошибка при обновлении урока");
+    });
+
+    it("should show error on removeLessonFx.fail", async () => {
+      const fn = vi.fn();
+      const scope = fork({
+        handlers: [
+          [
+            lessonModel.removeLessonFx,
+            () => {
+              throw new Error("test");
+            },
+          ],
+        ],
+      });
+
+      createWatch({ unit: notificationsModel.showErrorEvent, fn, scope });
+      await allSettled(lessonModel.removeLessonFx, {
+        scope,
+        params: { id: "1" },
+      });
+
+      expect(fn).toHaveBeenCalledWith("Ошибка при удалении урока");
+    });
+  });
+});

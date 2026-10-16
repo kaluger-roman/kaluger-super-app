@@ -42,7 +42,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: false, intervals: [], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: false, intervals: [], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "default"],
         [notificationsModel.$isPushSubscribed, false],
         [notificationsModel.$vapidKey, null],
@@ -59,7 +62,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, false],
-        [notificationsModel.$reminderSettings, { enabled: false, intervals: [], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: false, intervals: [], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "default"],
         [notificationsModel.$isPushSubscribed, false],
         [notificationsModel.$vapidKey, null],
@@ -76,7 +82,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: false, intervals: [], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: false, intervals: [], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "default"],
         [notificationsModel.$isPushSubscribed, false],
         [notificationsModel.$vapidKey, null],
@@ -94,7 +103,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: true, intervals: [5, 30], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: true, intervals: [5, 30], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "granted"],
         [notificationsModel.$isPushSubscribed, true],
         [notificationsModel.$vapidKey, "key"],
@@ -116,7 +128,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: true, intervals: [30], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: true, intervals: [30], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "granted"],
         [notificationsModel.$isPushSubscribed, true],
         [notificationsModel.$vapidKey, "key"],
@@ -133,7 +148,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: false, intervals: [], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: false, intervals: [], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "default"],
         [notificationsModel.$isPushSubscribed, false],
         [notificationsModel.$vapidKey, null],
@@ -151,7 +169,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: false, intervals: [], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: false, intervals: [], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "denied"],
         [notificationsModel.$isPushSubscribed, false],
         [notificationsModel.$vapidKey, null],
@@ -161,9 +182,7 @@ describe("ReminderSettings", () => {
 
     renderWithProviders(<ReminderSettings />, scope);
 
-    expect(
-      screen.getByText(/Уведомления заблокированы/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Уведомления заблокированы/)).toBeInTheDocument();
   });
 
   it("should call unsubscribePushFx when disabling reminders while subscribed", async () => {
@@ -174,7 +193,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: true, intervals: [30], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: true, intervals: [30], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "granted"],
         [notificationsModel.$isPushSubscribed, true],
         [notificationsModel.$vapidKey, "key"],
@@ -182,7 +204,10 @@ describe("ReminderSettings", () => {
       ],
       handlers: [
         [notificationsModel.unsubscribePushFx, unsubscribeMock],
-        [notificationsModel.updateSettingsFx, vi.fn().mockResolvedValue({ enabled: false, intervals: [30], muteWhenInLesson: false })],
+        [
+          notificationsModel.updateSettingsFx,
+          vi.fn().mockResolvedValue({ enabled: false, intervals: [30], muteWhenInLesson: false }),
+        ],
       ],
     });
 
@@ -200,7 +225,10 @@ describe("ReminderSettings", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
-        [notificationsModel.$reminderSettings, { enabled: true, intervals: [30], muteWhenInLesson: false }],
+        [
+          notificationsModel.$reminderSettings,
+          { enabled: true, intervals: [30], muteWhenInLesson: false },
+        ],
         [notificationsModel.$pushPermission, "granted"],
         [notificationsModel.$isPushSubscribed, true],
         [notificationsModel.$vapidKey, "key"],

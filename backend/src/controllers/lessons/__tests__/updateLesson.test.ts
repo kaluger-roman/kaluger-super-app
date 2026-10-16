@@ -1,12 +1,13 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
 
 // Mock wsManager and recurring helpers to control side effects
 import * as wsManager from "../../../lib/wsManager";
 import * as recurringHelpers from "../../../services/recurringHelpers";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("updateLesson controller", () => {
   let authToken: string;
@@ -15,7 +16,7 @@ describe("updateLesson controller", () => {
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "u" },
+      data: { email: uniqueEmail(), password: "x", name: "u" },
     });
     userId = user.id;
     authToken = generateToken({ userId: user.id, email: user.email });
@@ -231,10 +232,7 @@ describe("updateLesson controller", () => {
     // Regression for bug-hunt 2026-05-09-3 #3: previously the base lesson
     // committed first and shift conflicts threw → 500 with the base already
     // updated. The fix pre-checks conflicts and returns 409 without DB writes.
-    const previewSpy = jest.spyOn(
-      recurringHelpers,
-      "previewShiftFutureRecurringLessons"
-    );
+    const previewSpy = jest.spyOn(recurringHelpers, "previewShiftFutureRecurringLessons");
     (previewSpy as jest.Mock).mockImplementation(async () => ({
       planned: [],
       conflicts: [{ lessonId: "x", conflictingLessonId: "y" }],
@@ -274,10 +272,7 @@ describe("updateLesson controller", () => {
   });
 
   it("updates price for future recurring lessons and broadcasts websocket on status change", async () => {
-    const updatePriceSpy = jest.spyOn(
-      recurringHelpers,
-      "updatePriceForFutureRecurringLessons"
-    );
+    const updatePriceSpy = jest.spyOn(recurringHelpers, "updatePriceForFutureRecurringLessons");
     (updatePriceSpy as jest.Mock).mockResolvedValue({ updated: 1 });
 
     // mock ws manager
@@ -346,9 +341,7 @@ describe("updateLesson controller", () => {
         startTime: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),
       })
       .expect(400)
-      .then((res) =>
-        expect(res.body.error).toMatch(/Невозможно перенести отменённый урок/)
-      );
+      .then((res) => expect(res.body.error).toMatch(/Невозможно перенести отменённый урок/));
   });
 
   it("keeps status CANCELLED when updating non-time fields without status", async () => {
@@ -373,6 +366,64 @@ describe("updateLesson controller", () => {
       .then((res) => {
         expect(res.body.lesson.status).toBe("CANCELLED");
       });
+  });
+
+  it("clears notes, homework and description when explicit null is sent (regression: cleared note survived the update)", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 48 * 3600 * 1000),
+        endTime: new Date(Date.now() + 48 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        notes: "старая заметка",
+        homework: "старое дз",
+        description: "старое описание",
+      },
+    });
+
+    await request(app)
+      .put(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ notes: null, homework: null, description: null })
+      .expect(200);
+
+    const updated = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    expect(updated?.notes).toBeNull();
+    expect(updated?.homework).toBeNull();
+    expect(updated?.description).toBeNull();
+  });
+
+  it("keeps notes, homework and description when the fields are omitted from the update", async () => {
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 72 * 3600 * 1000),
+        endTime: new Date(Date.now() + 72 * 3600 * 1000 + 3600000),
+        isRecurring: false,
+        status: "SCHEDULED",
+        notes: "заметка",
+        homework: "дз",
+        description: "описание",
+      },
+    });
+
+    await request(app)
+      .put(`/api/lessons/${lesson.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ isPaid: true })
+      .expect(200);
+
+    const updated = await prisma.lesson.findUnique({ where: { id: lesson.id } });
+    expect(updated?.notes).toBe("заметка");
+    expect(updated?.homework).toBe("дз");
+    expect(updated?.description).toBe("описание");
   });
 
   it("does not call shift or price updater when status is RESCHEDULED", async () => {
@@ -401,9 +452,7 @@ describe("updateLesson controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .send({
         startTime: new Date(Date.now() + 9 * 24 * 3600 * 1000).toISOString(),
-        endTime: new Date(
-          Date.now() + 9 * 24 * 3600 * 1000 + 3600000
-        ).toISOString(),
+        endTime: new Date(Date.now() + 9 * 24 * 3600 * 1000 + 3600000).toISOString(),
         status: "RESCHEDULED",
         price: 500,
       })
@@ -446,10 +495,7 @@ describe("updateLesson controller", () => {
   });
 
   it("calls previewShiftFutureRecurringLessons on successful shift and proceeds", async () => {
-    const previewSpy = jest.spyOn(
-      recurringHelpers,
-      "previewShiftFutureRecurringLessons"
-    );
+    const previewSpy = jest.spyOn(recurringHelpers, "previewShiftFutureRecurringLessons");
     (previewSpy as jest.Mock).mockResolvedValue({ planned: [], conflicts: [] });
 
     const r = await prisma.lesson.create({
@@ -470,9 +516,7 @@ describe("updateLesson controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .send({
         startTime: new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString(),
-        endTime: new Date(
-          Date.now() + 6 * 24 * 3600 * 1000 + 3600000
-        ).toISOString(),
+        endTime: new Date(Date.now() + 6 * 24 * 3600 * 1000 + 3600000).toISOString(),
       })
       .expect(200)
       .then((res) => {
@@ -598,7 +642,7 @@ describe("updateLesson controller", () => {
     });
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "x",
         name: "Shift Student",
         isEmailVerified: true,
@@ -679,12 +723,10 @@ describe("updateLesson controller", () => {
       });
 
     const broadcastEvent = jest.fn();
-    const wsSpy = jest
-      .spyOn(wsManager, "getWebSocketManager")
-      .mockReturnValue({
-        broadcastStudentLessonEvent: broadcastEvent,
-        broadcastLessonStatusUpdate: jest.fn(),
-      } as unknown as ReturnType<typeof wsManager.getWebSocketManager>);
+    const wsSpy = jest.spyOn(wsManager, "getWebSocketManager").mockReturnValue({
+      broadcastStudentLessonEvent: broadcastEvent,
+      broadcastLessonStatusUpdate: jest.fn(),
+    } as unknown as ReturnType<typeof wsManager.getWebSocketManager>);
 
     try {
       await request(app)

@@ -1,7 +1,8 @@
-import { Response } from "express";
-import { UpdateStudentDto } from "../../types";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { UpdateStudentDto } from "../../types";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
+import { tryAttachCommissionToStudents } from "../../services";
 import { handlePrismaError } from "../../utils/prismaErrorHandler";
 import { validateUpdateStudentDto, prepareUpdateData } from "./validators";
 
@@ -37,9 +38,11 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       data: preparedData,
     });
 
-    res.json({
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
+    return res.json({
       message: "Ученик успешно обновлен",
-      student,
+      student: studentWithCommission,
     });
   } catch (error) {
     console.error("Update student error:", error);
@@ -48,6 +51,6 @@ export const updateStudent = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

@@ -1,9 +1,7 @@
 import type { FC } from "react";
 
-import {
-  Button as MuiButton,
-  ButtonProps as MuiButtonProps,
-} from "@mui/material";
+import type { ButtonProps as MuiButtonProps } from "@mui/material";
+import { Button as MuiButton } from "@mui/material";
 
 export type ButtonProps = MuiButtonProps;
 

@@ -10,22 +10,12 @@ import { useUnit } from "effector-react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
 import { studentUserModel, userModel } from "@entities";
-import {
-  getStudentToken,
-  theme,
-  NotificationProvider,
-  setNavigate,
-} from "@shared";
+import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
 import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
-import {
-  appInitModel,
-  blockingModel,
-  studentWebSocketModel,
-  webSocketModel,
-} from "./model";
-import type { BeforeInstallPromptEvent } from "./model/app-init.types";
+import { appInitModel, blockingModel, studentWebSocketModel, webSocketModel } from "./model";
+import type { BeforeInstallPromptEvent } from "./model/appInit.types";
 
 const AppRouter: FC = () => {
   const navigate = useNavigate();
@@ -42,11 +32,9 @@ const AppRouter: FC = () => {
 
 const App: FC = () => {
   const appInitialized = useUnit(appInitModel.$appInitialized);
-  const isBlocking = useUnit(blockingModel.$isBlocking);
+  const isBlockingVisible = useUnit(blockingModel.$isBlockingVisible);
   const isAuthenticated = useUnit(userModel.$isAuthenticated);
-  const isStudentAuthenticated = useUnit(
-    studentUserModel.$isStudentAuthenticated
-  );
+  const isStudentAuthenticated = useUnit(studentUserModel.$isStudentAuthenticated);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -133,7 +121,7 @@ const App: FC = () => {
             <NotificationProvider />
             <OfflineIndicator />
             <InstallPrompt />
-            <Styled.ModalBackdrop open={isBlocking}>
+            <Styled.ModalBackdrop open={isBlockingVisible}>
               <CircularProgress color="inherit" />
             </Styled.ModalBackdrop>
           </PullToRefresh>

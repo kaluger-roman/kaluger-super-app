@@ -1,17 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  callModel,
-  dispatchCallSignal,
-  setCallTransport,
-  setWebRtcAdapter,
-} from "../index";
-import { sendCallSignal } from "../signaling";
-import {
-  createFakeAdapter,
-  createFakePeerConnection,
-  createFakeStream,
-} from "./fakeWebrtc";
+import { callModel, dispatchCallSignal, setCallTransport, setWebRtcAdapter } from "../index";
+import { sendCallSignal } from "../signaling.helpers";
+import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
+import { readStore } from "./storeProbe";
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -160,14 +152,12 @@ describe("features/videoCall/model client signaling", () => {
       await flush();
       sent = [];
 
-      (
-        pc as unknown as { connectionState: RTCPeerConnectionState }
-      ).connectionState = "failed";
+      (pc as unknown as { connectionState: RTCPeerConnectionState }).connectionState = "failed";
       pc?.onconnectionstatechange?.(undefined as unknown as Event);
       await flush();
 
       expect(sent.some((m) => m.type === "call_hangup")).toBe(true);
-      expect(callModel.$callPhase.getState()).toBe("idle");
+      expect(readStore(callModel.$callPhase)).toBe("idle");
     });
   });
 });

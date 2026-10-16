@@ -1,3 +1,7 @@
+import type { LessonStatus } from "@prisma/client";
+
+import type { ContactMethod } from "./student";
+
 export type CreateLessonDto = {
   subject: "MATHEMATICS" | "PHYSICS";
   lessonType: "EGE" | "OGE" | "OLYMPICS" | "SCHOOL";
@@ -5,26 +9,64 @@ export type CreateLessonDto = {
   startTime: Date;
   endTime: Date;
   price?: number;
-  studentId: string;
+  studentId?: string;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: ContactMethod;
   homework?: string;
   notes?: string;
   isRecurring?: boolean; // Регулярное занятие
+  isTaxExempt?: boolean;
 };
 
-export type UpdateLessonDto = Partial<CreateLessonDto> & {
+export type UpdateLessonDto = Omit<
+  Partial<CreateLessonDto>,
+  "description" | "homework" | "notes"
+> & {
+  // Explicit null clears the field — Prisma treats `undefined` as "no change",
+  // so a note cleared in the edit form would otherwise survive the update.
+  description?: string | null;
+  homework?: string | null;
+  notes?: string | null;
   isPaid?: boolean;
   // Allow explicit `null` so we can clear paymentDate on cancellation. Prisma
   // treats `undefined` as "no change", so without `null` paymentDate would
   // silently stay set when isPaid flips to false.
   paymentDate?: Date | null;
+  receivedAmount?: number;
   isHomeworkSentByTeacher?: boolean;
   grade?: number;
-  status?:
-    | "SCHEDULED"
-    | "COMPLETED"
-    | "CANCELLED"
-    | "RESCHEDULED"
-    | "IN_PROGRESS";
+  status?: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
+};
+
+export type { LessonStatus };
+
+export type CommissionCreditState = "FACT" | "FORECAST";
+
+export type CommissionCredit = {
+  amount: number;
+  state: CommissionCreditState;
+};
+
+export type CommissionLessonInput = {
+  id: string;
+  startTime: Date;
+  paymentDate: Date | null;
+  price: number | null;
+  receivedAmount: number | null;
+  status: LessonStatus;
+  isPaid: boolean;
+};
+
+export type AllocateCommissionInput = {
+  commissionAmount: number;
+  lessons: CommissionLessonInput[];
+};
+
+export type CommissionAllocation = {
+  repaid: number;
+  remaining: number;
+  creditByLessonId: Map<string, CommissionCredit>;
 };
 
 export type ShiftResult = {

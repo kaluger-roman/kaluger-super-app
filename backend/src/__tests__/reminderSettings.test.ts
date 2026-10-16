@@ -1,8 +1,9 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../index";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { generateToken } from "../utils/auth";
+import { uniqueEmail } from "./helpers";
 
 jest.mock("../services/reminderScheduler", () => ({
   recalculateRemindersForUser: jest.fn(),
@@ -16,7 +17,7 @@ describe("reminder settings integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -87,15 +88,9 @@ describe("reminder settings integration tests", () => {
       // P2002 unique constraint and surfaced as 500 to one of the requests.
       // The fix uses upsert, which is race-safe.
       const responses = await Promise.all([
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
-        request(app)
-          .get("/api/reminder-settings")
-          .set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
+        request(app).get("/api/reminder-settings").set("Authorization", `Bearer ${authToken}`),
       ]);
 
       for (const res of responses) {

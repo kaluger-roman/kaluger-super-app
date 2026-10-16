@@ -13,12 +13,19 @@ export type {
   ResetPasswordDto,
   UpdateProfileDto,
 } from "./auth";
-export type { CreateStudentDto, UpdateStudentDto } from "./student";
+export type { ContactMethod, CreateStudentDto, UpdateStudentDto } from "./student";
+export type { CronScope } from "./cron";
 export type {
   CreateLessonDto,
   UpdateLessonDto,
   ShiftResult,
   LessonSlot,
+  LessonStatus,
+  CommissionCreditState,
+  CommissionCredit,
+  CommissionLessonInput,
+  AllocateCommissionInput,
+  CommissionAllocation,
 } from "./lesson";
 export type {
   TaxRatePeriodDto,
@@ -27,9 +34,15 @@ export type {
   TaxBreakdownEntry,
 } from "./taxRate";
 export type {
-  NewsItemResponse,
-  NewsPaginationResponse,
-} from "./news";
+  IncomeHistoryTaxDto,
+  IncomeHistoryEntryDto,
+  IncomeHistoryDayDto,
+  IncomeHistorySummaryDto,
+  IncomeHistoryPageDto,
+  IncomeHistoryDto,
+  IncomeHistoryQuery,
+} from "./incomeHistory";
+export type { NewsItemResponse, NewsPaginationResponse } from "./news";
 export type {
   PushSubscriptionDto,
   PushUnsubscribeDto,
@@ -38,17 +51,8 @@ export type {
   PushSubscriptionResponse,
   PushNotificationPayload,
 } from "./push";
-export type {
-  AdminJwtPayload,
-  AdminRequest,
-  AdminLoginDto,
-  AdminOverviewResponse,
-} from "./admin";
-export type {
-  UpdateBackupSettingsDto,
-  BackupSettingsResponse,
-  BackupFileResponse,
-} from "./backup";
+export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
+export type { UpdateBackupSettingsDto, BackupSettingsResponse, BackupFileResponse } from "./backup";
 export type {
   StudentJwtPayload,
   StudentRequest,

@@ -47,9 +47,7 @@ export const TaxRatePeriodRow: FC<Props> = ({
             size="small"
             fullWidth
             value={rate}
-            onChange={(e) =>
-              onRateChange(e.target.value === "" ? 0 : Number(e.target.value))
-            }
+            onChange={(e) => onRateChange(e.target.value === "" ? 0 : Number(e.target.value))}
             inputProps={{ min: 0, max: 100, step: 0.1 }}
             label="Ставка %"
           />

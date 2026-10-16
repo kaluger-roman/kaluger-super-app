@@ -29,7 +29,7 @@ const renderForm = () =>
           <LoginForm />
         </ThemeProvider>
       </BrowserRouter>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("LoginForm — forgot password link", () => {

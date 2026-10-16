@@ -1,12 +1,6 @@
 import type { FC, KeyboardEvent } from "react";
 
-import {
-  Alert,
-  ToggleButton,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Alert, ToggleButton, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import { TextField, Button } from "@shared";

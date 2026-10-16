@@ -1,1 +1,1 @@
-export * as tutorStudentInvitationModel from "./tutor-student-invitation.model";
+export * as tutorStudentInvitationModel from "./tutorStudentInvitation.model";

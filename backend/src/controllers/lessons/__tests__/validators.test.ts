@@ -1,9 +1,12 @@
+import type { Lesson } from "@prisma/client";
+import type { UpdateLessonDto } from "../../../types";
 import {
+  RECEIVED_AMOUNT_INVALID_ERROR,
+  RECEIVED_AMOUNT_UNPAID_ERROR,
   validateLessonData,
-  checkSchedulingConflicts,
 } from "../../lessons/validators";
+import { validateUpdateData } from "../updateLesson.validators";
 import { truncateToMinute } from "../../../utils/time";
-import type { PrismaClient } from "@prisma/client";
 
 type CreateLessonDto = {
   subject?: string;
@@ -12,6 +15,10 @@ type CreateLessonDto = {
   endTime?: string | Date;
   studentId?: string;
   price?: number;
+  prospectName?: string;
+  prospectPhone?: string;
+  prospectContactMethod?: string;
+  isRecurring?: boolean;
 };
 
 describe("validateLessonData", () => {
@@ -19,9 +26,7 @@ describe("validateLessonData", () => {
     const data: CreateLessonDto = {};
     const res = validateLessonData(data as any);
     expect(res.isValid).toBe(false);
-    expect(res.error).toBe(
-      "Предмет, тип урока, время начала, время окончания и ID студента обязательны"
-    );
+    expect(res.error).toBe("Предмет, тип урока, время начала и время окончания обязательны");
   });
 
   it("returns error when endTime is not after startTime", () => {
@@ -37,9 +42,7 @@ describe("validateLessonData", () => {
     };
 
     // Ensure truncateToMinute behavior assumed
-    expect(truncateToMinute(start).getTime()).toBe(
-      truncateToMinute(end).getTime()
-    );
+    expect(truncateToMinute(start).getTime()).toBe(truncateToMinute(end).getTime());
 
     const res = validateLessonData(data as any);
     expect(res.isValid).toBe(false);
@@ -91,71 +94,179 @@ describe("validateLessonData", () => {
     const withoutPrice = validateLessonData(base as any);
     expect(withoutPrice.isValid).toBe(true);
   });
+
+  describe("prospect (trial lesson without student)", () => {
+    const base = {
+      subject: "MATHEMATICS",
+      lessonType: "EGE",
+      startTime: new Date("2025-01-01T10:00:00Z").toISOString(),
+      endTime: new Date("2025-01-01T11:00:00Z").toISOString(),
+    };
+
+    it("returns error when neither studentId nor prospectName is given", () => {
+      const res = validateLessonData(base as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Укажите ученика или имя для пробного урока без ученика");
+    });
+
+    it("returns error when prospect fields are combined with studentId", () => {
+      const res = validateLessonData({
+        ...base,
+        studentId: "s1",
+        prospectName: "Иван",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Данные пробного ученика нельзя указывать вместе с учеником");
+    });
+
+    it("returns error when prospectName is blank", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "   ",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Имя ученика для пробного урока обязательно");
+    });
+
+    it("returns error when prospect lesson is recurring", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        isRecurring: true,
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Пробный урок без ученика не может быть повторяющимся");
+    });
+
+    it("returns error when prospectContactMethod is not in allowed list", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        prospectContactMethod: "VIBER",
+      } as any);
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("Недопустимый способ связи (WhatsApp, Telegram или MAX)");
+    });
+
+    it("returns valid for prospect lesson with name and MAX contact", () => {
+      const res = validateLessonData({
+        ...base,
+        prospectName: "Иван",
+        prospectPhone: "+79991234567",
+        prospectContactMethod: "MAX",
+      } as any);
+      expect(res.isValid).toBe(true);
+    });
+  });
 });
 
-describe("checkSchedulingConflicts", () => {
-  let mockPrisma: Partial<PrismaClient> & {
-    lesson: { findMany: jest.Mock };
+const TAX_EXEMPT_ERROR = "Некорректное значение признака «Не облагается налогом»";
+const INVALID_TAX_EXEMPT_VALUES: unknown[] = [null, "true", 1, {}];
+
+describe("validateLessonData isTaxExempt", () => {
+  const base = {
+    subject: "MATHEMATICS",
+    lessonType: "EGE",
+    startTime: new Date("2025-01-01T10:00:00Z").toISOString(),
+    endTime: new Date("2025-01-01T11:00:00Z").toISOString(),
+    studentId: "s1",
   };
 
-  beforeEach(() => {
-    mockPrisma = {
-      lesson: {
-        findMany: jest.fn(),
-      },
-    } as any;
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({ isValid: true });
   });
 
-  it("calls prisma.findMany with correct where clause and returns results", async () => {
-    const userId = "tutor-1";
-    const startTime = new Date("2025-01-01T10:00:00Z");
-    const endTime = new Date("2025-01-01T11:00:00Z");
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateLessonData({ ...base, isTaxExempt } as any)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
+    });
+  });
+});
 
-    const expectedResults = [
-      { id: "l1", tutorId: userId, startTime, endTime, status: "SCHEDULED" },
-    ];
+describe("validateUpdateData isTaxExempt", () => {
+  const existingLesson = {
+    id: "lesson-1",
+    studentId: "s1",
+    status: "SCHEDULED",
+    startTime: new Date("2025-01-01T10:00:00Z"),
+    endTime: new Date("2025-01-01T11:00:00Z"),
+  } as Lesson;
 
-    mockPrisma.lesson.findMany.mockResolvedValue(expectedResults);
-
-    const res = await checkSchedulingConflicts(
-      userId,
-      startTime,
-      endTime,
-      mockPrisma as unknown as PrismaClient
-    );
-
-    expect(mockPrisma.lesson.findMany).toHaveBeenCalledTimes(1);
-
-    const calledWith = mockPrisma.lesson.findMany.mock.calls[0][0];
-    expect(calledWith).toHaveProperty("where");
-    const where = calledWith.where;
-    expect(where.tutorId).toBe(userId);
-    expect(where.status).toEqual({ not: "CANCELLED" });
-    expect(where.OR).toBeInstanceOf(Array);
-
-    // Validate the OR clause shape
-    expect(where.OR[0]).toHaveProperty("startTime");
-    expect(where.OR[0]).toHaveProperty("endTime");
-    expect(where.OR[0].startTime).toEqual({ lt: endTime });
-    expect(where.OR[0].endTime).toEqual({ gt: startTime });
-
-    expect(res).toBe(expectedResults);
+  it.each([true, false, undefined])("accepts isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({ isValid: true });
   });
 
-  it("returns empty array when there are no conflicts", async () => {
-    const userId = "tutor-2";
-    const startTime = new Date("2025-01-05T10:00:00Z");
-    const endTime = new Date("2025-01-05T11:00:00Z");
+  it("accepts isTaxExempt on a cancelled lesson", () => {
+    expect(
+      validateUpdateData({ isTaxExempt: true }, { ...existingLesson, status: "CANCELLED" })
+    ).toEqual({ isValid: true });
+  });
 
-    mockPrisma.lesson.findMany.mockResolvedValue([]);
+  it.each(INVALID_TAX_EXEMPT_VALUES)("rejects non-boolean isTaxExempt = %p", (isTaxExempt) => {
+    expect(validateUpdateData({ isTaxExempt } as any, existingLesson)).toEqual({
+      isValid: false,
+      error: TAX_EXEMPT_ERROR,
+    });
+  });
+});
 
-    const res = await checkSchedulingConflicts(
-      userId,
-      startTime,
-      endTime,
-      mockPrisma as unknown as PrismaClient
-    );
-    expect(mockPrisma.lesson.findMany).toHaveBeenCalledTimes(1);
-    expect(res).toEqual([]);
+describe("validateUpdateData receivedAmount", () => {
+  const INVALID_ERROR = RECEIVED_AMOUNT_INVALID_ERROR;
+  const UNPAID_ERROR = RECEIVED_AMOUNT_UNPAID_ERROR;
+
+  const unpaidLesson = {
+    id: "lesson-1",
+    studentId: "s1",
+    status: "COMPLETED",
+    isPaid: false,
+    startTime: new Date("2025-01-01T10:00:00Z"),
+    endTime: new Date("2025-01-01T11:00:00Z"),
+  } as Lesson;
+  const paidLesson = { ...unpaidLesson, isPaid: true } as Lesson;
+
+  it.each([0, 1800, 1800.5, 0.07, 99999999.99])(
+    "accepts receivedAmount = %p when the lesson is being marked paid",
+    (receivedAmount) => {
+      expect(validateUpdateData({ isPaid: true, receivedAmount }, unpaidLesson)).toEqual({
+        isValid: true,
+      });
+    }
+  );
+
+  it.each([0, 1800, 1800.5, 99999999.99])(
+    "accepts receivedAmount = %p on an already paid lesson",
+    (receivedAmount) => {
+      expect(validateUpdateData({ receivedAmount }, paidLesson)).toEqual({ isValid: true });
+    }
+  );
+
+  it.each([-1, -0.01, 100000000, 1800.123, "1800", null, NaN, Infinity, {}])(
+    "rejects receivedAmount = %p",
+    (receivedAmount) => {
+      const body = { isPaid: true, receivedAmount } as unknown as UpdateLessonDto;
+      expect(validateUpdateData(body, unpaidLesson)).toEqual({
+        isValid: false,
+        error: INVALID_ERROR,
+      });
+    }
+  );
+
+  it("should reject an amount on an unpaid lesson when isPaid is not sent", () => {
+    expect(validateUpdateData({ receivedAmount: 1800 }, unpaidLesson)).toEqual({
+      isValid: false,
+      error: UNPAID_ERROR,
+    });
+  });
+
+  it("should reject an amount sent together with removing the payment", () => {
+    expect(validateUpdateData({ isPaid: false, receivedAmount: 1800 }, paidLesson)).toEqual({
+      isValid: false,
+      error: UNPAID_ERROR,
+    });
+  });
+
+  it("should accept a body without receivedAmount", () => {
+    expect(validateUpdateData({ isPaid: false }, paidLesson)).toEqual({ isValid: true });
   });
 });

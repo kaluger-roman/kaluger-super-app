@@ -3,13 +3,13 @@ import { interval } from "patronum";
 
 import type { CallMediaState } from "../videoCall.types";
 import {
+  CALL_DURATION_TICK_MS,
   CONNECTING_MESSAGE,
   DEFAULT_PEER_MEDIA_STATE,
   DEFAULT_SELF_MEDIA_STATE,
   MEDIA_DENIED_MESSAGE,
-  toErrorMessage,
-  toOutgoingPeer,
-} from "./call.helpers";
+} from "./call.constants";
+import { toErrorMessage, toOutgoingPeer } from "./call.helpers";
 import type {
   CallPeer,
   CallPhase,
@@ -65,7 +65,7 @@ sample({
 export const $activePeerName = combine(
   $outgoingCallPeer,
   $incomingCall,
-  (outgoing, incoming) => outgoing?.name ?? incoming?.callerName ?? "",
+  (outgoing, incoming) => outgoing?.name ?? incoming?.callerName ?? ""
 );
 
 export const callTerminated = createEvent();
@@ -82,8 +82,16 @@ sample({ clock: callRinging, fn: ({ callId }) => callId, target: $callId });
 sample({ clock: incomingCallReceived, fn: (): CallPhase => "incoming", target: $callPhase });
 sample({ clock: incomingCallReceived, target: $incomingCall });
 sample({ clock: incomingCallReceived, fn: ({ callId }) => callId, target: $callId });
-sample({ clock: incomingCallReceived, fn: () => DEFAULT_SELF_MEDIA_STATE, target: $selfMediaState });
-sample({ clock: incomingCallReceived, fn: () => DEFAULT_PEER_MEDIA_STATE, target: $peerMediaState });
+sample({
+  clock: incomingCallReceived,
+  fn: () => DEFAULT_SELF_MEDIA_STATE,
+  target: $selfMediaState,
+});
+sample({
+  clock: incomingCallReceived,
+  fn: () => DEFAULT_PEER_MEDIA_STATE,
+  target: $peerMediaState,
+});
 
 sample({ clock: callConnected, fn: (): CallPhase => "active", target: $callPhase });
 sample({ clock: callConnected, fn: () => null, target: $callStatusMessage });
@@ -107,10 +115,18 @@ sample({ clock: rejectedReceived, target: callTerminated });
 sample({ clock: canceledReceived, target: callTerminated });
 
 sample({ clock: callErrorReceived, target: callTerminated });
-sample({ clock: callErrorReceived, fn: (text) => toErrorMessage(text), target: $callStatusMessage });
+sample({
+  clock: callErrorReceived,
+  fn: toErrorMessage,
+  target: $callStatusMessage,
+});
 
 sample({ clock: mediaAcquisitionFailed, target: callTerminated });
-sample({ clock: mediaAcquisitionFailed, fn: () => MEDIA_DENIED_MESSAGE, target: $callStatusMessage });
+sample({
+  clock: mediaAcquisitionFailed,
+  fn: () => MEDIA_DENIED_MESSAGE,
+  target: $callStatusMessage,
+});
 
 sample({ clock: [rejectCall, cancelCall, hangUp, callEnded], target: callTerminated });
 
@@ -123,7 +139,7 @@ sample({ clock: callTerminated, fn: () => DEFAULT_PEER_MEDIA_STATE, target: $pee
 sample({ clock: callResourcesReleased, fn: () => null, target: $callId });
 
 const { tick } = interval({
-  timeout: 1000,
+  timeout: CALL_DURATION_TICK_MS,
   start: callConnected,
   stop: callTerminated,
 });

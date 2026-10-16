@@ -8,7 +8,7 @@ import {
   normalizeEmail,
 } from "../utils";
 import type { VerifyEmailDto, ResendVerificationDto } from "../types";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { sendVerificationEmail } from "../services";
 
 // Generic error returned for verification failures that, if differentiated,
@@ -16,16 +16,14 @@ import { sendVerificationEmail } from "../services";
 const INVALID_CODE_ERROR = "Неверный код подтверждения";
 
 export const verifyEmail = async (
-  req: Request<{}, {}, VerifyEmailDto>,
-  res: Response,
+  req: Request<Record<string, never>, unknown, VerifyEmailDto>,
+  res: Response
 ) => {
   try {
     const { email: rawEmail, code } = req.body;
 
     if (!rawEmail || !code) {
-      return res
-        .status(400)
-        .json({ error: "Email и код подтверждения обязательны" });
+      return res.status(400).json({ error: "Email и код подтверждения обязательны" });
     }
 
     const email = normalizeEmail(rawEmail);
@@ -89,7 +87,7 @@ export const verifyEmail = async (
 
     const token = generateToken({ userId: user.id, email: user.email });
 
-    res.json({
+    return res.json({
       message: "Email успешно подтвержден",
       token,
       user: {
@@ -102,20 +100,19 @@ export const verifyEmail = async (
     });
   } catch (error) {
     console.error("Verify email error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
 // Always returned to the unauthenticated /resend-verification caller so the
 // existence (and verification state) of an email cannot be enumerated.
 const RESEND_NEUTRAL_RESPONSE = {
-  message:
-    "Если такой email зарегистрирован и не подтверждён, код отправлен повторно",
+  message: "Если такой email зарегистрирован и не подтверждён, код отправлен повторно",
 };
 
 export const resendVerification = async (
-  req: Request<{}, {}, ResendVerificationDto>,
-  res: Response,
+  req: Request<Record<string, never>, unknown, ResendVerificationDto>,
+  res: Response
 ) => {
   try {
     const { email: rawEmail } = req.body;
@@ -153,14 +150,12 @@ export const resendVerification = async (
       await sendVerificationEmail(email, verificationCode);
     } catch (emailError) {
       console.error("Error sending verification email:", emailError);
-      return res
-        .status(500)
-        .json({ error: "Ошибка отправки письма. Попробуйте позже" });
+      return res.status(500).json({ error: "Ошибка отправки письма. Попробуйте позже" });
     }
 
-    res.json(RESEND_NEUTRAL_RESPONSE);
+    return res.json(RESEND_NEUTRAL_RESPONSE);
   } catch (error) {
     console.error("Resend verification error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

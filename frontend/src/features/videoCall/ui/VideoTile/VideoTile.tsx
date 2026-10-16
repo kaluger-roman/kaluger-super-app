@@ -1,9 +1,6 @@
 import type { FC } from "react";
 
-import {
-  MicOff as MicOffIcon,
-  ScreenShare as ScreenShareIcon,
-} from "@mui/icons-material";
+import { MicOff as MicOffIcon, ScreenShare as ScreenShareIcon } from "@mui/icons-material";
 import { Tooltip } from "@mui/material";
 
 import { TileContent } from "./TileContent";

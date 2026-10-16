@@ -15,16 +15,14 @@ type StyledPaperProps = {
   $isMobile: boolean;
 };
 
-export const StyledPaper = styled(Paper)<StyledPaperProps>(
-  ({ theme, $isMobile }) => ({
-    padding: theme.spacing($isMobile ? 3 : 4),
-    width: "100%",
-    maxWidth: $isMobile ? "100%" : 480,
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-  })
-);
+export const StyledPaper = styled(Paper)<StyledPaperProps>(({ theme, $isMobile }) => ({
+  padding: theme.spacing($isMobile ? 3 : 4),
+  width: "100%",
+  maxWidth: $isMobile ? "100%" : 480,
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+}));
 
 export const IconBox = styled(Box)(({ theme }) => ({
   fontSize: 64,

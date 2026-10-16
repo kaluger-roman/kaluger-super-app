@@ -3,10 +3,7 @@ import { extractAxiosError as extractAxiosErrorShared } from "@shared";
 import type { TokenStatus } from "./resetPassword.types";
 
 export const extractAxiosError = (error: unknown): string =>
-  extractAxiosErrorShared(
-    error,
-    "Не удалось сменить пароль. Попробуйте позже"
-  );
+  extractAxiosErrorShared(error, "Не удалось сменить пароль. Попробуйте позже");
 
 const getResponseError = (error: unknown): string | undefined => {
   const axiosError = error as {
@@ -16,7 +13,7 @@ const getResponseError = (error: unknown): string | undefined => {
 };
 
 export const mapVerifyTokenError = (
-  error: unknown,
+  error: unknown
 ): { status: Exclude<TokenStatus, "idle" | "checking" | "valid">; message: string } => {
   const message = getResponseError(error) ?? "Ссылка для сброса пароля недействительна";
   if (message.includes("истёк")) {

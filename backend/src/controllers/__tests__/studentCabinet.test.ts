@@ -1,10 +1,10 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 
 import { app } from "../../index";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { generateToken } from "../../utils/auth";
 import { generateStudentToken } from "../../utils/studentAuth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../../services/email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -24,7 +24,7 @@ describe("studentCabinet controller", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Учитель",
         isEmailVerified: true,
@@ -40,7 +40,7 @@ describe("studentCabinet controller", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Ученик",
         studentId,
@@ -60,7 +60,7 @@ describe("studentCabinet controller", () => {
     });
     const otherStudentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Другой",
         studentId: otherStudent.id,
@@ -104,9 +104,7 @@ describe("studentCabinet controller", () => {
         },
       })
       .catch(() => undefined);
-    await prisma.student
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
+    await prisma.student.deleteMany({ where: { tutorId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
   });
@@ -134,6 +132,79 @@ describe("studentCabinet controller", () => {
     // Изоляция: никаких чувствительных полей
     expect(res.body.lessons[0]).not.toHaveProperty("price");
     expect(res.body.lessons[0]).not.toHaveProperty("notes");
+  });
+
+  it("never exposes commission data to the student cabinet", async () => {
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { commissionAmount: 5000 },
+    });
+
+    // studentId is shared by the suite, so the commission is reset even when an
+    // assertion below fails.
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body).toLowerCase()).not.toContain("commission");
+      for (const lesson of res.body.lessons) {
+        expect(Object.keys(lesson).some((key) => key.startsWith("commission"))).toBe(false);
+        expect(lesson).not.toHaveProperty("price");
+        expect(lesson).not.toHaveProperty("isPaid");
+      }
+    } finally {
+      await prisma.student.update({
+        where: { id: studentId },
+        data: { commissionAmount: 0 },
+      });
+    }
+  });
+
+  it("never exposes the tax-exempt flag to the student cabinet", async () => {
+    await prisma.lesson.updateMany({ where: { studentId }, data: { isTaxExempt: true } });
+
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.lessons.length).toBeGreaterThan(0);
+      for (const lesson of res.body.lessons) {
+        expect(lesson).not.toHaveProperty("isTaxExempt");
+      }
+    } finally {
+      await prisma.lesson.updateMany({ where: { studentId }, data: { isTaxExempt: false } });
+    }
+  });
+
+  it("never exposes the received amount to the student cabinet", async () => {
+    await prisma.lesson.updateMany({
+      where: { studentId },
+      data: { isPaid: true, receivedAmount: 1800 },
+    });
+
+    try {
+      const res = await request(app)
+        .get("/api/student-cabinet/lessons")
+        .query({ weekStart: "2026-05-04" })
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.lessons.length).toBeGreaterThan(0);
+      for (const lesson of res.body.lessons) {
+        expect(lesson).not.toHaveProperty("receivedAmount");
+      }
+    } finally {
+      await prisma.lesson.updateMany({
+        where: { studentId },
+        data: { isPaid: false, receivedAmount: null },
+      });
+    }
   });
 
   it("does not leak other students' lessons even when querying same week", async () => {

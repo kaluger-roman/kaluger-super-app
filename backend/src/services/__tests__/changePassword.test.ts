@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashPassword, comparePassword } from "../../utils/auth";
 import { changePassword } from "../changePassword";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("changePassword service", () => {
   let userId: string;
@@ -11,7 +12,7 @@ describe("changePassword service", () => {
     const hashedPassword = await hashPassword(originalPassword);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: hashedPassword,
         name: faker.person.fullName(),
       },
@@ -25,36 +26,28 @@ describe("changePassword service", () => {
   });
 
   it("should throw 404 when user not found", async () => {
-    await expect(
-      changePassword("non-existent-id", "old", "New1Password"),
-    ).rejects.toMatchObject({
+    await expect(changePassword("non-existent-id", "old", "New1Password")).rejects.toMatchObject({
       message: "Пользователь не найден",
       statusCode: 404,
     });
   });
 
   it("should throw 400 when current password is wrong", async () => {
-    await expect(
-      changePassword(userId, "WrongPassword1", "NewPassword1"),
-    ).rejects.toMatchObject({
+    await expect(changePassword(userId, "WrongPassword1", "NewPassword1")).rejects.toMatchObject({
       message: "Неверный текущий пароль",
       statusCode: 400,
     });
   });
 
   it("should throw 400 when new password fails validation", async () => {
-    await expect(
-      changePassword(userId, originalPassword, "short"),
-    ).rejects.toMatchObject({
+    await expect(changePassword(userId, originalPassword, "short")).rejects.toMatchObject({
       message: "Пароль должен содержать минимум 8 символов, заглавные и строчные буквы и цифру",
       statusCode: 400,
     });
   });
 
   it("should throw 400 when new password equals current", async () => {
-    await expect(
-      changePassword(userId, originalPassword, originalPassword),
-    ).rejects.toMatchObject({
+    await expect(changePassword(userId, originalPassword, originalPassword)).rejects.toMatchObject({
       message: "Новый пароль должен отличаться от текущего",
       statusCode: 400,
     });

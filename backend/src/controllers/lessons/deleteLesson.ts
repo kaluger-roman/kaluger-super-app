@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   ACTIVE_REMINDER_STATUSES,
   broadcastStudentLessonDeleted,
@@ -25,7 +25,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    if (deleteAllFuture && existingLesson.isRecurring) {
+    if (deleteAllFuture && existingLesson.isRecurring && existingLesson.studentId) {
       const baseKey = getRecurringLessonKey(existingLesson);
 
       const futureLessons = await prisma.lesson.findMany({
@@ -86,8 +86,10 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
 
       void broadcastStudentLessonDeleted(id, studentUserId);
     }
+
+    return;
   } catch (error) {
     console.error("Delete lesson error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

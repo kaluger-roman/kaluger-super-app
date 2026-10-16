@@ -13,7 +13,7 @@ export type IncomingCall = {
   callerName: string;
 };
 
-export type CallStatusKind = "info" | "error";
+type CallStatusKind = "info" | "error";
 
 export type CallStatusMessage = {
   kind: CallStatusKind;
@@ -26,15 +26,41 @@ export type IceServerPayload = {
   credential?: string;
 };
 
-export type StartCallParams =
-  | { studentId: string; peerName: string }
-  | { peerName: string };
+export type StartCallParams = { studentId: string; peerName: string } | { peerName: string };
 
-export type MediaStatePayload = {
-  callId: string;
-  micOn: boolean;
+export type LocalMediaResult = {
+  stream: MediaStream;
   cameraOn: boolean;
-  screenSharing: boolean;
+};
+
+export type CallSignalTarget = {
+  callId: string;
+  iceServers: IceServerPayload[];
+};
+
+export type LocalMediaParams = CallSignalTarget & {
+  polite: boolean;
+};
+
+export type SdpPayload = {
+  callId: string;
+  sdp: RTCSessionDescriptionInit;
+};
+
+export type IcePayload = {
+  callId: string;
+  candidate: RTCIceCandidateInit;
+};
+
+export type MediaToggleContext = {
+  callId: string | null;
+  media: CallMediaState;
+};
+
+export type ScreenShareContext = {
+  callId: string | null;
+  self: CallMediaState;
+  peerSharing: boolean;
 };
 
 export type { CallMediaState };

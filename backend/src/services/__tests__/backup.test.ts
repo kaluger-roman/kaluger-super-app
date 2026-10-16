@@ -1,13 +1,13 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
+import { getTotalSizeMb, cleanupOldBackups, getBackupSettings, runBackupJob } from "../backup";
 import {
-  getTotalSizeMb,
-  cleanupOldBackups,
-  getBackupSettings,
-  runBackupJob,
-} from "../backup";
+  acquireGlobalTestLock,
+  GLOBAL_TEST_LOCK,
+  GLOBAL_TEST_LOCK_TIMEOUT_MS,
+} from "../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
 
@@ -19,6 +19,11 @@ jest.mock("child_process", () => ({
 describe("backup service", () => {
   let tmpDir: string;
   const originalEnv = process.env.BACKUP_DIR;
+  let releaseBackupSettingsLock: () => Promise<void>;
+
+  beforeAll(async () => {
+    releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+  }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "backup-test-"));
@@ -35,6 +40,7 @@ describe("backup service", () => {
 
   afterAll(async () => {
     await prisma.backupSettings.deleteMany();
+    await releaseBackupSettingsLock();
   });
 
   describe("getTotalSizeMb", () => {
@@ -79,11 +85,7 @@ describe("backup service", () => {
       // Regression for bug-hunt 2026-05-09-3 #8: parallel callers used to both
       // see findFirst -> null and both call create, ending with two rows.
       // upsert with a fixed singleton id is race-safe.
-      await Promise.all([
-        getBackupSettings(),
-        getBackupSettings(),
-        getBackupSettings(),
-      ]);
+      await Promise.all([getBackupSettings(), getBackupSettings(), getBackupSettings()]);
 
       const count = await prisma.backupSettings.count();
       expect(count).toBe(1);
@@ -189,9 +191,7 @@ describe("backup service", () => {
       expect(mockExec).toHaveBeenCalled();
 
       const settings = await prisma.backupSettings.findFirst();
-      expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(
-        sixHoursAgo.getTime()
-      );
+      expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(sixHoursAgo.getTime());
     });
 
     it("should not start a parallel pg_dump while another is running (regression: cron overlap)", async () => {

@@ -5,16 +5,8 @@ import {
   resolvePairForTutor,
 } from "../../services/callSignaling";
 import type { LiveCall } from "../../services/callSignaling";
-import type {
-  CallerKindValue,
-  CallSignalingInbound,
-  CallSignalingOutbound,
-} from "../../types";
-import {
-  CallAuthorizationError,
-  CallPeerBusyError,
-  CallPeerOfflineError,
-} from "../../utils";
+import type { CallerKindValue, CallSignalingInbound, CallSignalingOutbound } from "../../types";
+import { CallAuthorizationError, CallPeerBusyError, CallPeerOfflineError } from "../../utils";
 import { getWebSocketManager } from "../wsManager";
 import { isCallSignalType } from "./signaling.types";
 import type { OutboundSender } from "./signaling.types";
@@ -61,10 +53,7 @@ const handleInvite = async (
   data: Extract<CallSignalingInbound, { type: "call_invite" }>,
   send: OutboundSender
 ): Promise<void> => {
-  const existingForSender = callRegistry.findActiveCallForParticipant(
-    senderKind,
-    senderId
-  );
+  const existingForSender = callRegistry.findActiveCallForParticipant(senderKind, senderId);
   if (existingForSender?.callerKind === senderKind) {
     return;
   }
@@ -74,15 +63,10 @@ const handleInvite = async (
       ? await resolvePairForTutor(senderId, data.targetStudentId ?? "")
       : await resolvePairForStudent(senderId);
 
-  const calleeKind: CallerKindValue =
-    senderKind === "tutor" ? "student" : "tutor";
-  const calleeId =
-    senderKind === "tutor" ? pair.studentUserId : pair.tutorUserId;
+  const calleeKind: CallerKindValue = senderKind === "tutor" ? "student" : "tutor";
+  const calleeId = senderKind === "tutor" ? pair.studentUserId : pair.tutorUserId;
 
-  const existingForPair = callRegistry.findActiveCallForPair(
-    pair.tutorUserId,
-    pair.studentUserId
-  );
+  const existingForPair = callRegistry.findActiveCallForPair(pair.tutorUserId, pair.studentUserId);
   if (existingForPair?.callerKind === senderKind) {
     return;
   }
@@ -114,10 +98,7 @@ const handleInvite = async (
   });
 };
 
-export const onRingTimeout = async (
-  call: LiveCall,
-  send: OutboundSender
-): Promise<void> => {
+export const onRingTimeout = async (call: LiveCall, send: OutboundSender): Promise<void> => {
   const terminated = await callRegistry.terminateCall(call.callId, "MISSED");
   if (!terminated) return;
   send(terminated.callerKind, callerIdOf(terminated), {
@@ -159,9 +140,7 @@ const handleSignalInner = async (
 
   if (
     !callRegistry.getCall(data.callId) &&
-    (data.type === "call_reject" ||
-      data.type === "call_cancel" ||
-      data.type === "call_hangup")
+    (data.type === "call_reject" || data.type === "call_cancel" || data.type === "call_hangup")
   ) {
     return;
   }
@@ -171,30 +150,45 @@ const handleSignalInner = async (
     case "call_accept": {
       if (call.ringTimeout) clearTimeout(call.ringTimeout);
       call.ringTimeout = undefined;
-      relayToPeer(call, senderKind, {
-        type: "call_accepted",
-        callId: call.callId,
-        iceServers: buildIceServers(),
-      }, send);
+      relayToPeer(
+        call,
+        senderKind,
+        {
+          type: "call_accepted",
+          callId: call.callId,
+          iceServers: buildIceServers(),
+        },
+        send
+      );
       return;
     }
     case "call_reject": {
       const terminated = await callRegistry.terminateCall(call.callId, "REJECTED");
       if (terminated) {
-        relayToPeer(terminated, senderKind, {
-          type: "call_rejected",
-          callId: terminated.callId,
-        }, send);
+        relayToPeer(
+          terminated,
+          senderKind,
+          {
+            type: "call_rejected",
+            callId: terminated.callId,
+          },
+          send
+        );
       }
       return;
     }
     case "call_cancel": {
       const terminated = await callRegistry.terminateCall(call.callId, "CANCELED");
       if (terminated) {
-        relayToPeer(terminated, senderKind, {
-          type: "call_canceled",
-          callId: terminated.callId,
-        }, send);
+        relayToPeer(
+          terminated,
+          senderKind,
+          {
+            type: "call_canceled",
+            callId: terminated.callId,
+          },
+          send
+        );
       }
       return;
     }
@@ -202,10 +196,15 @@ const handleSignalInner = async (
       const status = call.connectedAt ? "COMPLETED" : "FAILED";
       const terminated = await callRegistry.terminateCall(call.callId, status);
       if (terminated) {
-        relayToPeer(terminated, senderKind, {
-          type: "call_ended",
-          callId: terminated.callId,
-        }, send);
+        relayToPeer(
+          terminated,
+          senderKind,
+          {
+            type: "call_ended",
+            callId: terminated.callId,
+          },
+          send
+        );
       }
       return;
     }
@@ -214,22 +213,42 @@ const handleSignalInner = async (
       return;
     }
     case "webrtc_offer":
-      relayToPeer(call, senderKind, { type: "webrtc_offer", callId: call.callId, sdp: data.sdp }, send);
+      relayToPeer(
+        call,
+        senderKind,
+        { type: "webrtc_offer", callId: call.callId, sdp: data.sdp },
+        send
+      );
       return;
     case "webrtc_answer":
-      relayToPeer(call, senderKind, { type: "webrtc_answer", callId: call.callId, sdp: data.sdp }, send);
+      relayToPeer(
+        call,
+        senderKind,
+        { type: "webrtc_answer", callId: call.callId, sdp: data.sdp },
+        send
+      );
       return;
     case "webrtc_ice":
-      relayToPeer(call, senderKind, { type: "webrtc_ice", callId: call.callId, candidate: data.candidate }, send);
+      relayToPeer(
+        call,
+        senderKind,
+        { type: "webrtc_ice", callId: call.callId, candidate: data.candidate },
+        send
+      );
       return;
     case "call_media_state":
-      relayToPeer(call, senderKind, {
-        type: "call_media_state",
-        callId: call.callId,
-        micOn: data.micOn,
-        cameraOn: data.cameraOn,
-        screenSharing: data.screenSharing,
-      }, send);
+      relayToPeer(
+        call,
+        senderKind,
+        {
+          type: "call_media_state",
+          callId: call.callId,
+          micOn: data.micOn,
+          cameraOn: data.cameraOn,
+          screenSharing: data.screenSharing,
+        },
+        send
+      );
       return;
   }
 };
@@ -299,11 +318,7 @@ export const terminateActiveCallForParticipant = async (
   if (!call) return;
   const wasConnected = call.connectedAt != null;
   const droppedByCaller = kind === call.callerKind;
-  const status = wasConnected
-    ? "COMPLETED"
-    : droppedByCaller
-      ? "CANCELED"
-      : "MISSED";
+  const status = wasConnected ? "COMPLETED" : droppedByCaller ? "CANCELED" : "MISSED";
   const terminated = await callRegistry.terminateCall(call.callId, status);
   if (!terminated) return;
   const peer = peerOf(terminated, kind);

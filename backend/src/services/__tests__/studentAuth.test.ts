@@ -1,14 +1,10 @@
 import { Prisma } from "@prisma/client";
-import { faker } from "@faker-js/faker";
 
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils";
 import { issueInvitation } from "../studentInvitation";
-import {
-  getStudentSettings,
-  loginStudent,
-  registerStudentByInvite,
-} from "../studentAuth";
+import { getStudentSettings, loginStudent, registerStudentByInvite } from "../studentAuth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -19,20 +15,18 @@ jest.mock("../email", () => ({
 
 const VALID_PASSWORD = "StrongPass1";
 
-const extractTokenFromUrl = (url: string): string =>
-  url.split("/").pop() as string;
+const extractTokenFromUrl = (url: string): string => url.split("/").pop() as string;
 
 describe("studentAuth service", () => {
   let tutorId: string;
   let studentId: string;
 
   beforeAll(async () => {
-    if (!process.env.FRONTEND_URL)
-      process.env.FRONTEND_URL = "http://localhost:3000";
+    if (!process.env.FRONTEND_URL) process.env.FRONTEND_URL = "http://localhost:3000";
 
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Анна Петрова",
         isEmailVerified: true,
@@ -47,15 +41,9 @@ describe("studentAuth service", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentInvitation
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
-    await prisma.studentUser
-      .deleteMany({ where: { studentId } })
-      .catch(() => undefined);
-    await prisma.student
-      .delete({ where: { id: studentId } })
-      .catch(() => undefined);
+    await prisma.studentInvitation.deleteMany({ where: { tutorId } }).catch(() => undefined);
+    await prisma.studentUser.deleteMany({ where: { studentId } }).catch(() => undefined);
+    await prisma.student.delete({ where: { id: studentId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
   });
@@ -73,7 +61,7 @@ describe("studentAuth service", () => {
       return {
         token: extractTokenFromUrl(issued.inviteUrl),
         name: "Пётр Сидоров",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       };
@@ -137,9 +125,7 @@ describe("studentAuth service", () => {
       const original = process.env.STUDENT_JWT_SECRET;
       delete process.env.STUDENT_JWT_SECRET;
       try {
-        await expect(registerStudentByInvite(dto)).rejects.toThrow(
-          "STUDENT_JWT_SECRET is not set"
-        );
+        await expect(registerStudentByInvite(dto)).rejects.toThrow("STUDENT_JWT_SECRET is not set");
 
         const user = await prisma.studentUser.findUnique({
           where: { email: dto.email },
@@ -162,7 +148,7 @@ describe("studentAuth service", () => {
       expect(first.ok).toBe(true);
       const second = await registerStudentByInvite({
         ...dto,
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
       });
       expect(second.ok).toBe(false);
       if (!second.ok) expect(second.status).toBe(410);
@@ -176,7 +162,7 @@ describe("studentAuth service", () => {
       const buildConcurrentDto = () => ({
         token,
         name: "Гонка",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -206,13 +192,12 @@ describe("studentAuth service", () => {
 
     it("maps P2002 on studentId to 410 (race with concurrent invite for same student)", async () => {
       const dto = await buildDto();
-      const knownError = new Prisma.PrismaClientKnownRequestError(
-        "Unique constraint failed",
-        { code: "P2002", clientVersion: "test", meta: { target: ["studentId"] } }
-      );
-      const txSpy = jest
-        .spyOn(prisma, "$transaction")
-        .mockRejectedValueOnce(knownError);
+      const knownError = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+        meta: { target: ["studentId"] },
+      });
+      const txSpy = jest.spyOn(prisma, "$transaction").mockRejectedValueOnce(knownError);
 
       const result = await registerStudentByInvite(dto);
       txSpy.mockRestore();
@@ -222,7 +207,7 @@ describe("studentAuth service", () => {
     });
 
     it("returns 409 when email already exists in student_users", async () => {
-      const existingEmail = faker.internet.email().toLowerCase();
+      const existingEmail = uniqueEmail().toLowerCase();
       await prisma.studentUser.create({
         data: {
           email: existingEmail,
@@ -250,7 +235,7 @@ describe("studentAuth service", () => {
       const dto = {
         token: "",
         name: "Тест",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       };
@@ -302,7 +287,7 @@ describe("studentAuth service", () => {
       const result = await registerStudentByInvite({
         token: extractTokenFromUrl(issued.inviteUrl),
         name: "Пётр",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });

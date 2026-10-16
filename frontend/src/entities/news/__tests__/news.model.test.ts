@@ -34,7 +34,7 @@ const createNewsItem = (overrides: Partial<NewsItem> = {}): NewsItem => ({
 
 const createResponse = (
   news: NewsItem[],
-  pagination: Partial<NewsListResponse["pagination"]> = {},
+  pagination: Partial<NewsListResponse["pagination"]> = {}
 ): NewsListResponse => ({
   news,
   pagination: {

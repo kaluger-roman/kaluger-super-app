@@ -1,6 +1,3 @@
-export { WebSocketManager } from "./WebSocketManager";
+export { WebSocketManager } from "./webSocketManager";
 export type { AuthenticatedWebSocket } from "./types";
-export {
-  handleCallSignal,
-  terminateActiveCallForParticipant,
-} from "./signaling";
+export { handleCallSignal, terminateActiveCallForParticipant } from "./signaling";

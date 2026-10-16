@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
-import { ACTIVE_REMINDER_STATUSES } from "../../services";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
+import { ACTIVE_REMINDER_STATUSES, tryAttachCommissionToStudents } from "../../services";
 
 export const archiveStudent = async (req: AuthRequest, res: Response) => {
   try {
@@ -61,10 +61,12 @@ export const archiveStudent = async (req: AuthRequest, res: Response) => {
       return student;
     });
 
-    res.json({ student: result });
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [result]);
+
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Archive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -91,9 +93,11 @@ export const unarchiveStudent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ student });
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Unarchive student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

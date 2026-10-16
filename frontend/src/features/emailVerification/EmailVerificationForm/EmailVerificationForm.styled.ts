@@ -1,4 +1,4 @@
-import { Box, Paper } from "@mui/material";
+import { Alert, Box, Paper } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -57,4 +57,8 @@ export const ActionsBox = styled(Box)`
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing(2)};
   margin-top: ${({ theme }) => theme.spacing(3)};
+`;
+
+export const ErrorAlert = styled(Alert)`
+  margin-bottom: ${({ theme }) => theme.spacing(2)};
 `;

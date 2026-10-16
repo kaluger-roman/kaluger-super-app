@@ -1,4 +1,4 @@
-import { WebSocketManager } from "./websocket";
+import type { WebSocketManager } from "./websocket";
 
 let wsManagerInstance: WebSocketManager | null = null;
 

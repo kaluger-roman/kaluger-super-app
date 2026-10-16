@@ -9,9 +9,9 @@ import { StudentArchivedInfo } from "@shared";
 import { StudentDeleteDialog } from "@shared/ui";
 
 import * as Styled from "./StudentForm.styled";
+import type { StudentFormProps } from "./StudentForm.types";
 import { StudentFormActions } from "./StudentFormActions";
 import { StudentFormFields } from "./StudentFormFields";
-import type { StudentFormProps } from "./types";
 import { studentFormModel } from "../../models";
 
 export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) => {
@@ -32,8 +32,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
     (field: string) =>
     (
       event:
-        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-        | { target: { value: unknown } }
+        React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
     ) => {
       const target = (event as { target?: { value?: unknown } }).target;
       const value = target?.value ?? "";
@@ -76,7 +75,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
         <Styled.StyledDialogTitle>
           {student ? (
             <>
-              Редактировать студента{" "}
+              Редактировать ученика{" "}
               {student?.archived && student?.archivedAt && (
                 <StudentArchivedInfo
                   archivedAt={student.archivedAt}
@@ -87,7 +86,7 @@ export const StudentForm: FC<StudentFormProps> = ({ open, onClose, student }) =>
               )}
             </>
           ) : (
-            "Добавить студента"
+            "Добавить ученика"
           )}
         </Styled.StyledDialogTitle>
 

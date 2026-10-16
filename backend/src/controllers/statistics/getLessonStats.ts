@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
 import { buildStatisticsWhere } from "./utils";
 
 export const getLessonsBySubject = async (req: AuthRequest, res: Response) => {
@@ -9,12 +9,7 @@ export const getLessonsBySubject = async (req: AuthRequest, res: Response) => {
     const { startDate, endDate } = req.query;
     const timezone = req.headers["x-timezone"] as string | undefined;
 
-    const where = buildStatisticsWhere(
-      userId!,
-      startDate as string,
-      endDate as string,
-      timezone
-    );
+    const where = buildStatisticsWhere(userId!, startDate as string, endDate as string, timezone);
 
     const lessonsBySubject = await prisma.lesson.groupBy({
       by: ["subject"],
@@ -27,10 +22,10 @@ export const getLessonsBySubject = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ lessonsBySubject });
+    return res.json({ lessonsBySubject });
   } catch (error) {
     console.error("Get lessons by subject error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -40,12 +35,7 @@ export const getLessonsByType = async (req: AuthRequest, res: Response) => {
     const { startDate, endDate } = req.query;
     const timezone = req.headers["x-timezone"] as string | undefined;
 
-    const where = buildStatisticsWhere(
-      userId!,
-      startDate as string,
-      endDate as string,
-      timezone
-    );
+    const where = buildStatisticsWhere(userId!, startDate as string, endDate as string, timezone);
 
     const lessonsByType = await prisma.lesson.groupBy({
       by: ["lessonType"],
@@ -58,9 +48,9 @@ export const getLessonsByType = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ lessonsByType });
+    return res.json({ lessonsByType });
   } catch (error) {
     console.error("Get lessons by type error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

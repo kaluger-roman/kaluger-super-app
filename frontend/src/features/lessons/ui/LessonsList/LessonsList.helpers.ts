@@ -10,10 +10,7 @@ export type GroupedLessons = {
   };
 };
 
-export const filterLessonsByType = (
-  lessons: Lesson[],
-  type: LessonListType
-): Lesson[] => {
+export const filterLessonsByType = (lessons: Lesson[], type: LessonListType): Lesson[] => {
   switch (type) {
     case "scheduled":
       return lessons.filter(
@@ -33,10 +30,7 @@ export const filterLessonsByType = (
   }
 };
 
-export const groupLessonsByDate = (
-  lessons: Lesson[],
-  type: LessonListType
-): GroupedLessons => {
+export const groupLessonsByDate = (lessons: Lesson[], type: LessonListType): GroupedLessons => {
   const grouped: GroupedLessons = {};
 
   lessons.forEach((lesson) => {
@@ -77,10 +71,7 @@ export const groupLessonsByDate = (
   return grouped;
 };
 
-export const sortYears = (
-  years: string[],
-  type: LessonListType
-): string[] => {
+export const sortYears = (years: string[], type: LessonListType): string[] => {
   return years.sort((a, b) => {
     if (type === "scheduled") {
       return parseInt(a) - parseInt(b);

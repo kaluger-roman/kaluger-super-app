@@ -76,7 +76,7 @@ describe("features/forgotPassword/models/forgotPassword.model", () => {
 
       expect(scope.getState(forgotPasswordModel.$isSent)).toBe(true);
       expect(scope.getState(forgotPasswordModel.$successMessage)).toBe(
-        "Если адрес зарегистрирован",
+        "Если адрес зарегистрирован"
       );
     });
 

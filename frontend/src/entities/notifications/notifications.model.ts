@@ -38,7 +38,13 @@ export const loadVapidKeyFx = createEffect(async () => {
 });
 
 export const subscribePushFx = createEffect(
-  async ({ vapidKey, registration }: { vapidKey: string; registration: ServiceWorkerRegistration }) => {
+  async ({
+    vapidKey,
+    registration,
+  }: {
+    vapidKey: string;
+    registration: ServiceWorkerRegistration;
+  }) => {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       throw new Error("Разрешение на уведомления не предоставлено");
@@ -100,10 +106,12 @@ export const updateSettingsFx = createEffect(async (data: Partial<ReminderSettin
   return await notificationsApi.updateSettings(data);
 });
 
-export const checkPushSubscriptionFx = createEffect(async (registration: ServiceWorkerRegistration) => {
-  const subscription = await registration.pushManager.getSubscription();
-  return subscription !== null;
-});
+export const checkPushSubscriptionFx = createEffect(
+  async (registration: ServiceWorkerRegistration) => {
+    const subscription = await registration.pushManager.getSubscription();
+    return subscription !== null;
+  }
+);
 
 export const $isSettingsLoading = loadSettingsFx.pending;
 
@@ -180,4 +188,3 @@ sample({
   fn: () => ({ message: "Не удалось подписаться на уведомления", type: "error" as const }),
   target: showNotification,
 });
-

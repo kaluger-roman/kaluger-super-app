@@ -21,6 +21,7 @@ export const LessonForm: FC = () => {
   const formData = useUnit(lessonFormModel.$formData);
   const errors = useUnit(lessonFormModel.$errors);
   const confirmDialog = useUnit(lessonFormModel.$confirmDialog);
+  const canSubmit = useUnit(lessonFormModel.$canSubmit);
 
   useEffect(() => {
     lessonFormModel.formOpened({ lesson, open });
@@ -55,7 +56,7 @@ export const LessonForm: FC = () => {
     if (
       e.key === "Enter" &&
       !isLoading &&
-      formData.studentId &&
+      canSubmit &&
       (e.target as HTMLElement).tagName !== "TEXTAREA"
     ) {
       e.preventDefault();
@@ -104,7 +105,6 @@ export const LessonForm: FC = () => {
           lesson={lesson}
           isLoading={isLoading}
           isMobile={isMobile}
-          formData={formData}
           onClose={handleClose}
           onCancelLesson={handleCancelLesson}
           onSubmit={handleSubmit}

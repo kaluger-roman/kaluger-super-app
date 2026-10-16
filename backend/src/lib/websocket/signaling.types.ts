@@ -27,5 +27,4 @@ export const CALL_SIGNAL_TYPES = [
 export type CallSignalType = (typeof CALL_SIGNAL_TYPES)[number];
 
 export const isCallSignalType = (value: unknown): value is CallSignalType =>
-  typeof value === "string" &&
-  (CALL_SIGNAL_TYPES as readonly string[]).includes(value);
+  typeof value === "string" && (CALL_SIGNAL_TYPES as readonly string[]).includes(value);

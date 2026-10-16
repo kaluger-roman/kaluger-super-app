@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
 
 export const listTaxPeriods = async (req: AuthRequest, res: Response) => {
   try {
@@ -17,7 +17,7 @@ export const listTaxPeriods = async (req: AuthRequest, res: Response) => {
         id: period.id,
         startDate: period.startDate.toISOString(),
         rate: period.rate,
-      })),
+      }))
     );
   } catch (error) {
     console.error("List tax periods error:", error);

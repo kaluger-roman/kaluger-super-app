@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { WebRtcAdapter } from "../webrtc";
+import type { WebRtcAdapter } from "../webrtc.types";
 
 type FakeTrack = {
   kind: "audio" | "video";
@@ -76,9 +76,7 @@ export const createFakePeerConnection = (): RTCPeerConnection => {
   return pc as unknown as RTCPeerConnection;
 };
 
-export const createFakeAdapter = (
-  overrides: Partial<WebRtcAdapter> = {}
-): WebRtcAdapter => ({
+export const createFakeAdapter = (overrides: Partial<WebRtcAdapter> = {}): WebRtcAdapter => ({
   createPeerConnection: vi.fn(() => createFakePeerConnection()),
   getUserMedia: vi.fn(async () => createFakeStream()),
   getDisplayMedia: vi.fn(async () => createFakeStream(["video"])),

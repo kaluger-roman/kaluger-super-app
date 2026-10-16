@@ -24,9 +24,4 @@ export type LiveCall = {
   ringTimeout?: ReturnType<typeof setTimeout>;
 };
 
-export type CallFinalizeStatus =
-  | "COMPLETED"
-  | "MISSED"
-  | "REJECTED"
-  | "CANCELED"
-  | "FAILED";
+export type CallFinalizeStatus = "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";

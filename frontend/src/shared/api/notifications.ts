@@ -32,7 +32,9 @@ export const notificationsApi = {
     return response.data;
   },
 
-  updateSettings: async (data: UpdateReminderSettingsRequest): Promise<ReminderSettingsResponse> => {
+  updateSettings: async (
+    data: UpdateReminderSettingsRequest
+  ): Promise<ReminderSettingsResponse> => {
     const response = await api.put("/reminder-settings", data);
     return response.data;
   },

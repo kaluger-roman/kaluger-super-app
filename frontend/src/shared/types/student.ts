@@ -1,23 +1,24 @@
+export type ContactMethod = "WHATSAPP" | "TELEGRAM" | "MAX";
+
 export type ArchiveReason =
-  | "COMPLETED_STUDIES"
-  | "FOUND_ANOTHER_TUTOR"
-  | "CHANGED_MIND"
-  | "POOR_EFFORT"
-  | "MISSED_LESSONS";
+  "COMPLETED_STUDIES" | "FOUND_ANOTHER_TUTOR" | "CHANGED_MIND" | "POOR_EFFORT" | "MISSED_LESSONS";
 
 export type Student = {
   id: string;
   name: string;
-  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  contactMethod?: ContactMethod;
   parentPhone?: string | null;
   parentName?: string | null;
-  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  parentContactMethod?: ContactMethod | null;
   telegramNick?: string | null;
   parentTelegramNick?: string | null;
   phone?: string | null;
   notes?: string | null;
   hourlyRate?: number | null;
   grade?: number | null; // Класс от 1 до 11
+  commissionAmount?: number | null;
+  commissionRepaid?: number | null;
+  commissionRemaining?: number | null;
   archived: boolean;
   archivedAt?: string | null;
   archiveReason?: ArchiveReason | null;
@@ -29,16 +30,17 @@ export type Student = {
 
 export type CreateStudentDto = {
   name: string;
-  contactMethod?: "WHATSAPP" | "TELEGRAM";
+  contactMethod?: ContactMethod;
   parentPhone?: string | null;
   parentName?: string | null;
-  parentContactMethod?: "WHATSAPP" | "TELEGRAM" | null;
+  parentContactMethod?: ContactMethod | null;
   telegramNick?: string | null;
   parentTelegramNick?: string | null;
   phone?: string | null;
   notes?: string | null;
   hourlyRate?: number | null;
   grade?: number | null;
+  commissionAmount?: number | null;
 };
 
 export type UpdateStudentDto = Partial<CreateStudentDto>;

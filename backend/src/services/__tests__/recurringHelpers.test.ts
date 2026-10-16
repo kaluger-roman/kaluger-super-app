@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import {
   getRecurringLessonKey,
   groupRecurringLessonsByPattern,
@@ -7,6 +7,7 @@ import {
 } from "../recurringHelpers";
 import { truncateToMinute } from "../../utils/time";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("recurringHelpers", () => {
   let userId: string;
@@ -14,7 +15,7 @@ describe("recurringHelpers", () => {
 
   beforeAll(async () => {
     const user = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "t" },
+      data: { email: uniqueEmail(), password: "x", name: "t" },
     });
     userId = user.id;
 
@@ -35,7 +36,8 @@ describe("recurringHelpers", () => {
   });
 
   it("generates stable recurring key and groups lessons keeping latest", () => {
-    const now = new Date();
+    // Minute-aligned so +1s/+2s never cross into the next minute of the key
+    const now = truncateToMinute(new Date());
     const a = {
       id: "a",
       tutorId: userId,
@@ -62,9 +64,7 @@ describe("recurringHelpers", () => {
 
   it("shifts future recurring lessons successfully when no conflicts", async () => {
     // create base recurring lesson and two future instances with same weekday/time
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 2 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 2 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({
@@ -142,9 +142,7 @@ describe("recurringHelpers", () => {
 
   it("detects conflicts and aborts shifts", async () => {
     // create base recurring lesson and a future instance
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 3 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 3 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({
@@ -212,9 +210,7 @@ describe("recurringHelpers", () => {
   });
 
   it("updates price for future recurring lessons", async () => {
-    const baseStart = truncateToMinute(
-      new Date(Date.now() + 6 * 24 * 3600 * 1000)
-    );
+    const baseStart = truncateToMinute(new Date(Date.now() + 6 * 24 * 3600 * 1000));
     const baseEnd = new Date(baseStart.getTime() + 3600000);
 
     const base = await prisma.lesson.create({

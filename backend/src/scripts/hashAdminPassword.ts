@@ -12,9 +12,7 @@ const main = async () => {
 
   console.log("\nХеш пароля администратора:");
   console.log(hash);
-  console.log(
-    "\nДобавьте в .env (или секреты CI/CD):\nADMIN_PASSWORD_HASH=" + hash + "\n"
-  );
+  console.log("\nДобавьте в .env (или секреты CI/CD):\nADMIN_PASSWORD_HASH=" + hash + "\n");
 };
 
 main().catch((error) => {

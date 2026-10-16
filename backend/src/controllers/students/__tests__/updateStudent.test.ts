@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("updateStudent integration tests", () => {
   let authToken: string;
@@ -11,7 +12,7 @@ describe("updateStudent integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -31,6 +32,29 @@ describe("updateStudent integration tests", () => {
     await prisma.$disconnect();
   });
 
+  it("should update contactMethod from WHATSAPP to MAX", async () => {
+    const student = await prisma.student.create({
+      data: {
+        name: "ToMax",
+        contactMethod: "WHATSAPP",
+        phone: "+79990007777",
+        tutorId: userId,
+      },
+    });
+
+    await request(app)
+      .put(`/api/students/${student.id}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ contactMethod: "MAX" })
+      .expect(200)
+      .then(async () => {
+        const updated = await prisma.student.findUnique({
+          where: { id: student.id },
+        });
+        expect(updated?.contactMethod).toBe("MAX");
+      });
+  });
+
   it("returns 400 when validation fails (invalid hourlyRate)", async () => {
     const student = await prisma.student.create({
       data: {
@@ -47,9 +71,7 @@ describe("updateStudent integration tests", () => {
       .send({ hourlyRate: -10 })
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Почасовая ставка должна быть положительной"
-        );
+        expect(res.body.error).toBe("Почасовая ставка должна быть положительной");
       });
   });
 
@@ -57,7 +79,7 @@ describe("updateStudent integration tests", () => {
     // create student for different user
     const otherUser = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -148,9 +170,7 @@ describe("updateStudent integration tests", () => {
     });
 
     const originalUpdate = prisma.student.update;
-    prisma.student.update = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.student.update = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .put(`/api/students/${student.id}`)

@@ -1,12 +1,9 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
-import { Lesson } from "@prisma/client";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
+import type { Lesson } from "@prisma/client";
 
-export const findNextUnpaidLesson = async (
-  tutorId: string,
-  cancelledLesson: Lesson
-) =>
+export const findNextUnpaidLesson = async (tutorId: string, cancelledLesson: Lesson) =>
   prisma.lesson.findFirst({
     where: {
       id: { not: cancelledLesson.id },
@@ -21,10 +18,7 @@ export const findNextUnpaidLesson = async (
     include: { student: { select: { name: true } } },
   });
 
-export const getLessonCancellationInfo = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getLessonCancellationInfo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
@@ -40,7 +34,7 @@ export const getLessonCancellationInfo = async (
       return res.status(404).json({ error: "Урок не найден" });
     }
 
-    if (!lesson.isPaid || !lesson.paymentDate) {
+    if (!lesson.studentId || !lesson.isPaid || !lesson.paymentDate) {
       return res.json({ cancellationInfo: null });
     }
 
@@ -54,13 +48,13 @@ export const getLessonCancellationInfo = async (
       nextLessonId: nextLesson.id,
       nextLessonStartTime: nextLesson.startTime.toISOString(),
       nextLessonStudentName: nextLesson.student?.name || "",
-      transferAmount: lesson.price?.toNumber() ?? 0,
+      transferAmount: (lesson.receivedAmount ?? lesson.price)?.toNumber() ?? 0,
       transferDate: lesson.paymentDate.toISOString(),
     };
 
-    res.json({ cancellationInfo });
+    return res.json({ cancellationInfo });
   } catch (error) {
     console.error("Get cancellation info error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

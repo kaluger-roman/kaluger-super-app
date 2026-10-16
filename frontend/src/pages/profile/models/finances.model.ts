@@ -8,7 +8,7 @@ import { NO_PERIODS_ERROR, isInvalidEnableAttempt } from "./finances.helpers";
 export const taxEnabledRequested = createEvent<boolean>();
 
 export const setTaxEnabledFx = createEffect(async (target: boolean) =>
-  authApi.updateProfile({ taxEnabled: target }),
+  authApi.updateProfile({ taxEnabled: target })
 );
 
 // Guard: enabling without any period — show notification, do not call API
@@ -37,8 +37,7 @@ sample({
 
 sample({
   clock: setTaxEnabledFx.doneData,
-  fn: (user) =>
-    user.taxEnabled ? "Учёт налога включён" : "Учёт налога выключен",
+  fn: (user) => (user.taxEnabled ? "Учёт налога включён" : "Учёт налога выключен"),
   target: notificationsModel.showSuccessEvent,
 });
 

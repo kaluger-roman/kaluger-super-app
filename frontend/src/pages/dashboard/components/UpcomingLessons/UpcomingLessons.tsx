@@ -1,7 +1,7 @@
 import { Typography, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
-import { formatLessonTime } from "@shared";
+import { CommissionBadge, formatLessonTime, getLessonDisplayName } from "@shared";
 import type { Lesson } from "@shared/types";
 
 import * as Styled from "./UpcomingLessons.styled";
@@ -27,7 +27,9 @@ export const UpcomingLessons = ({ lessons }: UpcomingLessonsProps) => {
           <Styled.LessonCard key={lesson.id} variant="outlined">
             <Styled.LessonCardContent>
               <Box>
-                <Styled.StudentName variant="subtitle2">{lesson.student?.name}</Styled.StudentName>
+                <Styled.StudentName variant="subtitle2">
+                  {getLessonDisplayName(lesson)}
+                </Styled.StudentName>
                 <Typography variant="body2" color="text.secondary">
                   {formatLessonTime(lesson.startTime, lesson.endTime)}
                 </Typography>
@@ -36,6 +38,7 @@ export const UpcomingLessons = ({ lessons }: UpcomingLessonsProps) => {
                 <Styled.LessonPrice variant="body2">
                   {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
                 </Styled.LessonPrice>
+                <CommissionBadge credit={lesson.commissionCredit} />
               </Box>
             </Styled.LessonCardContent>
           </Styled.LessonCard>

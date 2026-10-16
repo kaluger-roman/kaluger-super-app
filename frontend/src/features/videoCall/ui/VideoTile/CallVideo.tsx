@@ -19,13 +19,5 @@ export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden = false })
     }
   }, [stream]);
 
-  return (
-    <Styled.VideoElement
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted={muted}
-      $hidden={hidden}
-    />
-  );
+  return <Styled.VideoElement ref={videoRef} autoPlay playsInline muted={muted} $hidden={hidden} />;
 };

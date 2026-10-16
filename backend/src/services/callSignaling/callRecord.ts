@@ -1,4 +1,4 @@
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import type { CallerKindValue } from "../../types";
 import type { CallFinalizeStatus } from "./callSignaling.types";
 
@@ -39,7 +39,7 @@ export const createFinalizedCallRecord = async ({
         callerKind: callerKind === "tutor" ? "TUTOR" : "STUDENT",
         status,
         startedAt,
-        endedAt: status === "COMPLETED" ? endedAt ?? null : null,
+        endedAt: status === "COMPLETED" ? (endedAt ?? null) : null,
         durationSeconds,
       },
     });

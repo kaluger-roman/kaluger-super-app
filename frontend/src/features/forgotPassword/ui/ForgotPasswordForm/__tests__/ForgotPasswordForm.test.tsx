@@ -31,7 +31,7 @@ const renderForm = (scope: ReturnType<typeof fork>) =>
           <ForgotPasswordForm />
         </ThemeProvider>
       </BrowserRouter>
-    </EffectorProvider>,
+    </EffectorProvider>
   );
 
 describe("ForgotPasswordForm", () => {
@@ -69,7 +69,8 @@ describe("ForgotPasswordForm", () => {
 
   it("should show neutral success message after submit and hide the form", async () => {
     vi.mocked(authApi.forgotPassword).mockResolvedValueOnce({
-      message: "Если адрес зарегистрирован, мы отправили на него письмо со ссылкой для сброса пароля",
+      message:
+        "Если адрес зарегистрирован, мы отправили на него письмо со ссылкой для сброса пароля",
     });
     const user = userEvent.setup();
     renderForm(fork());
@@ -78,9 +79,7 @@ describe("ForgotPasswordForm", () => {
     await user.click(screen.getByRole("button", { name: "Отправить" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Если адрес зарегистрирован/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Если адрес зарегистрирован/i)).toBeInTheDocument();
     });
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
   });
@@ -108,7 +107,7 @@ describe("ForgotPasswordForm", () => {
       () =>
         new Promise<{ message: string }>((resolve) => {
           resolvePromise = resolve;
-        }),
+        })
     );
 
     const scope = fork();

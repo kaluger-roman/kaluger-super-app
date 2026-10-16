@@ -1,5 +1,5 @@
 import { parse } from "url";
-import prisma from "../prisma";
+import { prisma } from "../prisma";
 import {
   getCachedStudentTokenVersion,
   setCachedStudentTokenVersion,

@@ -9,8 +9,6 @@ export const CallHistoryEmpty: FC = () => (
   <Styled.EmptyBox>
     <PhoneDisabledIcon fontSize="large" color="disabled" />
     <Typography variant="h6">Звонков пока нет</Typography>
-    <Typography variant="body2">
-      Здесь появится история ваших видеозвонков
-    </Typography>
+    <Typography variant="body2">Здесь появится история ваших видеозвонков</Typography>
   </Styled.EmptyBox>
 );

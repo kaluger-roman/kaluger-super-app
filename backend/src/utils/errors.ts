@@ -25,6 +25,34 @@ export class StudentInvitationConsumedError extends Error {
   }
 }
 
+export class UserAlreadyExistsError extends Error {
+  constructor() {
+    super("Пользователь уже существует");
+    this.name = "UserAlreadyExistsError";
+  }
+}
+
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super("Неверные учетные данные");
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+export class EmailNotVerifiedError extends Error {
+  constructor() {
+    super("Email не подтвержден. Проверьте почту или запросите новый код подтверждения");
+    this.name = "EmailNotVerifiedError";
+  }
+}
+
+export class TaxPeriodsRequiredError extends Error {
+  constructor() {
+    super("Чтобы включить учёт налога, добавьте хотя бы один период");
+    this.name = "TaxPeriodsRequiredError";
+  }
+}
+
 export class CallAuthorizationError extends Error {
   constructor(message = "Звонок этому собеседнику недоступен") {
     super(message);

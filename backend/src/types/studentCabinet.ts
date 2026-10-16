@@ -46,12 +46,7 @@ export type StudentLessonResponse = {
   subject: "MATHEMATICS" | "PHYSICS";
   startTime: string;
   endTime: string;
-  status:
-    | "SCHEDULED"
-    | "COMPLETED"
-    | "CANCELLED"
-    | "RESCHEDULED"
-    | "IN_PROGRESS";
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "IN_PROGRESS";
 };
 
 export type StudentLessonsByWeekResponse = {
@@ -71,8 +66,7 @@ export type TutorInvitationStatusResponse =
   | { status: "registered"; registeredAt: string; studentEmail: string };
 
 export type ValidateInvitationResponse =
-  | { valid: true; studentName: string; tutorName: string }
-  | { valid: false };
+  { valid: true; studentName: string; tutorName: string } | { valid: false };
 
 export type StudentLessonWsEvent =
   | { type: "lesson_created"; lesson: StudentLessonResponse }

@@ -1,8 +1,9 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("tax-periods endpoints", () => {
   let authToken: string;
@@ -11,7 +12,7 @@ describe("tax-periods endpoints", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -70,9 +71,7 @@ describe("tax-periods endpoints", () => {
 
   describe("PUT /api/tax-periods", () => {
     it("returns 401 without token", async () => {
-      const res = await request(app)
-        .put("/api/tax-periods")
-        .send({ periods: [] });
+      const res = await request(app).put("/api/tax-periods").send({ periods: [] });
       expect(res.status).toBe(401);
     });
 
@@ -139,9 +138,7 @@ describe("tax-periods endpoints", () => {
           ],
         });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Период с такой датой начала уже существует",
-      );
+      expect(res.body.error).toBe("Период с такой датой начала уже существует");
     });
 
     it("returns 400 when duplicate startDates differ only by ISO format", async () => {
@@ -155,9 +152,7 @@ describe("tax-periods endpoints", () => {
           ],
         });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Период с такой датой начала уже существует",
-      );
+      expect(res.body.error).toBe("Период с такой датой начала уже существует");
     });
 
     it("returns 400 when rate is below 0", async () => {
@@ -214,9 +209,7 @@ describe("tax-periods endpoints", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .send({ periods: [] });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe(
-        "Нельзя удалить последний период при включённом учёте налога",
-      );
+      expect(res.body.error).toBe("Нельзя удалить последний период при включённом учёте налога");
     });
   });
 });

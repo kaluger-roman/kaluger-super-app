@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from "express";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import {
   getCachedStudentTokenVersion,
   setCachedStudentTokenVersion,
@@ -21,9 +21,7 @@ export const authenticateStudent = async (
 
   const payload = verifyStudentToken(token);
   if (!payload) {
-    return res
-      .status(401)
-      .json({ error: "Недействительный или истекший токен" });
+    return res.status(401).json({ error: "Недействительный или истекший токен" });
   }
 
   const tokenVersion = payload.tokenVersion ?? 0;
@@ -57,5 +55,5 @@ export const authenticateStudent = async (
   }
 
   req.studentUser = payload;
-  next();
+  return next();
 };

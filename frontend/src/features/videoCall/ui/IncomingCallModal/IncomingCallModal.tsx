@@ -1,9 +1,6 @@
 import type { FC } from "react";
 
-import {
-  Call as CallIcon,
-  CallEnd as CallEndIcon,
-} from "@mui/icons-material";
+import { Call as CallIcon, CallEnd as CallEndIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
@@ -33,10 +30,7 @@ export const IncomingCallModal: FC = () => {
 
       <Styled.Actions>
         <Styled.ActionColumn>
-          <Styled.DeclineButton
-            onClick={() => actions.reject()}
-            aria-label="Отклонить вызов"
-          >
+          <Styled.DeclineButton onClick={() => actions.reject()} aria-label="Отклонить вызов">
             <CallEndIcon />
           </Styled.DeclineButton>
           <Styled.Caption variant="caption" color="text.secondary">
@@ -45,10 +39,7 @@ export const IncomingCallModal: FC = () => {
         </Styled.ActionColumn>
 
         <Styled.ActionColumn>
-          <Styled.AcceptButton
-            onClick={() => actions.accept()}
-            aria-label="Принять вызов"
-          >
+          <Styled.AcceptButton onClick={() => actions.accept()} aria-label="Принять вызов">
             <CallIcon />
           </Styled.AcceptButton>
           <Styled.Caption variant="caption" color="text.secondary">

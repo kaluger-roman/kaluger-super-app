@@ -2,9 +2,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { AdminJwtPayload, JwtPayload } from "../types";
 
+// Pure-JS bcryptjs at cost 12 takes seconds under a parallel jest run; tests only need a valid hash
+const SALT_ROUNDS = process.env.NODE_ENV === "test" ? 4 : 12;
+
 export const hashPassword = async (password: string): Promise<string> => {
-  const saltRounds = 12;
-  return bcrypt.hash(password, saltRounds);
+  return bcrypt.hash(password, SALT_ROUNDS);
 };
 
 export const comparePassword = async (
@@ -34,9 +36,7 @@ export const generateToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 };
 
-export const generateAdminToken = (
-  payload: AdminJwtPayload
-): string => {
+export const generateAdminToken = (payload: AdminJwtPayload): string => {
   return jwt.sign(payload, getAdminJwtSecret(), { expiresIn: "24h" });
 };
 
@@ -48,14 +48,9 @@ export const verifyToken = (token: string): JwtPayload | null => {
   }
 };
 
-export const verifyAdminToken = (
-  token: string
-): AdminJwtPayload | null => {
+export const verifyAdminToken = (token: string): AdminJwtPayload | null => {
   try {
-    const payload = jwt.verify(
-      token,
-      getAdminJwtSecret()
-    ) as AdminJwtPayload;
+    const payload = jwt.verify(token, getAdminJwtSecret()) as AdminJwtPayload;
     if (!payload.isAdmin) return null;
     return payload;
   } catch {
@@ -68,8 +63,7 @@ export const validateEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-export const normalizeEmail = (email: string): string =>
-  email.trim().toLowerCase();
+export const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 export const validatePassword = (password: string): boolean => {
   // At least 8 characters, one uppercase, one lowercase, one digit

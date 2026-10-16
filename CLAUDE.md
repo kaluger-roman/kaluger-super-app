@@ -17,6 +17,7 @@ npm test                 # All tests (vitest)
 npm run test -- path     # Single test file
 npm run lint             # ESLint
 npm run lint:fix         # ESLint autofix
+npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm run test:e2e         # Playwright E2E
 npm run find-cycle       # Circular dependency check (madge)
@@ -27,6 +28,10 @@ npm run find-cycle       # Circular dependency check (madge)
 ```bash
 npm run dev              # Dev server (nodemon)
 npm run build            # TypeScript compile
+npm run lint             # ESLint (flat config)
+npm run lint:fix         # ESLint autofix
+npm run format           # Prettier write
+npm run format:check     # Prettier check
 npm test                 # All tests (jest)
 npm test -- --testPathPattern=path  # Single test file
 npm run db:migrate       # Prisma migrate dev
@@ -36,6 +41,13 @@ npm run db:seed          # Seed database
 npm run db:migrate:test  # Migrate test database (.env.test)
 npm run news:generate    # Save news entry as JSON file (--title, --content, --version)
 npm run news:sync        # Sync news JSON files to database (runs on deploy)
+```
+
+### Repo root
+
+```bash
+npm install              # lint-staged + enables the pre-commit hook for the main checkout and all worktrees
+node --test scripts/__tests__/  # Tests for scripts/ and .githooks/
 ```
 
 ## Architecture
@@ -102,9 +114,11 @@ Do NOT skip this step. These files contain critical project-specific patterns (E
 Before committing code, you MUST verify:
 
 1. **Tests pass** — `npm test` in the relevant directory (frontend/backend)
-2. **ESLint clean** — `npm run lint` in `frontend/`
+2. **ESLint clean** — `npm run lint` in `frontend/` and `backend/`
 3. **TypeScript clean** — `npm run build` in `backend/`
 4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
+
+The pre-commit hook (`.githooks/pre-commit`) runs `prettier --write`, `eslint --fix` and `prettier --write` again on staged `frontend/src`, `frontend/e2e`, `frontend/playwright.config.ts` and `backend/src` files and re-stages the result; CI also runs `npm run format:check`. The hook sees only staged files, so the checks above still apply. It runs lint-staged with `--no-stash` because the stash stack is shared by all worktrees, so the "Skipping backup because `--no-stash` was used. This might result in data loss." warning is expected; if any file is partially staged, the hook keeps lint-staged's backup stash instead, since a failed `--no-stash` run would not restore the unstaged hunks. It needs `frontend/node_modules` / `backend/node_modules` — in a fresh worktree, symlink them from the main checkout. It also stops the commit when a staged package's installed Prettier differs from its `package-lock.json` (typically a main checkout pulled without `npm install`); run `npm install` in the directory the hint names. If it fails, fix the cause; do not commit with `--no-verify` unless the user asks.
 
 ## Testing Requirements
 
@@ -121,9 +135,23 @@ Before committing code, you MUST verify:
 - UI text, error messages — Russian
 - Respond to the user in Russian
 
+## MANDATORY: Draft PR at Task Start
+
+Every task that gets its own branch or worktree opens a draft PR right away, before any real work, so the work and the Claude Code session behind it can always be found again:
+
+```bash
+node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"]
+```
+
+- Run it right after `EnterWorktree` / creating the branch. For `/speckit.specify` and `/auto-feature` — right after the `NNN-name` feature branch is created. No commits needed: if the branch has none on top of `main`, the script adds an empty start commit (same tree, index and working tree untouched), pushes over HTTPS and opens the draft.
+- The PR body gets a "Сессии Claude Code" section: local session id, `cd <launch dir> && claude --resume <id>` (sessions are listed per launch directory, so a worktree session is invisible from the repo root), web link. Keep that section when rewriting the PR description at the end.
+- Continuing a task in another session (or after a resume): run the script again — it comments the new session on the existing PR, or does nothing if the session is already recorded.
+- Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
+- Skip only for read-only tasks that create no branch.
+
 ## Changelog
 
-Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database.
+Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`, `/commit-commands:commit-push-pr`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database. A PreToolUse hook (`.claude/hooks/check-changelog-before-pr.sh`) denies `gh pr create` / `gh pr ready` until CHANGELOG.md is in the branch diff; the start-of-task draft PR from `scripts/start-task-pr.mjs` is not gated.
 
 ## Slash Commands
 
@@ -141,6 +169,15 @@ Before creating a PR (via `/commit-commands:commit-push-pr` or `gh pr create`), 
 - PostgreSQL via Prisma ORM (новая таблица `password_reset_tokens`) (028-forgot-password)
 - TypeScript 5.x (strict) — фронт и бек, Node.js 20 (029-student-cabinet)
 - PostgreSQL через Prisma ORM. Две новые таблицы (`student_users`, `student_invitations`) + одно новое поле в `students` (`studentUserId`). (029-student-cabinet)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, styled-components (frontend); (031-max-messenger-trial-lessons)
+- PostgreSQL via Prisma ORM — расширение enum `ContactMethod`, (031-max-messenger-trial-lessons)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, Material UI (styled-components API), (032-lesson-notes-in-card)
+- N/A — без изменений БД: поле `notes` уже есть в модели урока (032-lesson-notes-in-card)
+- PostgreSQL через Prisma. Одна новая колонка: (033-commission-tracking)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, Material UI (styled API) — frontend; Express, Prisma — backend. Новых зависимостей нет (034-tax-exempt-lessons)
+- PostgreSQL через Prisma. Одна новая колонка `lessons."isTaxExempt" BOOLEAN NOT NULL DEFAULT false` (034-tax-exempt-lessons)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, effector-react, Material UI (styled API), axios — frontend; Express, Prisma — backend. Новых зависимостей нет (035-income-history)
+- PostgreSQL через Prisma. Одна новая колонка `lessons."receivedAmount" DECIMAL(10,2) NULL` + бэкфилл в миграции; новых таблиц и индексов нет (035-income-history)
 - TypeScript 5.x (strict), Node.js 20 + Frontend — React, Effector, Material UI, styled-components, browser WebRTC APIs (`RTCPeerConnection`, `navigator.mediaDevices.getUserMedia`/`getDisplayMedia`), patronum (timers). Backend — Express, Prisma, `ws` (existing WebSocketManager). **No new runtime npm dependencies** (WebRTC is a browser primitive; STUN/TURN are infra, configured via env). coturn is an **operational/infra** dependency, not an npm package. (030-webrtc-video-calls)
 - PostgreSQL via Prisma ORM. One new table `call_records` (+ migration). Signaling messages are ephemeral (never persisted). (030-webrtc-video-calls)
 

@@ -32,7 +32,8 @@ export const ForgotPasswordForm: FC = () => {
           Восстановление пароля
         </Styled.TitleTypography>
         <Typography variant={isMobile ? "body2" : "body1"} color="text.secondary">
-          Введите email, на который зарегистрирован аккаунт. Мы отправим письмо со ссылкой для сброса пароля.
+          Введите email, на который зарегистрирован аккаунт. Мы отправим письмо со ссылкой для
+          сброса пароля.
         </Typography>
       </Styled.HeaderBox>
 

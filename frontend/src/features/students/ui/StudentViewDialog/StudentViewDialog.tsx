@@ -27,7 +27,7 @@ import { StudentNotes } from "./StudentNotes";
 import * as studentViewDialogModel from "./StudentViewDialog.model";
 import * as Styled from "./StudentViewDialog.styled";
 import { InvitationManager } from "../../../tutorStudentInvitation";
-import { CallButton, callModel } from "../../../videoCall";
+import { CallButton } from "../../../videoCall";
 import { studentsModel, studentsArchiveModel } from "../../models";
 
 type StudentViewDialogProps = {
@@ -46,15 +46,10 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
     deleteFromViewConfirmed: studentsModel.deleteFromViewConfirmed,
     archiveRequested: studentsArchiveModel.archiveRequested,
     unarchiveRequested: studentsArchiveModel.unarchiveRequested,
-    callStarted: callModel.callStarted,
+    callRequested: studentViewDialogModel.callRequested,
   });
 
   if (!student) return null;
-
-  const handleCall = () => {
-    actions.callStarted({ studentId: student.id, peerName: student.name });
-    actions.viewDialogClosed();
-  };
 
   const handleDelete = () => {
     studentViewDialogModel.deleteDialogOpened();
@@ -107,7 +102,7 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
         <Styled.ActionsContainer $isMobile={isMobile}>
           <Styled.ActionsLeft>
             {student.studentUser && !student.archived && (
-              <CallButton fullWidth={isMobile} onClick={handleCall} />
+              <CallButton fullWidth={isMobile} onClick={() => actions.callRequested(student)} />
             )}
             {student.archived ? (
               <Button

@@ -15,20 +15,13 @@ export const assertStudentAuthConfigured = (): void => {
   getStudentJwtSecret();
 };
 
-export const generateStudentToken = (
-  payload: StudentJwtPayload
-): string => {
+export const generateStudentToken = (payload: StudentJwtPayload): string => {
   return jwt.sign(payload, getStudentJwtSecret(), { expiresIn: "7d" });
 };
 
-export const verifyStudentToken = (
-  token: string
-): StudentJwtPayload | null => {
+export const verifyStudentToken = (token: string): StudentJwtPayload | null => {
   try {
-    const payload = jwt.verify(
-      token,
-      getStudentJwtSecret()
-    ) as StudentJwtPayload;
+    const payload = jwt.verify(token, getStudentJwtSecret()) as StudentJwtPayload;
     if (!payload.isStudent) return null;
     return payload;
   } catch {

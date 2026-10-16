@@ -1,13 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect } from "vitest";
 
 import type { Statistics } from "@shared";
 
 import { FinancialStatistics } from "../FinancialStatistics";
 
-const createStatistics = (
-  overrides: Partial<Statistics> = {},
-): Statistics => ({
+const createStatistics = (overrides: Partial<Statistics> = {}): Statistics => ({
   completedLessons: 10,
   cancelledLessons: 1,
   upcomingLessons: 3,
@@ -25,6 +24,7 @@ const createStatistics = (
   paymentsInRangeCount: 4,
   trialLessonsCount: 1,
   taxAmount: 3000,
+  taxExemptIncome: 0,
   taxBreakdown: [{ rate: 6, earnings: 50000, tax: 3000 }],
   ...overrides,
 });
@@ -33,9 +33,12 @@ describe("FinancialStatistics", () => {
   it("renders tax card with single rate label", () => {
     render(<FinancialStatistics statistics={createStatistics()} />);
     expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
-    expect(
-      screen.getByText("Сумма налога по оплатам за период"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Сумма налога по оплатам за период")).toBeInTheDocument();
+  });
+
+  it("marks the tax amount with the test id used by e2e", () => {
+    render(<FinancialStatistics statistics={createStatistics()} />);
+    expect(screen.getByTestId("tax-amount")).toHaveTextContent(/3\s*000/);
   });
 
   it("renders neutral tax label and info button when multiple rates apply", () => {
@@ -48,13 +51,11 @@ describe("FinancialStatistics", () => {
             { rate: 6, earnings: 10000, tax: 600 },
           ],
         })}
-      />,
+      />
     );
 
     expect(screen.getByText("Налоги")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /подробности расчёта налога/i })).toBeInTheDocument();
   });
 
   it("hides tax card entirely when taxAmount is null", () => {
@@ -64,7 +65,7 @@ describe("FinancialStatistics", () => {
           taxAmount: null,
           taxBreakdown: null,
         })}
-      />,
+      />
     );
     expect(screen.queryByText(/налоги/i)).toBeNull();
   });
@@ -74,18 +75,14 @@ describe("FinancialStatistics", () => {
       <FinancialStatistics
         statistics={createStatistics({
           taxAmount: 0,
-          taxBreakdown: [
-            { rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true },
-          ],
+          taxBreakdown: [{ rate: 0, earnings: 5000, tax: 0, isOutsidePeriods: true }],
         })}
-      />,
+      />
     );
 
     expect(screen.getByText("Налоги")).toBeInTheDocument();
     expect(screen.queryByText("Налоги (0%)")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: /подробности расчёта налога/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /подробности расчёта налога/i })).toBeInTheDocument();
   });
 
   it("renders other financial cards regardless of tax state", () => {
@@ -98,5 +95,50 @@ describe("FinancialStatistics", () => {
     expect(screen.getByText("Потенциальный доход за период")).toBeInTheDocument();
     expect(screen.getByText("Задолженность")).toBeInTheDocument();
     expect(screen.getByText("Пробные уроки")).toBeInTheDocument();
+  });
+
+  it("shows the info icon with the tax-exempt line for a single rate", async () => {
+    const user = userEvent.setup();
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: 60,
+          taxBreakdown: [{ rate: 6, earnings: 1000, tax: 60 }],
+          taxExemptIncome: 2000,
+        })}
+      />
+    );
+
+    expect(screen.getByText("Налоги (6%)")).toBeInTheDocument();
+    await user.hover(screen.getByRole("button", { name: /подробности расчёта налога/i }));
+    expect(await screen.findByText(/^Не облагается налогом: 2\s000\s₽$/)).toBeInTheDocument();
+  });
+
+  it("hides the info icon for a single rate without tax-exempt payments", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxBreakdown: [{ rate: 6, earnings: 50000, tax: 3000 }],
+          taxExemptIncome: 0,
+        })}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /подробности расчёта налога/i })).toBeNull();
+  });
+
+  it("mentions no tax-exempt income when tax accounting is disabled", () => {
+    render(
+      <FinancialStatistics
+        statistics={createStatistics({
+          taxAmount: null,
+          taxBreakdown: null,
+          taxExemptIncome: null,
+        })}
+      />
+    );
+
+    expect(screen.queryByText(/Не облагается налогом/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /подробности расчёта налога/i })).toBeNull();
   });
 });

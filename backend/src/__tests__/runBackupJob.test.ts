@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 jest.mock("child_process", () => ({
   exec: (
@@ -15,10 +15,16 @@ jest.mock("child_process", () => ({
 }));
 
 import { runBackupJob } from "../services/backup";
+import { acquireGlobalTestLock, GLOBAL_TEST_LOCK, GLOBAL_TEST_LOCK_TIMEOUT_MS } from "./helpers";
 
 describe("runBackupJob error logging", () => {
   let consoleErrorSpy: jest.SpyInstance;
   let consoleLogSpy: jest.SpyInstance;
+  let releaseBackupSettingsLock: () => Promise<void>;
+
+  beforeAll(async () => {
+    releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+  }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     await prisma.backupSettings.deleteMany();
@@ -41,6 +47,7 @@ describe("runBackupJob error logging", () => {
 
   afterAll(async () => {
     await prisma.backupSettings.deleteMany();
+    await releaseBackupSettingsLock();
     await prisma.$disconnect();
   });
 

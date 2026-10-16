@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Prisma } from "@prisma/client";
 import type { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const getReminderSettings = async (req: AuthRequest, res: Response) => {
   try {
@@ -24,10 +24,7 @@ export const getReminderSettings = async (req: AuthRequest, res: Response) => {
         },
       });
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         settings = await prisma.reminderSettings.findUniqueOrThrow({
           where: { userId: userId! },
         });

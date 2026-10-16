@@ -4,12 +4,12 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cron from "node-cron";
 import { createServer } from "http";
-import prisma from "./lib/prisma";
+import { prisma } from "./lib/prisma";
 import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
-import { processScheduledReminders, runBackupJob } from "./services";
+import { processScheduledReminders, reconcileReceivedAmounts, runBackupJob } from "./services";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
 if (process.env.NODE_ENV !== "test") {
@@ -25,7 +25,7 @@ import { pushRouter } from "./routes/push";
 import { reminderSettingsRouter } from "./routes/reminderSettings";
 import { adminRouter } from "./routes/admin";
 import { taxPeriodsRouter } from "./routes/taxPeriods";
-import { testRouter } from "./routes/__test__";
+import { testRouter } from "./routes/testSupport";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";
@@ -44,7 +44,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  }),
+  })
 );
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
@@ -85,21 +85,35 @@ app.get("/health", async (req, res) => {
 });
 
 // Error handling
+// Body-parser errors carry their own status (400 for a malformed body, 413 for one over
+// the limit) — answering 500 to those turns a client mistake into a server alert.
 app.use(
   (
-    err: Error,
+    err: Error & { status?: number; statusCode?: number },
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction,
+    next: express.NextFunction
   ) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Something went wrong!" });
-  },
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    const status = err.statusCode ?? err.status ?? 500;
+
+    if (status >= 500) {
+      console.error(err.stack);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+
+    return res
+      .status(status)
+      .json({ error: status === 413 ? "Тело запроса слишком большое" : "Некорректный запрос" });
+  }
 );
 
 // 404 handler
 app.use("*", (req, res) => {
-  res.status(404).json({ error: "Route not found" });
+  res.status(404).json({ error: "Маршрут не найден" });
 });
 
 const PORT = process.env.PORT || 3001;
@@ -118,14 +132,20 @@ if (shouldStartServer) {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
-    console.log(
-      `Student WebSocket server available at ws://localhost:${PORT}/ws/student`,
-    );
+    console.log(`Student WebSocket server available at ws://localhost:${PORT}/ws/student`);
 
     if (!shouldRunCrons) {
       console.log("Cron jobs disabled (test mode)");
       return;
     }
+
+    reconcileReceivedAmounts()
+      .then(({ filled, cleared }) => {
+        if (filled > 0 || cleared > 0) {
+          console.log(`Reconciled received amounts: filled ${filled}, cleared ${cleared}`);
+        }
+      })
+      .catch((error) => console.error("Error reconciling received amounts:", error));
 
     const CRON_TIMEZONE = "Europe/Moscow";
 
@@ -139,7 +159,7 @@ if (shouldStartServer) {
           console.error("Error in recurring lessons cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -151,7 +171,7 @@ if (shouldStartServer) {
           console.error("Error in lesson status update cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -163,7 +183,7 @@ if (shouldStartServer) {
           console.error("Error in reminder processing cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     cron.schedule(
@@ -175,7 +195,7 @@ if (shouldStartServer) {
           console.error("Error in database backup cron job:", error);
         }
       },
-      { timezone: CRON_TIMEZONE },
+      { timezone: CRON_TIMEZONE }
     );
 
     console.log(`Cron jobs scheduled (timezone: ${CRON_TIMEZONE}):`);

@@ -33,9 +33,7 @@ export const StudentCabinetLayout: FC = () => {
           >
             <MenuIcon />
           </Styled.MenuButton>
-          <Styled.HeaderTitle variant="h6">
-            Кабинет ученика
-          </Styled.HeaderTitle>
+          <Styled.HeaderTitle variant="h6">Кабинет ученика</Styled.HeaderTitle>
           {session?.tutor && (
             <Styled.HeaderCallButton>
               <CallButton

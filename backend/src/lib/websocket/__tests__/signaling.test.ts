@@ -1,14 +1,10 @@
 import { faker } from "@faker-js/faker";
 
-import prisma from "../../prisma";
+import { prisma } from "../../prisma";
 import * as callSignalingService from "../../../services/callSignaling";
 import { callRegistry } from "../../../services/callSignaling";
 import type { CallerKindValue, CallSignalingOutbound } from "../../../types";
-import {
-  handleCallSignal,
-  onRingTimeout,
-  terminateActiveCallForParticipant,
-} from "../signaling";
+import { handleCallSignal, onRingTimeout, terminateActiveCallForParticipant } from "../signaling";
 
 const onlineUsers = new Set<string>();
 const onlineStudents = new Set<string>();
@@ -35,16 +31,11 @@ describe("handleCallSignal routing", () => {
   let otherTutorId: string;
   let sent: Captured[];
 
-  const send = (
-    kind: CallerKindValue,
-    id: string,
-    message: CallSignalingOutbound
-  ): void => {
+  const send = (kind: CallerKindValue, id: string, message: CallSignalingOutbound): void => {
     sent.push({ kind, id, message });
   };
 
-  const messagesOfType = (type: string): Captured[] =>
-    sent.filter((c) => c.message.type === type);
+  const messagesOfType = (type: string): Captured[] => sent.filter((c) => c.message.type === type);
 
   beforeAll(async () => {
     const tutor = await prisma.user.create({
@@ -221,12 +212,7 @@ describe("handleCallSignal routing", () => {
   it("should reject signaling for a callId the sender is not part of", async () => {
     const callId = await inviteAndGetCallId();
     sent = [];
-    await handleCallSignal(
-      "tutor",
-      otherTutorId,
-      { type: "webrtc_offer", callId, sdp: {} },
-      send
-    );
+    await handleCallSignal("tutor", otherTutorId, { type: "webrtc_offer", callId, sdp: {} }, send);
     expect(messagesOfType("call_error")).toHaveLength(1);
     expect(messagesOfType("webrtc_offer")).toHaveLength(0);
   });
@@ -250,9 +236,7 @@ describe("handleCallSignal routing", () => {
     const canceled = messagesOfType("call_canceled");
     expect(canceled).toHaveLength(1);
     expect(canceled[0].id).toBe(studentUserId);
-    expect(
-      callRegistry.findActiveCallForParticipant("tutor", tutorId)
-    ).toBeUndefined();
+    expect(callRegistry.findActiveCallForParticipant("tutor", tutorId)).toBeUndefined();
   });
 
   it("treats a caller drop during ringing as a cancel and closes the callee modal", async () => {
@@ -293,12 +277,7 @@ describe("handleCallSignal routing", () => {
   it("ignores malformed signaling without relaying or sending call_error", async () => {
     const callId = await inviteAndGetCallId();
 
-    await handleCallSignal(
-      "tutor",
-      tutorId,
-      { type: "webrtc_offer", callId },
-      send
-    );
+    await handleCallSignal("tutor", tutorId, { type: "webrtc_offer", callId }, send);
     expect(messagesOfType("webrtc_offer")).toHaveLength(0);
 
     await handleCallSignal("student", studentUserId, { type: "ping" }, send);
@@ -317,9 +296,7 @@ describe("handleCallSignal routing", () => {
   });
 
   const resolvePair = async () => {
-    const { resolvePairForTutor } = await import(
-      "../../../services/callSignaling"
-    );
+    const { resolvePairForTutor } = await import("../../../services/callSignaling");
     return resolvePairForTutor(tutorId, studentId);
   };
 

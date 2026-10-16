@@ -26,9 +26,7 @@ export const ActiveCallScreen: FC = () => {
       <Styled.Header>
         <Styled.HeaderInfo>
           <Styled.PeerName variant="h6">{peerName}</Styled.PeerName>
-          <Styled.CallTimer variant="body2">
-            {formatCallDuration(durationSeconds)}
-          </Styled.CallTimer>
+          <Styled.CallTimer variant="body2">{formatCallDuration(durationSeconds)}</Styled.CallTimer>
         </Styled.HeaderInfo>
       </Styled.Header>
 

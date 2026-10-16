@@ -1,10 +1,6 @@
-import { faker } from "@faker-js/faker";
-
-import prisma from "../../lib/prisma";
-import {
-  getStudentLessonsByWeek,
-  getStudentUserIdByLessonId,
-} from "../studentCabinet";
+import { prisma } from "../../lib/prisma";
+import { getStudentLessonsByWeek, getStudentUserIdByLessonId } from "../studentCabinet";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -27,7 +23,7 @@ describe("studentCabinet service", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Учитель",
         isEmailVerified: true,
@@ -47,7 +43,7 @@ describe("studentCabinet service", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Ученик",
         studentId,
@@ -73,9 +69,7 @@ describe("studentCabinet service", () => {
       data: {
         subject: "PHYSICS",
         startTime: new Date(refMonday.getTime() - 7 * 24 * 60 * 60 * 1000),
-        endTime: new Date(
-          refMonday.getTime() - 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000
-        ),
+        endTime: new Date(refMonday.getTime() - 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
         tutorId,
         studentId,
         status: "COMPLETED",
@@ -97,9 +91,7 @@ describe("studentCabinet service", () => {
 
   afterAll(async () => {
     await prisma.lesson.deleteMany({ where: { tutorId } }).catch(() => undefined);
-    await prisma.studentUser
-      .deleteMany({ where: { studentId } })
-      .catch(() => undefined);
+    await prisma.studentUser.deleteMany({ where: { studentId } }).catch(() => undefined);
     await prisma.student
       .deleteMany({ where: { id: { in: [studentId, otherStudentId] } } })
       .catch(() => undefined);
@@ -109,10 +101,7 @@ describe("studentCabinet service", () => {
 
   describe("getStudentLessonsByWeek", () => {
     it("returns only this student's lessons for the requested week", async () => {
-      const result = await getStudentLessonsByWeek(
-        studentUserId,
-        refMondayStart.toISOString()
-      );
+      const result = await getStudentLessonsByWeek(studentUserId, refMondayStart.toISOString());
       expect(result.lessons).toHaveLength(1);
       expect(result.lessons[0].subject).toBe("MATHEMATICS");
       expect(result.lessons[0].status).toBe("SCHEDULED");
@@ -124,17 +113,14 @@ describe("studentCabinet service", () => {
     it("returns empty array when studentUser is detached from a Student", async () => {
       const orphan = await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Без карточки",
           studentId: null,
         },
       });
 
-      const result = await getStudentLessonsByWeek(
-        orphan.id,
-        refMondayStart.toISOString()
-      );
+      const result = await getStudentLessonsByWeek(orphan.id, refMondayStart.toISOString());
       expect(result.lessons).toEqual([]);
 
       await prisma.studentUser.delete({ where: { id: orphan.id } });

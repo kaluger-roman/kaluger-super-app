@@ -1,2 +1,2 @@
 export { LessonForm } from "./LessonForm";
-export type { LessonFormProps } from "./types";
+export type { LessonFormProps } from "./LessonForm.types";

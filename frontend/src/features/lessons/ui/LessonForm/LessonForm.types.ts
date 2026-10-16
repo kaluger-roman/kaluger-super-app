@@ -1,0 +1,36 @@
+import type { ContactMethod, Lesson } from "@shared";
+
+export type LessonFormData = {
+  subject: string;
+  lessonType: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  price: string;
+  studentId: string;
+  withoutStudent: boolean;
+  prospectName: string;
+  prospectPhone: string;
+  prospectContactMethod: ContactMethod | "";
+  homework: string;
+  notes: string;
+  isRecurring: boolean;
+  isPaid: boolean;
+  isHomeworkSentByTeacher: boolean;
+  isTaxExempt: boolean;
+  paymentDate?: string;
+  receivedAmount: string;
+};
+
+export type LessonFormProps = {
+  open: boolean;
+  onClose: () => void;
+  lesson?: Lesson;
+};
+
+export type ConfirmDialogData = {
+  open: boolean;
+  title: string;
+  message: string;
+  action: () => void;
+};

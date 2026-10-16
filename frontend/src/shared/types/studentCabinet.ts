@@ -51,8 +51,7 @@ export type InvitationStatusResponse =
   | { status: "registered"; registeredAt: string; studentEmail: string };
 
 export type ValidateInvitationResponse =
-  | { valid: true; studentName: string; tutorName: string }
-  | { valid: false };
+  { valid: true; studentName: string; tutorName: string } | { valid: false };
 
 export type StudentLessonWsEvent =
   | { type: "lesson_created"; lesson: StudentVisibleLesson }

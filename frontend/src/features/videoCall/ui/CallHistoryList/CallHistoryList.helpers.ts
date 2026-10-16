@@ -10,5 +10,4 @@ const STATUS_CHIP_COLOR: Record<CallStatus, ChipColor> = {
   failed: "error",
 };
 
-export const getStatusChipColor = (status: CallStatus): ChipColor =>
-  STATUS_CHIP_COLOR[status];
+export const getStatusChipColor = (status: CallStatus): ChipColor => STATUS_CHIP_COLOR[status];

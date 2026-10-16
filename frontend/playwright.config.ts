@@ -1,14 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.PORT ?? "3000"}`;
+
 export default defineConfig({
   testDir: "./e2e",
+  // e2e/**/*.test.ts are vitest unit tests of the e2e helpers.
+  testMatch: "**/*.spec.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -16,13 +20,13 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3000",
+        baseURL,
       },
     },
   ],
   webServer: {
     command: "npm start",
-    url: "http://localhost:3000",
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

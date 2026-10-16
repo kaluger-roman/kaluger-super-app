@@ -4,20 +4,25 @@ import type { MouseEvent } from "react";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { Typography, Chip, IconButton } from "@mui/material";
 
+import { useIsTaxEnabled } from "@entities";
 import {
   SUBJECT_LABELS,
   LESSON_TYPE_LABELS,
   formatTimeFromString,
+  getLessonDisplayName,
   getStatusColor,
   getStatusLabel,
   formatDate,
   RecurringLessonBadge,
-  StudentName,
+  LessonStudentName,
+  CommissionBadge,
+  TaxExemptBadge,
 } from "@shared";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonCard.styled";
 import { LessonStatusIcons } from "../../../LessonStatusIcons";
+import { LessonNotes, hasVisibleNotes } from "../LessonNotes";
 
 type LessonCardProps = {
   lesson: Lesson;
@@ -26,6 +31,9 @@ type LessonCardProps = {
 };
 
 export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuClick }) => {
+  const isTaxEnabled = useIsTaxEnabled();
+  const isTaxExempt = isTaxEnabled && Boolean(lesson.isTaxExempt);
+
   const handleCardClick = useCallback(() => {
     onCardClick?.(lesson);
   }, [onCardClick, lesson]);
@@ -38,19 +46,18 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
   );
 
   return (
-    <Styled.StyledCard
-      variant="outlined"
-      onClick={onCardClick ? handleCardClick : undefined}
-    >
+    <Styled.StyledCard variant="outlined" onClick={onCardClick ? handleCardClick : undefined}>
       <Styled.StyledCardContent>
         <Styled.HeaderRow>
           <Styled.ContentColumn>
             <Styled.TitleRow>
-              <StudentName
-                student={lesson.student}
+              <LessonStudentName
+                lesson={lesson}
                 variant="h6"
                 component={
-                  <Styled.StudentName variant="h6">{lesson.student?.name}</Styled.StudentName>
+                  <Styled.StudentName variant="h6">
+                    {getLessonDisplayName(lesson)}
+                  </Styled.StudentName>
                 }
               />
               <Chip
@@ -65,9 +72,13 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
               <Typography variant="body2" color="text.secondary">
                 ⏰ {formatTimeFromString(lesson.startTime)} - {formatTimeFromString(lesson.endTime)}
               </Typography>
-              <Styled.PriceText variant="body2">
-                💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
-              </Styled.PriceText>
+              <Styled.PriceGroup>
+                <Styled.PriceText variant="body2">
+                  💰 {lesson.price ? `${lesson.price} ₽` : "Бесплатно"}
+                </Styled.PriceText>
+                <CommissionBadge credit={lesson.commissionCredit} />
+                <TaxExemptBadge isTaxExempt={isTaxExempt} />
+              </Styled.PriceGroup>
             </Styled.InfoRow>
 
             {lesson.isPaid && lesson.paymentDate && (
@@ -83,14 +94,12 @@ export const LessonCard = memo<LessonCardProps>(({ lesson, onCardClick, onMenuCl
 
               <LessonStatusIcons lesson={lesson} />
             </Styled.BottomRow>
+
+            {hasVisibleNotes(lesson.notes) && <LessonNotes notes={lesson.notes} />}
           </Styled.ContentColumn>
 
           {onMenuClick && (
-            <IconButton
-              size="small"
-              aria-label="Меню урока"
-              onClick={handleMenuClick}
-            >
+            <IconButton size="small" aria-label="Меню урока" onClick={handleMenuClick}>
               <MoreVertIcon />
             </IconButton>
           )}

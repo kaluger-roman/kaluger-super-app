@@ -9,5 +9,6 @@ export const getTaxLabel = (breakdown: TaxBreakdownEntry[]): string => {
 
 export const shouldShowTaxInfoIcon = (
   breakdown: TaxBreakdownEntry[],
+  taxExemptIncome = 0
 ): boolean =>
-  breakdown.length > 1 || breakdown.some((entry) => entry.isOutsidePeriods);
+  breakdown.length > 1 || breakdown.some((entry) => entry.isOutsidePeriods) || taxExemptIncome > 0;

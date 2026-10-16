@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("get students integration tests", () => {
   let authToken: string;
@@ -11,7 +12,7 @@ describe("get students integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -135,14 +136,9 @@ describe("get students integration tests", () => {
 
   it("handles database errors in getStudents", async () => {
     const originalFindMany = prisma.student.findMany;
-    prisma.student.findMany = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.student.findMany = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
-    await request(app)
-      .get("/api/students")
-      .set("Authorization", `Bearer ${authToken}`)
-      .expect(500);
+    await request(app).get("/api/students").set("Authorization", `Bearer ${authToken}`).expect(500);
 
     prisma.student.findMany = originalFindMany;
   });
@@ -158,9 +154,7 @@ describe("get students integration tests", () => {
     });
 
     const originalFindFirst = prisma.student.findFirst;
-    prisma.student.findFirst = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.student.findFirst = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get(`/api/students/${student.id}`)

@@ -5,7 +5,7 @@ import { Navigate } from "react-router-dom";
 
 import { verificationModel } from "@entities";
 
-import type { ProtectedRouteProps } from "../../types";
+import type { ProtectedRouteProps } from "../../app.types";
 
 export const ProtectedRoute: FC<ProtectedRouteProps> = ({ element, isLoggedIn }) => {
   const verificationEmail = useUnit(verificationModel.$verificationEmail);

@@ -1,2 +1,2 @@
-export * as adminAuthModel from "./admin-auth.model";
-export * as adminDataModel from "./admin-data.model";
+export * as adminAuthModel from "./adminAuth.model";
+export * as adminDataModel from "./adminData.model";

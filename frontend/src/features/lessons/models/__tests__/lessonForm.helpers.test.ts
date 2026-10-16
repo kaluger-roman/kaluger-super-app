@@ -1,0 +1,1038 @@
+import { describe, it, expect } from "vitest";
+
+import type { Lesson, Student } from "@shared";
+
+import type { LessonFormData } from "../../ui/LessonForm/LessonForm.types";
+import {
+  applyHourlyRateAutofill,
+  applyWithoutStudentRules,
+  canSubmitLessonForm,
+  getFormReceivedAmountError,
+  prepareFormData,
+  validateFormData,
+  prepareSubmitData,
+  hasTimeChanged,
+  hasPriceChanged,
+  shouldConfirmTimeChange,
+  shouldConfirmPriceChange,
+  shouldUpdateDirectly,
+  clearFieldError,
+  updateFormField,
+  updateFormDate,
+} from "../lessonForm.helpers";
+
+const createMockLesson = (overrides: Partial<Lesson> = {}): Lesson => ({
+  id: "lesson-1",
+  subject: "PHYSICS",
+  lessonType: "EGE",
+  startTime: "2026-01-15T10:00:00.000Z",
+  endTime: "2026-01-15T11:00:00.000Z",
+  status: "SCHEDULED",
+  isPaid: false,
+  studentId: "student-1",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  ...overrides,
+});
+
+describe("prepareFormData", () => {
+  it("should prepare form data from lesson", () => {
+    const lesson = createMockLesson({
+      description: "Test description",
+      price: 1500,
+      homework: "Do exercises",
+      notes: "Important notes",
+      isRecurring: true,
+      isPaid: true,
+      isHomeworkSentByTeacher: true,
+    });
+
+    const result = prepareFormData(lesson);
+
+    expect(result.subject).toBe("PHYSICS");
+    expect(result.lessonType).toBe("EGE");
+    expect(result.description).toBe("Test description");
+    expect(result.price).toBe("1500");
+    expect(result.homework).toBe("Do exercises");
+    expect(result.notes).toBe("Important notes");
+    expect(result.isRecurring).toBe(true);
+    expect(result.isPaid).toBe(true);
+    expect(result.isHomeworkSentByTeacher).toBe(true);
+    expect(result.studentId).toBe("student-1");
+  });
+
+  it("should handle lesson without optional fields", () => {
+    const lesson = createMockLesson();
+
+    const result = prepareFormData(lesson);
+
+    expect(result.description).toBe("");
+    expect(result.price).toBe("");
+    expect(result.homework).toBe("");
+    expect(result.notes).toBe("");
+    expect(result.isRecurring).toBe(false);
+    expect(result.isPaid).toBe(false);
+    expect(result.isHomeworkSentByTeacher).toBe(false);
+  });
+
+  it("should create default form data when no lesson provided", () => {
+    const result = prepareFormData();
+
+    expect(result.subject).toBe("PHYSICS");
+    expect(result.lessonType).toBe("EGE");
+    expect(result.description).toBe("");
+    expect(result.price).toBe("");
+    expect(result.studentId).toBe("");
+    expect(result.homework).toBe("");
+    expect(result.notes).toBe("");
+    expect(result.isRecurring).toBe(false);
+    expect(result.isPaid).toBe(false);
+    expect(result.isHomeworkSentByTeacher).toBe(false);
+    expect(result.startTime).toBeInstanceOf(Date);
+    expect(result.endTime).toBeInstanceOf(Date);
+  });
+
+  it("should set endTime 1 hour after startTime for new lesson", () => {
+    const result = prepareFormData();
+
+    const duration = result.endTime.getTime() - result.startTime.getTime();
+    expect(duration).toBe(60 * 60 * 1000); // 1 hour in milliseconds
+  });
+
+  it("should take isTaxExempt from the lesson", () => {
+    expect(prepareFormData(createMockLesson({ isTaxExempt: true })).isTaxExempt).toBe(true);
+  });
+
+  it("should default isTaxExempt to false for a lesson without the field and a new lesson", () => {
+    expect(prepareFormData(createMockLesson()).isTaxExempt).toBe(false);
+    expect(prepareFormData().isTaxExempt).toBe(false);
+  });
+});
+
+describe("validateFormData", () => {
+  const createValidFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "1500",
+    studentId: "student-1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
+    receivedAmount: "",
+    ...overrides,
+  });
+
+  it("should validate correct form data", () => {
+    const formData = createValidFormData();
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(true);
+    expect(Object.keys(result.errors)).toHaveLength(0);
+  });
+
+  it("should return error when studentId is missing", () => {
+    const formData = createValidFormData({ studentId: "" });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.studentId).toBe("Выберите ученика");
+  });
+
+  it("should return error when endTime is before startTime", () => {
+    const formData = createValidFormData({
+      startTime: new Date("2026-01-15T11:00:00.000Z"),
+      endTime: new Date("2026-01-15T10:00:00.000Z"),
+    });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.endTime).toBe("Время окончания должно быть позже времени начала");
+  });
+
+  it("should return error when endTime equals startTime", () => {
+    const formData = createValidFormData({
+      startTime: new Date("2026-01-15T10:00:00.000Z"),
+      endTime: new Date("2026-01-15T10:00:00.000Z"),
+    });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.endTime).toBe("Время окончания должно быть позже времени начала");
+  });
+
+  it("should return error when price is negative", () => {
+    const formData = createValidFormData({ price: "-100" });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.price).toBe("Цена должна быть положительным числом");
+  });
+
+  it("should return error when price is not a number", () => {
+    const formData = createValidFormData({ price: "abc" });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.price).toBe("Цена должна быть положительным числом");
+  });
+
+  it("should allow empty price", () => {
+    const formData = createValidFormData({ price: "" });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(true);
+  });
+
+  it("should return multiple errors", () => {
+    const formData = createValidFormData({
+      studentId: "",
+      endTime: new Date("2026-01-15T09:00:00.000Z"),
+      price: "invalid",
+    });
+
+    const result = validateFormData(formData);
+
+    expect(result.isValid).toBe(false);
+    expect(Object.keys(result.errors)).toHaveLength(3);
+    expect(result.errors.studentId).toBeDefined();
+    expect(result.errors.endTime).toBeDefined();
+    expect(result.errors.price).toBeDefined();
+  });
+});
+
+describe("prepareSubmitData", () => {
+  const createValidFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "Test lesson",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "1500",
+    studentId: "student-1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "Do exercises",
+    notes: "Some notes",
+    isRecurring: true,
+    isPaid: true,
+    isHomeworkSentByTeacher: true,
+    isTaxExempt: false,
+    receivedAmount: "",
+    ...overrides,
+  });
+
+  it("should prepare submit data with all fields", () => {
+    const formData = createValidFormData();
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.subject).toBe("PHYSICS");
+    expect(result.lessonType).toBe("EGE");
+    expect(result.description).toBe("Test lesson");
+    expect(result.price).toBe(1500);
+    expect(result.homework).toBe("Do exercises");
+    expect(result.notes).toBe("Some notes");
+    expect(result.isRecurring).toBe(true);
+    expect(result.isPaid).toBe(true);
+    expect(result.isHomeworkSentByTeacher).toBe(true);
+    expect(result.studentId).toBe("student-1");
+    expect(typeof result.startTime).toBe("string");
+    expect(typeof result.endTime).toBe("string");
+  });
+
+  it("should convert empty text fields to null so the server actually clears them", () => {
+    const formData = createValidFormData({
+      description: "",
+      homework: "",
+      notes: "",
+      price: "",
+    });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
+    expect(result.price).toBeUndefined();
+  });
+
+  it("should convert whitespace-only text fields to null", () => {
+    const formData = createValidFormData({
+      description: "   ",
+      homework: "\n\t",
+      notes: "  \n  ",
+    });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.description).toBeNull();
+    expect(result.homework).toBeNull();
+    expect(result.notes).toBeNull();
+  });
+
+  it("should convert price string to number", () => {
+    const formData = createValidFormData({ price: "2000" });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.price).toBe(2000);
+  });
+
+  it("should handle isRecurring as undefined when false", () => {
+    const formData = createValidFormData({ isRecurring: false });
+
+    const result = prepareSubmitData(formData);
+
+    expect(result.isRecurring).toBeUndefined();
+  });
+
+  it.each([true, false])("should always send isTaxExempt as a boolean (%s)", (isTaxExempt) => {
+    const result = prepareSubmitData(createValidFormData({ isTaxExempt }));
+
+    expect(result).toHaveProperty("isTaxExempt", isTaxExempt);
+  });
+});
+
+describe("hasTimeChanged", () => {
+  it("should return true when start time changed", () => {
+    const lesson = createMockLesson({
+      startTime: "2026-01-15T10:00:00.000Z",
+      endTime: "2026-01-15T11:00:00.000Z",
+    });
+    const formData = prepareFormData(lesson);
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+    formData.endTime = new Date("2026-01-15T13:00:00.000Z");
+
+    const result = hasTimeChanged(lesson, formData);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true when end time changed", () => {
+    const lesson = createMockLesson({
+      startTime: "2026-01-15T10:00:00.000Z",
+      endTime: "2026-01-15T11:00:00.000Z",
+    });
+    const formData = prepareFormData(lesson);
+    formData.endTime = new Date("2026-01-15T12:00:00.000Z");
+
+    const result = hasTimeChanged(lesson, formData);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false when time not changed", () => {
+    const lesson = createMockLesson({
+      startTime: "2026-01-15T10:00:00.000Z",
+      endTime: "2026-01-15T11:00:00.000Z",
+    });
+    const formData = prepareFormData(lesson);
+
+    const result = hasTimeChanged(lesson, formData);
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("hasPriceChanged", () => {
+  it("should return true when price changed", () => {
+    const lesson = createMockLesson({ price: 1000 });
+    const formData = prepareFormData(lesson);
+    formData.price = "1500";
+
+    const result = hasPriceChanged(lesson, formData);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true when price changed from undefined to value", () => {
+    const lesson = createMockLesson({ price: undefined });
+    const formData = prepareFormData(lesson);
+    formData.price = "1500";
+
+    const result = hasPriceChanged(lesson, formData);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true when price changed to undefined", () => {
+    const lesson = createMockLesson({ price: 1000 });
+    const formData = prepareFormData(lesson);
+    formData.price = "";
+
+    const result = hasPriceChanged(lesson, formData);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false when price not changed", () => {
+    const lesson = createMockLesson({ price: 1500 });
+    const formData = prepareFormData(lesson);
+
+    const result = hasPriceChanged(lesson, formData);
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false when both prices are undefined", () => {
+    const lesson = createMockLesson({ price: undefined });
+    const formData = prepareFormData(lesson);
+    formData.price = "";
+
+    const result = hasPriceChanged(lesson, formData);
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("shouldConfirmTimeChange", () => {
+  it("should return true for recurring scheduled lesson with time change", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+      startTime: "2026-01-15T10:00:00.000Z",
+    });
+    const formData = prepareFormData(lesson);
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+    formData.endTime = new Date("2026-01-15T13:00:00.000Z");
+
+    const result = shouldConfirmTimeChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false for non-recurring lesson", () => {
+    const lesson = createMockLesson({
+      isRecurring: false,
+      status: "SCHEDULED",
+    });
+    const formData = prepareFormData(lesson);
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+
+    const result = shouldConfirmTimeChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false for completed lesson", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "COMPLETED",
+    });
+    const formData = prepareFormData(lesson);
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+
+    const result = shouldConfirmTimeChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false when no time change", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+    });
+    const formData = prepareFormData(lesson);
+
+    const result = shouldConfirmTimeChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false when no editing lesson", () => {
+    const formData = prepareFormData();
+
+    const result = shouldConfirmTimeChange({ formData, editingLesson: undefined });
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("shouldConfirmPriceChange", () => {
+  it("should return true for recurring scheduled lesson with price change only", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+      price: 1000,
+    });
+    const formData = prepareFormData(lesson);
+    formData.price = "1500";
+
+    const result = shouldConfirmPriceChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false when time also changed", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+      price: 1000,
+    });
+    const formData = prepareFormData(lesson);
+    formData.price = "1500";
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+
+    const result = shouldConfirmPriceChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false for non-recurring lesson", () => {
+    const lesson = createMockLesson({
+      isRecurring: false,
+      status: "SCHEDULED",
+      price: 1000,
+    });
+    const formData = prepareFormData(lesson);
+    formData.price = "1500";
+
+    const result = shouldConfirmPriceChange({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("shouldUpdateDirectly", () => {
+  it("should return true for non-recurring lesson", () => {
+    const lesson = createMockLesson({
+      isRecurring: false,
+      status: "SCHEDULED",
+    });
+    const formData = prepareFormData(lesson);
+
+    const result = shouldUpdateDirectly({ formData, editingLesson: lesson });
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true for completed lesson", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "COMPLETED",
+    });
+    const formData = prepareFormData(lesson);
+
+    const result = shouldUpdateDirectly({ formData, editingLesson: lesson });
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true for recurring scheduled lesson without changes", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+      price: 1000,
+    });
+    const formData = prepareFormData(lesson);
+
+    const result = shouldUpdateDirectly({ formData, editingLesson: lesson });
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false for recurring scheduled lesson with time change", () => {
+    const lesson = createMockLesson({
+      isRecurring: true,
+      status: "SCHEDULED",
+    });
+    const formData = prepareFormData(lesson);
+    formData.startTime = new Date("2026-01-15T12:00:00.000Z");
+
+    const result = shouldUpdateDirectly({ formData, editingLesson: lesson });
+
+    expect(result).toBe(false);
+  });
+
+  it("should return false when no editing lesson", () => {
+    const formData = prepareFormData();
+
+    const result = shouldUpdateDirectly({ formData, editingLesson: undefined });
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("clearFieldError", () => {
+  it("should remove field error", () => {
+    const errors = { studentId: "Error", price: "Another error" };
+
+    const result = clearFieldError(errors, "studentId");
+
+    expect(result.studentId).toBeUndefined();
+    expect(result.price).toBe("Another error");
+  });
+
+  it("should return same errors when field not found", () => {
+    const errors = { price: "Error" };
+
+    const result = clearFieldError(errors, "studentId");
+
+    expect(result).toEqual(errors);
+  });
+
+  it("should handle empty errors", () => {
+    const result = clearFieldError({}, "studentId");
+
+    expect(result).toEqual({});
+  });
+});
+
+describe("updateFormField", () => {
+  it("should update form field", () => {
+    const formData = prepareFormData();
+
+    const result = updateFormField(formData, "subject", "MATHEMATICS");
+
+    expect(result.subject).toBe("MATHEMATICS");
+    expect(result.lessonType).toBe(formData.lessonType);
+  });
+
+  it("should update boolean field", () => {
+    const formData = prepareFormData();
+
+    const result = updateFormField(formData, "isPaid", true);
+
+    expect(result.isPaid).toBe(true);
+  });
+});
+
+describe("updateFormDate", () => {
+  it("should update start time and adjust end time", () => {
+    const formData = prepareFormData();
+    const originalDuration = formData.endTime.getTime() - formData.startTime.getTime();
+    const newStartTime = new Date("2026-01-15T14:00:00.000Z");
+
+    const result = updateFormDate(formData, "startTime", newStartTime);
+
+    expect(result.startTime).toEqual(newStartTime);
+    const newDuration = result.endTime.getTime() - result.startTime.getTime();
+    expect(newDuration).toBe(originalDuration);
+  });
+
+  it("should update end time without affecting start time", () => {
+    const formData = prepareFormData();
+    const newEndTime = new Date("2026-01-15T13:00:00.000Z");
+
+    const result = updateFormDate(formData, "endTime", newEndTime);
+
+    expect(result.endTime).toEqual(newEndTime);
+    expect(result.startTime).toEqual(formData.startTime);
+  });
+
+  it("should return unchanged data when value is null", () => {
+    const formData = prepareFormData();
+
+    const result = updateFormDate(formData, "startTime", null);
+
+    expect(result).toEqual(formData);
+  });
+
+  it("should use default 1 hour duration when original duration is invalid", () => {
+    const formData = prepareFormData();
+    formData.startTime = new Date("2026-01-15T10:00:00.000Z");
+    formData.endTime = new Date("2026-01-15T09:00:00.000Z"); // Invalid: before start
+    const newStartTime = new Date("2026-01-15T14:00:00.000Z");
+
+    const result = updateFormDate(formData, "startTime", newStartTime);
+
+    const duration = result.endTime.getTime() - result.startTime.getTime();
+    expect(duration).toBe(60 * 60 * 1000); // 1 hour
+  });
+});
+
+const createMockStudent = (overrides: Partial<Student> = {}): Student =>
+  ({
+    id: "s-1",
+    name: "Иван",
+    contactMethod: "TELEGRAM",
+    phone: "+79000000001",
+    hourlyRate: 1500,
+    archived: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  }) as unknown as Student;
+
+describe("applyHourlyRateAutofill", () => {
+  const baseFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    ...prepareFormData(),
+    studentId: "s-1",
+    price: "",
+    ...overrides,
+  });
+
+  it("подставляет почасовую ставку активного ученика, когда цена пуста", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData(),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("2000");
+  });
+
+  it("подставляет ставку архивного ученика, если он не найден среди активных", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ studentId: "s-arch" }),
+      [],
+      [createMockStudent({ id: "s-arch", hourlyRate: 800 })]
+    );
+
+    expect(result.price).toBe("800");
+  });
+
+  it("не трогает поле цены, если пользователь уже ввёл значение", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ price: "999" }),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("999");
+  });
+
+  it("ничего не подставляет, если у ученика нет ставки", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData(),
+      [createMockStudent({ id: "s-1", hourlyRate: null })],
+      []
+    );
+
+    expect(result.price).toBe("");
+  });
+
+  it("ничего не подставляет, если студент не выбран", () => {
+    const result = applyHourlyRateAutofill(
+      baseFormData({ studentId: "" }),
+      [createMockStudent({ id: "s-1", hourlyRate: 2000 })],
+      []
+    );
+
+    expect(result.price).toBe("");
+  });
+});
+
+describe("validateFormData (prospect mode)", () => {
+  const createProspectFormData = (overrides: Partial<LessonFormData> = {}): LessonFormData => ({
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "0",
+    studentId: "",
+    withoutStudent: true,
+    prospectName: "Пётр (пробный)",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
+    receivedAmount: "",
+    paymentDate: undefined,
+    ...overrides,
+  });
+
+  it("should be valid without studentId when prospect name is filled", () => {
+    const result = validateFormData(createProspectFormData());
+    expect(result.isValid).toBe(true);
+  });
+
+  it("should require prospect name when withoutStudent is enabled", () => {
+    const result = validateFormData(createProspectFormData({ prospectName: "   " }));
+    expect(result.isValid).toBe(false);
+    expect(result.errors.prospectName).toBe("Укажите имя ученика");
+  });
+
+  it("should not require studentId when withoutStudent is enabled", () => {
+    const result = validateFormData(createProspectFormData({ studentId: "" }));
+    expect(result.errors.studentId).toBeUndefined();
+  });
+});
+
+describe("canSubmitLessonForm", () => {
+  const base: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "",
+    studentId: "",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
+    receivedAmount: "",
+    paymentDate: undefined,
+  };
+
+  it("should require studentId in student mode", () => {
+    expect(canSubmitLessonForm(base)).toBe(false);
+    expect(canSubmitLessonForm({ ...base, studentId: "s1" })).toBe(true);
+  });
+
+  it("should require non-blank prospect name in prospect mode", () => {
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true })).toBe(false);
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: " " })).toBe(false);
+    expect(canSubmitLessonForm({ ...base, withoutStudent: true, prospectName: "Пётр" })).toBe(true);
+  });
+});
+
+describe("applyWithoutStudentRules", () => {
+  const base: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "",
+    studentId: "s1",
+    withoutStudent: false,
+    prospectName: "",
+    prospectPhone: "",
+    prospectContactMethod: "",
+    homework: "",
+    notes: "",
+    isRecurring: true,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
+    receivedAmount: "",
+    paymentDate: undefined,
+  };
+
+  it("should clear studentId, disable recurring and set price 0 when toggled on", () => {
+    const result = applyWithoutStudentRules({ ...base, withoutStudent: true }, "withoutStudent");
+    expect(result.studentId).toBe("");
+    expect(result.isRecurring).toBe(false);
+    expect(result.price).toBe("0");
+  });
+
+  it("should clear prospect fields and reset zero price when toggled off", () => {
+    const prospect: LessonFormData = {
+      ...base,
+      studentId: "",
+      withoutStudent: false,
+      prospectName: "Пётр",
+      prospectPhone: "+79990000000",
+      prospectContactMethod: "MAX",
+      price: "0",
+    };
+    const result = applyWithoutStudentRules(prospect, "withoutStudent");
+    expect(result.prospectName).toBe("");
+    expect(result.prospectPhone).toBe("");
+    expect(result.prospectContactMethod).toBe("");
+    expect(result.price).toBe("");
+  });
+
+  it("should not change form data for other fields", () => {
+    const result = applyWithoutStudentRules(base, "price");
+    expect(result).toEqual(base);
+  });
+
+  it("should preserve zero price when toggled off while editing an existing lesson", () => {
+    const editingLesson = {
+      id: "lesson-prospect",
+      studentId: null,
+      prospectName: "Пётр",
+      price: 0,
+    } as unknown as Lesson;
+    const prospect: LessonFormData = {
+      ...base,
+      studentId: "",
+      withoutStudent: false,
+      prospectName: "Пётр",
+      price: "0",
+    };
+
+    const result = applyWithoutStudentRules(prospect, "withoutStudent", editingLesson);
+
+    expect(result.price).toBe("0");
+  });
+});
+
+describe("prepareSubmitData (prospect mode)", () => {
+  const prospectFormData: LessonFormData = {
+    subject: "PHYSICS",
+    lessonType: "EGE",
+    description: "",
+    startTime: new Date("2026-01-15T10:00:00.000Z"),
+    endTime: new Date("2026-01-15T11:00:00.000Z"),
+    price: "0",
+    studentId: "",
+    withoutStudent: true,
+    prospectName: "  Пётр (пробный)  ",
+    prospectPhone: "+79990000000",
+    prospectContactMethod: "MAX",
+    homework: "",
+    notes: "",
+    isRecurring: false,
+    isPaid: false,
+    isHomeworkSentByTeacher: false,
+    isTaxExempt: false,
+    receivedAmount: "",
+    paymentDate: undefined,
+  };
+
+  it("should send trimmed prospect fields without studentId in prospect mode", () => {
+    const result = prepareSubmitData(prospectFormData);
+    expect(result.studentId).toBeUndefined();
+    expect(result.prospectName).toBe("Пётр (пробный)");
+    expect(result.prospectPhone).toBe("+79990000000");
+    expect(result.prospectContactMethod).toBe("MAX");
+    expect(result.isRecurring).toBeUndefined();
+  });
+
+  it("should omit empty optional prospect contact fields", () => {
+    const result = prepareSubmitData({
+      ...prospectFormData,
+      prospectPhone: "",
+      prospectContactMethod: "",
+    });
+    expect(result.prospectPhone).toBeUndefined();
+    expect(result.prospectContactMethod).toBeUndefined();
+  });
+
+  it("should send studentId without prospect fields in student mode", () => {
+    const result = prepareSubmitData({
+      ...prospectFormData,
+      withoutStudent: false,
+      studentId: "s1",
+      prospectName: "",
+      prospectPhone: "",
+      prospectContactMethod: "",
+    });
+    expect(result.studentId).toBe("s1");
+    expect(result.prospectName).toBeUndefined();
+    expect(result.prospectPhone).toBeUndefined();
+    expect(result.prospectContactMethod).toBeUndefined();
+  });
+});
+
+describe("prepareFormData (prospect lesson)", () => {
+  it("should enable withoutStudent mode and fill prospect fields from lesson", () => {
+    const lesson = {
+      id: "lesson-1",
+      subject: "PHYSICS",
+      lessonType: "EGE",
+      startTime: "2026-01-15T10:00:00.000Z",
+      endTime: "2026-01-15T11:00:00.000Z",
+      status: "SCHEDULED",
+      isPaid: false,
+      studentId: null,
+      prospectName: "Пётр (пробный)",
+      prospectPhone: "+79990000000",
+      prospectContactMethod: "MAX",
+      price: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    } as Lesson;
+
+    const result = prepareFormData(lesson);
+    expect(result.withoutStudent).toBe(true);
+    expect(result.studentId).toBe("");
+    expect(result.prospectName).toBe("Пётр (пробный)");
+    expect(result.prospectPhone).toBe("+79990000000");
+    expect(result.prospectContactMethod).toBe("MAX");
+  });
+});
+
+describe("received amount in the lesson form", () => {
+  const paidLesson = (overrides: Partial<Lesson> = {}) =>
+    createMockLesson({
+      isPaid: true,
+      price: 1500,
+      paymentDate: "2026-01-10T00:00:00.000Z",
+      receivedAmount: 1800,
+      ...overrides,
+    });
+
+  it("should take the received amount of a paid lesson", () => {
+    expect(prepareFormData(paidLesson()).receivedAmount).toBe("1800");
+  });
+
+  it("should fall back to the price when a paid lesson has no received amount", () => {
+    expect(prepareFormData(paidLesson({ receivedAmount: null })).receivedAmount).toBe("1500");
+  });
+
+  it("should fall back to zero for a paid lesson without price and amount", () => {
+    expect(
+      prepareFormData(paidLesson({ receivedAmount: null, price: undefined })).receivedAmount
+    ).toBe("0");
+  });
+
+  it("should leave the field empty for an unpaid lesson and a new lesson", () => {
+    expect(prepareFormData(createMockLesson({ price: 1500 })).receivedAmount).toBe("");
+    expect(prepareFormData().receivedAmount).toBe("");
+  });
+
+  it("should send the received amount as a number only for a paid lesson", () => {
+    const paidForm = { ...prepareFormData(paidLesson()), receivedAmount: "1800,5" };
+    expect(prepareSubmitData(paidForm)).toMatchObject({ isPaid: true, receivedAmount: 1800.5 });
+
+    const unpaidForm = { ...paidForm, isPaid: false, receivedAmount: "" };
+    expect(prepareSubmitData(unpaidForm)).not.toHaveProperty("receivedAmount");
+  });
+
+  it("should send zero when nothing was received", () => {
+    const form = { ...prepareFormData(paidLesson()), receivedAmount: "0" };
+    expect(prepareSubmitData(form).receivedAmount).toBe(0);
+  });
+
+  it.each([
+    ["", "Укажите полученную сумму"],
+    ["-5", "Сумма должна быть неотрицательным числом"],
+    ["10.555", "Не больше двух знаков после запятой"],
+  ])("should block saving a paid lesson with amount %p", (receivedAmount, error) => {
+    const form = { ...prepareFormData(paidLesson()), receivedAmount };
+
+    expect(getFormReceivedAmountError(form)).toBe(error);
+    expect(validateFormData(form)).toEqual({ isValid: false, errors: { receivedAmount: error } });
+    expect(canSubmitLessonForm(form)).toBe(false);
+  });
+
+  it("should ignore the field of an unpaid lesson", () => {
+    const form = { ...prepareFormData(createMockLesson({ price: 1500 })), receivedAmount: "" };
+
+    expect(getFormReceivedAmountError(form)).toBeNull();
+    expect(validateFormData(form).isValid).toBe(true);
+    expect(canSubmitLessonForm(form)).toBe(true);
+  });
+
+  it("should allow saving a paid lesson with a valid amount", () => {
+    const form = prepareFormData(paidLesson());
+
+    expect(validateFormData(form).isValid).toBe(true);
+    expect(canSubmitLessonForm(form)).toBe(true);
+  });
+});

@@ -2,15 +2,13 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
-import prisma from "../lib/prisma";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../lib/prisma";
 
 const execAsync = promisify(exec);
 
 const getBackupDir = (): string => {
-  const dir = path.resolve(
-    process.cwd(),
-    process.env.BACKUP_DIR || "backups"
-  );
+  const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -19,20 +17,28 @@ const getBackupDir = (): string => {
 
 // Singleton id used for the one-and-only BackupSettings row. The
 // 20260509100000_backup_settings_singleton migration consolidates any pre-
-// existing rows onto this id so concurrent first-time access is race-free.
+// existing rows onto this id.
 const BACKUP_SETTINGS_ID = "backup-settings-singleton";
 
 export const getBackupSettings = async () => {
-  return prisma.backupSettings.upsert({
-    where: { id: BACKUP_SETTINGS_ID },
-    update: {},
-    create: {
-      id: BACKUP_SETTINGS_ID,
-      enabled: true,
-      intervalHours: 6,
-      maxStorageMb: 300,
-    },
-  });
+  try {
+    return await prisma.backupSettings.upsert({
+      where: { id: BACKUP_SETTINGS_ID },
+      update: {},
+      create: {
+        id: BACKUP_SETTINGS_ID,
+        enabled: true,
+        intervalHours: 6,
+        maxStorageMb: 300,
+      },
+    });
+  } catch (err) {
+    // Prisma 6 upsert is select-then-insert: a parallel first call can lose the INSERT race
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return prisma.backupSettings.findUniqueOrThrow({ where: { id: BACKUP_SETTINGS_ID } });
+    }
+    throw err;
+  }
 };
 
 export const updateBackupSettings = async (data: {
@@ -72,9 +78,7 @@ export const getBackupFiles = (): Array<{
     .sort((a, b) => b.name.localeCompare(a.name));
 };
 
-export const getTotalSizeMb = (
-  files: Array<{ sizeMb: number }>
-): number => {
+export const getTotalSizeMb = (files: Array<{ sizeMb: number }>): number => {
   return files.reduce((sum, f) => sum + f.sizeMb, 0);
 };
 
@@ -128,14 +132,11 @@ export const performBackup = async (): Promise<string> => {
   // pipefail ensures the pipeline fails if pg_dump fails (not just gzip).
   // Without it, gzip produces a ~20-byte empty file on pg_dump errors.
   try {
-    await execAsync(
-      `set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`,
-      {
-        timeout: 300000,
-        env: { ...process.env, DATABASE_URL: pgDumpUrl },
-        shell: "/bin/bash",
-      }
-    );
+    await execAsync(`set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`, {
+      timeout: 300000,
+      env: { ...process.env, DATABASE_URL: pgDumpUrl },
+      shell: "/bin/bash",
+    });
   } catch (error) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -192,9 +193,7 @@ let backupRunning = false;
 
 export const runBackupJob = async (): Promise<void> => {
   if (backupRunning) {
-    console.warn(
-      "runBackupJob: previous backup still running, skipping this tick"
-    );
+    console.warn("runBackupJob: previous backup still running, skipping this tick");
     return;
   }
 

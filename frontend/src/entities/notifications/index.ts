@@ -1,4 +1,4 @@
-import "./notifications-toggle.model";
+import "./notificationsToggle.model";
 
 export * as notificationsModel from "./notifications.model";
 export type { ReminderSettings, PushPermissionState } from "./notifications.types";

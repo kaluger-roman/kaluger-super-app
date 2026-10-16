@@ -1,10 +1,6 @@
 export * from "./ui";
 export * from "./model";
-export {
-  formatCallDuration,
-  getCallStatusLabel,
-  getCallDirectionLabel,
-} from "./videoCall.helpers";
+export { formatCallDuration, getCallStatusLabel, getCallDirectionLabel } from "./videoCall.helpers";
 export type {
   CallDirection,
   CallStatus,

@@ -33,8 +33,8 @@ export const FinancesSection = () => {
           />
         </Styled.ToggleRow>
         <Styled.Description variant="body2">
-          Налог рассчитывается по дате оплаты урока и применяемой ставке периода.
-          Если выключить — налог нигде в системе не отображается.
+          Налог рассчитывается по дате оплаты урока и применяемой ставке периода. Если выключить —
+          налог нигде в системе не отображается.
         </Styled.Description>
       </Styled.InfoSection>
 
@@ -42,11 +42,7 @@ export const FinancesSection = () => {
         <Styled.InfoLabel variant="body2">Налоговые ставки</Styled.InfoLabel>
         <TaxRatePeriodsList />
         <Styled.ButtonRow>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => actions.openModal()}
-          >
+          <Button variant="outlined" size="small" onClick={() => actions.openModal()}>
             Настроить ставки
           </Button>
         </Styled.ButtonRow>

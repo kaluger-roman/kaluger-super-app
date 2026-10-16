@@ -1,6 +1,7 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
+import { tryAttachCommissionToStudents } from "../../services";
 
 export const getStudents = async (req: AuthRequest, res: Response) => {
   try {
@@ -24,10 +25,10 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       orderBy: { name: "asc" },
     });
 
-    res.json({ students });
+    return res.json({ students: await tryAttachCommissionToStudents(userId!, students) });
   } catch (error) {
     console.error("Get students error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };
 
@@ -53,9 +54,11 @@ export const getStudent = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Ученик не найден" });
     }
 
-    res.json({ student });
+    const [studentWithCommission] = await tryAttachCommissionToStudents(userId!, [student]);
+
+    return res.json({ student: studentWithCommission });
   } catch (error) {
     console.error("Get student error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

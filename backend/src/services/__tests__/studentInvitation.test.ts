@@ -1,6 +1,4 @@
-import { faker } from "@faker-js/faker";
-
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashInvitationToken } from "../../utils/studentInvitationToken";
 import {
   getInvitationStatus,
@@ -8,6 +6,7 @@ import {
   revokeInvitation,
   validateRawToken,
 } from "../studentInvitation";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -30,7 +29,7 @@ describe("studentInvitation service", () => {
 
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Учитель Тест",
         isEmailVerified: true,
@@ -40,7 +39,7 @@ describe("studentInvitation service", () => {
 
     const otherTutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Другой Учитель",
         isEmailVerified: true,
@@ -69,7 +68,7 @@ describe("studentInvitation service", () => {
     registeredStudentId = registered.id;
     await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Зарегистрированный",
         studentId: registeredStudentId,
@@ -78,9 +77,7 @@ describe("studentInvitation service", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentInvitation
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
+    await prisma.studentInvitation.deleteMany({ where: { tutorId } }).catch(() => undefined);
     await prisma.studentInvitation
       .deleteMany({ where: { tutorId: otherTutorId } })
       .catch(() => undefined);

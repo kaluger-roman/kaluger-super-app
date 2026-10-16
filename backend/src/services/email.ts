@@ -10,10 +10,7 @@ const extractResetToken = (resetUrl: string): string | undefined => {
   return match ? decodeURIComponent(match[1]) : undefined;
 };
 
-export const sendVerificationEmail = async (
-  email: string,
-  code: string,
-): Promise<void> => {
+export const sendVerificationEmail = async (email: string, code: string): Promise<void> => {
   if (isTestEnv) {
     recordTestMail({
       to: email,
@@ -40,10 +37,7 @@ export const sendVerificationEmail = async (
   });
 };
 
-export const sendEmailChangeVerification = async (
-  email: string,
-  code: string,
-): Promise<void> => {
+export const sendEmailChangeVerification = async (email: string, code: string): Promise<void> => {
   if (isTestEnv) {
     recordTestMail({
       to: email,
@@ -70,10 +64,7 @@ export const sendEmailChangeVerification = async (
   });
 };
 
-export const sendStudentVerificationEmail = async (
-  email: string,
-  code: string,
-): Promise<void> => {
+export const sendStudentVerificationEmail = async (email: string, code: string): Promise<void> => {
   if (isTestEnv) {
     recordTestMail({
       to: email,
@@ -100,10 +91,7 @@ export const sendStudentVerificationEmail = async (
   });
 };
 
-export const sendPasswordResetEmail = async (
-  email: string,
-  resetUrl: string,
-): Promise<void> => {
+export const sendPasswordResetEmail = async (email: string, resetUrl: string): Promise<void> => {
   if (isTestEnv) {
     recordTestMail({
       to: email,

@@ -1,8 +1,9 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../../index";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { generateToken, hashPassword } from "../../utils/auth";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 describe("POST /api/auth/change-password", () => {
   let authToken: string;
@@ -13,7 +14,7 @@ describe("POST /api/auth/change-password", () => {
     const hashedPassword = await hashPassword(currentPassword);
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: hashedPassword,
         name: faker.person.fullName(),
         isEmailVerified: true,
@@ -29,13 +30,11 @@ describe("POST /api/auth/change-password", () => {
   });
 
   it("should return 401 without auth token", async () => {
-    const res = await request(app)
-      .post("/api/auth/change-password")
-      .send({
-        currentPassword,
-        newPassword: "NewPassword1",
-        confirmPassword: "NewPassword1",
-      });
+    const res = await request(app).post("/api/auth/change-password").send({
+      currentPassword,
+      newPassword: "NewPassword1",
+      confirmPassword: "NewPassword1",
+    });
     expect(res.status).toBe(401);
   });
 
@@ -126,7 +125,10 @@ describe("POST /api/auth/change-password", () => {
 
     const loginRes = await request(app)
       .post("/api/auth/login")
-      .send({ email: (await prisma.user.findUnique({ where: { id: userId } }))!.email, password: newPassword });
+      .send({
+        email: (await prisma.user.findUnique({ where: { id: userId } }))!.email,
+        password: newPassword,
+      });
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
 

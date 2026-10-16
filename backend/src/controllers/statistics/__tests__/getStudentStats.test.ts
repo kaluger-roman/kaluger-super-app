@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("getStudentStatistics integration tests", () => {
   let authToken: string;
@@ -14,7 +15,7 @@ describe("getStudentStatistics integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -22,7 +23,7 @@ describe("getStudentStatistics integration tests", () => {
 
     const otherUser = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -94,12 +95,8 @@ describe("getStudentStatistics integration tests", () => {
       .expect(200)
       .then((res) => {
         expect(res.body.studentStatistics).toBeInstanceOf(Array);
-        const a = res.body.studentStatistics.find(
-          (s: any) => s.studentId === studentA
-        );
-        const b = res.body.studentStatistics.find(
-          (s: any) => s.studentId === studentB
-        );
+        const a = res.body.studentStatistics.find((s: any) => s.studentId === studentA);
+        const b = res.body.studentStatistics.find((s: any) => s.studentId === studentB);
 
         expect(a).toBeDefined();
         expect(b).toBeDefined();
@@ -145,9 +142,7 @@ describe("getStudentStatistics integration tests", () => {
       .expect(200)
       .then((res) => {
         // should not count the old 111 price when filtered to today
-        const stat = res.body.studentStatistics.find(
-          (s: any) => s.studentId === studentA
-        );
+        const stat = res.body.studentStatistics.find((s: any) => s.studentId === studentA);
         if (stat) {
           if (stat._sum && stat._sum.price) {
             expect(stat._sum.price).not.toBe(111);
@@ -191,9 +186,7 @@ describe("getStudentStatistics integration tests", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        const stat = res.body.studentStatistics.find(
-          (s: any) => s.studentId === tmp.id
-        );
+        const stat = res.body.studentStatistics.find((s: any) => s.studentId === tmp.id);
         expect(stat).toBeDefined();
         // sum of zeros should be 0
         expect(stat._sum.price).toBe(0);
@@ -245,9 +238,7 @@ describe("getStudentStatistics integration tests", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        const stat = res.body.studentStatistics.find(
-          (s: any) => s.studentId === tmp1.id
-        );
+        const stat = res.body.studentStatistics.find((s: any) => s.studentId === tmp1.id);
         expect(stat).toBeDefined();
         // mixed null + 1000 should sum to 1000
         expect(stat._sum.price).toBe(1000);
@@ -284,9 +275,7 @@ describe("getStudentStatistics integration tests", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        const stat = res.body.studentStatistics.find(
-          (s: any) => s.studentId === tmp2.id
-        );
+        const stat = res.body.studentStatistics.find((s: any) => s.studentId === tmp2.id);
         expect(stat).toBeDefined();
         // if all prices null Prisma returns null for _sum.price
         expect(stat._sum.price).toBeNull();
@@ -301,11 +290,34 @@ describe("getStudentStatistics integration tests", () => {
     });
   });
 
+  it("should not create a group for prospect lessons without student", async () => {
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Иван (пробный)",
+        subject: "MATHEMATICS",
+        lessonType: "EGE",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        price: 0,
+        status: "COMPLETED",
+      },
+    });
+
+    await request(app)
+      .get(`/api/statistics/by-student`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200)
+      .then((res) => {
+        const nullGroup = res.body.studentStatistics.find((s: any) => s.studentId === null);
+        expect(nullGroup).toBeUndefined();
+      });
+  });
+
   it("handles database errors gracefully", async () => {
     const originalGroupBy = prisma.lesson.groupBy;
-    prisma.lesson.groupBy = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.groupBy = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get("/api/statistics/by-student")

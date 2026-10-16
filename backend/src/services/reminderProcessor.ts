@@ -1,7 +1,7 @@
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { isValidTimezone } from "../utils/time";
 import { sendPushToUser, formatReminderTitle, formatReminderBody } from "./pushNotification";
-import type { PushNotificationPayload } from "../types";
+import type { CronScope, PushNotificationPayload } from "../types";
 
 // Limits per-tick batch size so a backlog after server downtime doesn't
 // hold a long DB transaction or overwhelm the push provider in one minute.
@@ -13,8 +13,9 @@ const REMINDER_BATCH_SIZE = 100;
 // чтобы пользователь увидел напоминание не сильно позже расписанного времени.
 const REMINDER_PROCESSING_TIMEOUT_MS = 10 * 60 * 1000;
 
-export const processScheduledReminders = async () => {
+export const processScheduledReminders = async (scope?: CronScope) => {
   const now = new Date();
+  const scopeWhere = scope ? { userId: { in: scope.tutorIds } } : {};
 
   // Watchdog: возвращаем в PENDING все PROCESSING-записи, claim'нутые более
   // REMINDER_PROCESSING_TIMEOUT_MS назад. Это покрывает случай, когда процесс
@@ -23,6 +24,7 @@ export const processScheduledReminders = async () => {
   const watchdogCutoff = new Date(now.getTime() - REMINDER_PROCESSING_TIMEOUT_MS);
   await prisma.scheduledReminder.updateMany({
     where: {
+      ...scopeWhere,
       status: "PROCESSING",
       claimedAt: { lt: watchdogCutoff },
     },
@@ -33,6 +35,7 @@ export const processScheduledReminders = async () => {
   const reminders = await prisma.$transaction(async (tx) => {
     const pending = await tx.scheduledReminder.findMany({
       where: {
+        ...scopeWhere,
         status: "PENDING",
         scheduledAt: { lte: now },
       },
@@ -102,7 +105,7 @@ export const processScheduledReminders = async () => {
     data: {
       status: "SENT" | "FAILED" | "CANCELLED";
       sentAt: Date | null;
-    },
+    }
   ) => {
     await prisma.scheduledReminder.updateMany({
       where: { id: reminderId, status: "PROCESSING", claimedAt: now },
@@ -149,9 +152,7 @@ export const processScheduledReminders = async () => {
 
       const user = userById.get(reminder.userId);
       const safeTimezone =
-        user?.timezone && isValidTimezone(user.timezone)
-          ? user.timezone
-          : undefined;
+        user?.timezone && isValidTimezone(user.timezone) ? user.timezone : undefined;
 
       // Build notification payload
       const payload: PushNotificationPayload = {
@@ -159,7 +160,7 @@ export const processScheduledReminders = async () => {
         body: formatReminderBody(
           lesson.subject,
           lesson.lessonType,
-          lesson.student.name,
+          lesson.student?.name ?? lesson.prospectName ?? "",
           lesson.startTime,
           lesson.endTime,
           safeTimezone
@@ -188,19 +189,16 @@ export const processScheduledReminders = async () => {
       }
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}:`, error);
-      await finalize(reminder.id, { status: "FAILED", sentAt: null }).catch(
-        (updateError) => {
-          console.error(
-            `Failed to mark reminder ${reminder.id} as FAILED:`,
-            updateError,
-          );
-        },
-      );
+      await finalize(reminder.id, { status: "FAILED", sentAt: null }).catch((updateError) => {
+        console.error(`Failed to mark reminder ${reminder.id} as FAILED:`, updateError);
+      });
       failedCount++;
     }
   }
 
   if (sentCount > 0 || cancelledCount > 0 || failedCount > 0) {
-    console.log(`Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled, ${failedCount} failed`);
+    console.log(
+      `Reminders processed: ${sentCount} sent, ${cancelledCount} cancelled, ${failedCount} failed`
+    );
   }
 };

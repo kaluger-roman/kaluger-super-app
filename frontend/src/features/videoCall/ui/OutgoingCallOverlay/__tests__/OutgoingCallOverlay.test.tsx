@@ -14,10 +14,7 @@ const renderOutgoing = () => {
   const scope = fork({
     values: [
       [callModel.$callPhase, "outgoing"],
-      [
-        callModel.$outgoingCallPeer,
-        { id: "stu-1", name: "Иван Смирнов", role: "student" },
-      ],
+      [callModel.$outgoingCallPeer, { id: "stu-1", name: "Иван Смирнов", role: "student" }],
     ],
   });
   render(

@@ -1,9 +1,13 @@
-export const formatCurrency = (amount: number): string => {
+// `withKopecks` is opt-in: every figure that existed before commissions must
+// keep rendering as whole roubles.
+export const formatCurrency = (amount: number, options?: { withKopecks?: boolean }): string => {
+  const hasKopecks = Boolean(options?.withKopecks) && Math.round(amount * 100) % 100 !== 0;
+
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
     currency: "RUB",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasKopecks ? 2 : 0,
+    maximumFractionDigits: hasKopecks ? 2 : 0,
   }).format(amount);
 };
 

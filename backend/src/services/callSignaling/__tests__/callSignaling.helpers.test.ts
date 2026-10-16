@@ -1,11 +1,8 @@
 import { faker } from "@faker-js/faker";
 
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { CallAuthorizationError } from "../../../utils";
-import {
-  resolvePairForStudent,
-  resolvePairForTutor,
-} from "../callSignaling.helpers";
+import { resolvePairForStudent, resolvePairForTutor } from "../callSignaling.helpers";
 
 describe("callSignaling pair resolution", () => {
   let tutorId: string;
@@ -96,14 +93,14 @@ describe("callSignaling pair resolution", () => {
   });
 
   it("should reject a tutor calling a non-existent student", async () => {
-    await expect(
-      resolvePairForTutor(tutorId, "non-existent-id")
-    ).rejects.toThrow(CallAuthorizationError);
+    await expect(resolvePairForTutor(tutorId, "non-existent-id")).rejects.toThrow(
+      CallAuthorizationError
+    );
   });
 
   it("should reject a student with no linked Student record", async () => {
-    await expect(
-      resolvePairForStudent(unlinkedStudentUserId)
-    ).rejects.toThrow(CallAuthorizationError);
+    await expect(resolvePairForStudent(unlinkedStudentUserId)).rejects.toThrow(
+      CallAuthorizationError
+    );
   });
 });

@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
 import webpush from "web-push";
-import prisma from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { processScheduledReminders } from "../services/reminderProcessor";
+import { uniqueEmail } from "./helpers";
 
 jest.mock("web-push", () => ({
   setVapidDetails: jest.fn(),
@@ -19,7 +20,7 @@ describe("reminderProcessor service", () => {
 
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -97,7 +98,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
 
@@ -132,7 +133,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     expect(webpush.sendNotification).not.toHaveBeenCalled();
 
@@ -197,7 +198,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     expect(webpush.sendNotification).not.toHaveBeenCalled();
 
@@ -249,9 +250,11 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    (webpush.sendNotification as jest.Mock).mockRejectedValue(new Error("Push service unavailable"));
+    (webpush.sendNotification as jest.Mock).mockRejectedValue(
+      new Error("Push service unavailable")
+    );
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: lesson.id },
@@ -293,7 +296,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     expect(webpush.sendNotification).not.toHaveBeenCalled();
 
@@ -356,7 +359,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await expect(processScheduledReminders()).resolves.not.toThrow();
+    await expect(processScheduledReminders({ tutorIds: [userId] })).resolves.not.toThrow();
 
     expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
 
@@ -424,7 +427,7 @@ describe("reminderProcessor service", () => {
       })),
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     const stillPending = await prisma.scheduledReminder.count({
       where: { lessonId: lesson.id, status: "PENDING" },
@@ -436,7 +439,8 @@ describe("reminderProcessor service", () => {
     expect(claimed).toBeLessThanOrEqual(100);
     expect(claimed).toBeGreaterThan(0);
     expect(stillPending).toBe(backlogSize - claimed);
-  });
+    // A full 100-reminder batch is delivered sequentially; under a parallel run it outlasts the default 10s
+  }, 30000);
 
   it("should leave PENDING in PROCESSING after a simulated mid-cycle crash and recover them on the next tick (regression: silent loss)", async () => {
     // Regression for bug-hunt 2026-05-10 #3: previously the claim transaction
@@ -488,7 +492,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     const recovered = await prisma.scheduledReminder.findUnique({
       where: { id: stuckReminder.id },
@@ -524,7 +528,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    await processScheduledReminders();
+    await processScheduledReminders({ tutorIds: [userId] });
 
     const after = await prisma.scheduledReminder.findUnique({
       where: { id: fresh.id },
@@ -541,7 +545,7 @@ describe("reminderProcessor service", () => {
     // user B has muteWhenInLesson disabled (must send).
     const otherUser = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: "Other Tutor",
       },
@@ -627,7 +631,7 @@ describe("reminderProcessor service", () => {
         },
       });
 
-      await processScheduledReminders();
+      await processScheduledReminders({ tutorIds: [userId, otherUser.id] });
 
       const a = await prisma.scheduledReminder.findUnique({ where: { id: reminderA.id } });
       const b = await prisma.scheduledReminder.findUnique({ where: { id: reminderB.id } });
@@ -641,6 +645,92 @@ describe("reminderProcessor service", () => {
       await prisma.pushSubscription.deleteMany({ where: { userId: otherUser.id } });
       await prisma.reminderSettings.deleteMany({ where: { userId: otherUser.id } });
       await prisma.student.delete({ where: { id: otherStudent.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
+  });
+
+  it("should send reminder with prospect name and not crash when lesson has no student", async () => {
+    await prisma.pushSubscription.create({
+      data: {
+        endpoint: `https://push.example.com/${faker.string.alphanumeric(10)}`,
+        p256dh: "key",
+        auth: "auth",
+        userId,
+      },
+    });
+
+    const prospectLesson = await prisma.lesson.create({
+      data: {
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        status: "SCHEDULED",
+        price: 0,
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Тест Проспект",
+        prospectPhone: "+79991234567",
+        prospectContactMethod: "MAX",
+      },
+    });
+
+    await prisma.scheduledReminder.create({
+      data: {
+        scheduledAt: new Date(Date.now() - 60 * 1000),
+        intervalMinutes: 30,
+        lessonId: prospectLesson.id,
+        userId,
+        status: "PENDING",
+      },
+    });
+
+    await processScheduledReminders({ tutorIds: [userId] });
+
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+    const payloadJson = (webpush.sendNotification as jest.Mock).mock.calls[0][1] as string;
+    expect(payloadJson).toContain("Тест Проспект");
+
+    const reminder = await prisma.scheduledReminder.findFirst({
+      where: { lessonId: prospectLesson.id },
+    });
+    expect(reminder!.status).toBe("SENT");
+  });
+
+  it("should not claim reminders of tutors outside the scope", async () => {
+    const otherUser = await prisma.user.create({
+      data: { email: uniqueEmail(), password: "hashed", name: faker.person.fullName() },
+    });
+    try {
+      const otherLesson = await prisma.lesson.create({
+        data: {
+          subject: "MATHEMATICS",
+          lessonType: "SCHOOL",
+          startTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+          status: "SCHEDULED",
+          tutorId: otherUser.id,
+        },
+      });
+      const otherReminder = await prisma.scheduledReminder.create({
+        data: {
+          scheduledAt: new Date(Date.now() - 60 * 1000),
+          intervalMinutes: 30,
+          lessonId: otherLesson.id,
+          userId: otherUser.id,
+          status: "PENDING",
+        },
+      });
+
+      await processScheduledReminders({ tutorIds: [userId] });
+
+      const after = await prisma.scheduledReminder.findUniqueOrThrow({
+        where: { id: otherReminder.id },
+      });
+      expect(after.status).toBe("PENDING");
+    } finally {
+      await prisma.scheduledReminder.deleteMany({ where: { userId: otherUser.id } });
+      await prisma.lesson.deleteMany({ where: { tutorId: otherUser.id } });
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });

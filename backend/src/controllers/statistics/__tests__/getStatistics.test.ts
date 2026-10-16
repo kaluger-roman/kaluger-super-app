@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("getStatistics controller", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("getStatistics controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -72,6 +73,7 @@ describe("getStatistics controller", () => {
         expect(res.body.paymentsInRangeCount).toBe(0);
         expect(res.body.taxAmount).toBeNull();
         expect(res.body.taxBreakdown).toBeNull();
+        expect(res.body.taxExemptIncome).toBeNull();
       });
   });
 
@@ -88,6 +90,7 @@ describe("getStatistics controller", () => {
         isPaid: true,
         paymentDate: new Date(),
         price: 10000,
+        receivedAmount: 10000,
         status: "COMPLETED",
       },
     });
@@ -126,6 +129,7 @@ describe("getStatistics controller", () => {
         isPaid: true,
         paymentDate: new Date("2025-06-01"),
         price: 50000,
+        receivedAmount: 50000,
         status: "COMPLETED",
       },
     });
@@ -137,9 +141,7 @@ describe("getStatistics controller", () => {
       .expect(200);
 
     expect(res.body.taxAmount).toBe(6500);
-    expect(res.body.taxBreakdown).toEqual([
-      { rate: 13, earnings: 50000, tax: 6500 },
-    ]);
+    expect(res.body.taxBreakdown).toEqual([{ rate: 13, earnings: 50000, tax: 6500 }]);
   });
 
   it("splits tax across multiple periods by paymentDate, with isOutsidePeriods bucket for early payments", async () => {
@@ -167,6 +169,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2023-09-01"),
           price: 5000,
+          receivedAmount: 5000,
           status: "COMPLETED",
         },
         {
@@ -180,6 +183,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2025-05-15"),
           price: 10000,
+          receivedAmount: 10000,
           status: "COMPLETED",
         },
         {
@@ -193,6 +197,7 @@ describe("getStatistics controller", () => {
           isPaid: true,
           paymentDate: new Date("2025-07-15"),
           price: 15000,
+          receivedAmount: 15000,
           status: "COMPLETED",
         },
       ],
@@ -225,6 +230,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1500,
+        receivedAmount: 1500,
         status: "COMPLETED",
       },
     });
@@ -296,8 +302,13 @@ describe("getStatistics controller", () => {
       },
     });
 
+    // Explicit range: the default current-month range misses a lesson from two days ago on the 1st-2nd
     await request(app)
       .get(`/api/statistics`)
+      .query({
+        startDate: new Date(twoDaysAgoStart.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+        endDate: now.toISOString(),
+      })
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
@@ -323,6 +334,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1200,
+        receivedAmount: 1200,
         status: "SCHEDULED",
       },
     });
@@ -355,12 +367,18 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 300,
+        receivedAmount: 300,
         status: "IN_PROGRESS",
       },
     });
 
+    // Explicit range: late on the last day of a month the +2h lesson falls outside the default month range
     await request(app)
       .get(`/api/statistics`)
+      .query({
+        startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        endDate: new Date(inTwoHoursStart.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      })
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
@@ -408,6 +426,33 @@ describe("getStatistics controller", () => {
       .expect(200)
       .then((res) => {
         expect(res.body.trialLessonsCount).toBe(2);
+      });
+  });
+
+  it("counts prospect lessons without student in trialLessonsCount", async () => {
+    await prisma.lesson.create({
+      data: {
+        tutorId: userId,
+        studentId: null,
+        prospectName: "Иван (пробный)",
+        subject: "MATHEMATICS",
+        lessonType: "SCHOOL",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3600000),
+        isRecurring: false,
+        isPaid: false,
+        price: 0,
+        status: "COMPLETED",
+      },
+    });
+
+    await request(app)
+      .get(`/api/statistics`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.trialLessonsCount).toBe(1);
+        expect(res.body.earnings).toBe(0);
       });
   });
 
@@ -483,6 +528,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 4321,
+        receivedAmount: 4321,
         status: "COMPLETED",
       },
     });
@@ -514,6 +560,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 999,
+        receivedAmount: 999,
         status: "SCHEDULED",
       },
     });
@@ -530,6 +577,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 111,
+        receivedAmount: 111,
         status: "SCHEDULED",
       },
     });
@@ -539,9 +587,7 @@ describe("getStatistics controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        expect(res.body.prepaidIncome).toBeGreaterThanOrEqual(
-          res.body.upcomingIncome
-        );
+        expect(res.body.prepaidIncome).toBeGreaterThanOrEqual(res.body.upcomingIncome);
       });
   });
 
@@ -552,8 +598,13 @@ describe("getStatistics controller", () => {
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
 
-    // lesson whose startTime is far in the past but payment came today — must be counted
+    // lesson whose startTime is far in the past but payment came today — must be counted.
+    // "An hour ago" is clamped to the start of today: in the first hour after
+    // local midnight it would otherwise land on yesterday and fall out of range.
     const oldStart = new Date(today.getFullYear() - 2, 0, 1, 10, 0, 0);
+    const paidEarlierToday = new Date(
+      Math.max(startOfToday.getTime(), today.getTime() - 60 * 60 * 1000)
+    );
     await prisma.lesson.create({
       data: {
         tutorId: userId,
@@ -565,7 +616,8 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 2500,
-        paymentDate: new Date(today.getTime() - 60 * 60 * 1000),
+        receivedAmount: 2500,
+        paymentDate: paidEarlierToday,
         status: "COMPLETED",
       },
     });
@@ -582,6 +634,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 1500,
+        receivedAmount: 1500,
         paymentDate: new Date(),
         status: "COMPLETED",
       },
@@ -599,6 +652,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 9999,
+        receivedAmount: 9999,
         paymentDate: new Date(today.getFullYear() - 1, 0, 1),
         status: "COMPLETED",
       },
@@ -617,6 +671,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 777,
+        receivedAmount: 777,
         status: "COMPLETED",
       },
     });
@@ -634,6 +689,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 11111,
+        receivedAmount: 11111,
         status: "COMPLETED",
       },
     });
@@ -650,6 +706,7 @@ describe("getStatistics controller", () => {
         isRecurring: false,
         isPaid: true,
         price: 0,
+        receivedAmount: 0,
         paymentDate: new Date(),
         status: "COMPLETED",
       },
@@ -671,11 +728,41 @@ describe("getStatistics controller", () => {
       });
   });
 
+  it("counts payments by received amount instead of price", async () => {
+    const paymentDate = new Date();
+    const paidLesson = (price: number, receivedAmount: number) => ({
+      tutorId: userId,
+      studentId,
+      subject: "MATHEMATICS" as const,
+      lessonType: "EGE" as const,
+      startTime: new Date(Date.now() - 2 * 3600000),
+      endTime: new Date(Date.now() - 3600000),
+      isPaid: true,
+      price,
+      receivedAmount,
+      paymentDate,
+      status: "COMPLETED" as const,
+    });
+    await prisma.lesson.createMany({
+      data: [paidLesson(2000, 0), paidLesson(0, 1500)],
+    });
+
+    const res = await request(app)
+      .get("/api/statistics")
+      .set("Authorization", `Bearer ${authToken}`)
+      .query({
+        startDate: new Date(Date.now() - 24 * 3600000).toISOString(),
+        endDate: new Date(Date.now() + 24 * 3600000).toISOString(),
+      })
+      .expect(200);
+
+    expect(res.body.paymentsInRangeCount).toBe(1);
+    expect(res.body.paymentsInRangeSum).toBe(1500);
+  });
+
   it("handles database errors gracefully", async () => {
     const originalAggregate = prisma.lesson.aggregate;
-    prisma.lesson.aggregate = jest
-      .fn()
-      .mockRejectedValueOnce(new Error("DB error"));
+    prisma.lesson.aggregate = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
     await request(app)
       .get("/api/statistics")

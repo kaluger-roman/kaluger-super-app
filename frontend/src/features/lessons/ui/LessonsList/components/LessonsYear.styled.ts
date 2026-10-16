@@ -1,5 +1,7 @@
 import { ExpandMore, ExpandLess } from "@mui/icons-material";
-import { styled, Box, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const YearBox = styled(Box)(({ theme }) => ({
   display: "flex",

@@ -1,12 +1,9 @@
 import { WebSocket } from "ws";
-import { AuthenticatedWebSocket } from "./types";
+import type { AuthenticatedWebSocket } from "./types";
 import { handleCallSignal } from "./signaling";
 import { isCallSignalType } from "./signaling.types";
 
-export const handleMessage = (
-  ws: AuthenticatedWebSocket,
-  data: unknown
-): void => {
+export const handleMessage = (ws: AuthenticatedWebSocket, data: unknown): void => {
   if (
     typeof data === "object" &&
     data !== null &&
@@ -32,10 +29,7 @@ export const handleMessage = (
   );
 };
 
-export const sendWelcomeMessage = (
-  ws: AuthenticatedWebSocket,
-  userId: string
-) => {
+export const sendWelcomeMessage = (ws: AuthenticatedWebSocket, userId: string) => {
   ws.send(
     JSON.stringify({
       type: "connection_established",

@@ -1,8 +1,9 @@
 import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("Student Archiving", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("Student Archiving", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed_password",
         name: faker.person.fullName(),
       },
@@ -213,28 +214,30 @@ describe("Student Archiving", () => {
       // фильтр updateMany должен включать обе активные стадии.
       let capturedWhere: unknown = null;
       const originalTransaction = prisma.$transaction.bind(prisma);
-      const txSpy = jest
-        .spyOn(prisma, "$transaction")
-        .mockImplementation(((arg: unknown) => {
-          if (typeof arg === "function") {
-            return (originalTransaction as unknown as (cb: (tx: unknown) => Promise<unknown>) => Promise<unknown>)(
-              async (tx: unknown) => {
-                const txClient = tx as {
-                  scheduledReminder: { updateMany: (args: { where?: unknown; data: unknown }) => Promise<unknown> };
-                };
-                const originalUpdateMany = txClient.scheduledReminder.updateMany.bind(
-                  txClient.scheduledReminder
-                );
-                txClient.scheduledReminder.updateMany = (args) => {
-                  capturedWhere = args.where;
-                  return originalUpdateMany(args);
-                };
-                return (arg as (tx: unknown) => Promise<unknown>)(tx);
-              }
+      const txSpy = jest.spyOn(prisma, "$transaction").mockImplementation(((arg: unknown) => {
+        if (typeof arg === "function") {
+          return (
+            originalTransaction as unknown as (
+              cb: (tx: unknown) => Promise<unknown>
+            ) => Promise<unknown>
+          )(async (tx: unknown) => {
+            const txClient = tx as {
+              scheduledReminder: {
+                updateMany: (args: { where?: unknown; data: unknown }) => Promise<unknown>;
+              };
+            };
+            const originalUpdateMany = txClient.scheduledReminder.updateMany.bind(
+              txClient.scheduledReminder
             );
-          }
-          return (originalTransaction as (a: unknown) => Promise<unknown>)(arg);
-        }) as unknown as typeof prisma.$transaction);
+            txClient.scheduledReminder.updateMany = (args) => {
+              capturedWhere = args.where;
+              return originalUpdateMany(args);
+            };
+            return (arg as (tx: unknown) => Promise<unknown>)(tx);
+          });
+        }
+        return (originalTransaction as (a: unknown) => Promise<unknown>)(arg);
+      }) as unknown as typeof prisma.$transaction);
 
       const processingStudent = await prisma.student.create({
         data: {
@@ -298,9 +301,7 @@ describe("Student Archiving", () => {
 
     it("should handle database errors", async () => {
       const originalTransaction = prisma.$transaction;
-      prisma.$transaction = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+      prisma.$transaction = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       await request(app)
         .put(`/api/students/${studentId}/archive`)
@@ -363,9 +364,7 @@ describe("Student Archiving", () => {
       });
 
       const originalUpdate = prisma.student.update;
-      prisma.student.update = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("DB error"));
+      prisma.student.update = jest.fn().mockRejectedValueOnce(new Error("DB error"));
 
       await request(app)
         .put(`/api/students/${archivedStudent.id}/unarchive`)

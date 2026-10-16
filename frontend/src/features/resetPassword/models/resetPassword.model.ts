@@ -22,8 +22,8 @@ export const confirmPasswordChanged = createEvent<string>();
 export const formSubmitted = createEvent();
 export const formReset = createEvent();
 
-export const verifyResetTokenFx = createEffect(
-  async ({ token }: { token: string }) => authApi.verifyResetToken({ token }),
+export const verifyResetTokenFx = createEffect(async ({ token }: { token: string }) =>
+  authApi.verifyResetToken({ token })
 );
 
 export const resetPasswordFx = createEffect(
@@ -35,7 +35,7 @@ export const resetPasswordFx = createEffect(
     token: string;
     newPassword: string;
     confirmPassword: string;
-  }) => authApi.resetPassword({ token, newPassword, confirmPassword }),
+  }) => authApi.resetPassword({ token, newPassword, confirmPassword })
 );
 
 export const $isVerifying = verifyResetTokenFx.pending;

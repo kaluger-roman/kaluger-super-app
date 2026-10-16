@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { ReminderSettingsDto } from "../../types";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { recalculateRemindersForUser, cancelAllPendingReminders } from "../../services";
 
 const VALID_INTERVALS = [5, 10, 15, 30, 60];
@@ -100,13 +100,13 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
       }
     }
 
-    res.json({
+    return res.json({
       enabled: settings.enabled,
       intervals: settings.intervals,
       muteWhenInLesson: settings.muteWhenInLesson,
     });
   } catch (error) {
     console.error("Update reminder settings error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

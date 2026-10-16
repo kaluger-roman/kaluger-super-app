@@ -1,6 +1,6 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth";
-import prisma from "../../lib/prisma";
+import type { Response } from "express";
+import type { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../lib/prisma";
 import { buildStatisticsWhere } from "./utils";
 
 export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
@@ -9,16 +9,11 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
     const { startDate, endDate } = req.query;
     const timezone = req.headers["x-timezone"] as string | undefined;
 
-    const where = buildStatisticsWhere(
-      userId!,
-      startDate as string,
-      endDate as string,
-      timezone
-    );
+    const where = buildStatisticsWhere(userId!, startDate as string, endDate as string, timezone);
 
     const studentStats = await prisma.lesson.groupBy({
       by: ["studentId"],
-      where,
+      where: { ...where, studentId: { not: null } },
       _count: {
         id: true,
       },
@@ -28,7 +23,9 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
     });
 
     // Получаем информацию о учениках
-    const studentIds = studentStats.map((stat) => stat.studentId);
+    const studentIds = studentStats
+      .map((stat) => stat.studentId)
+      .filter((id): id is string => id !== null);
     const students = await prisma.student.findMany({
       where: {
         id: { in: studentIds },
@@ -45,9 +42,9 @@ export const getStudentStatistics = async (req: AuthRequest, res: Response) => {
       student: students.find((s) => s.id === stat.studentId),
     }));
 
-    res.json({ studentStatistics: enrichedStats });
+    return res.json({ studentStatistics: enrichedStats });
   } catch (error) {
     console.error("Get student statistics error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

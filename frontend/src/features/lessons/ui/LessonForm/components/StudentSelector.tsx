@@ -6,13 +6,9 @@ import { useUnit } from "effector-react";
 import { studentModel } from "@entities";
 import type { Lesson, Student } from "@shared";
 
-import {
-  filterStudents,
-  getStudentLabel,
-  isSameStudent,
-} from "./StudentSelector.helpers";
+import { filterStudents, getStudentLabel, isSameStudent } from "./StudentSelector.helpers";
 import * as Styled from "./StudentSelector.styled";
-import type { LessonFormData } from "../types";
+import type { LessonFormData } from "../LessonForm.types";
 
 type StudentSelectorProps = {
   formData: LessonFormData;
@@ -36,7 +32,9 @@ export const StudentSelector: FC<StudentSelectorProps> = ({
   const archivedStudents = useUnit(studentModel.$archivedStudents);
 
   const isCompletedLesson = lesson?.status === "COMPLETED";
-  const availableStudents = isCompletedLesson ? archivedStudents : activeStudents;
+  const availableStudents = isCompletedLesson
+    ? [...activeStudents, ...archivedStudents]
+    : activeStudents;
   const isFieldDisabled = isLoading || isCompletedLesson;
 
   const selectedStudent =

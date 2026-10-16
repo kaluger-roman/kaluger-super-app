@@ -1,11 +1,6 @@
 import type { FC } from "react";
 
-import {
-  Button,
-  Switch,
-  FormControlLabel,
-  Typography,
-} from "@mui/material";
+import { Button, Switch, FormControlLabel, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { adminDataModel } from "@features/admin";
@@ -33,18 +28,10 @@ export const BackupSection: FC = () => {
     <div>
       <Styled.StyledControls>
         <FormControlLabel
-          control={
-            <Switch
-              checked={backupSettings.enabled}
-              onChange={() => actions.toggle()}
-            />
-          }
+          control={<Switch checked={backupSettings.enabled} onChange={() => actions.toggle()} />}
           label="Автоматические бэкапы"
         />
-        <Button
-          variant="contained"
-          onClick={() => actions.create()}
-        >
+        <Button variant="contained" onClick={() => actions.create()}>
           Создать бэкап
         </Button>
       </Styled.StyledControls>
@@ -77,8 +64,7 @@ export const BackupSection: FC = () => {
 
       {backupSettings.lastBackupAt && (
         <Styled.StyledSummary>
-          Последний бэкап:{" "}
-          {new Date(backupSettings.lastBackupAt).toLocaleString("ru-RU")}
+          Последний бэкап: {new Date(backupSettings.lastBackupAt).toLocaleString("ru-RU")}
         </Styled.StyledSummary>
       )}
 
@@ -86,15 +72,12 @@ export const BackupSection: FC = () => {
         <Typography variant="h6" gutterBottom>
           Файлы бэкапов
         </Typography>
-        {backupFiles.length === 0 && (
-          <Typography color="text.secondary">Нет бэкапов</Typography>
-        )}
+        {backupFiles.length === 0 && <Typography color="text.secondary">Нет бэкапов</Typography>}
         {backupFiles.map((file) => (
           <Styled.StyledFileCard key={file.name}>
             <Styled.StyledFileName>{file.name}</Styled.StyledFileName>
             <Styled.StyledFileInfo>
-              {file.sizeMb} МБ &middot;{" "}
-              {new Date(file.createdAt).toLocaleString("ru-RU")}
+              {file.sizeMb} МБ &middot; {new Date(file.createdAt).toLocaleString("ru-RU")}
             </Styled.StyledFileInfo>
           </Styled.StyledFileCard>
         ))}

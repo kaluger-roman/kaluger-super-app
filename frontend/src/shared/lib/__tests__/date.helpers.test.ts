@@ -220,10 +220,7 @@ describe("date.helpers", () => {
 
   describe("formatTimeRange", () => {
     it("joins start/end with em-dash", () => {
-      const range = formatTimeRange(
-        "2026-05-04T10:00:00",
-        "2026-05-04T11:30:00"
-      );
+      const range = formatTimeRange("2026-05-04T10:00:00", "2026-05-04T11:30:00");
       expect(range).toMatch(/^\d{2}:\d{2}—\d{2}:\d{2}$/);
     });
   });
@@ -250,9 +247,7 @@ describe("date.helpers", () => {
 
     it("accepts items whose start is a Date object", () => {
       type DateItem = { id: string; start: Date };
-      const items: DateItem[] = [
-        { id: "a", start: new Date(2026, 4, 4, 10) },
-      ];
+      const items: DateItem[] = [{ id: "a", start: new Date(2026, 4, 4, 10) }];
       expect(Object.keys(groupByDay(items, (i) => i.start))).toHaveLength(1);
     });
   });

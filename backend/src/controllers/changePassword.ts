@@ -7,13 +7,10 @@ import type { ChangePasswordDto } from "../types";
 export const changePassword = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { currentPassword, newPassword, confirmPassword } =
-      req.body as ChangePasswordDto;
+    const { currentPassword, newPassword, confirmPassword } = req.body as ChangePasswordDto;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      return res
-        .status(400)
-        .json({ error: "Все поля обязательны для заполнения" });
+      return res.status(400).json({ error: "Все поля обязательны для заполнения" });
     }
 
     if (newPassword !== confirmPassword) {
@@ -22,7 +19,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     const result = await changePasswordService(userId!, currentPassword, newPassword);
 
-    res.json({
+    return res.json({
       message: "Пароль успешно изменён",
       token: result.token,
       user: result.user,
@@ -35,6 +32,6 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    res.status(500).json({ error: "Ошибка при смене пароля" });
+    return res.status(500).json({ error: "Ошибка при смене пароля" });
   }
 };

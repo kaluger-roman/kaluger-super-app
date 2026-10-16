@@ -1,9 +1,12 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
+import { fork } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect } from "vitest";
 
+import { userModel } from "@entities";
 import { theme } from "@shared";
-import type { Lesson } from "@shared";
+import type { Lesson, User } from "@shared";
 
 import { LessonDetails } from "./LessonDetails";
 
@@ -135,5 +138,106 @@ describe("LessonDetails", () => {
     const recurringLesson = { ...mockLesson, isRecurring: true };
     renderWithTheme(<LessonDetails lesson={recurringLesson} />);
     // Component should show some indication of recurring status
+  });
+  it("should render the full commission badge for a fact credit", () => {
+    renderWithTheme(
+      <LessonDetails
+        lesson={{ ...mockLesson, commissionCredit: { amount: 1000, state: "FACT" } }}
+      />
+    );
+
+    expect(screen.getByText(/^в счёт комиссии: /)).toBeInTheDocument();
+    expect(screen.getByTestId("HandshakeIcon")).toBeInTheDocument();
+  });
+
+  it("should render the full commission badge for a forecast credit", () => {
+    renderWithTheme(
+      <LessonDetails
+        lesson={{ ...mockLesson, commissionCredit: { amount: 500, state: "FORECAST" } }}
+      />
+    );
+
+    expect(screen.getByText(/^план, в счёт комиссии: ~/)).toBeInTheDocument();
+    expect(screen.getByTestId("HandshakeOutlinedIcon")).toBeInTheDocument();
+  });
+
+  it("should render no commission badge without a credit", () => {
+    renderWithTheme(<LessonDetails lesson={mockLesson} />);
+
+    expect(screen.queryByTestId("HandshakeIcon")).toBeNull();
+    expect(screen.queryByTestId("HandshakeOutlinedIcon")).toBeNull();
+  });
+
+  describe("received amount mark", () => {
+    it("should show the received amount next to the price when it differs", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1800 }} />
+      );
+
+      expect(screen.getByText(/^получено 1\s800\s₽$/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: /^Получено 1\s800\s₽, стоимость урока 1\s500\s₽$/ })
+      ).toBeInTheDocument();
+    });
+
+    it("should show nothing received for a paid lesson with zero received amount", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 0 }} />
+      );
+
+      expect(screen.getByText(/^получено 0\s₽$/)).toBeInTheDocument();
+    });
+
+    it("should not show the mark when the received amount equals the price", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1500 }} />
+      );
+
+      expect(screen.queryByText(/получено/i)).not.toBeInTheDocument();
+    });
+
+    it("should not show the mark for an unpaid lesson", () => {
+      renderWithTheme(
+        <LessonDetails lesson={{ ...mockLesson, isPaid: false, receivedAmount: 1800 }} />
+      );
+
+      expect(screen.queryByText(/получено/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("tax-exempt switch", () => {
+    const tutor = (taxEnabled: boolean): User => ({
+      id: "user-1",
+      email: "tutor@test.local",
+      name: "Учитель",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      isEmailVerified: true,
+      taxEnabled,
+    });
+
+    const renderWithTax = (taxEnabled: boolean, lesson: Lesson) =>
+      render(
+        <Provider value={fork({ values: [[userModel.$user, tutor(taxEnabled)]] })}>
+          <ThemeProvider theme={theme}>
+            <LessonDetails lesson={lesson} />
+          </ThemeProvider>
+        </Provider>
+      );
+
+    it.each([true, false])(
+      "should show the switch with isTaxExempt = %s when tax accounting is enabled",
+      (isTaxExempt) => {
+        renderWithTax(true, { ...mockLesson, isTaxExempt });
+
+        const control = screen.getByRole("switch", { name: "Не облагается налогом" });
+        expect((control as HTMLInputElement).checked).toBe(isTaxExempt);
+      }
+    );
+
+    it("should hide the switch when tax accounting is disabled", () => {
+      renderWithTax(false, { ...mockLesson, isTaxExempt: true });
+
+      expect(screen.queryByRole("switch", { name: "Не облагается налогом" })).toBeNull();
+    });
   });
 });

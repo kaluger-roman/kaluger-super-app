@@ -2,11 +2,7 @@ import { allSettled, fork } from "effector";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCallHistory } from "../../api/callHistoryApi";
-import {
-  $callHistory,
-  CallHistoryGate,
-  loadCallHistoryFx,
-} from "../callHistory.model";
+import { $callHistory, CallHistoryGate, loadCallHistoryFx } from "../callHistory.model";
 
 vi.mock("../../api/callHistoryApi", () => ({
   getCallHistory: vi.fn(),

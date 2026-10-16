@@ -1,12 +1,12 @@
-import "./negotiation";
-import "./mediaControls";
-import "./screenShare";
-import "./call.toasts";
-import "./callSounds";
+import "./negotiation.model";
+import "./mediaControls.model";
+import "./screenShare.model";
+import "./toasts.model";
+import "./callSounds.model";
 
 export * as callModel from "./call.model";
-export { dispatchCallSignal } from "./signaling";
-export { setCallTransport } from "./transport";
+export { dispatchCallSignal, isCallSignalOutbound } from "./signaling.helpers";
+export { setCallTransport } from "./transport.helpers";
 export type {
   CallPhase,
   CallPeer,
@@ -15,16 +15,12 @@ export type {
   StartCallParams,
 } from "./call.types";
 export type { CallSignalingOutbound } from "./signaling.types";
-export { isCallSignalOutbound } from "./signaling.types";
 export {
   setWebRtcAdapter,
   resetWebRtcAdapter,
   getSession,
   stopAllSessions,
-} from "./webrtc";
-export type { WebRtcAdapter } from "./webrtc";
-export {
-  setCallSoundsAdapter,
-  resetCallSoundsAdapter,
-} from "./callSounds";
-export type { CallSoundsAdapter } from "./callSounds";
+} from "./webrtc.helpers";
+export type { WebRtcAdapter } from "./webrtc.types";
+export { setCallSoundsAdapter, resetCallSoundsAdapter } from "./callSounds.helpers";
+export type { CallSoundsAdapter } from "./callSounds.types";

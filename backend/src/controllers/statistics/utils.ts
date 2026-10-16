@@ -1,10 +1,6 @@
 import { getCurrentMonthRange, getLastMonthBounds } from "../../utils/time";
 
-export const getDateRange = (
-  startDate?: string,
-  endDate?: string,
-  timezone?: string
-) => {
+export const getDateRange = (startDate?: string, endDate?: string, timezone?: string) => {
   const fallback = getCurrentMonthRange(timezone);
 
   const gte = startDate ? new Date(startDate) : fallback.gte;

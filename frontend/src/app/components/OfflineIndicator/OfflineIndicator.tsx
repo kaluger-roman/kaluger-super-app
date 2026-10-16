@@ -7,10 +7,7 @@ export const OfflineIndicator = () => {
   const isOnline = useUnit(appInitModel.$isOnline);
 
   return (
-    <Snackbar
-      open={!isOnline}
-      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-    >
+    <Snackbar open={!isOnline} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
       <Alert severity="warning" variant="filled">
         Нет подключения к интернету. Данные могут быть неактуальны
       </Alert>

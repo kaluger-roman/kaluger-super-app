@@ -1,7 +1,7 @@
 import { fork, allSettled } from "effector";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import * as paymentStatusModel from "../payment-status.model";
+import * as paymentStatusModel from "../PaymentStatus.model";
 
 describe("PaymentStatus", () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: true,
+      params: { isPaid: true, price: 2000 },
     });
 
     const isOpen = scope.getState(paymentStatusModel.$isOpen);
@@ -53,7 +53,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: true,
+      params: { isPaid: true, price: 2000 },
     });
 
     const pendingStatus = scope.getState(paymentStatusModel.$pendingStatus);
@@ -65,7 +65,7 @@ describe("PaymentStatus", () => {
 
     await allSettled(paymentStatusModel.confirmDialogOpened, {
       scope,
-      params: false,
+      params: { isPaid: false, price: 2000 },
     });
 
     const pendingStatus = scope.getState(paymentStatusModel.$pendingStatus);

@@ -32,9 +32,7 @@ describe("validateRequiredEnv", () => {
       process.env[key] = "x";
     }
     delete process.env[missing];
-    expect(() => validateRequiredEnv()).toThrow(
-      new RegExp(`Missing.*${missing}`)
-    );
+    expect(() => validateRequiredEnv()).toThrow(new RegExp(`Missing.*${missing}`));
   });
 
   it("throws when a secret is set but empty", () => {

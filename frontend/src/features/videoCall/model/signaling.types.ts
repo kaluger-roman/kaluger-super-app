@@ -45,25 +45,4 @@ export type CallSignalingOutbound =
       screenSharing: boolean;
     };
 
-export const CALL_SIGNAL_OUTBOUND_TYPES = [
-  "call_incoming",
-  "call_ringing",
-  "call_accepted",
-  "call_rejected",
-  "call_canceled",
-  "call_ended",
-  "call_unavailable",
-  "call_busy",
-  "call_no_answer",
-  "call_error",
-  "webrtc_offer",
-  "webrtc_answer",
-  "webrtc_ice",
-  "call_media_state",
-] as const;
-
-export const isCallSignalOutbound = (
-  value: unknown
-): value is CallSignalingOutbound["type"] =>
-  typeof value === "string" &&
-  (CALL_SIGNAL_OUTBOUND_TYPES as readonly string[]).includes(value);
+export type CallTransport = (message: CallSignalingInbound) => void;

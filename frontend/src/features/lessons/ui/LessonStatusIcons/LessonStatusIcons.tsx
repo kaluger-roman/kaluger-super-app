@@ -1,15 +1,17 @@
 import type { FC } from "react";
 
-import { IconButton, Tooltip, Typography, TextField, Box } from "@mui/material";
+import { IconButton, Tooltip, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import type { Lesson } from "@shared";
-import { ConfirmStatusDialog } from "@shared";
+import { ConfirmStatusDialog, getLessonDisplayName } from "@shared";
 
-import * as lessonStatusIconsModel from "./lesson-status-icons.model";
+import { buildPaymentChange } from "./LessonStatusIcons.helpers";
 import { usePaymentDate } from "./LessonStatusIcons.hooks";
+import * as lessonStatusIconsModel from "./LessonStatusIcons.model";
 import * as Styled from "./LessonStatusIcons.styled";
-import { lessonPaymentChanged, lessonHomeworkSentChanged } from "../../models/lesson-actions.model";
+import * as lessonActionsModel from "../../models/lessonActions.model";
+import { PaymentFields } from "../PaymentFields";
 
 type Props = {
   lesson: Lesson;
@@ -18,21 +20,27 @@ type Props = {
 export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
   const openPaymentDialogFor = useUnit(lessonStatusIconsModel.$openPaymentDialogFor);
   const openHomeworkDialogFor = useUnit(lessonStatusIconsModel.$openHomeworkDialogFor);
+  const receivedAmountInput = useUnit(lessonStatusIconsModel.$receivedAmountInput);
+  const receivedAmountError = useUnit(lessonStatusIconsModel.$receivedAmountError);
 
-  const actions = useUnit({ lessonPaymentChanged, lessonHomeworkSentChanged });
+  const actions = useUnit({
+    lessonPaymentChanged: lessonActionsModel.lessonPaymentChanged,
+    lessonHomeworkSentChanged: lessonActionsModel.lessonHomeworkSentChanged,
+    paymentDialogOpened: lessonStatusIconsModel.paymentDialogOpened,
+    paymentDialogClosed: lessonStatusIconsModel.paymentDialogClosed,
+    receivedAmountChanged: lessonStatusIconsModel.receivedAmountChanged,
+  });
 
   const paymentDialogOpen = openPaymentDialogFor === lesson.id;
   const homeworkDialogOpen = openHomeworkDialogFor === lesson.id;
 
   const { paymentDate, setPaymentDate } = usePaymentDate(lesson, paymentDialogOpen);
+  const isPaymentConfirmBlocked = !lesson.isPaid && Boolean(receivedAmountError);
 
   const handlePaymentConfirm = () => {
-    lessonStatusIconsModel.paymentDialogClosed();
-    if (!lesson.isPaid && paymentDate) {
-      actions.lessonPaymentChanged({ lessonId: lesson.id, isPaid: true, paymentDate });
-    } else {
-      actions.lessonPaymentChanged({ lessonId: lesson.id, isPaid: false });
-    }
+    if (isPaymentConfirmBlocked) return;
+    actions.paymentDialogClosed();
+    actions.lessonPaymentChanged(buildPaymentChange(lesson, paymentDate, receivedAmountInput));
   };
 
   const handleHomeworkConfirm = () => {
@@ -57,7 +65,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
               }
               onClick={(e) => {
                 e.stopPropagation();
-                lessonStatusIconsModel.paymentDialogOpened(lesson.id);
+                actions.paymentDialogOpened({ lessonId: lesson.id, price: lesson.price });
               }}
             >
               <Styled.PaymentIcon $isPaid={lesson.isPaid} fontSize="small" />
@@ -73,28 +81,26 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                 <strong>{lesson.isPaid ? "неоплаченный" : "оплаченный"}</strong>?
                 <Styled.DialogContent>
                   <Typography variant="body2" color="text.secondary">
-                    Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+                    Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
                   </Typography>
                 </Styled.DialogContent>
               </>
             }
             confirmColor={lesson.isPaid ? "warning" : "success"}
-            onClose={() => lessonStatusIconsModel.paymentDialogClosed()}
+            confirmDisabled={isPaymentConfirmBlocked}
+            onClose={actions.paymentDialogClosed}
             onConfirm={handlePaymentConfirm}
           >
             {!lesson.isPaid && (
-              <Box sx={{ mt: 2 }}>
-                <TextField
-                  autoFocus
-                  margin="dense"
-                  label="Дата оплаты"
-                  type="date"
-                  fullWidth
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+              <Styled.PaymentDateBox>
+                <PaymentFields
+                  paymentDate={paymentDate}
+                  receivedAmount={receivedAmountInput}
+                  receivedAmountError={receivedAmountError}
+                  onPaymentDateChange={setPaymentDate}
+                  onReceivedAmountChange={actions.receivedAmountChanged}
                 />
-              </Box>
+              </Styled.PaymentDateBox>
             )}
           </ConfirmStatusDialog>
         </>
@@ -134,7 +140,7 @@ export const LessonStatusIcons: FC<Props> = ({ lesson }) => {
                 Вы уверены, что хотите изменить статус домашнего задания для урока?
                 <Styled.DialogContent>
                   <Typography variant="body2" color="text.secondary">
-                    Урок: <strong>{lesson.student?.name}</strong> • {lesson.price || 0} ₽
+                    Урок: <strong>{getLessonDisplayName(lesson)}</strong> • {lesson.price || 0} ₽
                   </Typography>
                 </Styled.DialogContent>
               </>

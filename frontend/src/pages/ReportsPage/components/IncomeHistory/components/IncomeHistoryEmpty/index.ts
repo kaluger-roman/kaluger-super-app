@@ -1,0 +1,1 @@
+export { IncomeHistoryEmpty } from "./IncomeHistoryEmpty";

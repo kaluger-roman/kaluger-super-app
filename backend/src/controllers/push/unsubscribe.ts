@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { PushUnsubscribeDto } from "../../types";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const unsubscribe = async (req: AuthRequest, res: Response) => {
   try {
@@ -27,9 +27,9 @@ export const unsubscribe = async (req: AuthRequest, res: Response) => {
       where: { id: subscription.id },
     });
 
-    res.json({ message: "Подписка удалена" });
+    return res.json({ message: "Подписка удалена" });
   } catch (error) {
     console.error("Unsubscribe error:", error);
-    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    return res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 };

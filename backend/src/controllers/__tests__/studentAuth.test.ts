@@ -1,11 +1,11 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
 
 import { app } from "../../index";
-import prisma from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { hashPassword } from "../../utils";
 import { generateToken } from "../../utils/auth";
 import { issueInvitation } from "../../services/studentInvitation";
+import { uniqueEmail } from "../../__tests__/helpers";
 
 jest.mock("../../services/email", () => ({
   sendPasswordResetEmail: jest.fn(async () => undefined),
@@ -22,11 +22,10 @@ describe("studentAuth + studentInvitations controllers", () => {
   let studentId: string;
 
   beforeAll(async () => {
-    if (!process.env.FRONTEND_URL)
-      process.env.FRONTEND_URL = "http://localhost:3000";
+    if (!process.env.FRONTEND_URL) process.env.FRONTEND_URL = "http://localhost:3000";
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: await hashPassword(VALID_PASSWORD),
         name: "Тутор Тестов",
         isEmailVerified: true,
@@ -42,12 +41,8 @@ describe("studentAuth + studentInvitations controllers", () => {
   });
 
   afterAll(async () => {
-    await prisma.studentInvitation
-      .deleteMany({ where: { tutorId } })
-      .catch(() => undefined);
-    await prisma.studentUser
-      .deleteMany({ where: { studentId } })
-      .catch(() => undefined);
+    await prisma.studentInvitation.deleteMany({ where: { tutorId } }).catch(() => undefined);
+    await prisma.studentUser.deleteMany({ where: { studentId } }).catch(() => undefined);
     await prisma.student.delete({ where: { id: studentId } }).catch(() => undefined);
     await prisma.user.delete({ where: { id: tutorId } }).catch(() => undefined);
     await prisma.$disconnect();
@@ -72,7 +67,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("rejects non-owner tutor with 403", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Другой",
           isEmailVerified: true,
@@ -92,7 +87,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("rejects with 409 if student already has an account", async () => {
       await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Реги",
           studentId,
@@ -105,9 +100,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns 401 without auth token", async () => {
-      const res = await request(app).post(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).post(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -132,9 +125,7 @@ describe("studentAuth + studentInvitations controllers", () => {
 
   describe("GET /api/students/:id/invitations", () => {
     it("returns 401 without auth token", async () => {
-      const res = await request(app).get(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).get(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -148,7 +139,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("returns 403 for non-owner tutor", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Чужой",
           isEmailVerified: true,
@@ -187,7 +178,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns registered when student already has an account", async () => {
-      const email = faker.internet.email().toLowerCase();
+      const email = uniqueEmail().toLowerCase();
       await prisma.studentUser.create({
         data: { email, password: "hash", name: "Реги", studentId },
       });
@@ -204,9 +195,7 @@ describe("studentAuth + studentInvitations controllers", () => {
 
   describe("DELETE /api/students/:id/invitations", () => {
     it("returns 401 without auth token", async () => {
-      const res = await request(app).delete(
-        `/api/students/${studentId}/invitations`
-      );
+      const res = await request(app).delete(`/api/students/${studentId}/invitations`);
       expect(res.status).toBe(401);
     });
 
@@ -220,7 +209,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     it("returns 403 for non-owner tutor", async () => {
       const other = await prisma.user.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Чужой",
           isEmailVerified: true,
@@ -265,7 +254,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       const issued = await issueInvitation(tutorId, studentId);
       if (!issued.ok) throw new Error("issue failed");
       const token = issued.inviteUrl.split("/").pop();
-      const email = faker.internet.email().toLowerCase();
+      const email = uniqueEmail().toLowerCase();
 
       const res = await request(app).post("/api/student-auth/register").send({
         token,
@@ -287,7 +276,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       await request(app).post("/api/student-auth/register").send({
         token,
         name: "Петя",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -295,7 +284,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       const res = await request(app).post("/api/student-auth/register").send({
         token,
         name: "Петя2",
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: VALID_PASSWORD,
         passwordConfirmation: VALID_PASSWORD,
       });
@@ -309,9 +298,7 @@ describe("studentAuth + studentInvitations controllers", () => {
       if (!issued.ok) throw new Error("issue failed");
       const token = issued.inviteUrl.split("/").pop();
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
         valid: true,
@@ -321,9 +308,7 @@ describe("studentAuth + studentInvitations controllers", () => {
     });
 
     it("returns valid:false for unknown token (no enumeration leak)", async () => {
-      const res = await request(app).get(
-        "/api/student-invitations/validate/totally-unknown"
-      );
+      const res = await request(app).get("/api/student-invitations/validate/totally-unknown");
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ valid: false });
     });
@@ -338,9 +323,7 @@ describe("studentAuth + studentInvitations controllers", () => {
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
 
@@ -353,9 +336,7 @@ describe("studentAuth + studentInvitations controllers", () => {
         .delete(`/api/students/${studentId}/invitations`)
         .set("Authorization", `Bearer ${tutorToken}`);
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
 
@@ -366,16 +347,14 @@ describe("studentAuth + studentInvitations controllers", () => {
 
       await prisma.studentUser.create({
         data: {
-          email: faker.internet.email().toLowerCase(),
+          email: uniqueEmail().toLowerCase(),
           password: "hash",
           name: "Реги",
           studentId,
         },
       });
 
-      const res = await request(app).get(
-        `/api/student-invitations/validate/${token}`
-      );
+      const res = await request(app).get(`/api/student-invitations/validate/${token}`);
       expect(res.body).toEqual({ valid: false });
     });
   });

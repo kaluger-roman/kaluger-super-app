@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  callModel,
-  setCallSoundsAdapter,
-  setCallTransport,
-  stopAllSessions,
-} from "../index";
+import { callModel, setCallSoundsAdapter, setCallTransport, stopAllSessions } from "../index";
 
 const makeSoundsMock = () => ({
   startRingback: vi.fn<() => void>(),

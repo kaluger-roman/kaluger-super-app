@@ -19,7 +19,7 @@ import {
 import { useUnit } from "effector-react";
 
 import { studentsArchiveModel } from "../../models";
-import { ARCHIVE_REASON_OPTIONS } from "../../models/students-archive.constants";
+import { ARCHIVE_REASON_OPTIONS } from "../../models/studentsArchive.constants";
 
 export const StudentArchiveDialog: FC = () => {
   const student = useUnit(studentsArchiveModel.$archiveDialogStudent);

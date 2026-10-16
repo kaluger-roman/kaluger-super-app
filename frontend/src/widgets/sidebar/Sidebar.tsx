@@ -1,15 +1,6 @@
-import type { FC, ReactElement } from "react";
+import type { FC } from "react";
 
-import {
-  Dashboard as DashboardIcon,
-  School as StudentsIcon,
-  Schedule as LessonsIcon,
-  Assessment as ReportsIcon,
-  Newspaper as NewsIcon,
-  Logout as LogoutIcon,
-  Person as PersonIcon,
-  VideoCall as VideoCallIcon,
-} from "@mui/icons-material";
+import { Logout as LogoutIcon } from "@mui/icons-material";
 import {
   List,
   ListItem,
@@ -25,51 +16,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { newsModel, userModel } from "@entities";
 import { logoutConfirmationModel } from "@features";
 
+import { NAVIGATION_ITEMS } from "./Sidebar.constants";
 import * as Styled from "./Sidebar.styled";
-
-type NavigationItem = {
-  label: string;
-  path: string;
-  icon: ReactElement;
-};
-
-const navigationItems: NavigationItem[] = [
-  {
-    label: "Главная",
-    path: "/",
-    icon: <DashboardIcon />,
-  },
-  {
-    label: "Ученики",
-    path: "/students",
-    icon: <StudentsIcon />,
-  },
-  {
-    label: "Уроки",
-    path: "/lessons",
-    icon: <LessonsIcon />,
-  },
-  {
-    label: "Отчеты",
-    path: "/reports",
-    icon: <ReportsIcon />,
-  },
-  {
-    label: "История звонков",
-    path: "/call/history",
-    icon: <VideoCallIcon />,
-  },
-  {
-    label: "Новости",
-    path: "/news",
-    icon: <NewsIcon />,
-  },
-  {
-    label: "Настройки",
-    path: "/profile",
-    icon: <PersonIcon />,
-  },
-];
 
 type SidebarProps = {
   drawerWidth: number;
@@ -118,7 +66,7 @@ export const Sidebar: FC<SidebarProps> = ({ drawerWidth, open, onClose }) => {
 
       <Styled.ContentBox>
         <List>
-          {navigationItems.map((item) => (
+          {NAVIGATION_ITEMS.map((item) => (
             <ListItem key={item.path} disablePadding>
               <ListItemButton
                 selected={location.pathname === item.path}

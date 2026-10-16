@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("createStudent integration tests", () => {
   let authToken: string;
@@ -11,7 +12,7 @@ describe("createStudent integration tests", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -40,6 +41,32 @@ describe("createStudent integration tests", () => {
       .expect(400)
       .then((res) => {
         expect(res.body.error).toBeDefined();
+      });
+  });
+
+  it("should create student with contactMethod MAX for student and parent", async () => {
+    const payload = {
+      name: "Max Student",
+      contactMethod: "MAX",
+      phone: "+79990002233",
+      parentName: "Max Parent",
+      parentPhone: "+79990002234",
+      parentContactMethod: "MAX",
+    };
+
+    await request(app)
+      .post("/api/students")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send(payload)
+      .expect(201)
+      .then(async (res) => {
+        expect(res.body.student.contactMethod).toBe("MAX");
+        expect(res.body.student.parentContactMethod).toBe("MAX");
+        const created = await prisma.student.findUnique({
+          where: { id: res.body.student.id },
+        });
+        expect(created?.contactMethod).toBe("MAX");
+        expect(created?.parentContactMethod).toBe("MAX");
       });
   });
 
@@ -89,9 +116,7 @@ describe("createStudent integration tests", () => {
       .send(payload)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "У вас уже есть ученик с таким номером телефона"
-        );
+        expect(res.body.error).toBe("У вас уже есть ученик с таким номером телефона");
       });
   });
 
@@ -107,9 +132,7 @@ describe("createStudent integration tests", () => {
       .send(payload)
       .expect(400)
       .then((res) => {
-        expect(res.body.error).toBe(
-          "Не выбран способ связи (WhatsApp или Telegram)"
-        );
+        expect(res.body.error).toBe("Не выбран способ связи (WhatsApp, Telegram или MAX)");
       });
   });
 });

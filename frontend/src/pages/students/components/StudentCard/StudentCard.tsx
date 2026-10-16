@@ -17,7 +17,13 @@ import {
 
 import { studentsModel } from "@features/students";
 import type { Student } from "@shared";
-import { formatDateLong, StudentArchivedInfo } from "@shared";
+import {
+  CommissionProgress,
+  CONTACT_METHOD_LABELS,
+  formatDateLong,
+  isCommissionClosed,
+  StudentArchivedInfo,
+} from "@shared";
 
 import * as Styled from "./StudentCard.styled";
 
@@ -26,6 +32,8 @@ type StudentCardProps = {
 };
 
 export const StudentCard: FC<StudentCardProps> = ({ student }) => {
+  const commissionClosed = isCommissionClosed(student.commissionAmount, student.commissionRepaid);
+
   return (
     <Styled.StyledCard variant="outlined" onClick={() => studentsModel.viewDialogOpened(student)}>
       <CardContent>
@@ -55,7 +63,7 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
 
               {student.contactMethod && (
                 <Typography variant="body2" color="text.secondary">
-                  {student.contactMethod === "WHATSAPP" ? "WhatsApp" : "Telegram"}
+                  {CONTACT_METHOD_LABELS[student.contactMethod]}
                   {student.contactMethod === "TELEGRAM" && student.telegramNick
                     ? ` (${student.telegramNick})`
                     : ""}
@@ -66,6 +74,14 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
                 <Typography variant="body2" color="text.secondary">
                   💰 {student.hourlyRate} ₽/урок
                 </Typography>
+              )}
+
+              {!commissionClosed && (
+                <CommissionProgress
+                  amount={student.commissionAmount}
+                  repaid={student.commissionRepaid}
+                  variant="compact"
+                />
               )}
 
               {student.archived && student.archivedAt && (
@@ -100,11 +116,17 @@ export const StudentCard: FC<StudentCardProps> = ({ student }) => {
               </AccordionSummary>
               <AccordionDetails>
                 <Styled.AccordionDetailsBox>
+                  {commissionClosed && (
+                    <CommissionProgress
+                      amount={student.commissionAmount}
+                      repaid={student.commissionRepaid}
+                    />
+                  )}
                   {student.parentName && (
                     <Typography variant="body2" color="text.secondary">
                       <b>Родители:</b> {student.parentName ? `${student.parentName} ` : ""}
                       {student.parentPhone} (
-                      {student.parentContactMethod === "WHATSAPP" ? "WhatsApp" : "Telegram"}
+                      {CONTACT_METHOD_LABELS[student.parentContactMethod ?? "WHATSAPP"]}
                       {student.parentTelegramNick && `: ${student.parentTelegramNick}`})
                     </Typography>
                   )}

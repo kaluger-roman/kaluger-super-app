@@ -1,4 +1,6 @@
-import { styled, Box, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+
+import { styled } from "@shared";
 
 export const InfoBox = styled(Box)(({ theme }) => ({
   display: "flex",

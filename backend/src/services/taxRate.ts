@@ -6,30 +6,21 @@ type FilterRange = { start: Date; end: Date };
 
 type RateInRange = { rate: number; isOutsidePeriods: boolean };
 
-const sortPeriodsByStartAsc = (
-  periods: TaxRatePeriodDto[],
-): TaxRatePeriodDto[] =>
-  [...periods].sort(
-    (a, b) =>
-      new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-  );
+type LessonTax = RateInRange & { tax: number };
+
+const sortPeriodsByStartAsc = (periods: TaxRatePeriodDto[]): TaxRatePeriodDto[] =>
+  [...periods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
 const bucketKey = (rate: number, isOutside: boolean): string =>
   `${rate}|${isOutside ? "out" : "in"}`;
 
-const compareBucketEntries = (
-  a: TaxBreakdownEntry,
-  b: TaxBreakdownEntry,
-): number => {
+const compareBucketEntries = (a: TaxBreakdownEntry, b: TaxBreakdownEntry): number => {
   if (a.rate !== b.rate) return a.rate - b.rate;
   // outside-of-periods entry comes before in-period entry of the same rate
   return Number(b.isOutsidePeriods ?? false) - Number(a.isOutsidePeriods ?? false);
 };
 
-export const resolveRate = (
-  paymentDate: Date,
-  periods: TaxRatePeriodDto[],
-): number => {
+export const resolveRate = (paymentDate: Date, periods: TaxRatePeriodDto[]): number => {
   if (periods.length === 0) return 0;
   const sorted = sortPeriodsByStartAsc(periods);
   let applicable: TaxRatePeriodDto | null = null;
@@ -47,10 +38,25 @@ export const resolveRate = (
 export const calcLessonTax = (price: number, rate: number): number =>
   Math.round((price * rate) / 100);
 
+// A payment before the earliest period (or with no periods at all) is taxed at
+// 0% and flagged, so the tutor sees it was not covered by any configured rate.
+export const resolveLessonTax = (
+  amount: number,
+  effectiveDate: Date,
+  sortedPeriods: TaxRatePeriodDto[]
+): LessonTax => {
+  const isOutsidePeriods =
+    sortedPeriods.length === 0 ||
+    effectiveDate.getTime() < new Date(sortedPeriods[0].startDate).getTime();
+  const rate = isOutsidePeriods ? 0 : resolveRate(effectiveDate, sortedPeriods);
+
+  return { rate, isOutsidePeriods, tax: calcLessonTax(amount, rate) };
+};
+
 export const computeRatesInRange = (
   periods: TaxRatePeriodDto[],
   filterStart: Date,
-  filterEnd: Date,
+  filterEnd: Date
 ): RateInRange[] => {
   const sorted = sortPeriodsByStartAsc(periods);
   const result: RateInRange[] = [];
@@ -58,10 +64,7 @@ export const computeRatesInRange = (
   const filterEndMs = filterEnd.getTime();
 
   // 0%-zone before earliest period overlaps the filter
-  if (
-    sorted.length > 0 &&
-    filterStartMs < new Date(sorted[0].startDate).getTime()
-  ) {
+  if (sorted.length > 0 && filterStartMs < new Date(sorted[0].startDate).getTime()) {
     result.push({ rate: 0, isOutsidePeriods: true });
   }
 
@@ -85,22 +88,18 @@ export const computeRatesInRange = (
 export const buildTaxBreakdown = (
   lessons: LessonForTax[],
   periods: TaxRatePeriodDto[],
-  filterRange: FilterRange,
+  filterRange: FilterRange
 ): { taxAmount: number; taxBreakdown: TaxBreakdownEntry[] } => {
   const sortedPeriods = sortPeriodsByStartAsc(periods);
-  const earliestStart =
-    sortedPeriods.length > 0
-      ? new Date(sortedPeriods[0].startDate).getTime()
-      : Number.POSITIVE_INFINITY;
-
   const buckets = new Map<string, TaxBreakdownEntry>();
 
   for (const lesson of lessons) {
     if (lesson.price == null || lesson.paymentDate == null) continue;
-    const paymentTime = lesson.paymentDate.getTime();
-    const isOutside = paymentTime < earliestStart;
-    const rate = isOutside ? 0 : resolveRate(lesson.paymentDate, sortedPeriods);
-    const tax = calcLessonTax(lesson.price, rate);
+    const {
+      rate,
+      isOutsidePeriods: isOutside,
+      tax,
+    } = resolveLessonTax(lesson.price, lesson.paymentDate, sortedPeriods);
     const key = bucketKey(rate, isOutside);
     const existing = buckets.get(key);
     if (existing) {
@@ -119,7 +118,7 @@ export const buildTaxBreakdown = (
   for (const { rate, isOutsidePeriods } of computeRatesInRange(
     periods,
     filterRange.start,
-    filterRange.end,
+    filterRange.end
   )) {
     const key = bucketKey(rate, isOutsidePeriods);
     if (buckets.has(key)) continue;

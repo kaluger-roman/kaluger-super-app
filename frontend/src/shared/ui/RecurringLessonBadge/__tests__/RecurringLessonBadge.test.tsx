@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect } from "vitest";
 
-import { theme } from "../../theme";
+import { theme } from "../../themeConfig";
 import { RecurringLessonBadge } from "../RecurringLessonBadge";
 
 const renderWithTheme = (ui: React.ReactElement) =>

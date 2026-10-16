@@ -1,8 +1,9 @@
 import request from "supertest";
 import { app } from "../../../index";
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { generateToken } from "../../../utils/auth";
 import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 describe("getLessons controller", () => {
   let authToken: string;
@@ -12,7 +13,7 @@ describe("getLessons controller", () => {
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: uniqueEmail(),
         password: "hashed",
         name: faker.person.fullName(),
       },
@@ -64,7 +65,7 @@ describe("getLessons controller", () => {
 
     // other user cannot access
     const other = await prisma.user.create({
-      data: { email: faker.internet.email(), password: "x", name: "o" },
+      data: { email: uniqueEmail(), password: "x", name: "o" },
     });
     const otherToken = generateToken({ userId: other.id, email: other.email });
 
@@ -415,7 +416,7 @@ describe("getLessons controller", () => {
 
   it("orders ascending when upcoming=true", async () => {
     const now = new Date();
-    const t1 = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -427,7 +428,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const t2 = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -446,9 +447,7 @@ describe("getLessons controller", () => {
       .query({ upcoming: "true", currentTime: now.toISOString() })
       .expect(200)
       .then((res) => {
-        const starts = res.body.lessons.map((l: any) =>
-          new Date(l.startTime).getTime()
-        );
+        const starts = res.body.lessons.map((l: any) => new Date(l.startTime).getTime());
         // ensure ascending
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeGreaterThanOrEqual(starts[i - 1]);
@@ -528,9 +527,7 @@ describe("getLessons controller", () => {
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeGreaterThanOrEqual(starts[i - 1]);
         // ensure student relation is present and matches
-        const found = lessons.find(
-          (l) => l.student && l.student.id === localStudent.id
-        );
+        const found = lessons.find((l) => l.student && l.student.id === localStudent.id);
         expect(found).toBeDefined();
       });
   });
@@ -601,7 +598,7 @@ describe("getLessons controller", () => {
 
   it("non-weekly non-upcoming returns descending order by default", async () => {
     // create three lessons with different times
-    const a = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -613,7 +610,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const b = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -625,7 +622,7 @@ describe("getLessons controller", () => {
         status: "SCHEDULED",
       },
     });
-    const c = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -643,9 +640,7 @@ describe("getLessons controller", () => {
       .set("Authorization", `Bearer ${authToken}`)
       .expect(200)
       .then((res) => {
-        const starts = res.body.lessons.map((l: any) =>
-          new Date(l.startTime).getTime()
-        );
+        const starts = res.body.lessons.map((l: any) => new Date(l.startTime).getTime());
         // verify descending order by default for non-upcoming
         for (let i = 1; i < starts.length; i++)
           expect(starts[i]).toBeLessThanOrEqual(starts[i - 1]);
@@ -655,7 +650,7 @@ describe("getLessons controller", () => {
   it("upcoming=true without currentTime is ignored and behaves as status filter absent", async () => {
     // ensure upcoming=true without currentTime does nothing special
     const now = new Date();
-    const fut = await prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         tutorId: userId,
         studentId,
@@ -744,6 +739,7 @@ describe("getLessons controller", () => {
             isRecurring: false,
             isPaid: true,
             price: 1000,
+            receivedAmount: 1000,
             paymentDate: yesterday,
             status: "COMPLETED",
           },
@@ -762,6 +758,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 5000,
+          receivedAmount: 5000,
           paymentDate: lastWeek,
           status: "COMPLETED",
         },
@@ -802,6 +799,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 1234,
+          receivedAmount: 1234,
           paymentDate: new Date(),
           status: "COMPLETED",
         },
@@ -830,6 +828,7 @@ describe("getLessons controller", () => {
           isRecurring: false,
           isPaid: true,
           price: 700,
+          receivedAmount: 700,
           paymentDate: new Date(),
           status: "COMPLETED",
         },
@@ -847,6 +846,46 @@ describe("getLessons controller", () => {
           expect(res.body.paymentsSummary).toEqual({ sum: 700, count: 1 });
         });
     });
+
+    it("sums received amounts and skips payments that received nothing", async () => {
+      const paymentDate = new Date();
+      const base = {
+        tutorId: userId,
+        studentId,
+        subject: "MATHEMATICS" as const,
+        lessonType: "SCHOOL" as const,
+        isPaid: true,
+        price: 2000,
+        paymentDate,
+        status: "COMPLETED" as const,
+      };
+      await prisma.lesson.create({
+        data: {
+          ...base,
+          startTime: new Date(Date.now() - 3 * 3600000),
+          endTime: new Date(Date.now() - 2 * 3600000),
+          receivedAmount: 1800,
+        },
+      });
+      await prisma.lesson.create({
+        data: {
+          ...base,
+          startTime: new Date(Date.now() - 5 * 3600000),
+          endTime: new Date(Date.now() - 4 * 3600000),
+          receivedAmount: 0,
+        },
+      });
+
+      const from = new Date(paymentDate.getTime() - 24 * 60 * 60 * 1000);
+
+      const res = await request(app)
+        .get(`/api/lessons`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .query({ paymentDateFrom: from.toISOString() })
+        .expect(200);
+
+      expect(res.body.paymentsSummary).toEqual({ sum: 1800, count: 1 });
+    });
   });
 
   describe("pagination input safety (regression: NaN propagation)", () => {
@@ -857,7 +896,7 @@ describe("getLessons controller", () => {
     beforeAll(async () => {
       const user = await prisma.user.create({
         data: {
-          email: faker.internet.email(),
+          email: uniqueEmail(),
           password: "hashed",
           name: faker.person.fullName(),
         },

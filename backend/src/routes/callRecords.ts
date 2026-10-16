@@ -8,10 +8,6 @@ const callRecordsRouter: Router = Router();
 callRecordsRouter.get("/history", authenticateToken, getTutorCallHistory);
 
 const studentCallRecordsRouter: Router = Router();
-studentCallRecordsRouter.get(
-  "/calls/history",
-  authenticateStudent,
-  getStudentCallHistory
-);
+studentCallRecordsRouter.get("/calls/history", authenticateStudent, getStudentCallHistory);
 
 export { callRecordsRouter, studentCallRecordsRouter };

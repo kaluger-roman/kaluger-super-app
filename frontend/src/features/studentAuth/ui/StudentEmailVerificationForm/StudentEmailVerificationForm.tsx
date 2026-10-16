@@ -10,9 +10,7 @@ export const StudentEmailVerificationForm: FC = () => {
   const code = useUnit(studentEmailVerificationModel.$code);
   const verifyError = useUnit(studentEmailVerificationModel.$verifyError);
   const resendError = useUnit(studentEmailVerificationModel.$resendError);
-  const cooldown = useUnit(
-    studentEmailVerificationModel.$resendCooldownSeconds
-  );
+  const cooldown = useUnit(studentEmailVerificationModel.$resendCooldownSeconds);
   const isVerifying = useUnit(studentEmailVerificationModel.$isVerifying);
   const isResending = useUnit(studentEmailVerificationModel.$isResending);
 
@@ -38,27 +36,15 @@ export const StudentEmailVerificationForm: FC = () => {
         <Styled.CodeField
           label="Код"
           value={code}
-          onChange={(e) =>
-            studentEmailVerificationModel.codeChanged(e.target.value)
-          }
+          onChange={(e) => studentEmailVerificationModel.codeChanged(e.target.value)}
           inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: 6 }}
           size="small"
         />
-        <Button
-          variant="contained"
-          disabled={isVerifying}
-          onClick={handleSubmit}
-        >
+        <Button variant="contained" disabled={isVerifying} onClick={handleSubmit}>
           {isVerifying ? "Проверяем…" : "Подтвердить"}
         </Button>
-        <Button
-          variant="text"
-          onClick={handleResend}
-          disabled={isResending || cooldown > 0}
-        >
-          {cooldown > 0
-            ? `Отправить заново через ${cooldown}с`
-            : "Отправить заново"}
+        <Button variant="text" onClick={handleResend} disabled={isResending || cooldown > 0}>
+          {cooldown > 0 ? `Отправить заново через ${cooldown}с` : "Отправить заново"}
         </Button>
       </Styled.Row>
     </Styled.Wrapper>

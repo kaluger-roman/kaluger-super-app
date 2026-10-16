@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import prisma from "../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { handleCallSignal } from "../../../lib/websocket/signaling";
 import { callRegistry } from "../index";
 import type { CallerKindValue, CallSignalingOutbound } from "../../../types";
@@ -23,11 +23,7 @@ describe("call lifecycle → call_records persistence", () => {
   let studentUserId: string;
   let sent: CallSignalingOutbound[];
 
-  const send = (
-    _kind: CallerKindValue,
-    _id: string,
-    message: CallSignalingOutbound
-  ): void => {
+  const send = (_kind: CallerKindValue, _id: string, message: CallSignalingOutbound): void => {
     sent.push(message);
   };
 

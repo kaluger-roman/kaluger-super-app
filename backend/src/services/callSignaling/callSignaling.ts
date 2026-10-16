@@ -2,19 +2,11 @@ import { randomUUID } from "crypto";
 import type { CallerKindValue } from "../../types";
 import { createFinalizedCallRecord } from "./callRecord";
 import { RING_TIMEOUT_MS } from "./callSignaling.constants";
-import type {
-  CallFinalizeStatus,
-  LiveCall,
-  ResolvedPair,
-} from "./callSignaling.types";
+import type { CallFinalizeStatus, LiveCall, ResolvedPair } from "./callSignaling.types";
 
 const liveCalls = new Map<string, LiveCall>();
 
-const matchesParticipant = (
-  call: LiveCall,
-  kind: CallerKindValue,
-  id: string
-): boolean =>
+const matchesParticipant = (call: LiveCall, kind: CallerKindValue, id: string): boolean =>
   kind === "tutor" ? call.tutorUserId === id : call.studentUserId === id;
 
 export const findActiveCallForParticipant = (
@@ -32,18 +24,14 @@ export const findActiveCallForPair = (
   studentUserId: string
 ): LiveCall | undefined => {
   for (const call of liveCalls.values()) {
-    if (
-      call.tutorUserId === tutorUserId &&
-      call.studentUserId === studentUserId
-    ) {
+    if (call.tutorUserId === tutorUserId && call.studentUserId === studentUserId) {
       return call;
     }
   }
   return undefined;
 };
 
-export const getCall = (callId: string): LiveCall | undefined =>
-  liveCalls.get(callId);
+export const getCall = (callId: string): LiveCall | undefined => liveCalls.get(callId);
 
 export const startCall = (
   pair: ResolvedPair,
@@ -76,11 +64,8 @@ export const markConnected = (callId: string): void => {
   call.connectedAt = new Date();
 };
 
-export const isParticipant = (
-  call: LiveCall,
-  kind: CallerKindValue,
-  id: string
-): boolean => matchesParticipant(call, kind, id);
+export const isParticipant = (call: LiveCall, kind: CallerKindValue, id: string): boolean =>
+  matchesParticipant(call, kind, id);
 
 export const getPeer = (
   call: LiveCall,

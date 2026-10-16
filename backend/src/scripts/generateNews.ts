@@ -38,7 +38,7 @@ const main = () => {
 
   if (!params) {
     console.error(
-      'Использование: npm run news:generate -- --title "Заголовок" --content "Текст" --version "2026-02-22"',
+      'Использование: npm run news:generate -- --title "Заголовок" --content "Текст" --version "2026-02-22"'
     );
     process.exit(1);
   }

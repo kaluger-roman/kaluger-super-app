@@ -1,2 +1,2 @@
 export { PaymentStatus } from "./PaymentStatus";
-export * as paymentStatusModel from "./payment-status.model";
+export * as paymentStatusModel from "./PaymentStatus.model";

@@ -13,24 +13,22 @@ type LessonsDayProps = {
   onMenuClick: (event: MouseEvent<HTMLElement>, lesson: Lesson) => void;
 };
 
-export const LessonsDay = memo<LessonsDayProps>(
-  ({ day, lessons, onCardClick, onMenuClick }) => {
-    return (
-      <Styled.DayContainer>
-        <Styled.DayTitle variant="subtitle1">{day}</Styled.DayTitle>
-        <Styled.LessonsContainer>
-          {lessons.map((lesson) => (
-            <LessonCard
-              key={lesson.id}
-              lesson={lesson}
-              onCardClick={onCardClick}
-              onMenuClick={onMenuClick}
-            />
-          ))}
-        </Styled.LessonsContainer>
-      </Styled.DayContainer>
-    );
-  }
-);
+export const LessonsDay = memo<LessonsDayProps>(({ day, lessons, onCardClick, onMenuClick }) => {
+  return (
+    <Styled.DayContainer>
+      <Styled.DayTitle variant="subtitle1">{day}</Styled.DayTitle>
+      <Styled.LessonsContainer>
+        {lessons.map((lesson) => (
+          <LessonCard
+            key={lesson.id}
+            lesson={lesson}
+            onCardClick={onCardClick}
+            onMenuClick={onMenuClick}
+          />
+        ))}
+      </Styled.LessonsContainer>
+    </Styled.DayContainer>
+  );
+});
 
 LessonsDay.displayName = "LessonsDay";

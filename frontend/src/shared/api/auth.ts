@@ -56,9 +56,7 @@ export const authApi = {
     return response.data;
   },
 
-  verifyEmailChange: async (data: {
-    code: string;
-  }): Promise<AuthResponse & { token: string }> => {
+  verifyEmailChange: async (data: { code: string }): Promise<AuthResponse & { token: string }> => {
     const response = await api.post("/auth/verify-email-change", data);
     return response.data;
   },

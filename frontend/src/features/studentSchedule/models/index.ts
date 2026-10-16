@@ -1,4 +1,4 @@
-export * as studentScheduleModel from "./student-schedule.model";
+export * as studentScheduleModel from "./studentSchedule.model";
 export {
   addDays,
   formatLessonDuration,
@@ -9,4 +9,4 @@ export {
   statusLabel,
   subjectLabel,
   toIsoDate,
-} from "./student-schedule.helpers";
+} from "./studentSchedule.helpers";

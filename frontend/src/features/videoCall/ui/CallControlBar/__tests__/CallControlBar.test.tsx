@@ -40,16 +40,12 @@ describe("CallControlBar", () => {
 
   it("should label the mic button by the current state", () => {
     renderBar({ micOn: true, cameraOn: true, screenSharing: false });
-    expect(
-      screen.getByRole("button", { name: "Выключить микрофон" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Выключить микрофон" })).toBeInTheDocument();
   });
 
   it("should show the enable-mic label when muted", () => {
     renderBar({ micOn: false, cameraOn: true, screenSharing: false });
-    expect(
-      screen.getByRole("button", { name: "Включить микрофон" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Включить микрофон" })).toBeInTheDocument();
   });
 
   it("should keep screen share clickable when the peer is already sharing", () => {
@@ -57,16 +53,12 @@ describe("CallControlBar", () => {
       { micOn: true, cameraOn: true, screenSharing: false },
       { micOn: true, cameraOn: true, screenSharing: true }
     );
-    expect(
-      screen.getByRole("button", { name: "Демонстрация экрана" })
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Демонстрация экрана" })).toBeEnabled();
   });
 
   it("should dispatch hangUp when the end-call button is clicked", async () => {
     const { scope } = renderBar({ micOn: true, cameraOn: true, screenSharing: false });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Завершить звонок" })
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Завершить звонок" }));
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
 });

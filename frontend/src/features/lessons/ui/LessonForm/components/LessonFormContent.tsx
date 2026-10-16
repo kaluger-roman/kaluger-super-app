@@ -1,19 +1,22 @@
-import { TextField, FormControlLabel, Checkbox } from "@mui/material";
+import { TextField } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
 
+import { useIsTaxEnabled } from "@entities";
 import type { Lesson } from "@shared";
 
 import { DateTimeSelector } from "./DateTimeSelector";
 import * as Styled from "./LessonFormContent.styled";
+import { LessonStatusSection } from "./LessonStatusSection";
+import { LessonStudentSection } from "./LessonStudentSection";
+import { PaidDetailsFields } from "./PaidDetailsFields";
 import { PastDateNotice } from "./PastDateNotice";
 import { PriceInput } from "./PriceInput";
-import { StudentSelector } from "./StudentSelector";
+import { RecurringCheckbox } from "./RecurringCheckbox";
 import { SubjectTypeSelector } from "./SubjectTypeSelector";
-import { HomeworkSentStatus } from "../../HomeworkSentStatus";
-import { PaymentStatus } from "../../PaymentStatus";
-import type { LessonFormData } from "../types";
+import { TaxExemptSwitch, TAX_EXEMPT_HINT } from "../../TaxExemptSwitch";
+import type { LessonFormData } from "../LessonForm.types";
 
 type LessonFormContentProps = {
   formData: LessonFormData;
@@ -36,11 +39,13 @@ export const LessonFormContent = ({
   handleDateChange,
   setFormData,
 }: LessonFormContentProps) => {
+  const isTaxEnabled = useIsTaxEnabled();
+
   return (
     <Styled.StyledDialogContent $isMobile={isMobile}>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
         <Styled.FormContainer $isMobile={isMobile}>
-          <StudentSelector
+          <LessonStudentSection
             formData={formData}
             errors={errors}
             isLoading={isLoading}
@@ -92,63 +97,28 @@ export const LessonFormContent = ({
           />
 
           {formData.isPaid && (
-            <Styled.DateFieldWrapper>
-              <TextField
-                label="Дата оплаты"
-                type="date"
-                fullWidth
-                value={formData.paymentDate || ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, paymentDate: e.target.value }))}
-                disabled={isLoading}
-                size={isMobile ? "small" : "medium"}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Styled.DateFieldWrapper>
+            <PaidDetailsFields
+              formData={formData}
+              isLoading={isLoading}
+              isMobile={isMobile}
+              setFormData={setFormData}
+            />
           )}
 
-          <Styled.CheckboxContainer>
-            {lesson && (
-              <PaymentStatus
-                lesson={{
-                  ...lesson,
-                  isPaid: formData.isPaid,
-                  paymentDate: formData.paymentDate,
-                }}
-                onPaymentChange={(_lessonId: string, isPaid: boolean, paymentDate?: string) =>
-                  setFormData((prev) => ({ ...prev, isPaid, paymentDate }))
-                }
-              />
-            )}
-            {lesson && (
-              <HomeworkSentStatus
-                lesson={{
-                  ...lesson,
-                  isHomeworkSentByTeacher: formData.isHomeworkSentByTeacher,
-                }}
-                onHomeworkSentChange={(_lessonId: string, isSent: boolean) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isHomeworkSentByTeacher: isSent,
-                  }))
-                }
-              />
-            )}
-          </Styled.CheckboxContainer>
-          {!lesson && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.isRecurring}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isRecurring: e.target.checked,
-                    }))
-                  }
-                  disabled={isLoading}
-                />
-              }
-              label="Регулярное занятие (еженедельно)"
+          <LessonStatusSection lesson={lesson} formData={formData} setFormData={setFormData} />
+          {isTaxEnabled && (
+            <TaxExemptSwitch
+              checked={formData.isTaxExempt}
+              disabled={isLoading}
+              hint={TAX_EXEMPT_HINT}
+              onChange={(isTaxExempt) => setFormData((prev) => ({ ...prev, isTaxExempt }))}
+            />
+          )}
+          {!lesson && !formData.withoutStudent && (
+            <RecurringCheckbox
+              checked={formData.isRecurring}
+              disabled={isLoading}
+              onChange={(isRecurring) => setFormData((prev) => ({ ...prev, isRecurring }))}
             />
           )}
 
