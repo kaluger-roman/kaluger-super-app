@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import type { Lesson } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { getWebSocketManager } from "../../lib/wsManager";
@@ -13,7 +12,7 @@ import {
 import type { ShiftPreview } from "../recurringHelpers";
 import { cancelRemindersForLesson, scheduleRemindersForLesson } from "../reminderScheduler";
 import { broadcastStudentLessonUpdated } from "../studentLessonBroadcast";
-import { MAX_TX_RETRIES } from "./lessonUpdate.constants";
+import { LESSON_UPDATE_LOCK_NAMESPACE, MAX_TX_RETRIES } from "./lessonUpdate.constants";
 import {
   isTimeChanging,
   shouldPropagateRecurringPrice,
@@ -25,12 +24,11 @@ import type {
   UpdatedLesson,
 } from "./lessonUpdate.types";
 
-// Serializable isolation + bounded retry on P2034 (transaction conflict /
-// serialization failure) gives a true TOCTOU guarantee for concurrent
-// updates on the same tutor. Default READ COMMITTED would let two
-// overlapping requests both pass the conflict-check `findFirst` and both
-// commit overlapping lessons — moving the check inside `$transaction`
-// alone is not enough.
+// A per-tutor advisory lock serializes concurrent updates of one tutor, so two
+// overlapping requests cannot both pass the conflict-check `findFirst` and both
+// commit overlapping lessons. Serializable isolation gave the same guarantee
+// but aborted unrelated tutors too: its predicate locks on btree indexes are
+// page-sized, and recent lessons (time-ordered cuids) share index pages.
 const runLessonUpdateTransaction = ({
   id,
   userId,
@@ -41,60 +39,59 @@ const runLessonUpdateTransaction = ({
   end,
   nextLessonForTransfer,
 }: ApplyLessonUpdateParams): Promise<LessonUpdateResult> =>
-  prisma.$transaction(
-    async (tx) => {
-      if (isTimeChanging(updateData)) {
-        const conflictingLesson = await tx.lesson.findFirst({
-          where: {
-            id: { not: id },
-            tutorId: userId,
-            status: { not: "CANCELLED" },
-            OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
-          },
-        });
-        if (conflictingLesson) {
-          throw new SchedulingConflictError("Временной слот конфликтует с существующим уроком");
-        }
-      }
+  prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LESSON_UPDATE_LOCK_NAMESPACE}::int4, hashtext(${userId}))`;
 
-      let plannedShift: ShiftPreview | undefined;
-      if (shouldShiftRecurringSeries(updateData, existingLesson)) {
-        plannedShift = await previewShiftFutureRecurringLessons(
-          existingLesson,
-          truncateToMinute(new Date(start)),
-          truncateToMinute(new Date(end)),
-          tx
-        );
-        if (plannedShift.conflicts.length > 0) {
-          throw new RecurringShiftConflictError("Перенесенная серия конфликтует с другими уроками");
-        }
-      }
-
-      if (nextLessonForTransfer && existingLesson.paymentDate) {
-        await tx.lesson.update({
-          where: { id: nextLessonForTransfer.id },
-          data: {
-            isPaid: true,
-            paymentDate: existingLesson.paymentDate,
-            receivedAmount: existingLesson.receivedAmount ?? existingLesson.price ?? 0,
-          },
-        });
-      }
-
-      const lesson = await tx.lesson.update({
-        where: { id },
-        data: dataToUpdate,
-        include: { student: { select: { id: true, name: true } } },
+    if (isTimeChanging(updateData)) {
+      const conflictingLesson = await tx.lesson.findFirst({
+        where: {
+          id: { not: id },
+          tutorId: userId,
+          status: { not: "CANCELLED" },
+          OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
+        },
       });
+      if (conflictingLesson) {
+        throw new SchedulingConflictError("Временной слот конфликтует с существующим уроком");
+      }
+    }
 
-      const result: ShiftResult | undefined = plannedShift
-        ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
-        : undefined;
+    let plannedShift: ShiftPreview | undefined;
+    if (shouldShiftRecurringSeries(updateData, existingLesson)) {
+      plannedShift = await previewShiftFutureRecurringLessons(
+        existingLesson,
+        truncateToMinute(new Date(start)),
+        truncateToMinute(new Date(end)),
+        tx
+      );
+      if (plannedShift.conflicts.length > 0) {
+        throw new RecurringShiftConflictError("Перенесенная серия конфликтует с другими уроками");
+      }
+    }
 
-      return { lesson, result, plannedShift };
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  );
+    if (nextLessonForTransfer && existingLesson.paymentDate) {
+      await tx.lesson.update({
+        where: { id: nextLessonForTransfer.id },
+        data: {
+          isPaid: true,
+          paymentDate: existingLesson.paymentDate,
+          receivedAmount: existingLesson.receivedAmount ?? existingLesson.price ?? 0,
+        },
+      });
+    }
+
+    const lesson = await tx.lesson.update({
+      where: { id },
+      data: dataToUpdate,
+      include: { student: { select: { id: true, name: true } } },
+    });
+
+    const result: ShiftResult | undefined = plannedShift
+      ? await applyShiftFutureRecurringLessons(tx, plannedShift.planned)
+      : undefined;
+
+    return { lesson, result, plannedShift };
+  });
 
 export const applyLessonUpdate = async (
   params: ApplyLessonUpdateParams

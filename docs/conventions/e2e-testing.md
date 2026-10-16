@@ -116,6 +116,7 @@ ESLint enforced: `playwright/no-raw-locators` не пропускает `locator
 - TypeScript строгий. Никаких `any` (общая конвенция). `frontend/tsconfig.json` включает `e2e/` и `playwright.config.ts`, так что `npx tsc --noEmit` проверяет и e2e.
 - Названные импорты, никаких `default exports`. Исключение — `playwright.config.ts`: Playwright читает конфиг из default export.
 - `npm run lint`, `npm run format:check` и pre-commit хук покрывают `frontend/e2e/**` и `playwright.config.ts` так же, как `src/`. Правила Jest и Testing Library, которые `react-app/jest` включает для любых `*.spec.*`, для e2e выключены; вместо них `eslint-plugin-playwright`: `no-focused-test`, `no-page-pause`, `no-wait-for-selector`, `no-wait-for-timeout`, `no-raw-locators`, `no-element-handle`, `no-eval`, `valid-test-tags`.
+- Хелперы e2e с собственной логикой (ожидание письма, разбор ответов API) покрываются юнит-тестом рядом с хелпером: `e2e/helpers/<name>.test.ts`. Его гоняет vitest (`npm test`), Playwright-спеки `*.spec.ts` vitest не трогает. Папка `__tests__` в e2e не подходит: правило kebab-case для папок её отвергнет.
 
 ## Связанные команды
 

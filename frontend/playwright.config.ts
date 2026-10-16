@@ -4,6 +4,8 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.PORT
 
 export default defineConfig({
   testDir: "./e2e",
+  // e2e/**/*.test.ts are vitest unit tests of the e2e helpers.
+  testMatch: "**/*.spec.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
