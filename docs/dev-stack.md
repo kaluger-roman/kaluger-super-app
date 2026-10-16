@@ -51,7 +51,10 @@ bash scripts/dev-stack.sh down-all         # снести все dev-* стек�
   `scripts/dev-stack.sh`). Ими пользуются `e2e/admin/*` и тестовый роут `/api/__test__/admin/token`.
 - **`pg_dump` на хосте должен быть не старше Postgres стенда (16).** Бэкап (`e2e/admin/create-backup`)
   зовёт `pg_dump` с хоста; на Ubuntu 22.04 из apt ставится 14, и он отказывается работать с сервером
-  16 (`server version mismatch`). Нужен `postgresql-client-16` из репозитория PGDG.
+  16 (`server version mismatch`). Нужен `postgresql-client-16` из репозитория PGDG. Обёртка
+  `pg_dump` в Debian/Ubuntu выбирает версию локального кластера, а не новейшую, поэтому
+  `run-backend`, `run-backend-e2e` и `test-backend` сами ставят в `PATH`
+  `/usr/lib/postgresql/<версия образа>/bin`, если он есть.
 - **WebSocket в dev** выводится из `REACT_APP_API_URL` (`resolveWsUrl` в
   `frontend/src/shared/config/index.ts`) — realtime ветки ходит в бэк своей же ветки.
 - **Playwright** читает `E2E_BASE_URL`/`PORT` (`frontend/playwright.config.ts`), API-хелперы e2e —

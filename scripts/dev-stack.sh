@@ -40,6 +40,18 @@ E2E_ADMIN_EMAIL="admin@e2e.local"
 # bcrypt of the password `E2eAdmin!2026` — single-quoted so the $ segments stay literal.
 E2E_ADMIN_PASSWORD_HASH='$2b$10$bh0KSxPLTBEwZJlmikbYauZdELBjCDPXcpe9vCds2KUZ6RRjCV3su'
 
+# Backups run the host's pg_dump, which refuses a newer server. Debian/Ubuntu's pg_dump
+# wrapper picks the local cluster's version, not the newest client, so put the client
+# matching the stand's Postgres image first on PATH when it is installed.
+PG_LIB_DIR="${DEV_STACK_PG_LIB_DIR:-/usr/lib/postgresql}"
+use_stand_pg_client() {
+  local major
+  major="$(sed -nE 's/^[[:space:]]*image: postgres:([0-9]+).*/\1/p' "$COMPOSE_FILE")"
+  if [ -n "$major" ] && [ -x "$PG_LIB_DIR/$major/bin/pg_dump" ]; then
+    PATH="$PG_LIB_DIR/$major/bin:$PATH"
+  fi
+}
+
 sanitize() {
   echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##'
 }
@@ -119,6 +131,7 @@ cmd_migrate_inner() {
 
 cmd_run_backend() {
   load_ports
+  use_stand_pg_client
   cd "$REPO_ROOT/backend"
   local load_env=()
   [ -f .env ] && load_env=(./node_modules/.bin/dotenv -e .env --)
@@ -128,6 +141,7 @@ cmd_run_backend() {
 
 cmd_run_backend_e2e() {
   load_ports
+  use_stand_pg_client
   cd "$REPO_ROOT/backend"
   NODE_ENV=test E2E=1 PORT="$API_PORT" DATABASE_URL="$TEST_DB_URL" \
     FRONTEND_URL="http://localhost:$WEB_PORT" \
@@ -146,6 +160,7 @@ cmd_run_frontend() {
 
 cmd_test_backend() {
   load_ports
+  use_stand_pg_client
   cd "$REPO_ROOT/backend"
   DATABASE_URL="$TEST_DB_URL" exec npm test -- "$@"
 }

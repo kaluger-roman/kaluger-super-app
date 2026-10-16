@@ -54,11 +54,13 @@ beforeEach(() => {
   mkdirSync(join(repo, "backend"));
   mkdirSync(bin);
   copyFileSync(join(REPO_ROOT, "scripts", "dev-stack.sh"), join(repo, "scripts", "dev-stack.sh"));
+  copyFileSync(join(REPO_ROOT, "docker-compose.dev.yml"), join(repo, "docker-compose.dev.yml"));
   writeFileSync(join(bin, "npm"), FAKE_NPM);
   chmodSync(join(bin, "npm"), 0o755);
   env = {
     PATH: `${bin}:${process.env.PATH}`,
     HOME: root,
+    DEV_STACK_PG_LIB_DIR: join(root, "postgresql"),
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_NOSYSTEM: "1",
     GIT_AUTHOR_NAME: "Test",
@@ -145,3 +147,35 @@ test(
     assert.equal(vars.DATABASE_URL, "postgresql://dev:dev@localhost:15433/tutor_app?schema=public");
   }
 );
+
+const installPgClient = (major) => {
+  const binDir = join(env.DEV_STACK_PG_LIB_DIR, major, "bin");
+  mkdirSync(binDir, { recursive: true });
+  writeFileSync(join(binDir, "pg_dump"), "#!/bin/sh\n");
+  chmodSync(join(binDir, "pg_dump"), 0o755);
+  return binDir;
+};
+
+for (const command of ["run-backend", "run-backend-e2e", "test-backend"]) {
+  test(`${command} puts the pg_dump matching the stand's Postgres image first on PATH`, () => {
+    const major = readFileSync(join(REPO_ROOT, "docker-compose.dev.yml"), "utf8").match(
+      /image: postgres:(\d+)/
+    )[1];
+    installPgClient("14");
+    const binDir = installPgClient(major);
+
+    const res = run(command);
+
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(npmEnv().PATH.split(":")[0], binDir);
+  });
+}
+
+test("run-backend-e2e leaves PATH alone when the stand's pg_dump is not installed", () => {
+  installPgClient("14");
+
+  const res = run("run-backend-e2e");
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(npmEnv().PATH, env.PATH);
+});
