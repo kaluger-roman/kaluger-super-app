@@ -6,6 +6,12 @@ import { generateAdminToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
 import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
+import {
+  BACKUP_FILE_EXTENSION,
+  OFFSITE_LAST_PULL_FILE,
+  RESTORE_CHECK_FILE,
+  getBackupDir,
+} from "../services";
 
 export const testRouter = Router();
 
@@ -277,12 +283,11 @@ testRouter.post("/admin/token", (_req: Request, res: Response) => {
 testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
   const fs = await import("fs");
   const path = await import("path");
-  const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
-  if (fs.existsSync(dir)) {
-    for (const file of fs.readdirSync(dir)) {
-      if (file.endsWith(".sql.gz")) {
-        fs.unlinkSync(path.join(dir, file));
-      }
+  const dir = getBackupDir();
+  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE];
+  for (const file of fs.readdirSync(dir)) {
+    if (file.endsWith(BACKUP_FILE_EXTENSION) || offsiteStatusFiles.includes(file)) {
+      fs.unlinkSync(path.join(dir, file));
     }
   }
   res.status(204).end();

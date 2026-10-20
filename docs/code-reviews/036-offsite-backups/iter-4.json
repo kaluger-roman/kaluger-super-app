@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "branch": "036-offsite-backups",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 4,
+  "timestamp": "2026-10-16T19:06:04Z",
+  "mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 62,
+    "insertions": 4928,
+    "deletions": 99
+  },
+  "summary": {
+    "raw_findings": 16,
+    "after_dedup": 7,
+    "after_score_filter": 7,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 5
+    },
+    "by_category": {
+      "claude-md": 1,
+      "logic": 4,
+      "security": 2
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "security",
+      "title": "Данные восстановленной копии (PII) остаются на диске home в анонимных docker-томах: `docker rm -f` без `-v` их не удаляет, объём записи ничем не ограничен",
+      "category": "security",
+      "file": "scripts/offsite-backup/restore-check.sh",
+      "line_start": 53,
+      "line_end": 57,
+      "snippet": "remove_container() {\n  if [[ -n $container ]]; then\n    docker rm -f \"$container\" >/dev/null 2>&1 || true\n    container=\"\"\n  fi",
+      "rationale": "Образ postgres объявляет VOLUME /var/lib/postgresql/data, поэтому PGDATA с развёрнутым дампом (users, students, хэши паролей) лежит в анонимном томе. Явный `docker rm -f` (здесь и в remove_leftover_containers) идёт без `-v`, а autoremove от `--rm` при этом проигрывает гонку («removal already in progress») и тома не удаляет. На home уже лежат три висящих тома по ~48,8 МБ, созданные сегодня, что совпадает с размером PGDATA после restore_check. Значит, полная копия prod-БД копится каждый день вне 90-дневной ретенции и лимита 20 GiB. Кроме того, у контейнера нет ограничения по диску: SQL из дампа скомпрометированного prod (generate_series, COPY gzip-бомбы) за 30 минут таймаута может заполнить корневой раздел home (там же /var/lib/docker, свободно 46G).",
+      "fix_hint": "Держать PGDATA в tmpfs с лимитом: `--tmpfs /var/lib/postgresql/data:rw,size=<N>g`. Так данные не попадают на диск, а размер ограничен, но лимит --memory тогда придётся поднять, потому что tmpfs учитывается в memcg. Как минимум перейти на `docker rm -fv` в remove_container и remove_leftover_containers и добавить в доку очистку уже висящих томов (`docker volume prune`).",
+      "score": 75,
+      "severity": "high",
+      "verification_note": "Проблема подтверждена: restore-check.sh удаляет контейнер через `docker rm -f` без `-v` (строки 55 и 69), а на home реально висят 3 анонимных тома, созданных 2026-10-16 в ходе разработки фичи, что показывает утечку данных; точный механизм гонки с --rm и ежедневный рост объёма остаются выводом из кода, а не проверенным фактом."
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Проверка имени роли из дампа (защита CREATE ROLE от подстановки) не покрыта тестом",
+      "category": "claude-md",
+      "file": "scripts/offsite-backup/restore-check.sh",
+      "line_start": 98,
+      "line_end": 101,
+      "snippet": "    if [[ ! $role =~ $OWNER_ROLE_RE ]]; then\n      log WARN \"skipping unexpected owner role in the dump: $role\"\n      continue\n    fi",
+      "rationale": "CLAUDE.md (Testing Requirements: «All new code must have full test coverage») требует покрыть новый код тестами. Тест «ignores OWNER TO inside COPY data» сюда не доходит: строка `ALTER x OWNER TO a b;` отсекается ещё OWNER_DDL_RE в grep. Поэтому ветку OWNER_ROLE_RE, которая не даёт строке из недоверенного дампа попасть в `CREATE ROLE \"$role\"`, не проверяет ни один тест, хотя contracts/home-scripts.md:53-54 обещает именно это поведение. Так же без тестов остались выход pull-backups.sh с кодом 2 при аргументах и отказ ssh_command на опции с одинарной кавычкой.",
+      "fix_hint": "Добавить в offsite-backup-restore-check.test.mjs кейс с DDL-строкой вида `ALTER TABLE public.t OWNER TO \"a b\";`: в restore-check.log есть WARN, CREATE ROLE для неё не вызывается, проверка успешна. Отдельно добавить тест `pull-backups.sh extra` → exit 2.",
+      "score": 75,
+      "severity": "high",
+      "verification_note": "В ветке нет теста на WARN-ветку OWNER_ROLE_RE (grep по WARN/skipping в offsite-backup-restore-check.test.mjs пуст), а существующий тест «ignores OWNER TO inside COPY data» использует строку `ALTER x OWNER TO a b;` с нижним регистром, которую отсекает OWNER_DDL_RE до проверки роли, поэтому строка 98-101 restore-check.sh реально не покрыта и это явное нарушение правила CLAUDE.md о полном покрытии нового кода."
+    },
+    {
+      "id": "f3",
+      "agent": "cross-file",
+      "title": "docs/ops/offsite-backups.md: коды выхода и список переопределений расходятся со скриптами после iter-3",
+      "category": "logic",
+      "file": "docs/ops/offsite-backups.md",
+      "line_start": 182,
+      "line_end": 190,
+      "snippet": "Exit codes: `pull-backups.sh` 0 = pulled or skipped, 1 = rsync failed or a\npulled file was not a valid gzip; `restore-check.sh` 0 = success reported (or",
+      "rationale": "pull-backups.sh:180-182 после iter-3 завершается с кодом 1 и тогда, когда файл отклонён по `--max-size` (oversized). contracts/home-scripts.md:22-24 это уже отражает, а ops-док нет: оператор, увидев exit 1 без rsync- и gzip-ошибок, не узнает о причине. В списке Overrides (строки 187-190) нет `OFFSITE_MAX_FILE_SIZE` (на него сама дока ссылается в строке 83: «raise it if the database grows»), `OFFSITE_RESTORE_TIMEOUT` и `OFFSITE_PG_MEMORY`. (also flagged by: claude-md, shallow-bug, deep-logic)",
+      "fix_hint": "Дописать к коду 1 для pull-backups.sh «or a file was refused as over OFFSITE_MAX_FILE_SIZE». В список Overrides добавить `OFFSITE_MAX_FILE_SIZE`, `OFFSITE_RESTORE_TIMEOUT`, `OFFSITE_PG_MEMORY`.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Проверено по коду: pull-backups.sh:180-182 завершается с кодом 1 при oversized, а docs/ops/offsite-backups.md:182-185 этого не упоминает; список Overrides (строки 187-190) действительно не содержит OFFSITE_MAX_FILE_SIZE, OFFSITE_RESTORE_TIMEOUT и OFFSITE_PG_MEMORY, хотя все три задаются в lib.sh:13,18,19 через env и используются в скриптах, так что расхождение реальное, но это ошибка в документации без влияния на работу кода."
+    },
+    {
+      "id": "f4",
+      "agent": "deep-logic",
+      "title": "Фикс f6 не доходит до админки: при отказе по --max-size (и при удалении имён из будущего) prod ставит свежую отметку синхронизации, а проверка восстановления «успешно» проверяет всё более старую копию",
+      "category": "logic",
+      "file": "frontend/src/pages/AdminPage/components/BackupSection/components/OffsiteStorageStatus/OffsiteStorageStatus.helpers.ts",
+      "line_start": 60,
+      "line_end": 61,
+      "snippet": "  const success = `${prefix} — успешно (${formatRestoreCounts(check.counts)})`;\n  if (isOlderThanHours(check.checkedAt, RESTORE_CHECK_STALE_HOURS, now)) {",
+      "rationale": "Отказ по --max-size оставляет rsync с кодом 0, поэтому prod-ssh-wrapper.sh:42-44 обновляет .offsite-last-pull, а restore-check продолжает проверять newest_backup, то есть последнюю дошедшую копию. Exit 1 и ERROR из iter-3 никто не увидит: log() пишет в stderr только при tty, у cron пустой вывод и письма нет. Админка остаётся полностью зелёной, хотя новые дампы домой не приходят. fileName из restoreCheck бэк отдаёт, но фронт его не показывает и не сравнивает с текущим временем, а именно этот тихий отказ f6 должен был сделать видимым (SC-005: «возраст резервного хранилища»). (also flagged by: wrapper-proxy)",
+      "fix_hint": "Показывать дату проверенной копии (parseBackupTimestamp от fileName) и ставить предупреждение, если она старее порога (например, 24 ч + intervalHours или старее новейшего файла prod больше чем на сутки). Вариант: restore-check сообщает ошибку `stale_copy`, когда новейшая копия старше порога.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Факт подтверждён: prod-ssh-wrapper.sh:42-44 ставит .offsite-last-pull при rsync-статусе 0, а pull-backups.sh отказ по --max-size даёт exit 1 только в лог/код выхода, поэтому админка (getOffsiteSyncLine по lastSyncAt и getRestoreCheckLine по checkedAt, без fileName) показывает свежие зелёные метки; но сценарий требует копию больше OFFSITE_MAX_FILE_SIZE (редкий случай), а остальная часть финдинга (таймаут для count(*) и т.п.) здесь не проверялась, так что оценка ограничена этим эффектом."
+    },
+    {
+      "id": "f5",
+      "agent": "security",
+      "title": "Фикс f7 итерации 3 неполный: таймаут стоит только на psql-восстановление, а SQL из недоверенного дампа может бесконечно держать общий lock через запросы count(*) и create_owner_roles",
+      "category": "security",
+      "file": "scripts/offsite-backup/restore-check.sh",
+      "line_start": 170,
+      "line_end": 171,
+      "snippet": "    if ! count=$(psql_in_container -d \"$RESTORE_DB\" -tAc \\\n      \"SELECT count(*) FROM public.$table\" 2>\"$details\") || [[ ! $count =~ ^[0-9]+$ ]]; then",
+      "rationale": "Дамп может создать `public.users` как VIEW с `WHERE pg_sleep(1e9) IS NOT NULL` (to_regclass для view не NULL) или оставить фоновый процесс с LOCK через dblink или COPY TO PROGRAM. Тогда count(*) и to_regclass, у которых нет timeout, висят бесконечно. create_owner_roles (строки 94–107) тоже вне таймаута и делает отдельный `docker exec` на каждую уникальную роль, так что миллион строк `OWNER TO rN` растягивает прогон на сутки. Всё это время держится .lock, а pull-backups.sh при занятом lock выходит с INFO и кодом 0, поэтому новые копии перестают приходить. Без таймаута остались и docker run (скачивание образа) и createdb, о которых прямо говорил fix_hint f7. (also flagged by: shallow-bug, deep-logic, wrapper-proxy)",
+      "fix_hint": "Ограничить таймаутом весь check_newest_copy: запускать его в подпроцессе под `timeout`, либо оборачивать каждый docker run/exec и create_owner_roles. Проверочным запросам задавать `-c statement_timeout=...` или PGOPTIONS. Добавить тест со stub-docker, который зависает на SELECT count(*).",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "В restore-check.sh таймаут (строка 152) стоит только на восстановление дампа, а count(*) в строках 170-171 и to_regclass в 161-162 идут через psql_in_container без statement_timeout, поэтому f7 действительно исправлен частично; но зависание требует, чтобы недоверенный дамп от prod создал view с тяжёлым телом, что редкий сценарий, и проблема не блокирует прод напрямую."
+    },
+    {
+      "id": "f6",
+      "agent": "type-safety",
+      "title": "Контракт home-scripts.md противоречит сам себе и коду: «never deletes a file with an unrecognised or future timestamp», хотя verify_pulled после iter-3 удаляет такие скачанные файлы",
+      "category": "logic",
+      "file": "specs/036-offsite-backups/contracts/home-scripts.md",
+      "line_start": 29,
+      "line_end": 38,
+      "snippet": "  retention removed are not pulled again; future-stamped names are skipped; a\n  pulled name that does not match the strict backup format is removed.\n...\n  `gzip -t`; never deletes the newest recognised copy or a file with an\n  unrecognised or future (more than 1 day ahead) timestamp.",
+      "rationale": "pull-backups.sh:93-101 (фикс iter-3) удаляет скачанные файлы с нераспознанным именем и с epoch > now+24h, а окно include (last = (now+86400)/86400) захватывает весь завтрашний день, то есть имена до ~+48 ч скачиваются и тут же удаляются, а не пропускаются. Раздел Guarantees утверждает обратное; data-model.md:71 («unrecognised names never touched or counted») тоже устарел. (also flagged by: claude-md, deep-logic, cross-file)",
+      "fix_hint": "Переписать Guarantees: retention не трогает нераспознанные/будущие имена, но verify_pulled удаляет только что скачанные файлы с нераспознанным именем или меткой позже now+24h; заменить «future-stamped names are skipped» на «pulled and removed». Так же поправить data-model.md:71.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Подтверждено по коду: pull-backups.sh:96-101 удаляет скачанные имена с нераспознанной или будущей меткой, а home-scripts.md:31 говорит «removed», но :38 при этом обещает «never deletes … a file with an unrecognised or future timestamp», и контракт внутренне противоречит себе; это документальная ошибка без влияния на работу скриптов, поэтому 50, а не 75."
+    },
+    {
+      "id": "f7",
+      "agent": "type-safety",
+      "title": "prod-ssh-wrapper.md описывает старую команду pull с неякорными include без --exclude=*/ и без --info=skip1 — ту самую уязвимую форму из iter-3 f5",
+      "category": "logic",
+      "file": "specs/036-offsite-backups/contracts/prod-ssh-wrapper.md",
+      "line_start": 53,
+      "line_end": 53,
+      "snippet": "- Pull: `rsync -rt --ignore-existing --max-size=1G --out-format=%n --include=backup-<YYYY-MM-DD>T*.sql.gz … --exclude=* -e \"ssh <opts>\" root@100.71.145.114:./ ~/prod-backups/` (one include per day of the home retention window up to tomorrow; see home-scripts.md)",
+      "rationale": "После iter-3 pull-backups.sh:44-50,75 сначала передаёт `--exclude=*/`, затем якорные строгие шаблоны `/backup-<date>T[0-9][0-9]-…Z.sql.gz` и добавляет `--info=skip1`; в контракте осталась шаблон-маска, которая пропускает каталоги (f5) и молча отбрасывает файлы по --max-size (f6). То же расхождение с ignore-existing уже исправлялось в iter-2; home-scripts.md:26-29 тоже не упоминает `--exclude=*/`, якорь и `--info=skip1`. (also flagged by: cross-file)",
+      "fix_hint": "Обновить строку Client side под фактическую команду: `--info=skip1 --exclude=*/ --include=/backup-<YYYY-MM-DD>T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z.sql.gz --include=/backup-<…>-[0-9][0-9][0-9]Z.sql.gz … --exclude=*`, и дописать то же в home-scripts.md.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Контракт specs/036-offsite-backups/contracts/prod-ssh-wrapper.md:53 всё ещё описывает старую маску `--include=backup-<date>T*.sql.gz` без `--exclude=*/`, якорей и `--info=skip1`, тогда как pull-backups.sh:44-50,75 уже использует строгие якорные шаблоны, и это расхождение документальное, без влияния на работу скриптов."
+    }
+  ],
+  "filtered_out": []
+}
