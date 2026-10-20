@@ -2,7 +2,7 @@ import type { FC } from "react";
 
 import { VideoCall as VideoCallIcon } from "@mui/icons-material";
 import { Typography } from "@mui/material";
-import { useGate, useUnit } from "effector-react";
+import { useGate } from "effector-react";
 
 import { callHistoryModel } from "@entities";
 import type { CallHistoryPrincipal } from "@entities";
@@ -16,12 +16,6 @@ type CallHistoryPageProps = {
 
 export const CallHistoryPage: FC<CallHistoryPageProps> = ({ principal }) => {
   useGate(callHistoryModel.CallHistoryGate, principal);
-  const { records, loadFailed, loading, refresh } = useUnit({
-    records: callHistoryModel.$callHistory,
-    loadFailed: callHistoryModel.$loadFailed,
-    loading: callHistoryModel.$isLoading,
-    refresh: callHistoryModel.refreshRequested,
-  });
 
   return (
     <Styled.StyledContainer maxWidth="md">
@@ -38,12 +32,7 @@ export const CallHistoryPage: FC<CallHistoryPageProps> = ({ principal }) => {
       </Styled.HeaderBox>
 
       <Styled.StyledPaper>
-        <CallHistoryList
-          records={records}
-          loadFailed={loadFailed}
-          loading={loading}
-          onRetry={() => refresh()}
-        />
+        <CallHistoryList />
       </Styled.StyledPaper>
     </Styled.StyledContainer>
   );

@@ -1,27 +1,21 @@
 import type { FC } from "react";
 
-import type { CallHistoryRecord } from "@entities";
+import { useUnit } from "effector-react";
+
+import { callHistoryModel } from "@entities";
 
 import { CallHistoryEmpty } from "./CallHistoryEmpty";
 import { CallHistoryError } from "./CallHistoryError";
 import * as Styled from "./CallHistoryList.styled";
 import { CallHistoryRow } from "./CallHistoryRow";
 
-type CallHistoryListProps = {
-  records: CallHistoryRecord[];
-  loadFailed: boolean;
-  loading: boolean;
-  onRetry: () => void;
-};
+export const CallHistoryList: FC = () => {
+  const records = useUnit(callHistoryModel.$callHistory);
+  const loadFailed = useUnit(callHistoryModel.$loadFailed);
+  const loading = useUnit(callHistoryModel.$isLoading);
 
-export const CallHistoryList: FC<CallHistoryListProps> = ({
-  records,
-  loadFailed,
-  loading,
-  onRetry,
-}) => {
   if (loadFailed) {
-    return <CallHistoryError retrying={loading} onRetry={onRetry} />;
+    return <CallHistoryError />;
   }
 
   // The first load is shown by the global blocking overlay.

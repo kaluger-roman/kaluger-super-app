@@ -340,6 +340,8 @@ describe("features/videoCall/model call transport", () => {
     const sentNow: unknown[] = [];
     setCallTransport((message) => sentNow.push(message));
     let denyOldMedia: (error: Error) => void = () => undefined;
+    let mediaDenied = false;
+    // The audio-only fallback of the old call must fail too, or its media effect never fails.
     const getUserMedia = vi
       .fn()
       .mockImplementationOnce(
@@ -348,7 +350,10 @@ describe("features/videoCall/model call transport", () => {
             denyOldMedia = reject;
           })
       )
-      .mockImplementation(async () => createFakeStream());
+      .mockImplementation(async () => {
+        if (mediaDenied) throw new DOMException("denied", "NotAllowedError");
+        return createFakeStream();
+      });
     setWebRtcAdapter(createFakeAdapter({ getUserMedia }));
     callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
     dispatchCallSignal({ type: "call_ringing", callId: "old-media", iceServers: [] });
@@ -356,11 +361,14 @@ describe("features/videoCall/model call transport", () => {
     callModel.hangUp();
     await startCallerSession("new-media");
 
-    denyOldMedia(new Error("NotAllowedError"));
+    mediaDenied = true;
+    denyOldMedia(new DOMException("denied", "NotAllowedError"));
     await settleMicrotasks();
 
     expect(readStore(callModel.$callId)).toBe("new-media");
-    expect(sentNow).not.toContainEqual({ type: "call_hangup", callId: "new-media" });
+    expect(sentNow).not.toContainEqual(
+      expect.objectContaining({ type: "call_hangup", callId: "new-media" })
+    );
   });
 
   it("should ask an open call history to refresh when the server says it changed", () => {

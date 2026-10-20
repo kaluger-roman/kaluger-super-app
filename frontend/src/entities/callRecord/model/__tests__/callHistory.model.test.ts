@@ -11,6 +11,7 @@ import {
   CallHistoryGate,
   loadCallHistoryFx,
   refreshRequested,
+  retryRequested,
 } from "../callHistory.model";
 
 vi.mock("../../api/callHistoryApi", () => ({
@@ -32,7 +33,7 @@ const sampleRecords = [
 
 describe("entities/callRecord/model/callHistory.model", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockedGetCallHistory.mockReset();
   });
 
   it("should load the tutor history when the gate opens for a tutor", async () => {
@@ -99,7 +100,7 @@ describe("entities/callRecord/model/callHistory.model", () => {
     expect(scope.getState($loadFailed)).toBe(true);
 
     mockedGetCallHistory.mockResolvedValueOnce(sampleRecords);
-    await allSettled(refreshRequested, { scope });
+    await allSettled(retryRequested, { scope });
 
     expect(scope.getState($loadFailed)).toBe(false);
     expect(scope.getState($callHistory)).toEqual(sampleRecords);
@@ -135,12 +136,96 @@ describe("entities/callRecord/model/callHistory.model", () => {
       })
     );
 
-    const retry = allSettled(refreshRequested, { scope });
+    const retry = allSettled(retryRequested, { scope });
 
     expect(scope.getState($loadFailed)).toBe(true);
     expect(scope.getState($isLoading)).toBe(true);
     release(sampleRecords);
     await retry;
     expect(scope.getState($loadFailed)).toBe(false);
+  });
+
+  it("should keep the shown list without a toast or blocking when a refresh fails", async () => {
+    mockedGetCallHistory.mockResolvedValueOnce(sampleRecords);
+    const scope = fork();
+    await allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+    const errors: string[] = [];
+    createWatch({
+      unit: notificationsModel.showErrorEvent,
+      fn: (text) => errors.push(text),
+      scope,
+    });
+    mockedGetCallHistory.mockRejectedValueOnce(new Error("network"));
+
+    const refresh = allSettled(refreshRequested, { scope });
+    expect(scope.getState($isLoading)).toBe(false);
+    await refresh;
+
+    expect(scope.getState($callHistory)).toEqual(sampleRecords);
+    expect(scope.getState($loadFailed)).toBe(false);
+    expect(errors).toEqual([]);
+  });
+
+  it("should drop a response that arrives after the page closed", async () => {
+    let release: (records: typeof sampleRecords) => void = () => undefined;
+    mockedGetCallHistory.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve;
+      })
+    );
+    const scope = fork();
+    const load = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+
+    const close = allSettled(CallHistoryGate.close, { scope, params: "tutor" });
+    release(sampleRecords);
+    await Promise.all([load, close]);
+
+    expect(scope.getState($callHistory)).toEqual([]);
+  });
+
+  it("should drop a failure that arrives after the page closed", async () => {
+    let fail: (error: Error) => void = () => undefined;
+    mockedGetCallHistory.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        fail = reject;
+      })
+    );
+    const scope = fork();
+    const errors: string[] = [];
+    createWatch({
+      unit: notificationsModel.showErrorEvent,
+      fn: (text) => errors.push(text),
+      scope,
+    });
+    const load = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+
+    const close = allSettled(CallHistoryGate.close, { scope, params: "tutor" });
+    fail(new Error("network"));
+    await Promise.all([load, close]);
+
+    expect(scope.getState($loadFailed)).toBe(false);
+    expect(errors).toEqual([]);
+  });
+
+  it("should run a refresh requested mid-flight after the current request", async () => {
+    const newerRecords = [{ ...sampleRecords[0], id: "2" }, ...sampleRecords];
+    let release: (records: typeof sampleRecords) => void = () => undefined;
+    mockedGetCallHistory
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = resolve;
+        })
+      )
+      .mockResolvedValueOnce(newerRecords);
+    const scope = fork();
+    const load = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+
+    const refresh = allSettled(refreshRequested, { scope });
+    expect(mockedGetCallHistory).toHaveBeenCalledTimes(1);
+    release(sampleRecords);
+    await Promise.all([load, refresh]);
+
+    expect(mockedGetCallHistory).toHaveBeenCalledTimes(2);
+    expect(scope.getState($callHistory)).toEqual(newerRecords);
   });
 });
