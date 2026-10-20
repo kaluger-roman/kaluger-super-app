@@ -44,7 +44,7 @@ export const resendEmailChangeCodeFx = createEffect(async () => {
   return await authApi.resendEmailChangeCode();
 });
 
-const persistTokenFx = createEffect((token: string) => {
+export const persistTokenFx = createEffect((token: string) => {
   localStorage.setItem("authToken", token);
 });
 

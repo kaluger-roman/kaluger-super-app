@@ -12,12 +12,7 @@ export const PullToRefresh = ({ children }: { children: ReactNode }) => {
   if (!isStandalone) return <>{children}</>;
 
   return (
-    <div
-      data-testid="pull-to-refresh"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       {pullDistance > 0 && (
         <Styled.Indicator $pullDistance={pullDistance}>
           <CircularProgress size={24} />

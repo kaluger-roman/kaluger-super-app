@@ -14,7 +14,13 @@ import { CallOverlay } from "@features/videoCall";
 import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
+import {
+  AppContent,
+  OfflineIndicator,
+  InstallPrompt,
+  PullToRefresh,
+  SessionElsewhereBanner,
+} from "./components";
 import { appInitModel, blockingModel, studentWebSocketModel, webSocketModel } from "./model";
 import type { BeforeInstallPromptEvent } from "./model/appInit.types";
 
@@ -119,15 +125,15 @@ const App: FC = () => {
         <Router>
           <PullToRefresh>
             <AppRouter />
+            <NotificationProvider />
             <OfflineIndicator />
+            <SessionElsewhereBanner />
             <InstallPrompt />
             <Styled.ModalBackdrop open={isBlockingVisible}>
               <CircularProgress color="inherit" />
             </Styled.ModalBackdrop>
           </PullToRefresh>
           <CallOverlay />
-          {/* Outside the pull-to-refresh wrapper: its transform would trap the toasts below the call screen. */}
-          <NotificationProvider />
         </Router>
       </LocalizationProvider>
     </ThemeProvider>

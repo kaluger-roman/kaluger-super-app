@@ -4,6 +4,9 @@ import { prisma } from "../../prisma";
 import { handleCallSignal, routeCallMessage } from "../signaling";
 import { SDP_MAX_LENGTH } from "../signaling.constants";
 
+const OFFER = { type: "offer", sdp: "v=0 offer" };
+const ANSWER = { type: "answer", sdp: "v=0 answer" };
+
 const CANDIDATE = {
   candidate: "candidate:1 1 udp 1 10.0.0.1 5000 typ host",
   sdpMid: "0",
@@ -83,6 +86,50 @@ describe("handleCallSignal parsing", () => {
     });
   });
 
+  it("should relay a valid offer, answer and media state to the peer unchanged", async () => {
+    const callId = await inviteAndAccept();
+
+    await handleCallSignal("tutor", tutorId, { type: "webrtc_offer", callId, sdp: OFFER });
+    await handleCallSignal("student", studentUserId, {
+      type: "webrtc_answer",
+      callId,
+      sdp: ANSWER,
+    });
+    await handleCallSignal("tutor", tutorId, {
+      type: "call_media_state",
+      callId,
+      micOn: false,
+      cameraOn: true,
+      screenSharing: false,
+      cameraAvailable: false,
+    });
+
+    expect(sent).toEqual([
+      {
+        kind: "student",
+        id: studentUserId,
+        message: { type: "webrtc_offer", callId, sdp: OFFER },
+      },
+      {
+        kind: "tutor",
+        id: tutorId,
+        message: { type: "webrtc_answer", callId, sdp: ANSWER },
+      },
+      {
+        kind: "student",
+        id: studentUserId,
+        message: {
+          type: "call_media_state",
+          callId,
+          micOn: false,
+          cameraOn: true,
+          screenSharing: false,
+          cameraAvailable: false,
+        },
+      },
+    ]);
+  });
+
   it("should ignore an invite whose targetStudentId is not a string", async () => {
     await handleCallSignal("tutor", tutorId, {
       type: "call_invite",
@@ -111,8 +158,11 @@ describe("handleCallSignal parsing", () => {
       callId,
       sdp: { type: "offer", sdp: "v".repeat(SDP_MAX_LENGTH + 1) },
     });
+    await handleCallSignal("tutor", tutorId, { type: "webrtc_offer", callId, sdp: OFFER });
 
-    expect(sent).toHaveLength(0);
+    expect(sent.map(({ message }) => message)).toEqual([
+      { type: "webrtc_offer", callId, sdp: OFFER },
+    ]);
   });
 
   it("should ignore malformed signaling without relaying or answering call_error", async () => {
@@ -120,8 +170,11 @@ describe("handleCallSignal parsing", () => {
 
     await handleCallSignal("tutor", tutorId, { type: "webrtc_offer", callId });
     await handleCallSignal("student", studentUserId, { type: "ping" });
+    await handleCallSignal("tutor", tutorId, { type: "webrtc_offer", callId, sdp: OFFER });
 
-    expect(sent).toHaveLength(0);
+    expect(sent.map(({ message }) => message)).toEqual([
+      { type: "webrtc_offer", callId, sdp: OFFER },
+    ]);
   });
 
   it("should claim call signals and leave other messages to the caller", () => {

@@ -44,5 +44,11 @@ export const RoundCallButton = styled(IconButton)<RoundCallButtonProps>(({
     "&:hover": {
       background: colors.hover,
     },
+    // MUI's disabled look (dark icon, no background) disappears on the dark call screen.
+    "&.Mui-disabled": {
+      color: theme.palette.common.white,
+      background: colors.background,
+      opacity: theme.palette.action.disabledOpacity,
+    },
   };
 });

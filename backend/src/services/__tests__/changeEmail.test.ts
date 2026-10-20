@@ -1,16 +1,13 @@
 import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
-import { getWebSocketManager } from "../../lib/wsManager";
 import { hashPassword } from "../../utils/auth";
 import { initiateEmailChange, verifyEmailChange, resendEmailChangeCode } from "../changeEmail";
 import { uniqueEmail } from "../../__tests__/helpers";
 
-jest.mock("../../lib/wsManager");
-
-const disconnectUser = jest.fn();
-jest.mocked(getWebSocketManager).mockReturnValue({
-  disconnectUser,
-} as unknown as ReturnType<typeof getWebSocketManager>);
+const mockDisconnectUser = jest.fn();
+jest.mock("../../lib/wsManager", () => ({
+  getWebSocketManager: jest.fn(() => ({ disconnectUser: mockDisconnectUser })),
+}));
 
 jest.mock("../email", () => ({
   sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
@@ -232,7 +229,7 @@ describe("changeEmail service", () => {
       expect(userAfter!.email).toBe(newEmail);
       expect(userAfter!.pendingEmail).toBeNull();
       expect(userAfter!.verificationCode).toBeNull();
-      expect(disconnectUser).toHaveBeenCalledWith(userId);
+      expect(mockDisconnectUser).toHaveBeenCalledWith(userId);
 
       // Update userEmail for subsequent tests
       userEmail = newEmail;

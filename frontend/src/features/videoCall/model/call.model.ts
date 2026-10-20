@@ -40,7 +40,7 @@ export const $screenStream = createStore<MediaStream | null>(null);
 export const $remoteStream = createStore<MediaStream | null>(null);
 export const $screenShareSupported = createStore(false);
 export const $isConnecting = $callPhase.map((phase) => phase === "connecting");
-// Mic and camera can be switched only once the own tracks exist.
+// Mic, camera and screen share can be switched only once the own tracks exist.
 export const $localMediaReady = $localStream.map(Boolean);
 // Where the current call's signals go: its id and the socket role it lives on.
 export const $callAddress = combine($callId, $callRole, (callId, role): CallAddress | null =>

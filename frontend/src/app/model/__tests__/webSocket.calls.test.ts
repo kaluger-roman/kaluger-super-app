@@ -17,7 +17,7 @@ class MockWebSocket {
   send = vi.fn();
   close = vi.fn();
   onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: { code: number }) => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onerror: ((event: unknown) => void) | null = null;
   readyState = 1;
@@ -117,7 +117,7 @@ describe.each([
     socket.onmessage?.({ data: incoming("c-3") });
     const { phases, unwatch } = watchPhases();
 
-    socket.onclose?.();
+    socket.onclose?.({ code: 1006 });
     unwatch();
 
     expect(phases).toContain("idle");

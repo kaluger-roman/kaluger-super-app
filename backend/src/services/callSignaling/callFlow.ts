@@ -33,6 +33,7 @@ import {
 import type { CallParticipant, LiveCall, ResolvedPair } from "./callSignaling.types";
 import { buildIceServers } from "./iceConfig";
 import { registerInviteAttempt } from "./inviteRateLimit";
+import { isLatestInvite, issueInviteTicket } from "./inviteSequence";
 
 const send = (to: CallParticipant, message: CallSignalingOutbound): void => {
   getWebSocketManager()?.sendToParticipant(to.kind, to.id, message);
@@ -153,23 +154,28 @@ const handleInvite = async (
 ): Promise<void> => {
   if (!registerInviteAttempt(sender)) throw new CallRateLimitError();
 
+  const ticket = issueInviteTicket(sender);
   const senderConnection = connectionOf(sender);
   const pair = await resolvePair(sender, data.targetStudentId);
   // The caller's socket may have closed, or been replaced by a new one, while the pair was resolved.
   if (!senderConnection || connectionOf(sender) !== senderConnection) return;
+  // The caller sent a newer invite meanwhile and waits for that one; this one is stale.
+  if (!isLatestInvite(sender, ticket)) return;
 
   const senderCall = callRegistry.findActiveCallForParticipant(sender.kind, sender.id);
   if (!senderCall) {
     await ringCallee(sender, pair, data.inviteId);
     return;
   }
-  if (!isSamePair(senderCall, pair)) throw new CallAuthorizationError(ALREADY_IN_CALL_MESSAGE);
-  if (senderCall.callerKind !== sender.kind || senderCall.status !== "ringing") {
-    throw new CallPeerBusyError();
+  if (senderCall.callerKind === sender.kind && senderCall.status === "ringing") {
+    // The caller gave up on its previous invite before call_ringing came back and called again,
+    // the same peer or another one: the new invite replaces that call, so a late call_cancel
+    // for it changes nothing.
+    await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, data.inviteId)]);
+    return;
   }
-  // The caller gave up on its previous invite before call_ringing came back and called again:
-  // the new invite replaces that call, so a late call_cancel for it changes nothing.
-  await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, data.inviteId)]);
+  if (isSamePair(senderCall, pair)) throw new CallPeerBusyError();
+  throw new CallAuthorizationError(ALREADY_IN_CALL_MESSAGE);
 };
 
 const hangUp = async (

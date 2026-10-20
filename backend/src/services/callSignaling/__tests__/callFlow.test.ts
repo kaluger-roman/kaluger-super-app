@@ -5,7 +5,7 @@ import type { CallSignalingInbound, CallerKindValue } from "../../../types";
 import { processCallSignal, terminateActiveCallForParticipant } from "../callFlow";
 import * as callRegistry from "../callSignaling";
 import { INVITE_RATE_LIMIT, RING_TIMEOUT_MS } from "../callSignaling.constants";
-import { resolvePairForTutor } from "../callSignaling.helpers";
+import * as callSignalingHelpers from "../callSignaling.helpers";
 
 const OFFER = { type: "offer" as const, sdp: "v=0 offer" };
 const ANSWER = { type: "answer" as const, sdp: "v=0 answer" };
@@ -156,7 +156,7 @@ describe("processCallSignal", () => {
   });
 
   it("should answer call_busy when the callee already has an active call", async () => {
-    const pair = await resolvePairForTutor(tutorId, studentId);
+    const pair = await callSignalingHelpers.resolvePairForTutor(tutorId, studentId);
     callRegistry.startCall(pair, "student", () => undefined);
 
     await invite();
@@ -188,6 +188,66 @@ describe("processCallSignal", () => {
     expect(
       await prisma.callRecord.count({ where: { tutorId, studentId, status: "CANCELED" } })
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should ring only the latest invite when an older one resolves after it", async () => {
+    const resolvePair = callSignalingHelpers.resolvePairForTutor;
+    let releaseFirst: () => void = () => undefined;
+    jest
+      .spyOn(callSignalingHelpers, "resolvePairForTutor")
+      .mockImplementationOnce(async (...args) => {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        return resolvePair(...args);
+      });
+
+    const first = invite("invite-1");
+    await invite("invite-2");
+    releaseFirst();
+    await first;
+
+    const ringing = messagesOfType("call_ringing");
+    expect(ringing.map((c) => c.message)).toEqual([
+      expect.objectContaining({ inviteId: "invite-2" }),
+    ]);
+    expect(messagesOfType("call_incoming")).toHaveLength(1);
+    expect(messagesOfType("call_canceled")).toHaveLength(0);
+    const callId = (ringing[0].message as { callId: string }).callId;
+    expect(callRegistry.findActiveCallForParticipant("tutor", tutorId)?.callId).toBe(callId);
+  });
+
+  it("should drop an older invite that resolves first once a newer one was sent", async () => {
+    await Promise.all([invite("invite-1"), invite("invite-2")]);
+
+    expect(messagesOfType("call_ringing").map((c) => c.message)).toEqual([
+      expect.objectContaining({ inviteId: "invite-2" }),
+    ]);
+    expect(messagesOfType("call_incoming")).toHaveLength(1);
+    expect(messagesOfType("call_canceled")).toHaveLength(0);
+  });
+
+  it("should replace its own ringing call when the caller calls another student", async () => {
+    const firstCallId = await inviteAndGetCallId("invite-1");
+    const other = await createLinkedStudent();
+    callWebSocket.connect("student", other.studentUserId);
+
+    await signal("tutor", tutorId, {
+      type: "call_invite",
+      inviteId: "invite-2",
+      targetStudentId: other.studentId,
+    });
+
+    expect(messagesOfType("call_canceled")).toEqual([
+      {
+        kind: "student",
+        id: studentUserId,
+        message: { type: "call_canceled", callId: firstCallId, reason: "canceled" },
+      },
+    ]);
+    expect(messagesOfType("call_incoming")[0].id).toBe(other.studentUserId);
+    expect(messagesOfType("call_ringing")[0].message).toMatchObject({ inviteId: "invite-2" });
+    expect(messagesOfType("call_error")).toHaveLength(0);
   });
 
   it("should keep the new call ringing when a stale call_cancel for the replaced call arrives", async () => {
@@ -325,8 +385,8 @@ describe("processCallSignal", () => {
     expect(callRegistry.getCall(callId)?.connectedAt).toBeUndefined();
   });
 
-  it("should answer call_error when the caller already has a call with another student", async () => {
-    await inviteAndGetCallId();
+  it("should answer call_error when the caller is already talking to another student", async () => {
+    await inviteAndAccept();
     const other = await createLinkedStudent();
     callWebSocket.connect("student", other.studentUserId);
 

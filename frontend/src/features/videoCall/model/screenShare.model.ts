@@ -24,7 +24,7 @@ const startScreenShareFx = createEffect(
   async (callId: string | null): Promise<MediaStream | null> => {
     if (!callId) return null;
     const session = getSession(callId);
-    if (!session) return null;
+    if (!session?.localStream) return null;
 
     const screenStream = await getDisplayMediaSafe();
     const screenTrack = screenStream.getVideoTracks()[0];
@@ -130,8 +130,9 @@ sample({
 });
 
 sample({
-  clock: startScreenShareFx.failData,
-  filter: (error) => !isPickerDismissed(error),
+  clock: startScreenShareFx.fail,
+  source: callModel.$callId,
+  filter: (callId, { params, error }) => callId === params && !isPickerDismissed(error),
   fn: () => SCREEN_SHARE_FAILED_TEXT,
   target: notificationsModel.showErrorEvent,
 });

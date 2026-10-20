@@ -2,6 +2,7 @@ import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { lessonModel } from "@entities";
+import { changePasswordModel } from "@features";
 
 import { WS_RECONNECT_DELAY_MS } from "../webSocket.constants";
 import {
@@ -10,6 +11,7 @@ import {
   disconnectWebSocket,
   handleLessonStatusUpdate,
   webSocketClosed,
+  $isReplacedElsewhere,
   $isWebSocketEnabled,
 } from "../webSocket.model";
 
@@ -25,6 +27,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const PLAIN_CLOSE = { revokedToken: null, replaced: false };
+
 const createScope = () => {
   const connectHandler = vi.fn(() => undefined);
   const scope = fork({ handlers: [[connectWebSocketFx, connectHandler]] });
@@ -32,13 +36,75 @@ const createScope = () => {
 };
 
 describe("app/model/webSocket.model — reconnect", () => {
+  it("ends the session instead of reconnecting when the server revoked the current token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    const closeRun = allSettled(webSocketClosed, {
+      scope,
+      params: { revokedToken: "test-token", replaced: false },
+    });
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await closeRun;
+
+    expect(connectHandler).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem("authToken")).toBeNull();
+  });
+
+  it("reconnects at once when this tab stores a new token after its own password change", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    void allSettled(webSocketClosed, {
+      scope,
+      params: { revokedToken: "test-token", replaced: false },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    // The pending reconnect delay keeps the scope busy, so allSettled would wait for it.
+    void allSettled(changePasswordModel.persistTokenFx, { scope, params: "fresh-token" });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("stays disconnected and reports it when another tab takes the connection over", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    const closeRun = allSettled(webSocketClosed, {
+      scope,
+      params: { revokedToken: null, replaced: true },
+    });
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await closeRun;
+
+    expect(connectHandler).toHaveBeenCalledTimes(1);
+    expect(scope.getState($isReplacedElsewhere)).toBe(true);
+  });
+
+  it("reconnects with the new token when this tab replaced the revoked one", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    const closeRun = allSettled(webSocketClosed, {
+      scope,
+      params: { revokedToken: "test-token", replaced: false },
+    });
+    localStorage.setItem("authToken", "fresh-token");
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await closeRun;
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(localStorage.getItem("authToken")).toBe("fresh-token");
+  });
+
   it("does NOT reconnect when user logged out before the timer fires (regression: stale reconnect after logout)", async () => {
     const { scope, connectHandler } = createScope();
 
     await allSettled(connectWebSocket, { scope });
     expect(connectHandler).toHaveBeenCalledTimes(1);
 
-    const closeRun = allSettled(webSocketClosed, { scope });
+    const closeRun = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
     const disconnectRun = allSettled(disconnectWebSocket, { scope });
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await Promise.all([closeRun, disconnectRun]);
@@ -54,9 +120,9 @@ describe("app/model/webSocket.model — reconnect", () => {
     expect(connectHandler).toHaveBeenCalledTimes(1);
 
     const closeRuns = [
-      allSettled(webSocketClosed, { scope }),
-      allSettled(webSocketClosed, { scope }),
-      allSettled(webSocketClosed, { scope }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
     ];
 
     expect(vi.getTimerCount()).toBe(1);
@@ -73,7 +139,7 @@ describe("app/model/webSocket.model — reconnect", () => {
     await allSettled(connectWebSocket, { scope });
     expect(connectHandler).toHaveBeenCalledTimes(1);
 
-    const closeRun = allSettled(webSocketClosed, { scope });
+    const closeRun = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
 
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS - 1);
     expect(connectHandler).toHaveBeenCalledTimes(1);
@@ -90,12 +156,12 @@ describe("app/model/webSocket.model — reconnect", () => {
 
     await allSettled(connectWebSocket, { scope });
 
-    const firstClose = allSettled(webSocketClosed, { scope });
+    const firstClose = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await firstClose;
     expect(connectHandler).toHaveBeenCalledTimes(2);
 
-    const secondClose = allSettled(webSocketClosed, { scope });
+    const secondClose = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
     expect(vi.getTimerCount()).toBe(1);
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await secondClose;
@@ -109,7 +175,7 @@ describe("app/model/webSocket.model — reconnect", () => {
     await allSettled(connectWebSocket, { scope });
 
     const runs = [
-      allSettled(webSocketClosed, { scope }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
       allSettled(disconnectWebSocket, { scope }),
       allSettled(connectWebSocket, { scope }),
     ];
@@ -128,10 +194,10 @@ describe("app/model/webSocket.model — reconnect", () => {
     await allSettled(connectWebSocket, { scope });
 
     const runs = [
-      allSettled(webSocketClosed, { scope }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
       allSettled(disconnectWebSocket, { scope }),
       allSettled(connectWebSocket, { scope }),
-      allSettled(webSocketClosed, { scope }),
+      allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE }),
     ];
     expect(connectHandler).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(2);

@@ -52,6 +52,7 @@ export const CallControlBar: FC = () => {
         <RoundCallButton
           $tone={selfMedia.screenSharing ? "active" : "neutral"}
           $size={56}
+          disabled={!localMediaReady}
           onClick={() => actions.toggleScreen()}
           aria-label={
             selfMedia.screenSharing ? "Остановить демонстрацию экрана" : "Демонстрация экрана"

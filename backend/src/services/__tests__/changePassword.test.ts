@@ -1,16 +1,13 @@
 import { faker } from "@faker-js/faker";
 import { prisma } from "../../lib/prisma";
-import { getWebSocketManager } from "../../lib/wsManager";
 import { hashPassword, comparePassword } from "../../utils/auth";
 import { changePassword } from "../changePassword";
 import { uniqueEmail } from "../../__tests__/helpers";
 
-jest.mock("../../lib/wsManager");
-
-const disconnectUser = jest.fn();
-jest.mocked(getWebSocketManager).mockReturnValue({
-  disconnectUser,
-} as unknown as ReturnType<typeof getWebSocketManager>);
+const mockDisconnectUser = jest.fn();
+jest.mock("../../lib/wsManager", () => ({
+  getWebSocketManager: jest.fn(() => ({ disconnectUser: mockDisconnectUser })),
+}));
 
 describe("changePassword service", () => {
   let userId: string;
@@ -71,12 +68,12 @@ describe("changePassword service", () => {
 
     const isOldPasswordValid = await comparePassword(originalPassword, user!.password);
     expect(isOldPasswordValid).toBe(false);
-    expect(disconnectUser).toHaveBeenCalledWith(userId);
+    expect(mockDisconnectUser).toHaveBeenCalledWith(userId);
   });
 
   it("should keep the live socket when the password was not changed", async () => {
-    disconnectUser.mockClear();
+    mockDisconnectUser.mockClear();
     await expect(changePassword(userId, "WrongPassword1", "NewPassword2")).rejects.toThrow();
-    expect(disconnectUser).not.toHaveBeenCalled();
+    expect(mockDisconnectUser).not.toHaveBeenCalled();
   });
 });

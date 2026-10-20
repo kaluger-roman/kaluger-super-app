@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { STUDENT_WS_RECONNECT_DELAY_MS } from "../studentWebSocket.constants";
 import {
+  $isReplacedElsewhere,
   $studentWebSocketConnection,
   connectStudentWebSocket,
   disconnectStudentWebSocket,
@@ -10,6 +11,7 @@ import {
 } from "../studentWebSocket.model";
 
 const STUDENT_TOKEN_KEY = "studentToken";
+const PLAIN_CLOSE = { replaced: false };
 
 type MockWebSocket = {
   url: string;
@@ -84,13 +86,29 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
     vi.useRealTimers();
   });
 
+  it("stays disconnected and reports it when another tab takes the connection over", async () => {
+    const scope = fork();
+    await allSettled(connectStudentWebSocket, { scope });
+
+    const closeRun = allSettled(studentWebSocketClosed, { scope, params: { replaced: true } });
+    await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS);
+    await closeRun;
+
+    expect(createdSockets).toHaveLength(1);
+    expect(scope.getState($isReplacedElsewhere)).toBe(true);
+
+    await allSettled(connectStudentWebSocket, { scope });
+    expect(createdSockets).toHaveLength(2);
+    expect(scope.getState($isReplacedElsewhere)).toBe(false);
+  });
+
   it("reconnects after the delay while the session is still enabled", async () => {
     const scope = fork();
 
     await allSettled(connectStudentWebSocket, { scope });
     expect(createdSockets).toHaveLength(1);
 
-    const closeRun = allSettled(studentWebSocketClosed, { scope });
+    const closeRun = allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE });
 
     await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS - 1);
     expect(createdSockets).toHaveLength(1);
@@ -107,8 +125,8 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
     await allSettled(connectStudentWebSocket, { scope });
 
     const closeRuns = [
-      allSettled(studentWebSocketClosed, { scope }),
-      allSettled(studentWebSocketClosed, { scope }),
+      allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE }),
+      allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE }),
     ];
     expect(vi.getTimerCount()).toBe(1);
 
@@ -123,7 +141,7 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
 
     await allSettled(connectStudentWebSocket, { scope });
 
-    const closeRun = allSettled(studentWebSocketClosed, { scope });
+    const closeRun = allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE });
     const disconnectRun = allSettled(disconnectStudentWebSocket, { scope });
 
     await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS);
@@ -138,7 +156,7 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
     await allSettled(connectStudentWebSocket, { scope });
 
     const runs = [
-      allSettled(studentWebSocketClosed, { scope }),
+      allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE }),
       allSettled(disconnectStudentWebSocket, { scope }),
       allSettled(connectStudentWebSocket, { scope }),
     ];
@@ -156,10 +174,10 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
     await allSettled(connectStudentWebSocket, { scope });
 
     const runs = [
-      allSettled(studentWebSocketClosed, { scope }),
+      allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE }),
       allSettled(disconnectStudentWebSocket, { scope }),
       allSettled(connectStudentWebSocket, { scope }),
-      allSettled(studentWebSocketClosed, { scope }),
+      allSettled(studentWebSocketClosed, { scope, params: PLAIN_CLOSE }),
     ];
     expect(createdSockets).toHaveLength(2);
     expect(vi.getTimerCount()).toBe(2);

@@ -1,0 +1,411 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32777",
+  "run_at": "2026-10-20T15:30:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7.md",
+  "readiness": "red",
+  "coverage": {
+    "total": 45,
+    "passed": 43,
+    "failed": 2,
+    "warned": 0,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "Репетитор звонит из карточки: «Вызываем…»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Ученик видит входящий с именем",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "Принятие → оба видят и слышат",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "«Завершить» → idle, устройства освобождены",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "«Отклонить» → «Вызов отклонён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Отмена до ответа",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "40 с без ответа → «Нет ответа»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "PH",
+        "title": "Фазы, «Соединение…», таймер, гудки",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "IC2",
+        "title": "Отмена и повтор в пределах одного RTT",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "PW",
+        "title": "Смена пароля: другое устройство отключено, текущая вкладка звонит",
+        "priority": "P1",
+        "status": "pass",
+        "finding_ids": [
+          4
+        ]
+      },
+      {
+        "id": "MT",
+        "title": "Две вкладки / два устройства одного пользователя",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "P2.1-2.4",
+        "title": "Микрофон и камера выкл/вкл, индикаторы",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "M2",
+        "title": "Микрофон и камера во время «Соединение…»",
+        "priority": "P2",
+        "status": "pass",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "P2.6",
+        "title": "Только аудио без камеры",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Камера стала доступна",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1",
+        "title": "Демонстрация видна собеседнику, индикатор",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.2",
+        "title": "Остановка кнопкой и системно",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.3",
+        "title": "Вторая демонстрация при чужой",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.4",
+        "title": "Завершение во время демонстрации освобождает захват",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.5",
+        "title": "Демонстрация, нажатая во время «Соединение…»",
+        "priority": "P3",
+        "status": "fail",
+        "finding_ids": [
+          2
+        ]
+      },
+      {
+        "id": "P4.1-4.2",
+        "title": "История: статусы и длительность",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.3",
+        "title": "Изоляция истории и 401",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.4",
+        "title": "Сортировка истории",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.5",
+        "title": "Фоновое обновление открытой истории",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.6",
+        "title": "Первое открытие истории без пустого состояния",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.7",
+        "title": "Ошибка загрузки и «Повторить»",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат не в сети (обе стороны)",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E2",
+        "title": "Нет ни камеры, ни микрофона",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E3",
+        "title": "Занятость",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E4",
+        "title": "Двойной клик «Видеозвонок»",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E5",
+        "title": "Авторизация и валидация сигналинга (сырой WS)",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E6",
+        "title": "Собеседник закрыл вкладку в звонке",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E7",
+        "title": "Встречный вызов",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E8",
+        "title": "Ученик → репетитор",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E9",
+        "title": "Звонящий закрыл вкладку во время вызова",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "ET",
+        "title": "Пропал транспорт / запоздалые сигналы без лишних тостов",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "SND",
+        "title": "Рингтон и гудки",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L1",
+        "title": "Портал, fixed при прокрутке",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L3",
+        "title": "Тосты поверх экрана звонка (вкл. standalone)",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L4",
+        "title": "Телефон 375×812 и 812×375",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L5",
+        "title": "Свой PiP обычный и компактный",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L7",
+        "title": "«Позвонить» в шапке кабинета ученика",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S1",
+        "title": "Вход через UI, меню, защита роутов",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S2",
+        "title": "Смена пароля через UI",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S4",
+        "title": "Консоль",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 4,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 0,
+      "low": 2
+    },
+    "by_category": {
+      "spec-mismatch": 0,
+      "bug": 2,
+      "ux": 1,
+      "improvement": 1
+    },
+    "unambiguous_fix_count": 2
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "При двух вкладках или устройствах одного пользователя звонок обрывается в течение 5 с",
+      "category": "bug",
+      "severity": "high",
+      "scenario_id": "MT",
+      "file": "frontend/src/app/model/webSocket.model.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/17-tutor-two-tabs-call-dropped.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/18-student-calls-tutor-two-tabs.png"
+      ],
+      "expected": "Звонок и входящий вызов не зависят от второй открытой вкладки/устройства",
+      "actual": "Сокеты перехватывают друг друга каждые 5 с (код 4000 → переподключение), замена соединения завершает звонок; входящий пропадает с «Репетитор сейчас не в сети»",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": [],
+      "autofix_tests_added": [],
+      "autofix_note": "Нужна политика нескольких вкладок (клиент + webSocketManager.ts), решение не однозначное",
+      "console_excerpt": "tu: OPEN 15:01:26 CLOSE 15:01:31 OPEN 15:01:36 ...; call_connected 15:02:02.852 → CLOSE 15:02:06.868 → peer call_ended",
+      "network_excerpt": "student << call_unavailable after tutor tab swap",
+      "fix_suggestion": "Не переподключаться на код 4000 (вытесненная вкладка переподключается на focus/visibilitychange) или не отбирать сокет у вкладки со звонком"
+    },
+    {
+      "id": 2,
+      "title": "Демонстрация экрана, начатая во время «Соединение…», продолжается без индикатора",
+      "category": "bug",
+      "severity": "high",
+      "scenario_id": "P3.5",
+      "file": "frontend/src/features/videoCall/ui/CallControlBar/CallControlBar.tsx",
+      "line_hint": 52,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/27-student-share-clicked-while-connecting.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/28-tutor-after-student-share-while-connecting.png"
+      ],
+      "expected": "Кнопка демонстрации недоступна до получения своих медиа (как микрофон и камера)",
+      "actual": "getDisplayMedia до getUserMedia; после соединения scr=false и кнопка «Демонстрация экрана», но трек экрана live и собеседник видит экран в плитке камеры без индикатора",
+      "unambiguous_fix": true,
+      "autofix_status": "skipped",
+      "autofix_files_modified": [],
+      "autofix_tests_added": [],
+      "autofix_note": "Правка (disabled на кнопке + guard !session?.localStream в startScreenShareFx) уже лежит в незакоммиченном рабочем дереве у параллельного агента; этим прогоном не проверялась",
+      "console_excerpt": "126354 gum call; 126847 click share; 126913 display call; 129361 gum ok",
+      "network_excerpt": ">> webrtc_offer, >> call_media_state scr=true, then scr=false; tutor video 480x270 (screen)",
+      "fix_suggestion": "disabled={!localMediaReady} на кнопке демонстрации и выход из startScreenShareFx при !session?.localStream; регрессионный тест на модель"
+    },
+    {
+      "id": 3,
+      "title": "Заблокированные кнопки микрофона и камеры во время «Соединение…» почти невидимы",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "M2",
+      "file": "frontend/src/features/videoCall/ui/RoundCallButton/RoundCallButton.styled.ts",
+      "line_hint": 44,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/09-student-connecting-buttons-disabled.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/41-connecting-disabled-buttons-before-fix.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run7/screenshots/42-connecting-disabled-buttons-after-fix.png"
+      ],
+      "expected": "Видимые приглушённые кнопки",
+      "actual": "Фон transparent, иконка rgba(0,0,0,0.26) на тёмном экране",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/ui/RoundCallButton/RoundCallButton.styled.ts"
+      ],
+      "autofix_tests_added": [],
+      "autofix_note": "UX в styled-файле, тест не требуется; проверено подстановкой тех же объявлений в живую страницу, стек не пересобирался",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "&.Mui-disabled: белая иконка, фон тона, opacity theme.palette.action.disabledOpacity"
+    },
+    {
+      "id": 4,
+      "title": "После смены пароля текущая вкладка 5 с недоступна для звонков",
+      "category": "improvement",
+      "severity": "low",
+      "scenario_id": "PW",
+      "file": "frontend/src/app/model/webSocket.model.ts",
+      "line_hint": null,
+      "screenshots": [],
+      "expected": "Вкладка с новым токеном сразу остаётся на связи",
+      "actual": "Сокет закрыт сервером, переподключение только через WS_RECONNECT_DELAY_MS (5 с)",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": [],
+      "autofix_tests_added": [],
+      "autofix_note": "Политика переподключения; файл сейчас правит другой агент",
+      "console_excerpt": "tu: 15:05:06.890 CLOSE, 15:05:11.892 OPEN",
+      "network_excerpt": null,
+      "fix_suggestion": "При закрытии кодом 4001 и уже другом токене в localStorage переподключаться сразу"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import type { CallSignalingInbound } from "../signaling.types";
 import { resetCallTransportsForTests, setCallTransport } from "../transport.helpers";
 import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
+  connectCallerSession,
   installTransport,
   receive,
   resetCallFlow,
@@ -138,6 +139,23 @@ describe("features/videoCall/model client signaling", () => {
     expect(readStore(callModel.$callPhase)).toBe("idle");
     expect(errors.calls).toContain("Нет связи с сервером. Проверьте интернет и попробуйте снова");
     expect(sent).toEqual([]);
+  });
+
+  it("should end the call, not report a renegotiation failure, when the answer finds no socket", async () => {
+    await connectCallerSession("c-answer-no-socket");
+    resetCallTransportsForTests();
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    receive({
+      type: "webrtc_offer",
+      callId: "c-answer-no-socket",
+      sdp: { type: "offer", sdp: "o" },
+    });
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(readStore(callModel.$callPhase)).toBe("idle");
+    expect(errors.calls).toEqual(["Нет связи с сервером. Проверьте интернет и попробуйте снова"]);
   });
 
   it("should notify the peer with call_hangup and end the call when the connection fails", async () => {

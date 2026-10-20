@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { WebSocket } from "ws";
 
 import { authenticateWebSocket } from "../auth";
+import { handleMessage } from "../messageHandler";
 import {
   processCallSignal,
   terminateActiveCallForParticipant,
@@ -30,15 +31,23 @@ jest.mock("../../../services/callSignaling", () => ({
   terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
 
-type SocketStub = EventEmitter & { readyState: number; close: jest.Mock; send: jest.Mock };
+type SocketStub = EventEmitter & {
+  readyState: number;
+  close: jest.Mock;
+  send: jest.Mock;
+  terminate: jest.Mock;
+};
 
 const makeSocket = (): SocketStub => {
   const emitter = new EventEmitter() as SocketStub;
   emitter.readyState = WebSocket.OPEN;
   emitter.close = jest.fn();
   emitter.send = jest.fn();
+  emitter.terminate = jest.fn();
   return emitter;
 };
+
+const inviteMessage = Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" }));
 
 type ConnectionHandlers = {
   handleConnection: (ws: unknown, request: unknown) => Promise<void>;
@@ -104,7 +113,7 @@ describe("WebSocketManager call lifecycle", () => {
     const ws = makeSocket();
     await connectStudent(ws);
 
-    ws.emit("message", Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" })));
+    ws.emit("message", inviteMessage);
 
     expect(processCallSignal).toHaveBeenCalledWith(
       { kind: "student", id: "student-1" },
@@ -112,16 +121,46 @@ describe("WebSocketManager call lifecycle", () => {
     );
   });
 
-  it("should close the tutor socket of a revoked token and end its call on close", async () => {
+  it("should revoke the tutor socket at once even if the client never completes the close", async () => {
     const ws = makeSocket();
-    ws.close.mockImplementation(() => ws.emit("close"));
+    await connectTutor(ws);
+    jest.useFakeTimers();
+
+    try {
+      manager.disconnectUser("tutor-1");
+
+      expect(ws.close).toHaveBeenCalledWith(4001, "Token revoked");
+      expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("tutor", "tutor-1");
+      expect(manager.getConnection("tutor", "tutor-1")).toBeUndefined();
+
+      ws.emit("message", inviteMessage);
+      expect(handleMessage).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1000);
+      expect(ws.terminate).toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("should end the revoked socket's call only once when it closes later", async () => {
+    const ws = makeSocket();
     await connectTutor(ws);
 
     manager.disconnectUser("tutor-1");
+    ws.emit("close");
 
-    expect(ws.close).toHaveBeenCalledWith(4001, "Token revoked");
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("tutor", "tutor-1");
-    expect(manager.getConnection("tutor", "tutor-1")).toBeUndefined();
+    expect(terminateActiveCallForParticipant).toHaveBeenCalledTimes(1);
+  });
+
+  it("should ignore messages from a replaced student socket", async () => {
+    const first = makeSocket();
+    await connectStudent(first);
+    await connectStudent(makeSocket());
+
+    first.emit("message", inviteMessage);
+
+    expect(processCallSignal).not.toHaveBeenCalled();
   });
 
   it("should look up and message a participant by kind", async () => {

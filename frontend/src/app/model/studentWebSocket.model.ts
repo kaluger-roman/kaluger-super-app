@@ -13,6 +13,8 @@ import type { StudentLessonWsEvent } from "@shared";
 import { getStudentToken, resolveWsUrl } from "@shared";
 
 import { STUDENT_WS_RECONNECT_DELAY_MS } from "./studentWebSocket.constants";
+import { WS_REPLACED_CLOSE_CODE } from "./webSocket.constants";
+import type { StudentWebSocketClose } from "./webSocket.types";
 
 // Connection lifecycle is bound to the **session**, not to any individual page.
 // Future cabinet features (calls, push, etc.) just subscribe to incoming events
@@ -21,13 +23,15 @@ import { STUDENT_WS_RECONNECT_DELAY_MS } from "./studentWebSocket.constants";
 export const connectStudentWebSocket = createEvent();
 export const disconnectStudentWebSocket = createEvent();
 export const studentWebSocketOpened = createEvent();
-export const studentWebSocketClosed = createEvent();
+export const studentWebSocketClosed = createEvent<StudentWebSocketClose>();
 
 export const setStudentWebSocketConnection = createEvent<WebSocket | null>();
 
 export const $studentWebSocketConnection = createStore<WebSocket | null>(null);
 export const $isStudentWebSocketEnabled = createStore(false);
 export const $isStudentWebSocketConnected = createStore(false);
+// Another tab or device of the same student holds the connection; this tab waits to be taken back.
+export const $isReplacedElsewhere = createStore(false);
 
 const $isReconnectScheduled = createStore(false);
 // patronum `delay` cannot be cancelled. Every explicit connect/disconnect bumps
@@ -81,12 +85,12 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
     dispatchMessage(event.data);
   };
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
     console.log("Student WS disconnected");
     const lostRole = clearCallTransport(ws);
     if (lostRole) callModel.transportDisconnected(lostRole);
     setStudentWebSocketConnection(null);
-    studentWebSocketClosed();
+    studentWebSocketClosed({ replaced: event.code === WS_REPLACED_CLOSE_CODE });
   };
 
   ws.onerror = (error) => {
@@ -170,8 +174,19 @@ const reconnectScheduled = sample({
     isScheduled: $isReconnectScheduled,
     generation: $reconnectGeneration,
   },
-  filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
+  filter: ({ isEnabled, isScheduled }, { replaced }) => isEnabled && !isScheduled && !replaced,
   fn: ({ generation }) => generation,
+});
+
+sample({
+  clock: studentWebSocketClosed,
+  fn: ({ replaced }) => replaced,
+  target: $isReplacedElsewhere,
+});
+sample({
+  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
+  fn: () => false,
+  target: $isReplacedElsewhere,
 });
 
 sample({

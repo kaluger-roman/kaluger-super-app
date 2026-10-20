@@ -16,6 +16,8 @@ import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 const TUTOR_WS_PATH = "/ws";
 const STUDENT_WS_PATH = "/ws/student";
 const TOKEN_REVOKED_CLOSE_CODE = 4001;
+// A client that never answers the close frame would otherwise hold the socket for ws's 30 s.
+const REVOKED_SOCKET_TERMINATE_MS = 1000;
 
 export class WebSocketManager {
   private wss: WebSocketServer;
@@ -93,6 +95,8 @@ export class WebSocketManager {
     });
 
     ws.on("message", (message) => {
+      // A replaced or revoked socket stays readable until it closes; it no longer speaks for the user.
+      if (this.clients.get(decoded.userId) !== ws) return;
       try {
         const data = JSON.parse(message.toString());
         handleMessage(ws, decoded.userId, data);
@@ -156,6 +160,7 @@ export class WebSocketManager {
     });
 
     ws.on("message", (message) => {
+      if (this.studentClients.get(decoded.studentUserId) !== ws) return;
       try {
         const data = JSON.parse(message.toString());
         routeCallMessage("student", decoded.studentUserId, data);
@@ -243,7 +248,20 @@ export class WebSocketManager {
 
   // The socket was opened with a token that is now revoked; calls must not go on over it.
   public disconnectUser(userId: string): void {
-    this.clients.get(userId)?.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+    const ws = this.clients.get(userId);
+    if (!ws) return;
+    // Revoke at once: the close handshake may take long, and until then the socket must not
+    // stay registered or keep its call.
+    this.clients.delete(userId);
+    void terminateActiveCallForParticipant("tutor", userId);
+    try {
+      ws.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+    } catch (error) {
+      console.error("Error closing revoked WebSocket:", error);
+    }
+    setTimeout(() => {
+      if (ws.readyState !== WebSocket.CLOSED) ws.terminate();
+    }, REVOKED_SOCKET_TERMINATE_MS).unref();
   }
 
   public getConnection(kind: CallerKindValue, id: string): WebSocket | undefined {

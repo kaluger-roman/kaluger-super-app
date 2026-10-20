@@ -41,12 +41,13 @@ const renderBar = (
 };
 
 describe("CallControlBar", () => {
-  it("should disable mic and camera until the own media is acquired", () => {
+  it("should disable mic, camera and screen share until the own media is acquired", () => {
     const self = { micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true };
     renderBar(self, self, true, null);
 
     expect(screen.getByRole("button", { name: "Выключить микрофон" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Выключить камеру" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Демонстрация экрана" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Завершить звонок" })).toBeEnabled();
   });
 

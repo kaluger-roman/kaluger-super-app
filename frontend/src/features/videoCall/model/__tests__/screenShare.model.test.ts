@@ -30,6 +30,21 @@ describe("features/videoCall/model screen share", () => {
     vi.restoreAllMocks();
   });
 
+  it("should not start sharing while the own media is still being acquired", async () => {
+    adapter = createFakeAdapter({
+      getDisplayMedia,
+      getUserMedia: () => new Promise(() => undefined),
+    });
+    setWebRtcAdapter(adapter);
+    await startCallerSession("call-pending-media");
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    expect(readStore(callModel.$screenStream)).toBeNull();
+  });
+
   it("should start sharing and broadcast screenSharing:true", async () => {
     await startCallerSession("call-1");
     sent.length = 0;

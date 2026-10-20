@@ -18,7 +18,6 @@ import {
   markRemoteDescriptionSet,
 } from "./peerConnection.helpers";
 import type { CallRole } from "./signaling.types";
-import { sendOverTransport } from "./transport.helpers";
 import {
   createMediaStreamSafe,
   createPeerConnection,
@@ -128,10 +127,9 @@ export const sendOfferFx = createEffect(async (callId: string): Promise<void> =>
     await session.pc.setLocalDescription();
     const offer = session.pc.localDescription;
     if (offer?.type !== "offer") return;
-    sendOverTransport(session.role, {
-      type: "webrtc_offer",
-      callId,
-      sdp: { type: offer.type, sdp: offer.sdp },
+    await callTransportModel.sendCallSignalFx({
+      role: session.role,
+      message: { type: "webrtc_offer", callId, sdp: { type: offer.type, sdp: offer.sdp } },
     });
   } finally {
     session.makingOffer = false;
@@ -155,7 +153,10 @@ export const sendAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Pr
     await markRemoteDescriptionSet(session);
     const answer = await session.pc.createAnswer();
     await session.pc.setLocalDescription(answer);
-    sendOverTransport(session.role, { type: "webrtc_answer", callId, sdp: answer });
+    await callTransportModel.sendCallSignalFx({
+      role: session.role,
+      message: { type: "webrtc_answer", callId, sdp: answer },
+    });
   } finally {
     session.answeringOffer = false;
   }

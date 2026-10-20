@@ -8,5 +8,6 @@ export { AuthRoute } from "./AuthRoute";
 export { AppRoutes } from "./AppRoutes";
 export { AppContent } from "./AppContent";
 export { OfflineIndicator } from "./OfflineIndicator";
+export { SessionElsewhereBanner } from "./SessionElsewhereBanner";
 export { InstallPrompt } from "./InstallPrompt";
 export { PullToRefresh } from "./PullToRefresh";
