@@ -163,6 +163,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - `/e2e-check [base-ref]` — analyze diff vs base, flag user-facing changes without e2e and possibly broken tests; report in `docs/e2e-coverage/checks/`
 - `/e2e-hunt [area]` — parallel inventory of user journeys vs existing e2e; prioritized coverage gaps in `docs/e2e-coverage/`
 
+## Offsite Backups
+
+Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab. Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
+
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, Material UI styled-components (frontend); Express, Prisma, bcryptjs, express-rate-limit, Resend (backend) — все уже в проекте (028-forgot-password)
@@ -178,6 +182,8 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - PostgreSQL через Prisma. Одна новая колонка `lessons."isTaxExempt" BOOLEAN NOT NULL DEFAULT false` (034-tax-exempt-lessons)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, effector-react, Material UI (styled API), axios — frontend; Express, Prisma — backend. Новых зависимостей нет (035-income-history)
 - PostgreSQL через Prisma. Одна новая колонка `lessons."receivedAmount" DECIMAL(10,2) NULL` + бэкфилл в миграции; новых таблиц и индексов нет (035-income-history)
+- TypeScript 5.x strict (backend Node 20, frontend React); bash (home/prod scripts, cron-safe) + Express, Prisma, Effector, MUI (existing); rsync 3.2.x + `rrsync` (prod), OpenSSH, flock, gzip, Docker Engine + `postgres:16-alpine` (home). No new npm dependencies. (036-offsite-backups)
+- PostgreSQL via Prisma — no schema change; new state in files: `$BACKUP_DIR/.offsite-last-pull`, `$BACKUP_DIR/.offsite-restore-check.json` (prod), `/home/roman-kaluger/prod-backups/` (home) (036-offsite-backups)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

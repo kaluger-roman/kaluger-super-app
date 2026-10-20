@@ -3,22 +3,32 @@ import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import { Prisma } from "@prisma/client";
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
+import {
+  BACKUP_FILE_EXTENSION,
+  BACKUP_SETTINGS_ID,
+  BACKUP_TMP_SUFFIX,
+  BYTES_PER_MB,
+  MIN_BACKUP_SIZE_BYTES,
+  PG_DUMP_TIMEOUT_MS,
+} from "./backup.constants";
+import {
+  removeIfExists,
+  removeStaleTmpFiles,
+  selectBackupsToDelete,
+  stripPrismaParams,
+} from "./backup.helpers";
+import type { BackupFileInfo } from "./backup.types";
 
 const execAsync = promisify(exec);
 
-const getBackupDir = (): string => {
+export const getBackupDir = (): string => {
   const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   return dir;
 };
-
-// Singleton id used for the one-and-only BackupSettings row. The
-// 20260509100000_backup_settings_singleton migration consolidates any pre-
-// existing rows onto this id.
-const BACKUP_SETTINGS_ID = "backup-settings-singleton";
 
 export const getBackupSettings = async () => {
   try {
@@ -53,25 +63,20 @@ export const updateBackupSettings = async (data: {
   });
 };
 
-export const getBackupFiles = (): Array<{
-  name: string;
-  path: string;
-  sizeMb: number;
-  createdAt: Date;
-}> => {
+export const getBackupFiles = (): BackupFileInfo[] => {
   const dir = getBackupDir();
   if (!fs.existsSync(dir)) return [];
 
   return fs
     .readdirSync(dir)
-    .filter((f) => f.endsWith(".sql.gz"))
+    .filter((f) => f.endsWith(BACKUP_FILE_EXTENSION))
     .map((name) => {
       const filePath = path.join(dir, name);
       const stats = fs.statSync(filePath);
       return {
         name,
         path: filePath,
-        sizeMb: stats.size / (1024 * 1024),
+        sizeMb: stats.size / BYTES_PER_MB,
         createdAt: stats.mtime,
       };
     })
@@ -82,45 +87,23 @@ export const getTotalSizeMb = (files: Array<{ sizeMb: number }>): number => {
   return files.reduce((sum, f) => sum + f.sizeMb, 0);
 };
 
-export const cleanupOldBackups = (maxStorageMb: number): number => {
-  const files = getBackupFiles();
-  let totalSize = getTotalSizeMb(files);
-  let deletedCount = 0;
+export const cleanupOldBackups = (maxStorageMb: number, now: Date = new Date()): number => {
+  removeStaleTmpFiles(getBackupDir(), now);
 
-  // Remove oldest files while over storage limit (keep at least 1)
-  const sortedOldestFirst = [...files].reverse();
+  const toDelete = selectBackupsToDelete(getBackupFiles(), maxStorageMb, now);
+  toDelete.forEach((file) => fs.unlinkSync(file.path));
 
-  for (const file of sortedOldestFirst) {
-    if (totalSize <= maxStorageMb || files.length - deletedCount <= 1) break;
-
-    fs.unlinkSync(file.path);
-    totalSize -= file.sizeMb;
-    deletedCount++;
-  }
-
-  return deletedCount;
+  return toDelete.length;
 };
 
-// Prisma supports `?schema=...` in DATABASE_URL, but pg_dump rejects it.
-// Strip Prisma-specific query params before passing the URL to pg_dump.
-const stripPrismaParams = (databaseUrl: string): string => {
-  try {
-    const url = new URL(databaseUrl);
-    url.searchParams.delete("schema");
-    url.searchParams.delete("connection_limit");
-    url.searchParams.delete("pool_timeout");
-    url.searchParams.delete("pgbouncer");
-    return url.toString();
-  } catch {
-    return databaseUrl;
-  }
-};
-
+// The dump goes to a `.tmp` name and is renamed only when complete, so neither
+// the file list nor the offsite pull (`*.sql.gz`) ever sees a half-written file.
 export const performBackup = async (): Promise<string> => {
   const dir = getBackupDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const filename = `backup-${timestamp}.sql.gz`;
+  const filename = `backup-${timestamp}${BACKUP_FILE_EXTENSION}`;
   const filePath = path.join(dir, filename);
+  const tmpPath = `${filePath}${BACKUP_TMP_SUFFIX}`;
 
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -132,15 +115,13 @@ export const performBackup = async (): Promise<string> => {
   // pipefail ensures the pipeline fails if pg_dump fails (not just gzip).
   // Without it, gzip produces a ~20-byte empty file on pg_dump errors.
   try {
-    await execAsync(`set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${filePath}"`, {
-      timeout: 300000,
+    await execAsync(`set -o pipefail; pg_dump "$DATABASE_URL" | gzip > "${tmpPath}"`, {
+      timeout: PG_DUMP_TIMEOUT_MS,
       env: { ...process.env, DATABASE_URL: pgDumpUrl },
       shell: "/bin/bash",
     });
   } catch (error) {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    removeIfExists(tmpPath);
     const stderr = (error as { stderr?: string }).stderr?.trim();
     const message = stderr
       ? `Ошибка pg_dump: ${stderr}`
@@ -148,15 +129,17 @@ export const performBackup = async (): Promise<string> => {
     throw new Error(message);
   }
 
-  // Verify backup file is not just an empty gzip header (~20 bytes).
-  // A valid pg_dump (even for an empty DB) includes schema info >> 100 bytes.
-  const MIN_BACKUP_SIZE_BYTES = 100;
-  const stats = fs.statSync(filePath);
-  if (stats.size < MIN_BACKUP_SIZE_BYTES) {
-    fs.unlinkSync(filePath);
-    throw new Error(
-      `Бэкап слишком мал (${stats.size} байт) — pg_dump вероятно завершился с ошибкой`
-    );
+  try {
+    const stats = fs.statSync(tmpPath);
+    if (stats.size < MIN_BACKUP_SIZE_BYTES) {
+      throw new Error(
+        `Бэкап слишком мал (${stats.size} байт) — pg_dump вероятно завершился с ошибкой`
+      );
+    }
+    fs.renameSync(tmpPath, filePath);
+  } catch (error) {
+    removeIfExists(tmpPath);
+    throw error;
   }
 
   return filePath;
@@ -181,7 +164,7 @@ export const createManualBackup = async (): Promise<{
 
   return {
     name: path.basename(filePath),
-    sizeMb: Math.round((stats.size / (1024 * 1024)) * 100) / 100,
+    sizeMb: Math.round((stats.size / BYTES_PER_MB) * 100) / 100,
     createdAt: stats.mtime,
   };
 };
@@ -218,7 +201,7 @@ export const runBackupJob = async (): Promise<void> => {
 
     const filePath = await performBackup();
     const stats = fs.statSync(filePath);
-    const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+    const sizeMb = (stats.size / BYTES_PER_MB).toFixed(2);
 
     console.log(`Backup created: ${path.basename(filePath)} (${sizeMb} MB)`);
 

@@ -52,7 +52,15 @@ export type {
   PushNotificationPayload,
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
-export type { UpdateBackupSettingsDto, BackupSettingsResponse, BackupFileResponse } from "./backup";
+export type {
+  UpdateBackupSettingsDto,
+  BackupSettingsResponse,
+  BackupFileResponse,
+  BackupRestoreCheckCounts,
+  BackupRestoreCheck,
+  BackupOffsiteStatus,
+  BackupSettingsFullResponse,
+} from "./backup";
 export type {
   StudentJwtPayload,
   StudentRequest,

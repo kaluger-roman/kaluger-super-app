@@ -7,7 +7,7 @@ import type { CronScope } from "../types";
 // Module-level guard prevents two overlapping cron ticks (e.g. tick N still
 // running due to DB latency when tick N+1 fires) from both broadcasting the
 // same lesson status change. Same pattern as `recurringRunning` in
-// services/recurringLessons.ts and `backupRunning` in services/backup.ts.
+// services/recurringLessons.ts and `backupRunning` in services/backup/backup.ts.
 let statusUpdaterRunning = false;
 
 export const updateLessonStatuses = async (scope?: CronScope) => {

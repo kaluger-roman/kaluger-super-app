@@ -50,6 +50,9 @@ const mockBackupSettingsResponse: BackupSettingsFullResponse = {
     },
   ],
   totalSizeMb: 1.5,
+  minRetentionDays: 30,
+  storageLimitExceeded: false,
+  offsite: { lastSyncAt: null, restoreCheck: null },
 };
 
 describe("features/admin/models/adminData.model", () => {

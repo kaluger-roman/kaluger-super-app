@@ -2,7 +2,13 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { prisma } from "../../lib/prisma";
-import { getTotalSizeMb, cleanupOldBackups, getBackupSettings, runBackupJob } from "../backup";
+import {
+  getTotalSizeMb,
+  cleanupOldBackups,
+  getBackupSettings,
+  performBackup,
+  runBackupJob,
+} from "../backup";
 import {
   acquireGlobalTestLock,
   GLOBAL_TEST_LOCK,
@@ -93,38 +99,126 @@ describe("backup service", () => {
   });
 
   describe("cleanupOldBackups", () => {
-    it("should not delete files when under limit", () => {
-      const filePath = path.join(tmpDir, "backup-2024-01-01.sql.gz");
-      fs.writeFileSync(filePath, Buffer.alloc(1024));
+    const oneMb = 1024 * 1024;
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = new Date("2026-10-16T12:00:00.000Z");
 
-      const deleted = cleanupOldBackups(300);
+    const writeBackup = (daysAgo: number, sizeBytes = oneMb): string => {
+      const timestamp = new Date(now.getTime() - daysAgo * dayMs)
+        .toISOString()
+        .replace(/[:.]/g, "-");
+      const filePath = path.join(tmpDir, `backup-${timestamp}.sql.gz`);
+      fs.writeFileSync(filePath, Buffer.alloc(sizeBytes));
+      return filePath;
+    };
+
+    it("should not delete files when under limit", () => {
+      const filePath = writeBackup(60, 1024);
+
+      const deleted = cleanupOldBackups(300, now);
       expect(deleted).toBe(0);
       expect(fs.existsSync(filePath)).toBe(true);
     });
 
-    it("should delete oldest files when over limit", () => {
-      const oneMb = 1024 * 1024;
+    it("should delete the oldest files older than 30 days while over limit", () => {
+      const oldest = writeBackup(90);
+      const old = writeBackup(60);
+      const older30 = writeBackup(31);
+      const fresh = writeBackup(1);
 
-      const file1 = path.join(tmpDir, "backup-2024-01-01.sql.gz");
-      const file2 = path.join(tmpDir, "backup-2024-01-02.sql.gz");
-      const file3 = path.join(tmpDir, "backup-2024-01-03.sql.gz");
+      const deleted = cleanupOldBackups(2, now);
 
-      fs.writeFileSync(file1, Buffer.alloc(oneMb));
-      fs.writeFileSync(file2, Buffer.alloc(oneMb));
-      fs.writeFileSync(file3, Buffer.alloc(oneMb));
+      expect(deleted).toBe(2);
+      expect(fs.existsSync(oldest)).toBe(false);
+      expect(fs.existsSync(old)).toBe(false);
+      expect(fs.existsSync(older30)).toBe(true);
+      expect(fs.existsSync(fresh)).toBe(true);
+    });
 
-      const deleted = cleanupOldBackups(2);
-      expect(deleted).toBe(1);
+    it("should never delete backups younger than 30 days even far over the limit", () => {
+      const files = [
+        writeBackup(1, oneMb * 4),
+        writeBackup(15, oneMb * 4),
+        writeBackup(29, oneMb * 4),
+      ];
+
+      const deleted = cleanupOldBackups(1, now);
+
+      expect(deleted).toBe(0);
+      files.forEach((filePath) => expect(fs.existsSync(filePath)).toBe(true));
     });
 
     it("should always keep at least one backup", () => {
-      const oneMb = 1024 * 1024;
-      const filePath = path.join(tmpDir, "backup-2024-01-01.sql.gz");
-      fs.writeFileSync(filePath, Buffer.alloc(oneMb * 5));
+      const filePath = writeBackup(200, oneMb * 5);
 
-      const deleted = cleanupOldBackups(1);
+      const deleted = cleanupOldBackups(1, now);
       expect(deleted).toBe(0);
       expect(fs.existsSync(filePath)).toBe(true);
+    });
+
+    it("should remove temp files older than 24 hours and keep fresh ones", () => {
+      const staleTmp = path.join(tmpDir, "backup-2026-10-14T00-00-00-000Z.sql.gz.tmp");
+      const freshTmp = path.join(tmpDir, "backup-2026-10-16T11-59-00-000Z.sql.gz.tmp");
+      fs.writeFileSync(staleTmp, "partial");
+      fs.writeFileSync(freshTmp, "partial");
+      const staleTime = new Date(now.getTime() - 25 * 60 * 60 * 1000);
+      fs.utimesSync(staleTmp, staleTime, staleTime);
+      fs.utimesSync(freshTmp, now, now);
+
+      cleanupOldBackups(300, now);
+
+      expect(fs.existsSync(staleTmp)).toBe(false);
+      expect(fs.existsSync(freshTmp)).toBe(true);
+    });
+  });
+
+  describe("performBackup", () => {
+    const originalDatabaseUrl = process.env.DATABASE_URL;
+
+    const mockDump = (writeBytes: number | null, error: Error | null = null) => {
+      mockExec.mockImplementation(
+        (cmd: string, _opts: unknown, cb: (err: unknown, result: unknown) => void) => {
+          const match = cmd.match(/> "(.+)"/);
+          if (match && writeBytes !== null) {
+            fs.writeFileSync(match[1], Buffer.alloc(writeBytes));
+          }
+          cb(error, { stdout: "", stderr: "" });
+        }
+      );
+    };
+
+    beforeEach(() => {
+      process.env.DATABASE_URL = "postgresql://user@localhost:5432/db?schema=public";
+      mockExec.mockReset();
+    });
+
+    afterEach(() => {
+      process.env.DATABASE_URL = originalDatabaseUrl;
+    });
+
+    it("should dump into a temp file and rename it to the final name", async () => {
+      mockDump(1024);
+
+      const filePath = await performBackup();
+
+      const command = mockExec.mock.calls[0][0] as string;
+      expect(command).toContain(`> "${filePath}.tmp"`);
+      expect(path.basename(filePath)).toMatch(/^backup-.+Z\.sql\.gz$/);
+      expect(fs.readdirSync(tmpDir)).toEqual([path.basename(filePath)]);
+    });
+
+    it("should leave neither file when pg_dump fails", async () => {
+      mockDump(10, Object.assign(new Error("exit 1"), { stderr: "connection refused" }));
+
+      await expect(performBackup()).rejects.toThrow("Ошибка pg_dump: connection refused");
+      expect(fs.readdirSync(tmpDir)).toEqual([]);
+    });
+
+    it("should leave neither file when the dump is too small", async () => {
+      mockDump(20);
+
+      await expect(performBackup()).rejects.toThrow("Бэкап слишком мал (20 байт)");
+      expect(fs.readdirSync(tmpDir)).toEqual([]);
     });
   });
 

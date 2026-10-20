@@ -1,4 +1,5 @@
-import { Box, Paper, TextField, Typography } from "@mui/material";
+import { InfoOutlined } from "@mui/icons-material";
+import { Alert, Box, Paper, TextField, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -48,4 +49,22 @@ export const StyledSettingsRow = styled(Box)({
 
 export const StyledSettingsField = styled(TextField)({
   minWidth: "220px",
+});
+
+export const StyledRetentionHint = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "6px",
+  marginTop: "12px",
+  color: theme.palette.text.secondary,
+}));
+
+export const StyledRetentionHintIcon = styled(InfoOutlined)({
+  fontSize: "18px",
+  marginTop: "1px",
+  flexShrink: 0,
+});
+
+export const StyledLimitAlert = styled(Alert)({
+  marginTop: "8px",
 });

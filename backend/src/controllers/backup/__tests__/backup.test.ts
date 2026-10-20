@@ -86,6 +86,96 @@ describe("backup admin integration tests", () => {
       });
     });
 
+    it("should return the retention floor and no offsite status by default", async () => {
+      const res = await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.minRetentionDays).toBe(30);
+      expect(res.body.storageLimitExceeded).toBe(false);
+      expect(res.body.offsite).toEqual({ lastSyncAt: null, restoreCheck: null });
+    });
+
+    it("should flag the storage limit when fresh backups exceed it", async () => {
+      await prisma.backupSettings.create({
+        data: {
+          id: "backup-settings-singleton",
+          enabled: true,
+          intervalHours: 6,
+          maxStorageMb: 10,
+        },
+      });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      fs.writeFileSync(
+        path.join(tmpDir, `backup-${timestamp}.sql.gz`),
+        Buffer.alloc(11 * 1024 * 1024)
+      );
+
+      const res = await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.storageLimitExceeded).toBe(true);
+      expect(res.body.totalSizeMb).toBe(11);
+    });
+
+    it("should not list temp files and status dot-files as backups", async () => {
+      fs.writeFileSync(path.join(tmpDir, "backup-2026-10-16T14-00-00-058Z.sql.gz"), "x");
+      fs.writeFileSync(path.join(tmpDir, "backup-2026-10-16T15-00-00-058Z.sql.gz.tmp"), "x");
+      fs.writeFileSync(path.join(tmpDir, ".offsite-last-pull"), "2026-10-16T14:17:03Z\n");
+
+      const res = await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.files.map((f: { name: string }) => f.name)).toEqual([
+        "backup-2026-10-16T14-00-00-058Z.sql.gz",
+      ]);
+    });
+
+    it("should return the offsite pull time and restore check result", async () => {
+      fs.writeFileSync(path.join(tmpDir, ".offsite-last-pull"), "2026-10-16T14:17:03Z\n");
+      fs.writeFileSync(
+        path.join(tmpDir, ".offsite-restore-check.json"),
+        JSON.stringify({
+          checkedAt: "2026-10-16T05:47:12Z",
+          fileName: null,
+          status: "error",
+          reason: "empty_table_lessons",
+        })
+      );
+
+      const res = await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.offsite).toEqual({
+        lastSyncAt: "2026-10-16T14:17:03Z",
+        restoreCheck: {
+          checkedAt: "2026-10-16T05:47:12Z",
+          fileName: null,
+          status: "error",
+          error: "таблица lessons пуста",
+        },
+      });
+    });
+
+    it("should return null offsite fields for corrupt status files", async () => {
+      fs.writeFileSync(path.join(tmpDir, ".offsite-last-pull"), "garbage");
+      fs.writeFileSync(path.join(tmpDir, ".offsite-restore-check.json"), "{broken");
+
+      const res = await request(app)
+        .get("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.offsite).toEqual({ lastSyncAt: null, restoreCheck: null });
+    });
+
     it("should return 401 without auth token", async () => {
       await request(app).get("/api/admin/backup/settings").expect(401);
     });
@@ -111,10 +201,11 @@ describe("backup admin integration tests", () => {
         .send({ enabled: false, intervalHours: 24, maxStorageMb: 500 })
         .expect(200);
 
-      expect(res.body).toMatchObject({
+      expect(res.body).toEqual({
         enabled: false,
         intervalHours: 24,
         maxStorageMb: 500,
+        lastBackupAt: null,
       });
     });
 

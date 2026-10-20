@@ -27,4 +27,7 @@ export type {
   BackupSettingsData,
   BackupFileData,
   BackupSettingsFullResponse,
+  BackupOffsiteStatus,
+  RestoreCheckCounts,
+  RestoreCheckResult,
 } from "./admin.types";
