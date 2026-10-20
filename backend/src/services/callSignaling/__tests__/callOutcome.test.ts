@@ -62,28 +62,40 @@ describe("resolveHangupStatus", () => {
 });
 
 describe("registerInviteAttempt", () => {
+  const START = 1_000_000;
+  let now: number;
+
+  beforeEach(() => {
+    now = START;
+    jest.spyOn(Date, "now").mockImplementation(() => now);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("should reject the attempt over the limit inside the window", () => {
-    const now = 1_000_000;
     for (let attempt = 0; attempt < INVITE_RATE_LIMIT; attempt += 1) {
-      expect(registerInviteAttempt(TUTOR, now + attempt)).toBe(true);
+      now = START + attempt;
+      expect(registerInviteAttempt(TUTOR)).toBe(true);
     }
-    expect(registerInviteAttempt(TUTOR, now + INVITE_RATE_LIMIT)).toBe(false);
+    now = START + INVITE_RATE_LIMIT;
+    expect(registerInviteAttempt(TUTOR)).toBe(false);
   });
 
   it("should allow invites again once the window has passed", () => {
-    const now = 1_000_000;
     for (let attempt = 0; attempt < INVITE_RATE_LIMIT; attempt += 1) {
-      registerInviteAttempt(TUTOR, now);
+      registerInviteAttempt(TUTOR);
     }
-    expect(registerInviteAttempt(TUTOR, now + INVITE_RATE_WINDOW_MS)).toBe(true);
+    now = START + INVITE_RATE_WINDOW_MS;
+    expect(registerInviteAttempt(TUTOR)).toBe(true);
   });
 
   it("should count each sender separately", () => {
-    const now = 1_000_000;
     for (let attempt = 0; attempt < INVITE_RATE_LIMIT; attempt += 1) {
-      registerInviteAttempt(TUTOR, now);
+      registerInviteAttempt(TUTOR);
     }
-    expect(registerInviteAttempt(STUDENT, now)).toBe(true);
+    expect(registerInviteAttempt(STUDENT)).toBe(true);
   });
 });
 

@@ -15,6 +15,7 @@ import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 // mismatch вызывает `socket.destroy()` и убивает рукопожатие второго.
 const TUTOR_WS_PATH = "/ws";
 const STUDENT_WS_PATH = "/ws/student";
+const TOKEN_REVOKED_CLOSE_CODE = 4001;
 
 export class WebSocketManager {
   private wss: WebSocketServer;
@@ -238,6 +239,11 @@ export class WebSocketManager {
       return true;
     }
     return false;
+  }
+
+  // The socket was opened with a token that is now revoked; calls must not go on over it.
+  public disconnectUser(userId: string): void {
+    this.clients.get(userId)?.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
   }
 
   public getConnection(kind: CallerKindValue, id: string): WebSocket | undefined {

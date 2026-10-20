@@ -5,8 +5,10 @@ import { notificationsModel } from "@shared";
 import { CONNECTION_FAILED_TEXT, RENEGOTIATION_FAILED_TEXT } from "./call.constants";
 import { hasCallId, isCallAddress } from "./call.helpers";
 import * as callModel from "./call.model";
-import type { AcceptedCall, LocalMediaReady, OfferParams } from "./call.types";
+import type { AcceptedCall, AddressedSignal, LocalMediaReady, OfferParams } from "./call.types";
+import * as callTransportModel from "./callTransport.model";
 import * as peerConnectionModel from "./peerConnection.model";
+import { toMediaStateMessage } from "./transport.helpers";
 import { getSession } from "./webrtc.helpers";
 
 const callAcceptedReceivedFx = createEffect<AcceptedCall, void>(
@@ -58,7 +60,6 @@ sample({ clock: callModel.iceReceived, target: peerConnectionModel.applyIceFx })
 const peerNegotiationFailed = [
   peerConnectionModel.sendAnswerFx.fail.map(({ params }) => params.callId),
   peerConnectionModel.applyAnswerFx.fail.map(({ params }) => params.callId),
-  offerReceivedFx.fail.map(({ params }) => params.callId),
 ];
 
 // Before media connects any failed negotiation means the call cannot start.
@@ -132,6 +133,9 @@ sample({
   clock: callModel.selfMediaStateChanged,
   source: callModel.$callAddress,
   filter: isCallAddress,
-  fn: (address, media) => ({ ...address, media }),
-  target: peerConnectionModel.sendMediaStateFx,
+  fn: ({ callId, role }, media): AddressedSignal => ({
+    role,
+    message: toMediaStateMessage(callId, media),
+  }),
+  target: callTransportModel.sendCallSignalFx,
 });

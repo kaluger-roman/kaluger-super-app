@@ -15,9 +15,13 @@ export const getTileContentKind = ({
 export const getVideoFit = (kind: TileContentKind): VideoFit =>
   kind === "screen" ? "contain" : "cover";
 
-// Only a peer's shared screen gives up room to the pills; a camera and the own preview fill the tile.
-export const getVideoLayout = (kind: TileContentKind, config: TileVariantConfig): VideoLayout =>
-  kind === "screen" && config.frameScreen ? "framed" : "overlay";
+// Only a peer's shared screen gives up room to the pills, and only on a stage tall enough to
+// spare it; a camera and the own preview fill the tile.
+export const getVideoLayout = (
+  kind: TileContentKind,
+  config: TileVariantConfig,
+  shortStage: boolean
+): VideoLayout => (kind === "screen" && config.frameScreen && !shortStage ? "framed" : "overlay");
 
 export const getCameraLabel = (media: CallMediaState): string =>
   media.cameraAvailable ? CAMERA_OFF_LABEL : CAMERA_UNAVAILABLE_LABEL;

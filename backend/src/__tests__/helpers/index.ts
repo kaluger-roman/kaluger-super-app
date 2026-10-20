@@ -6,3 +6,4 @@ export {
 export { uniqueEmail } from "./uniqueEmail";
 export { callWebSocket, callWebSocketManagerModule } from "./callWebSocketMock";
 export type { CapturedCallMessage } from "./callWebSocketMock";
+export { waitFor } from "./waitFor";

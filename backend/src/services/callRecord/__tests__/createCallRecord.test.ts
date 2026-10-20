@@ -37,16 +37,20 @@ describe("createCallRecord", () => {
     const startedAt = new Date("2026-06-04T10:00:00.000Z");
     const connectedAt = new Date("2026-06-04T10:00:05.000Z");
     const endedAt = new Date("2026-06-04T10:05:05.000Z");
-
-    await createCallRecord({
-      tutorId,
-      studentId,
-      callerKind: "tutor",
-      status: "COMPLETED",
-      startedAt,
-      connectedAt,
-      endedAt,
-    });
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+    jest.setSystemTime(endedAt);
+    try {
+      await createCallRecord({
+        tutorId,
+        studentId,
+        callerKind: "tutor",
+        status: "COMPLETED",
+        startedAt,
+        connectedAt,
+      });
+    } finally {
+      jest.useRealTimers();
+    }
 
     const record = await prisma.callRecord.findFirstOrThrow({ where: { tutorId } });
     expect(record.status).toBe("COMPLETED");

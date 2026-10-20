@@ -7,9 +7,9 @@ import type {
   IceServerPayload,
   LocalMediaParams,
   LocalMediaReady,
-  MediaStateUpdate,
   SdpPayload,
 } from "./call.types";
+import * as callTransportModel from "./callTransport.model";
 import { buildRtcConfiguration } from "./iceConfig.helpers";
 import { acquireLocalMedia, getCameraTrack, mediaStateOf } from "./negotiation.helpers";
 import {
@@ -18,7 +18,7 @@ import {
   markRemoteDescriptionSet,
 } from "./peerConnection.helpers";
 import type { CallRole } from "./signaling.types";
-import { sendMediaState, sendOverTransport } from "./transport.helpers";
+import { sendOverTransport } from "./transport.helpers";
 import {
   createMediaStreamSafe,
   createPeerConnection,
@@ -45,17 +45,16 @@ const attachPeerConnection = (
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      sendOverTransport(role, {
-        type: "webrtc_ice",
-        callId,
-        candidate: event.candidate.toJSON(),
+      callTransportModel.sendCallSignalFx({
+        role,
+        message: { type: "webrtc_ice", callId, candidate: event.candidate.toJSON() },
       });
     }
   };
 
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") {
-      sendOverTransport(role, { type: "call_connected", callId });
+      callTransportModel.sendCallSignalFx({ role, message: { type: "call_connected", callId } });
       callModel.callConnected();
     }
     if (pc.connectionState === "failed") {
@@ -185,8 +184,4 @@ export const applyIceFx = createEffect(async ({ callId, candidate }: IcePayload)
     return;
   }
   await addIceCandidateSafely(session, candidate);
-});
-
-export const sendMediaStateFx = createEffect(({ callId, role, media }: MediaStateUpdate): void => {
-  sendMediaState(role, callId, media);
 });

@@ -1,4 +1,3 @@
-import { allSettled, fork } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { callModel } from "../index";
@@ -7,6 +6,7 @@ import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
   connectCallerSession,
   installTransport,
+  receive,
   resetCallFlow,
   settleMicrotasks,
   startCallerSession,
@@ -78,18 +78,29 @@ describe("features/videoCall/model media controls", () => {
     });
   });
 
-  it("should update $peerMediaState when an inbound call_media_state arrives", async () => {
-    const scope = fork();
-    await allSettled(callModel.peerMediaStateChanged, {
-      scope,
-      params: { micOn: false, cameraOn: false, screenSharing: false, cameraAvailable: true },
-    });
-    expect(scope.getState(callModel.$peerMediaState)).toEqual({
+  it("should update $peerMediaState when the peer's call_media_state arrives", async () => {
+    await connectCallerSession("call-peer-media");
+    const peerMedia = { micOn: false, cameraOn: false, screenSharing: true, cameraAvailable: true };
+
+    receive({ type: "call_media_state", callId: "call-peer-media", ...peerMedia });
+
+    expect(readStore(callModel.$peerMediaState)).toEqual(peerMedia);
+  });
+
+  it("should ignore a call_media_state of another call", async () => {
+    await connectCallerSession("call-own");
+    const before = readStore(callModel.$peerMediaState);
+
+    receive({
+      type: "call_media_state",
+      callId: "call-other",
       micOn: false,
       cameraOn: false,
-      screenSharing: false,
-      cameraAvailable: true,
+      screenSharing: true,
+      cameraAvailable: false,
     });
+
+    expect(readStore(callModel.$peerMediaState)).toEqual(before);
   });
 
   it("should fall back to audio-only when video acquisition fails", async () => {

@@ -1,4 +1,5 @@
 import type { CallMediaState } from "../videoCall.types";
+import { NO_TRANSPORT_TEXT } from "./call.constants";
 import type {
   CallRole,
   CallSignalingInbound,
@@ -24,23 +25,20 @@ export const resetCallTransportsForTests = (): void => {
   transports.clear();
 };
 
-export const sendOverTransport = (role: CallRole, message: CallSignalingInbound): boolean => {
+export const sendOverTransport = (role: CallRole, message: CallSignalingInbound): void => {
   const installed = transports.get(role);
-  if (!installed) {
-    console.error(`Call transport for ${role} is not initialized`);
-    return false;
-  }
+  if (!installed) throw new Error(NO_TRANSPORT_TEXT);
   installed.send(message);
-  return true;
 };
 
-export const sendMediaState = (role: CallRole, callId: string, media: CallMediaState): void => {
-  sendOverTransport(role, {
-    type: "call_media_state",
-    callId,
-    micOn: media.micOn,
-    cameraOn: media.cameraOn,
-    screenSharing: media.screenSharing,
-    cameraAvailable: media.cameraAvailable,
-  });
-};
+export const toMediaStateMessage = (
+  callId: string,
+  media: CallMediaState
+): CallSignalingInbound => ({
+  type: "call_media_state",
+  callId,
+  micOn: media.micOn,
+  cameraOn: media.cameraOn,
+  screenSharing: media.screenSharing,
+  cameraAvailable: media.cameraAvailable,
+});

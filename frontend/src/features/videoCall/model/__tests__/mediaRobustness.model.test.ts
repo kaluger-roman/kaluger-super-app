@@ -127,6 +127,44 @@ describe("features/videoCall/model media robustness", () => {
     expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
   });
 
+  it("should not keep a screen share that finished starting after the call ended", async () => {
+    const pendingOffer = deferred<void>();
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
+    await connectCallerSession("screen-late");
+    adapter.peerConnections[0].setLocalDescription.mockImplementationOnce(
+      () => pendingOffer.promise
+    );
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    callModel.hangUp();
+    await settleMicrotasks();
+    pendingOffer.resolve();
+    await settleMicrotasks();
+
+    expect(readStore(callModel.$screenStream)).toBeNull();
+    expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
+  });
+
+  it("should report a failed answer mid-call once and roll back once", async () => {
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
+    await connectCallerSession("answer-fail");
+    const pc = adapter.peerConnections[0];
+    pc.createAnswer.mockRejectedValueOnce(new Error("OperationError"));
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    receive({ type: "webrtc_offer", callId: "answer-fail", sdp: { type: "offer", sdp: "o" } });
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toEqual([
+      "Не удалось обновить видео собеседника. Если оно пропало, перезвоните",
+    ]);
+    expect(pc.setLocalDescription).toHaveBeenCalledTimes(2);
+    expect(pc.setLocalDescription).toHaveBeenLastCalledWith({ type: "rollback" });
+    expect(readStore(callModel.$callPhase)).toBe("active");
+  });
+
   it("should reuse the video transceiver when sharing again after an audio-only start", async () => {
     useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await startCallerSession("audio-4");

@@ -15,6 +15,7 @@ import * as peerConnectionModel from "./peerConnection.model";
 import { getDisplayMediaSafe, getSession } from "./webrtc.helpers";
 
 const $peerSharing = callModel.$peerMediaState.map((media) => media.screenSharing);
+const $selfSharing = callModel.$selfMediaState.map((media) => media.screenSharing);
 
 const screenShareEnded = createEvent();
 
@@ -60,8 +61,6 @@ const stopScreenShareFx = createEffect(async (callId: string | null): Promise<bo
   return true;
 });
 
-const $selfSharing = callModel.$selfMediaState.map((media) => media.screenSharing);
-
 sample({
   clock: callModel.toggleScreenShare,
   source: { selfSharing: $selfSharing, peerSharing: $peerSharing },
@@ -91,8 +90,15 @@ sample({
   target: stopScreenShareFx,
 });
 
+// A share that finished after its call ended belongs to no call: its tracks are already stopped.
+const currentCallShare = sample({
+  clock: startScreenShareFx.done,
+  source: callModel.$callId,
+  filter: (callId, { params }) => callId === params,
+  fn: (_, { result }) => result,
+});
 const sharingStarted = sample({
-  clock: startScreenShareFx.doneData,
+  clock: currentCallShare,
   filter: (stream): stream is MediaStream => stream !== null,
 });
 

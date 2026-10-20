@@ -1,56 +1,85 @@
-import jwt from "jsonwebtoken";
+import { prisma } from "../../prisma";
+import { generateToken } from "../../../utils/auth";
+import { uniqueEmail } from "../../../__tests__/helpers";
 import { authenticateWebSocket } from "../auth";
 
-describe("websocket auth", () => {
-  const originalEnv = process.env.JWT_SECRET;
+describe("authenticateWebSocket", () => {
+  let userId: string;
+  let email: string;
+  let tokenVersion: number;
 
-  beforeEach(() => {
-    jest.restoreAllMocks();
-    process.env.JWT_SECRET = "test-secret";
+  const connect = async (token?: string) => {
+    const ws: any = { close: jest.fn() };
+    const request: any = { url: token ? `/?token=${encodeURIComponent(token)}` : "/" };
+    const result = await authenticateWebSocket(ws, request);
+    return { ws, result };
+  };
+
+  beforeAll(async () => {
+    const user = await prisma.user.create({
+      data: { email: uniqueEmail().toLowerCase(), password: "hash", name: "WS Tutor" },
+    });
+    userId = user.id;
+    email = user.email;
+    tokenVersion = user.tokenVersion;
   });
 
   afterEach(() => {
-    process.env.JWT_SECRET = originalEnv;
+    jest.restoreAllMocks();
   });
 
-  it("should return decoded payload when token is valid", async () => {
-    const fakePayload = { userId: "user-1", email: "test@example.com" };
+  afterAll(async () => {
+    await prisma.user.delete({ where: { id: userId } }).catch(() => undefined);
+  });
 
-    jest.spyOn(jwt, "verify").mockImplementation(() => fakePayload as any);
+  it("should return the user when the token is valid and current", async () => {
+    const { ws, result } = await connect(generateToken({ userId, email, tokenVersion }));
 
-    const ws: any = {
-      close: jest.fn(),
-    };
-
-    const request: any = {
-      url: "/?token=valid-token",
-    };
-
-    const result = await authenticateWebSocket(ws, request);
-
-    expect(result).toEqual(fakePayload);
+    expect(result).toEqual({ userId, email });
     expect(ws.close).not.toHaveBeenCalled();
   });
 
   it("should close ws and return null when token is missing", async () => {
-    const ws: any = { close: jest.fn() };
-    const request: any = { url: "/" };
-
-    const result = await authenticateWebSocket(ws, request);
+    const { ws, result } = await connect();
 
     expect(result).toBeNull();
     expect(ws.close).toHaveBeenCalledWith(1008, "No token provided");
   });
 
   it("should close ws and return null when token is invalid", async () => {
-    jest.spyOn(jwt, "verify").mockImplementation(() => {
-      throw new Error("invalid token");
-    });
+    const { ws, result } = await connect("not.a.jwt");
 
-    const ws: any = { close: jest.fn() };
-    const request: any = { url: "/?token=bad" };
+    expect(result).toBeNull();
+    expect(ws.close).toHaveBeenCalledWith(1008, "Authentication failed");
+  });
 
-    const result = await authenticateWebSocket(ws, request);
+  it("should reject a token whose tokenVersion was revoked", async () => {
+    const token = generateToken({ userId, email, tokenVersion });
+    await prisma.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } });
+    try {
+      const { ws, result } = await connect(token);
+
+      expect(result).toBeNull();
+      expect(ws.close).toHaveBeenCalledWith(1008, "Token revoked");
+    } finally {
+      await prisma.user.update({ where: { id: userId }, data: { tokenVersion } });
+    }
+  });
+
+  it("should reject a token of a deleted user", async () => {
+    const { ws, result } = await connect(
+      generateToken({ userId: "missing-user", email, tokenVersion: 0 })
+    );
+
+    expect(result).toBeNull();
+    expect(ws.close).toHaveBeenCalledWith(1008, "Token revoked");
+  });
+
+  it("should close ws when the tokenVersion lookup fails", async () => {
+    jest.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("db down"));
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const { ws, result } = await connect(generateToken({ userId, email, tokenVersion }));
 
     expect(result).toBeNull();
     expect(ws.close).toHaveBeenCalledWith(1008, "Authentication failed");

@@ -15,7 +15,6 @@ export type CreateCallRecordArgs = {
   status: CallStatus;
   startedAt: Date;
   connectedAt?: Date;
-  endedAt?: Date;
 };
 
 export type FinalizedTimes = {

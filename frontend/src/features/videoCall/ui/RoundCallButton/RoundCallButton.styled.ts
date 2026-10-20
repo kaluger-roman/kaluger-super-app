@@ -28,7 +28,6 @@ const toneColors = (theme: Theme, tone: RoundCallButtonTone) => {
   };
 };
 
-// One round call control in every call screen; only the tone and the size differ.
 export const RoundCallButton = styled(IconButton)<RoundCallButtonProps>(({
   theme,
   $tone,

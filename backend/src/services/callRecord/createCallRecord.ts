@@ -9,7 +9,6 @@ export const createCallRecord = async ({
   status,
   startedAt,
   connectedAt,
-  endedAt = new Date(),
 }: CreateCallRecordArgs): Promise<void> => {
   await prisma.callRecord.create({
     data: {
@@ -18,7 +17,7 @@ export const createCallRecord = async ({
       callerKind: toPrismaCallerKind(callerKind),
       status,
       startedAt,
-      ...toFinalizedTimes(status, connectedAt, endedAt),
+      ...toFinalizedTimes(status, connectedAt, new Date()),
     },
   });
 };

@@ -56,7 +56,7 @@ export const VideoTile: FC<VideoTileProps> = ({
 
       <Styled.NameRow>
         <Tooltip title={name}>
-          <Styled.NamePill>{name}</Styled.NamePill>
+          <Styled.NamePill $paddingX={config.pillPaddingX}>{name}</Styled.NamePill>
         </Tooltip>
         {config.badgeInNameRow && micBadge}
       </Styled.NameRow>

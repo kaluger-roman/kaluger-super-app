@@ -20,6 +20,8 @@ import type {
   LocalStreams,
   SdpPayload,
   StartCallParams,
+  TerminalSignal,
+  TerminatedCall,
 } from "./call.types";
 import type { CallEndReason, CallRole, ReceivedSignal } from "./signaling.types";
 
@@ -38,6 +40,8 @@ export const $screenStream = createStore<MediaStream | null>(null);
 export const $remoteStream = createStore<MediaStream | null>(null);
 export const $screenShareSupported = createStore(false);
 export const $isConnecting = $callPhase.map((phase) => phase === "connecting");
+// Mic and camera can be switched only once the own tracks exist.
+export const $localMediaReady = $localStream.map(Boolean);
 // Where the current call's signals go: its id and the socket role it lives on.
 export const $callAddress = combine($callId, $callRole, (callId, role): CallAddress | null =>
   callId && role ? { callId, role } : null
@@ -93,8 +97,8 @@ export const callFailed = createEvent<string>();
 export const mediaAcquisitionFailed = createEvent();
 export const transportDisconnected = createEvent<CallRole>();
 export const callConnectionLost = createEvent();
-export const callTerminated = createEvent();
-export const callResourcesReleased = createEvent();
+export const callTerminated = createEvent<TerminatedCall>();
+const callEnding = createEvent<TerminalSignal | null>();
 
 sample({ clock: callStarted, fn: (): CallPhase => "outgoing", target: $callPhase });
 sample({ clock: callStarted, fn: toCallerRole, target: $callRole });
@@ -143,21 +147,44 @@ sample({
 sample({ clock: screenStreamChanged, target: $screenStream });
 
 sample({
+  clock: rejectCall,
+  fn: (): TerminalSignal => ({ type: "call_reject" }),
+  target: callEnding,
+});
+sample({
+  clock: cancelCall,
+  fn: (): TerminalSignal => ({ type: "call_cancel" }),
+  target: callEnding,
+});
+sample({
+  clock: [hangUp, callFailed],
+  fn: (): TerminalSignal => ({ type: "call_hangup" }),
+  target: callEnding,
+});
+sample({
+  clock: mediaAcquisitionFailed,
+  fn: (): TerminalSignal => ({ type: "call_hangup", reason: "media_unavailable" }),
+  target: callEnding,
+});
+sample({
   clock: [
-    rejectCall,
-    cancelCall,
-    hangUp,
     callEnded,
-    callFailed,
     unavailableReceived,
     busyReceived,
     noAnswerReceived,
     rejectedReceived,
     canceledReceived,
     callErrorReceived,
-    mediaAcquisitionFailed,
     callConnectionLost,
   ],
+  fn: () => null,
+  target: callEnding,
+});
+// The address is read once here, so the terminal signal still knows where to go after the reset.
+sample({
+  clock: callEnding,
+  source: $callAddress,
+  fn: (address, signal): TerminatedCall => ({ address, signal }),
   target: callTerminated,
 });
 
@@ -168,13 +195,12 @@ sample({ clock: callTerminated, fn: () => null, target: $inviteId });
 sample({ clock: callTerminated, fn: () => 0, target: $callDurationSeconds });
 sample({ clock: callTerminated, fn: () => DEFAULT_SELF_MEDIA_STATE, target: $selfMediaState });
 sample({ clock: callTerminated, fn: () => DEFAULT_PEER_MEDIA_STATE, target: $peerMediaState });
-// The terminal signal goes out with the call's address before the address is forgotten.
 sample({
-  clock: callResourcesReleased,
+  clock: callTerminated,
   fn: () => null,
   target: [$callId, $callRole, $localStream, $screenStream, $remoteStream],
 });
-sample({ clock: callResourcesReleased, fn: (): IceServerPayload[] => [], target: $iceServers });
+sample({ clock: callTerminated, fn: (): IceServerPayload[] => [], target: $iceServers });
 
 const { tick } = interval({
   timeout: CALL_DURATION_TICK_MS,

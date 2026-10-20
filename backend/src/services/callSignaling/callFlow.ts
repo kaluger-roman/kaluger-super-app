@@ -97,31 +97,26 @@ const resolvePair = (sender: CallParticipant, targetStudentId?: string): Promise
   return resolvePairForTutor(sender.id, targetStudentId);
 };
 
-const handleInvite = async (
+const cancelRinging = (call: LiveCall): Promise<void> => {
+  if (!callRegistry.removeCall(call.callId)) return Promise.resolve();
+  relayToPeer(call, call.callerKind, {
+    type: "call_canceled",
+    callId: call.callId,
+    reason: "canceled",
+  });
+  return finishCall(call, "CANCELED");
+};
+
+const ringCallee = async (
   sender: CallParticipant,
-  data: Extract<CallSignalingInbound, { type: "call_invite" }>
+  pair: ResolvedPair,
+  inviteId: string
 ): Promise<void> => {
-  if (!registerInviteAttempt(sender)) throw new CallRateLimitError();
-
-  const senderConnection = connectionOf(sender);
-  const pair = await resolvePair(sender, data.targetStudentId);
-  // The caller's socket may have closed, or been replaced by a new one, while the pair was resolved.
-  if (!senderConnection || connectionOf(sender) !== senderConnection) return;
-
   const callee: CallParticipant =
     sender.kind === "tutor"
       ? { kind: "student", id: pair.studentUserId }
       : { kind: "tutor", id: pair.tutorUserId };
 
-  const senderCall = callRegistry.findActiveCallForParticipant(sender.kind, sender.id);
-  if (senderCall && isSamePair(senderCall, pair)) {
-    if (senderCall.callerKind === sender.kind && senderCall.status === "ringing") {
-      sendRinging(senderCall, data.inviteId);
-      return;
-    }
-    throw new CallPeerBusyError();
-  }
-  if (senderCall) throw new CallAuthorizationError(ALREADY_IN_CALL_MESSAGE);
   if (!connectionOf(callee)) {
     await recordCall(
       {
@@ -149,15 +144,32 @@ const handleInvite = async (
     callerName: sender.kind === "tutor" ? pair.tutorName : pair.studentName,
     iceServers: buildIceServers(callee),
   });
-  sendRinging(call, data.inviteId);
+  sendRinging(call, inviteId);
 };
 
-const requireParticipantCall = (callId: string, sender: CallParticipant): LiveCall => {
-  const call = callRegistry.getCall(callId);
-  if (!call || !callRegistry.isParticipant(call, sender.kind, sender.id)) {
-    throw new CallAuthorizationError(CALL_NOT_FOUND_MESSAGE);
+const handleInvite = async (
+  sender: CallParticipant,
+  data: Extract<CallSignalingInbound, { type: "call_invite" }>
+): Promise<void> => {
+  if (!registerInviteAttempt(sender)) throw new CallRateLimitError();
+
+  const senderConnection = connectionOf(sender);
+  const pair = await resolvePair(sender, data.targetStudentId);
+  // The caller's socket may have closed, or been replaced by a new one, while the pair was resolved.
+  if (!senderConnection || connectionOf(sender) !== senderConnection) return;
+
+  const senderCall = callRegistry.findActiveCallForParticipant(sender.kind, sender.id);
+  if (!senderCall) {
+    await ringCallee(sender, pair, data.inviteId);
+    return;
   }
-  return call;
+  if (!isSamePair(senderCall, pair)) throw new CallAuthorizationError(ALREADY_IN_CALL_MESSAGE);
+  if (senderCall.callerKind !== sender.kind || senderCall.status !== "ringing") {
+    throw new CallPeerBusyError();
+  }
+  // The caller gave up on its previous invite before call_ringing came back and called again:
+  // the new invite replaces that call, so a late call_cancel for it changes nothing.
+  await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, data.inviteId)]);
 };
 
 const hangUp = async (
@@ -198,13 +210,7 @@ const handleCancel = async (call: LiveCall, sender: CallParticipant): Promise<vo
     await hangUp(call, sender.kind, "hangup");
     return;
   }
-  if (!callRegistry.removeCall(call.callId)) return;
-  relayToPeer(call, sender.kind, {
-    type: "call_canceled",
-    callId: call.callId,
-    reason: "canceled",
-  });
-  await finishCall(call, "CANCELED");
+  await cancelRinging(call);
 };
 
 const relayMediaSignal = (
@@ -225,11 +231,12 @@ const handleSignal = async (sender: CallParticipant, data: CallSignalingInbound)
     return;
   }
 
-  const isTerminating =
-    data.type === "call_reject" || data.type === "call_cancel" || data.type === "call_hangup";
-  if (isTerminating && !callRegistry.getCall(data.callId)) return;
-
-  const call = requireParticipantCall(data.callId, sender);
+  const call = callRegistry.getCall(data.callId);
+  // Both parties are told before a call is removed, so a signal for an unknown call is stale.
+  if (!call) return;
+  if (!callRegistry.isParticipant(call, sender.kind, sender.id)) {
+    throw new CallAuthorizationError(CALL_NOT_FOUND_MESSAGE);
+  }
 
   switch (data.type) {
     case "call_accept":

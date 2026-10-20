@@ -10,7 +10,7 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 
 | `type` | Payload | Meaning | Server action |
 |--------|---------|---------|---------------|
-| `call_invite` | `{ inviteId, targetStudentId }` (tutor) **or** `{ inviteId }` (student → their tutor). `inviteId` — client-generated id (≤64 chars) the server echoes in every reply to this invite | Initiate a call to the linked peer | Verify pair (R4); reject if self/cross-pair → `call_error`. If callee offline → `call_unavailable`. If callee busy → `call_busy`. Else create `LiveCall(ringing)`, generate `callId`, start 40s ring timeout, forward `call_incoming` to callee. Echo `call_ringing { callId, inviteId }` to caller; the caller gets its ICE config with `call_accepted`. Dedup repeat invites from same caller→same peer (FR-018). |
+| `call_invite` | `{ inviteId, targetStudentId }` (tutor) **or** `{ inviteId }` (student → their tutor). `inviteId` — client-generated id (≤64 chars) the server echoes in every reply to this invite | Initiate a call to the linked peer | Verify pair (R4); reject if self/cross-pair → `call_error`. If callee offline → `call_unavailable`. If callee busy → `call_busy`. Else create `LiveCall(ringing)`, generate `callId`, start 40s ring timeout, forward `call_incoming` to callee. Echo `call_ringing { callId, inviteId }` to caller; the caller gets its ICE config with `call_accepted`. A repeat invite from the same caller to the same peer while its call still rings replaces that call: the old one ends as `CANCELED` (`call_canceled { reason: "canceled" }` to the callee) and a new call with a new `callId` starts, so a late `call_cancel` for the old `callId` changes nothing (FR-018). |
 | `call_accept` | `{ callId }` | Callee accepts | Validate caller is the callee of `callId`. Forward `call_accepted` (+ minted ICE config) to caller. Clear ring timeout. Move to negotiation. |
 | `call_reject` | `{ callId }` | Callee declines | Forward `call_rejected` to caller; finalize `call_records` as `REJECTED`; drop `LiveCall`. |
 | `call_cancel` | `{ callId }` | Caller cancels before answer | Forward `call_canceled` to callee (dismiss incoming UI); finalize `CANCELED`; drop `LiveCall`. |
@@ -23,7 +23,9 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 
 Replies are matched to the request by `callId`, or, before the call exists, by `inviteId`: a client ignores a reply for an invite it no longer waits for and cancels a late `call_ringing` of such an invite. `call_media_state.cameraAvailable` and the `reason` of `call_canceled` / `call_ended` are always present.
 
-Validation: any inbound message referencing a `callId` the sender is not a participant of, or a target outside the sender's authorized pair, is dropped and answered with `call_error` (Russian message). Malformed JSON is ignored (matches existing manager behavior).
+Validation: an inbound message referencing an existing `callId` the sender is not a participant of, or a target outside the sender's authorized pair, is dropped and answered with `call_error` (Russian message). A message for an unknown `callId` is stale (both parties are told before a call is removed) and is dropped silently. Malformed JSON is ignored (matches existing manager behavior).
+
+Authentication: `/ws` checks the JWT `tokenVersion` like the HTTP API (`/ws/student` already does), and a tutor socket opened before a password change, email change or password reset is closed with code `4001` ("Token revoked"), which ends its active call; the client reconnects with the new token.
 
 ---
 
@@ -41,7 +43,7 @@ Validation: any inbound message referencing a `callId` the sender is not a parti
 | `call_unavailable` | `{ reason: "offline", inviteId }` (invite to an offline peer) **or** `{ reason: "offline", callId }` (callee dropped while ringing) | caller | «Ученик сейчас не в сети» (FR-013, Edge offline) |
 | `call_busy` | `{ inviteId }` | caller | «Абонент занят» (Edge "Занятость") |
 | `call_no_answer` | `{ callId }` | caller | «Нет ответа» on 40s timeout (FR-009) |
-| `call_error` | `{ message, callId }` **or** `{ message, inviteId }` (error on an invite) | sender | Russian error (self-call, cross-pair, unknown callId) |
+| `call_error` | `{ message, callId }` **or** `{ message, inviteId }` (error on an invite) | sender | Russian error (self-call, cross-pair, a call the sender is not part of) |
 | `webrtc_offer` / `webrtc_answer` / `webrtc_ice` | relayed verbatim | peer | Drives `RTCPeerConnection` |
 | `call_media_state` | `{ callId, micOn, cameraOn, screenSharing }` | peer | Update `$peerMediaState` indicators |
 

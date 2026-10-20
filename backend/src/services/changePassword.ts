@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { setCachedTokenVersion } from "../lib/tokenVersionCache";
+import { getWebSocketManager } from "../lib/wsManager";
 import { comparePassword, generateToken, hashPassword, validatePassword } from "../utils";
 
 type ChangePasswordResult = {
@@ -73,6 +74,7 @@ export const changePassword = async (
   // minted passes the next authenticateToken middleware check without an
   // extra DB roundtrip (and so stale cached old version cannot reject it).
   setCachedTokenVersion(updatedUser.id, updatedUser.tokenVersion);
+  getWebSocketManager()?.disconnectUser(updatedUser.id);
 
   const token = generateToken({
     userId: updatedUser.id,

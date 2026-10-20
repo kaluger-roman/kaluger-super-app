@@ -119,7 +119,6 @@ const App: FC = () => {
         <Router>
           <PullToRefresh>
             <AppRouter />
-            <NotificationProvider />
             <OfflineIndicator />
             <InstallPrompt />
             <Styled.ModalBackdrop open={isBlockingVisible}>
@@ -127,6 +126,8 @@ const App: FC = () => {
             </Styled.ModalBackdrop>
           </PullToRefresh>
           <CallOverlay />
+          {/* Outside the pull-to-refresh wrapper: its transform would trap the toasts below the call screen. */}
+          <NotificationProvider />
         </Router>
       </LocalizationProvider>
     </ThemeProvider>

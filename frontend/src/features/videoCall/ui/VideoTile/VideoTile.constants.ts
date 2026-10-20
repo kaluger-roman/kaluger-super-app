@@ -1,9 +1,9 @@
 import type { TileVariant, TileVariantConfig } from "./VideoTile.types";
 
 // On a short stage (landscape phone) the pills overlay the shared screen instead of framing it.
-export const SHORT_STAGE_MEDIA = "@media (max-height: 500px)";
+export const SHORT_STAGE_QUERY = "(max-height: 500px)";
+export const SHORT_STAGE_MEDIA = `@media ${SHORT_STAGE_QUERY}`;
 
-// Everything that differs between the peer's tile and the own PiP lives in this table.
 export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
   remote: {
     avatarSize: 96,
@@ -15,6 +15,7 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
     gap: 8,
     badgeSize: 28,
     badgeInNameRow: false,
+    pillPaddingX: 10,
   },
   self: {
     avatarSize: 48,
@@ -26,6 +27,7 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
     gap: 6,
     badgeSize: 24,
     badgeInNameRow: true,
+    pillPaddingX: 10,
   },
   selfCompact: {
     avatarSize: 28,
@@ -37,6 +39,8 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
     gap: 4,
     badgeSize: 20,
     badgeInNameRow: true,
+    // The compact PiP leaves the name about 34px next to the badge.
+    pillPaddingX: 6,
   },
 };
 

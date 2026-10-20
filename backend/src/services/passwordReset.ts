@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { invalidateCachedTokenVersion } from "../lib/tokenVersionCache";
+import { getWebSocketManager } from "../lib/wsManager";
 import {
   RESET_REQUEST_COOLDOWN_SECONDS,
   comparePassword,
@@ -147,4 +148,5 @@ export const applyPasswordReset = async (
   // Invalidate the token-version cache: the user must re-login via the
   // password-reset flow, so any cached old version is now stale.
   invalidateCachedTokenVersion(user!.id);
+  getWebSocketManager()?.disconnectUser(user!.id);
 };

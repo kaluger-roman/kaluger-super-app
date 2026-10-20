@@ -1,5 +1,5 @@
 import type { CallMediaState } from "../videoCall.types";
-import type { CallCancelReason, CallRole } from "./signaling.types";
+import type { CallCancelReason, CallRole, CallSignalingInbound } from "./signaling.types";
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active";
 
@@ -82,17 +82,25 @@ export type MediaToggleContext = {
 
 export type MediaPatch = Partial<CallMediaState>;
 
-export type MediaStateUpdate = CallAddress & {
-  media: CallMediaState;
-};
-
 export type CanceledNotice = {
   reason: CallCancelReason;
   callerName: string;
 };
 
-export type HangupParams = CallAddress & {
-  reason?: "media_unavailable";
+// The signal the own side owes the peer when the call ends here; null when the peer ended it.
+export type TerminalSignal =
+  | { type: "call_reject" }
+  | { type: "call_cancel" }
+  | { type: "call_hangup"; reason?: "media_unavailable" };
+
+export type TerminatedCall = {
+  address: CallAddress | null;
+  signal: TerminalSignal | null;
+};
+
+export type AddressedSignal = {
+  role: CallRole;
+  message: CallSignalingInbound;
 };
 
 export type InviteParams = {

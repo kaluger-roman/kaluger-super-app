@@ -29,10 +29,14 @@ describe("VideoTile helpers", () => {
   });
 
   it("should frame only the peer's shared screen between the pills", () => {
-    expect(getVideoLayout("screen", TILE_VARIANTS.remote)).toBe("framed");
-    expect(getVideoLayout("video", TILE_VARIANTS.remote)).toBe("overlay");
-    expect(getVideoLayout("screen", TILE_VARIANTS.self)).toBe("overlay");
-    expect(getVideoLayout("screen", TILE_VARIANTS.selfCompact)).toBe("overlay");
+    expect(getVideoLayout("screen", TILE_VARIANTS.remote, false)).toBe("framed");
+    expect(getVideoLayout("video", TILE_VARIANTS.remote, false)).toBe("overlay");
+    expect(getVideoLayout("screen", TILE_VARIANTS.self, false)).toBe("overlay");
+    expect(getVideoLayout("screen", TILE_VARIANTS.selfCompact, false)).toBe("overlay");
+  });
+
+  it("should overlay the pills on the peer's shared screen on a short stage", () => {
+    expect(getVideoLayout("screen", TILE_VARIANTS.remote, true)).toBe("overlay");
   });
 
   it("should say whether the camera is off or missing", () => {

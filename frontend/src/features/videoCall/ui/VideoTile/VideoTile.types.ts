@@ -17,4 +17,5 @@ export type TileVariantConfig = {
   gap: number;
   badgeSize: number;
   badgeInNameRow: boolean;
+  pillPaddingX: number;
 };

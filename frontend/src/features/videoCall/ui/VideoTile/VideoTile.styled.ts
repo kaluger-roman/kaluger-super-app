@@ -64,7 +64,6 @@ export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit,
         width: "100%",
         height: "100%",
         minHeight: 0,
-        [SHORT_STAGE_MEDIA]: OVERLAY_VIDEO,
       }
     : OVERLAY_VIDEO),
   zIndex: 0,
@@ -111,9 +110,9 @@ export const NameRow = styled(Box)({
   minWidth: 0,
 });
 
-export const NamePill = styled(Box)({
+export const NamePill = styled(Box)<{ $paddingX: number }>(({ $paddingX }) => ({
   maxWidth: "100%",
-  padding: "4px 10px",
+  padding: `4px ${$paddingX}px`,
   borderRadius: 999,
   background: "rgba(0, 0, 0, 0.55)",
   color: "#ffffff",
@@ -124,7 +123,7 @@ export const NamePill = styled(Box)({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-});
+}));
 
 export const StatusBadge = styled(Box)<{ $size: number }>(({ theme, $size }) => ({
   display: "flex",

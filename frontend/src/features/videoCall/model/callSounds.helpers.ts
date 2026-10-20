@@ -7,13 +7,14 @@ let audioContext: AudioContext | null = null;
 const getAudioContext = (): AudioContext | null => {
   if (typeof window === "undefined" || typeof window.AudioContext !== "function") return null;
   if (!audioContext) audioContext = new window.AudioContext();
-  if (audioContext.state === "suspended") {
-    // Browsers keep audio suspended until the first user gesture; the next tone retries.
-    void audioContext.resume().catch((error: unknown) => {
-      console.warn("Call sound is waiting for a user gesture:", error);
-    });
-  }
   return audioContext;
+};
+
+// Browsers keep audio suspended until the page gets a user gesture, so every pulse retries:
+// the tone becomes audible as soon as the user interacts with the page during the call.
+const resumeIfSuspended = (ctx: AudioContext): void => {
+  if (ctx.state !== "suspended") return;
+  ctx.resume().catch(() => undefined);
 };
 
 const startTone = (pattern: TonePattern): ToneHandle | null => {
@@ -37,6 +38,7 @@ const startTone = (pattern: TonePattern): ToneHandle | null => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const pulse = (on: boolean): void => {
     if (stopped) return;
+    resumeIfSuspended(ctx);
     const now = ctx.currentTime;
     gain.gain.cancelScheduledValues(now);
     gain.gain.setTargetAtTime(on ? pattern.volume : 0, now, TONE_RAMP_SECONDS);

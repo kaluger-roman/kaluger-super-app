@@ -1,10 +1,12 @@
 import type { FC } from "react";
 
 import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
+import { useMediaQuery } from "@mui/material";
 
 import type { CallMediaState } from "../../videoCall.types";
 import { CallAvatar } from "../CallAvatar";
 import { CallVideo } from "./CallVideo";
+import { SHORT_STAGE_QUERY } from "./VideoTile.constants";
 import {
   getCameraLabel,
   getTileContentKind,
@@ -25,6 +27,7 @@ type TileContentProps = {
 export const TileContent: FC<TileContentProps> = ({ name, media, stream, muted, config }) => {
   const kind = getTileContentKind(media);
   const showVideo = kind !== "placeholder";
+  const shortStage = useMediaQuery(SHORT_STAGE_QUERY);
 
   return (
     <>
@@ -34,7 +37,7 @@ export const TileContent: FC<TileContentProps> = ({ name, media, stream, muted, 
           muted={muted}
           hidden={!showVideo}
           fit={getVideoFit(kind)}
-          layout={getVideoLayout(kind, config)}
+          layout={getVideoLayout(kind, config, shortStage)}
         />
       )}
       {!showVideo && (

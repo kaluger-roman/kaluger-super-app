@@ -1,6 +1,6 @@
 import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { theme } from "@shared";
 
@@ -17,7 +17,24 @@ const sharing: CallMediaState = {
 const renderTile = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
+const matchShortStage = () => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(max-height: 500px)",
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
 describe("VideoTile screen share", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("should show the screen-share indicator while sharing", () => {
     renderTile(<VideoTile name="Иван" media={sharing} variant="remote" />);
     expect(screen.getAllByText("Демонстрация экрана").length).toBeGreaterThan(0);
@@ -55,6 +72,14 @@ describe("VideoTile screen share", () => {
       <VideoTile name="Иван" media={sharing} variant="remote" stream={new MediaStream()} />
     );
     expect(container.querySelector("video")).toHaveAttribute("data-layout", "framed");
+  });
+
+  it("should overlay the pills on the peer's shared screen on a short landscape stage", () => {
+    matchShortStage();
+    const { container } = renderTile(
+      <VideoTile name="Иван" media={sharing} variant="remote" stream={new MediaStream()} />
+    );
+    expect(container.querySelector("video")).toHaveAttribute("data-layout", "overlay");
   });
 
   it("should let the own screen preview fill the small tile", () => {

@@ -112,6 +112,18 @@ describe("WebSocketManager call lifecycle", () => {
     );
   });
 
+  it("should close the tutor socket of a revoked token and end its call on close", async () => {
+    const ws = makeSocket();
+    ws.close.mockImplementation(() => ws.emit("close"));
+    await connectTutor(ws);
+
+    manager.disconnectUser("tutor-1");
+
+    expect(ws.close).toHaveBeenCalledWith(4001, "Token revoked");
+    expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("tutor", "tutor-1");
+    expect(manager.getConnection("tutor", "tutor-1")).toBeUndefined();
+  });
+
   it("should look up and message a participant by kind", async () => {
     const tutor = makeSocket();
     const student = makeSocket();

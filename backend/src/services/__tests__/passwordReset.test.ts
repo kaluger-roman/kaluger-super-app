@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
+import { getWebSocketManager } from "../../lib/wsManager";
 import { createResetToken, comparePassword, hashPassword, hashResetToken } from "../../utils";
 import { applyPasswordReset, requestPasswordReset, verifyResetToken } from "../passwordReset";
 
@@ -12,6 +13,13 @@ jest.mock("../email", () => ({
 
 import { sendPasswordResetEmail } from "../email";
 import { uniqueEmail } from "../../__tests__/helpers";
+
+jest.mock("../../lib/wsManager");
+
+const disconnectUser = jest.fn();
+jest.mocked(getWebSocketManager).mockReturnValue({
+  disconnectUser,
+} as unknown as ReturnType<typeof getWebSocketManager>);
 
 const ORIGINAL_PASSWORD = "OldPassword1";
 const VALID_NEW_PASSWORD = "NewPassword1";
@@ -254,6 +262,7 @@ describe("passwordReset service", () => {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       expect(await comparePassword(VALID_NEW_PASSWORD, user!.password)).toBe(true);
       expect(await comparePassword(ORIGINAL_PASSWORD, user!.password)).toBe(false);
+      expect(disconnectUser).toHaveBeenCalledWith(userId);
     });
 
     it("should set isEmailVerified to true if it was false", async () => {

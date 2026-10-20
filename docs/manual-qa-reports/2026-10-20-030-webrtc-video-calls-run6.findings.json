@@ -1,0 +1,442 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32776",
+  "run_at": "2026-10-20T13:05:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 46,
+    "passed": 41,
+    "failed": 3,
+    "warned": 2,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "Репетитор звонит из карточки: «Вызываем…» с «Отменить»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Ученик видит входящий с именем, «Принять»/«Отклонить»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "Принятие → оба видят и слышат друг друга",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "«Завершить» → у обоих idle, устройства освобождены",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "«Отклонить» → «Вызов отклонён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Отмена до ответа → входящий исчезает",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "40 с без ответа → «Нет ответа»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "PH",
+        "title": "Фазы outgoing → connecting → active, баннер «Соединение…», таймер, гудки",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "IC1",
+        "title": "Отмена после call_ringing и повтор через 300 мс",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "IC2",
+        "title": "Отмена и повтор в пределах одного RTT",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [1]
+      },
+      {
+        "id": "P2.1-2.2",
+        "title": "Микрофон выкл/вкл, индикатор у собеседника",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.3-2.4",
+        "title": "Камера выкл/вкл, заглушка",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.6",
+        "title": "Нет камеры, есть микрофон → «только аудио»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Камера появилась → собеседник видит видео",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "M1",
+        "title": "Микрофон, переключённый во время ожидания камеры, сохраняется",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "M2",
+        "title": "Переключение микрофона/камеры во время «Соединение…»",
+        "priority": "P2",
+        "status": "warn",
+        "finding_ids": [4]
+      },
+      {
+        "id": "P3.1",
+        "title": "Демонстрация видна собеседнику, индикатор у обоих",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1b",
+        "title": "Демонстрация на низкой сцене 812×375 накладывается под плашки",
+        "priority": "P3",
+        "status": "fail",
+        "finding_ids": [3]
+      },
+      {
+        "id": "P3.2",
+        "title": "Остановка демонстрации кнопкой и системно → снова камера",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.3",
+        "title": "Вторая демонстрация при чужой → сообщение",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.4",
+        "title": "Завершение во время демонстрации освобождает захват",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "L1",
+        "title": "Портал, fixed, прокрутка страницы под экраном",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L2",
+        "title": "PWA standalone: pull-to-refresh не задевает звонок",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L3",
+        "title": "Тосты во время звонка видны",
+        "priority": "Smoke",
+        "status": "fail",
+        "finding_ids": [2]
+      },
+      {
+        "id": "L4",
+        "title": "Телефон 375×812 и 812×375: кнопки целиком, без горизонтального скролла",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L5",
+        "title": "Свой PiP обычный/компактный с выключенной камерой",
+        "priority": "Smoke",
+        "status": "warn",
+        "finding_ids": [5]
+      },
+      {
+        "id": "L6",
+        "title": "Круглые кнопки и их цвета",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "L7",
+        "title": "«Позвонить» в шапке кабинета ученика",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "P4.1",
+        "title": "Завершённый звонок в истории у обоих",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.2",
+        "title": "Остальные статусы по-русски, без длительности",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.3",
+        "title": "Изоляция истории и 401",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.4",
+        "title": "Сортировка от новых к старым",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.5",
+        "title": "Открытая история обновляется после звонка без оверлея",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.6",
+        "title": "Первое открытие без мигания пустого состояния",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.7",
+        "title": "Ошибка загрузки и «Повторить»",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат не в сети",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E2",
+        "title": "Нет ни камеры, ни микрофона",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E3",
+        "title": "Занятость",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E4",
+        "title": "Двойной клик → один call_invite",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E5",
+        "title": "Вне пары / без адресата / архив / без кабинета / неизвестный callId",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E6",
+        "title": "Закрытие вкладки собеседника",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E7",
+        "title": "Встречный вызов",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E8",
+        "title": "Звонок ученик → репетитор",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E9",
+        "title": "Звонящий закрыл вкладку во время вызова",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "S1",
+        "title": "Вход через UI, меню, защита роутов",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S4",
+        "title": "Консоль",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 5,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 2
+    },
+    "by_category": {
+      "spec-mismatch": 1,
+      "bug": 3,
+      "ux": 1,
+      "improvement": 0
+    },
+    "unambiguous_fix_count": 2
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "После быстрой отмены и повторного вызова звонящий навсегда остаётся на «Вызываем…»",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "IC2",
+      "file": "backend/src/services/callSignaling/callFlow.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/18-student-stuck-calling-after-fast-recall.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/19-tutor-after-fast-recall.png"
+      ],
+      "expected": "Второй вызов звонит у адресата, через 40 с «Нет ответа»",
+      "actual": "Сервер привязал invite#2 к звонку A, клиент отменил A как устаревший ringing invite#1; звонящий висит на «Вызываем…» с гудками >90 с, у адресата входящего нет",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Протокол и зоны других агентов (backend/, features/videoCall/model). В рабочем дереве есть незакоммиченная правка callFlow.ts (новый invite заменяет звонок), этим прогоном не проверена",
+      "console_excerpt": null,
+      "network_excerpt": "student: >> call_invite << call_ringing(A,#1) >> call_invite(#2) << call_ringing(A,#2) >> call_cancel(A); tutor: << call_incoming(A) << call_canceled(A)",
+      "fix_suggestion": "На сервере новый inviteId при ringing-звонке того же звонящего должен отменять A и заводить новый звонок B (повтор с тем же inviteId — на A); регрессионный тест на invite#1, invite#2, cancel(A); опционально клиентский таймаут фазы outgoing"
+    },
+    {
+      "id": 2,
+      "title": "В установленном PWA тосты во время звонка скрыты под экраном звонка",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "L3",
+      "file": "frontend/src/app/App.tsx",
+      "line_hint": 120,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/29-phone-standalone-toast-during-call.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/30-desktop-toast-during-call-visible.png"
+      ],
+      "expected": "Тост виден поверх экрана звонка",
+      "actual": "Snackbar внутри обёртки pull-to-refresh с transform/will-change, экран звонка (портал, z 1300) его перекрывает",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/app/App.tsx",
+        "frontend/src/app/components/PullToRefresh/PullToRefresh.tsx"
+      ],
+      "autofix_tests_added": ["frontend/src/app/__tests__/App.test.tsx"],
+      "autofix_note": "Стек не пересобирался (в рабочем дереве WIP других агентов); проверено юнит-тестом, падающим без фикса",
+      "console_excerpt": "toast visibleOnTop=false, hit=call tile; wrapper transform matrix(1,0,0,1,0,0), will-change transform",
+      "network_excerpt": null,
+      "fix_suggestion": "Вынести <NotificationProvider /> из <PullToRefresh> рядом с <CallOverlay />"
+    },
+    {
+      "id": 3,
+      "title": "На низкой сцене демонстрация собеседника остаётся в рамке вместо наложения",
+      "category": "spec-mismatch",
+      "severity": "low",
+      "scenario_id": "P3.1b",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts",
+      "line_hint": 60,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/33-phone-landscape-peer-share-overlay.png",
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/35-phone-landscape-overlay-if-grid-reset.png"
+      ],
+      "expected": "На 812×375 видео на всю плитку, плашки поверх",
+      "actual": "position:absolute при grid-row:2 — содержащий блок область сетки, видео 758×165 вместо 770×214",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/ui/VideoTile/TileContent.tsx",
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.constants.ts",
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.helpers.ts",
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/videoCall/ui/VideoTile/__tests__/ScreenShare.test.tsx",
+        "frontend/src/features/videoCall/ui/VideoTile/__tests__/VideoTile.helpers.test.ts"
+      ],
+      "autofix_note": "Раскладка решается в getVideoLayout(kind, config, shortStage) через useMediaQuery; в браузере на новом бандле не проверялось",
+      "console_excerpt": "mq=true position=absolute gridRow=2; video y121 h165 in tile y71 h216",
+      "network_excerpt": null,
+      "fix_suggestion": "getVideoLayout учитывает shortStage, медиазапрос из ветки framed убрать"
+    },
+    {
+      "id": 4,
+      "title": "Кнопки микрофона и камеры во время «Соединение…» ничего не делают",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "M2",
+      "file": "frontend/src/features/videoCall/model/mediaControls.model.ts",
+      "line_hint": 18,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/08-student-connecting-banner.png"
+      ],
+      "expected": "Выключение применяется после получения треков или кнопки недоступны до соединения",
+      "actual": "Нажатия молча игнорируются, после соединения микрофон и камера включены",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Зона другого агента (features/videoCall/model) и выбор поведения, смежный с отложенным US2-5",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Применять $selfMediaState к трекам в addLocalMediaFx до первого call_media_state, либо disabled у кнопок пока $localStream === null"
+    },
+    {
+      "id": 5,
+      "title": "В компактном PiP на телефоне «Вы» обрезается до «В…»",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "L5",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-20-030-webrtc-video-calls-run6/screenshots/32-phone-portrait-compact-pip-peer-share.png"
+      ],
+      "expected": "«Вы» и значок микрофона помещаются целиком",
+      "actual": "72×96: под плашку 32 px, «Вы» с отступами 39 px → «В…»",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Выбор по дизайну",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Отступ плашки имени в таблице вариантов (6 px для selfCompact) или меньший gap/значок в компактном варианте"
+    }
+  ]
+}

@@ -19,10 +19,12 @@ const renderBar = (
     screenSharing: false,
     cameraAvailable: true,
   },
-  screenShareSupported = true
+  screenShareSupported = true,
+  localStream: MediaStream | null = new MediaStream()
 ) => {
   const scope = fork({
     values: [
+      [callModel.$localStream, localStream],
       [callModel.$selfMediaState, self],
       [callModel.$peerMediaState, peer],
       [callModel.$screenShareSupported, screenShareSupported],
@@ -39,6 +41,15 @@ const renderBar = (
 };
 
 describe("CallControlBar", () => {
+  it("should disable mic and camera until the own media is acquired", () => {
+    const self = { micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true };
+    renderBar(self, self, true, null);
+
+    expect(screen.getByRole("button", { name: "Выключить микрофон" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Выключить камеру" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Завершить звонок" })).toBeEnabled();
+  });
+
   it("should label the mic button by the current state", () => {
     renderBar({ micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true });
     expect(screen.getByRole("button", { name: "Выключить микрофон" })).toBeInTheDocument();

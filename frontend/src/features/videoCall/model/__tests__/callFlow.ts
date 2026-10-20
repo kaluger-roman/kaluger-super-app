@@ -3,7 +3,7 @@ import type { IceServerPayload } from "../call.types";
 import { dispatchCallSignal } from "../signaling.helpers";
 import type { CallRole, CallSignalingInbound, CallSignalingOutbound } from "../signaling.types";
 import { resetCallTransportsForTests, setCallTransport } from "../transport.helpers";
-import { stopAllSessions } from "../webrtc.helpers";
+import { resetWebRtcAdapter, stopAllSessions } from "../webrtc.helpers";
 import { readStore } from "./storeProbe";
 
 export const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
@@ -20,6 +20,7 @@ export const resetCallFlow = (): void => {
   callModel.hangUp();
   stopAllSessions();
   resetCallTransportsForTests();
+  resetWebRtcAdapter();
 };
 
 export const receive = (message: CallSignalingOutbound, role: CallRole = "tutor"): void => {

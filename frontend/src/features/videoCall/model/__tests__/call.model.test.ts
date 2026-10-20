@@ -3,7 +3,10 @@ import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { callModel } from "../index";
+import type { CallRole, CallSignalingInbound } from "../signaling.types";
+import { setCallTransport } from "../transport.helpers";
 import { installTransport, resetCallFlow, settleMicrotasks } from "./callFlow";
+import { createFakeAdapter } from "./fakeWebrtc";
 
 const startConnectedCall = async (scope: Scope): Promise<void> => {
   await allSettled(callModel.incomingCallReceived, {
@@ -156,14 +159,31 @@ describe("features/videoCall/model/call.model transitions", () => {
     expect(scope.getState(callModel.$iceServers)).toEqual([{ urls: "stun:example" }]);
   });
 
-  it("should forget the call address only after the call resources are released", async () => {
+  it("should send the hangup to the call's own socket and then forget the call", async () => {
+    const byRole: Record<CallRole, CallSignalingInbound[]> = { tutor: [], student: [] };
+    setCallTransport("tutor", (message) => byRole.tutor.push(message), "tutor-socket");
+    setCallTransport("student", (message) => byRole.student.push(message), "student-socket");
     const scope = fork();
     await startConnectedCall(scope);
+    const adapter = createFakeAdapter();
+    // The duration timer keeps the scope busy, so allSettled would never resolve here.
+    void allSettled(callModel.localMediaAttached, {
+      scope,
+      params: {
+        localStream: adapter.createMediaStream(),
+        remoteStream: adapter.createMediaStream(),
+      },
+    });
+    await settleMicrotasks();
+    expect(scope.getState(callModel.$remoteStream)).not.toBeNull();
 
     void allSettled(callModel.hangUp, { scope });
     await settleMicrotasks();
 
+    expect(byRole.tutor).toContainEqual({ type: "call_hangup", callId: "call-1" });
+    expect(byRole.student).toEqual([]);
     expect(scope.getState(callModel.$callAddress)).toBeNull();
+    expect(scope.getState(callModel.$localStream)).toBeNull();
     expect(scope.getState(callModel.$remoteStream)).toBeNull();
   });
 

@@ -31,6 +31,7 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       const studentPage = await studentContext.newPage();
       await seedStudentAuthInBrowser(studentPage, token);
       await studentPage.goto("/student/cabinet/schedule");
+      await expect(studentPage.getByRole("button", { name: "Позвонить" })).toBeVisible();
       // The student can take the call only once its socket is registered on the server.
       await expect.poll(() => isStudentOnline(studentUser.id)).toBe(true);
 

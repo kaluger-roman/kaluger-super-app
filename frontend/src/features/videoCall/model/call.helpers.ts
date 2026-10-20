@@ -9,7 +9,14 @@ import {
   TUTOR_UNAVAILABLE_TEXT,
   UNAVAILABLE_TEXT,
 } from "./call.constants";
-import type { CallAddress, CallPeer, CanceledNotice, StartCallParams } from "./call.types";
+import type {
+  AddressedSignal,
+  CallAddress,
+  CallPeer,
+  CanceledNotice,
+  StartCallParams,
+  TerminatedCall,
+} from "./call.types";
 import type { CallEndReason, CallRole } from "./signaling.types";
 
 // The caller's own role: a tutor calls a student, a student calls their tutor.
@@ -25,6 +32,12 @@ export const hasCallId = (callId: string | null): callId is string => callId !==
 
 export const isCallAddress = (address: CallAddress | null): address is CallAddress =>
   address !== null;
+
+export const toTerminalSignal = ({ address, signal }: TerminatedCall): AddressedSignal | null =>
+  address && signal ? { role: address.role, message: { ...signal, callId: address.callId } } : null;
+
+export const isAddressedSignal = (signal: AddressedSignal | null): signal is AddressedSignal =>
+  signal !== null;
 
 export const isPickerDismissed = (error: unknown): boolean =>
   typeof error === "object" &&

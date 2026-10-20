@@ -3,7 +3,8 @@ import { INVITE_RATE_LIMIT, INVITE_RATE_WINDOW_MS } from "./callSignaling.consta
 
 const invitesBySender = new Map<string, number[]>();
 
-export const registerInviteAttempt = (sender: CallParticipant, now = Date.now()): boolean => {
+export const registerInviteAttempt = (sender: CallParticipant): boolean => {
+  const now = Date.now();
   const key = `${sender.kind}:${sender.id}`;
   const recent = (invitesBySender.get(key) ?? []).filter(
     (timestamp) => now - timestamp < INVITE_RATE_WINDOW_MS

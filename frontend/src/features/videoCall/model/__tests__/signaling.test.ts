@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { notificationsModel } from "@shared";
+
 import { callModel } from "../index";
 import { parseCallSignal } from "../signaling.helpers";
 import type { CallSignalingInbound } from "../signaling.types";
+import { resetCallTransportsForTests, setCallTransport } from "../transport.helpers";
 import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
   installTransport,
@@ -14,7 +17,7 @@ import {
 } from "./callFlow";
 import { createFakeAdapter, createFakeStream, triggerConnectionState } from "./fakeWebrtc";
 import type { FakeAdapter } from "./fakeWebrtc";
-import { readStore } from "./storeProbe";
+import { collectEvents, readStore } from "./storeProbe";
 
 describe("features/videoCall/model parseCallSignal", () => {
   it("should keep a well-formed signal and drop fields it does not know", () => {
@@ -120,6 +123,21 @@ describe("features/videoCall/model client signaling", () => {
     const [config] = vi.mocked(adapter.createPeerConnection).mock.calls[0];
     expect(config.iceServers).toHaveLength(1);
     expect(config.iceServers?.[0]).toMatchObject({ urls: "stun:stun.example:3478" });
+  });
+
+  it("should end the call when its signal finds no socket for the call's role", async () => {
+    resetCallTransportsForTests();
+    setCallTransport("student", (message) => sent.push(message), "student-socket");
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    receive({ type: "call_incoming", callId: "c-no-socket", callerName: "Анна", iceServers: [] });
+    callModel.acceptCall();
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(readStore(callModel.$callPhase)).toBe("idle");
+    expect(errors.calls).toContain("Нет связи с сервером. Проверьте интернет и попробуйте снова");
+    expect(sent).toEqual([]);
   });
 
   it("should notify the peer with call_hangup and end the call when the connection fails", async () => {

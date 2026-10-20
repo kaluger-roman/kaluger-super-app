@@ -18,6 +18,7 @@ import * as Styled from "./CallControlBar.styled";
 export const CallControlBar: FC = () => {
   const selfMedia = useUnit(callModel.$selfMediaState);
   const screenShareSupported = useUnit(callModel.$screenShareSupported);
+  const localMediaReady = useUnit(callModel.$localMediaReady);
   const actions = useUnit({
     toggleMic: callModel.toggleMic,
     toggleCamera: callModel.toggleCamera,
@@ -30,6 +31,7 @@ export const CallControlBar: FC = () => {
       <RoundCallButton
         $tone={selfMedia.micOn ? "neutral" : "danger"}
         $size={56}
+        disabled={!localMediaReady}
         onClick={() => actions.toggleMic()}
         aria-label={selfMedia.micOn ? "Выключить микрофон" : "Включить микрофон"}
       >
@@ -39,6 +41,7 @@ export const CallControlBar: FC = () => {
       <RoundCallButton
         $tone={selfMedia.cameraOn ? "neutral" : "danger"}
         $size={56}
+        disabled={!localMediaReady}
         onClick={() => actions.toggleCamera()}
         aria-label={selfMedia.cameraOn ? "Выключить камеру" : "Включить камеру"}
       >
