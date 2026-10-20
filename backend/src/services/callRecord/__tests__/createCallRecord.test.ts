@@ -1,9 +1,9 @@
 import { uniqueEmail } from "../../../__tests__/helpers";
 
 import { prisma } from "../../../lib/prisma";
-import { createFinalizedCallRecord } from "../callRecord";
+import { createCallRecord } from "../createCallRecord";
 
-describe("createFinalizedCallRecord", () => {
+describe("createCallRecord", () => {
   let tutorId: string;
   let studentId: string;
 
@@ -38,7 +38,7 @@ describe("createFinalizedCallRecord", () => {
     const connectedAt = new Date("2026-06-04T10:00:05.000Z");
     const endedAt = new Date("2026-06-04T10:05:05.000Z");
 
-    await createFinalizedCallRecord({
+    await createCallRecord({
       tutorId,
       studentId,
       callerKind: "tutor",
@@ -56,7 +56,7 @@ describe("createFinalizedCallRecord", () => {
   });
 
   it("should leave endedAt and durationSeconds null for a MISSED call", async () => {
-    await createFinalizedCallRecord({
+    await createCallRecord({
       tutorId,
       studentId,
       callerKind: "tutor",
@@ -71,7 +71,7 @@ describe("createFinalizedCallRecord", () => {
   });
 
   it("should store callerKind STUDENT for student-initiated calls", async () => {
-    await createFinalizedCallRecord({
+    await createCallRecord({
       tutorId,
       studentId,
       callerKind: "student",
@@ -82,5 +82,17 @@ describe("createFinalizedCallRecord", () => {
     const record = await prisma.callRecord.findFirstOrThrow({ where: { tutorId } });
     expect(record.callerKind).toBe("STUDENT");
     expect(record.durationSeconds).toBeNull();
+  });
+
+  it("should reject when the record cannot be written", async () => {
+    await expect(
+      createCallRecord({
+        tutorId: "missing-tutor",
+        studentId,
+        callerKind: "tutor",
+        status: "MISSED",
+        startedAt: new Date(),
+      })
+    ).rejects.toThrow();
   });
 });

@@ -4,67 +4,62 @@ import { MicOff as MicOffIcon, ScreenShare as ScreenShareIcon } from "@mui/icons
 import { Tooltip } from "@mui/material";
 
 import { TileContent } from "./TileContent";
+import { TILE_VARIANTS } from "./VideoTile.constants";
 import * as Styled from "./VideoTile.styled";
+import type { TileVariant } from "./VideoTile.types";
+import type { CallMediaState } from "../../videoCall.types";
 
 type VideoTileProps = {
   name: string;
-  micOn: boolean;
-  cameraOn: boolean;
-  screenSharing: boolean;
-  audioOnly: boolean;
-  avatarSize?: number;
+  media: CallMediaState;
+  variant: TileVariant;
   stream?: MediaStream | null;
   muted?: boolean;
-  isSelf?: boolean;
-  compact?: boolean;
 };
 
 export const VideoTile: FC<VideoTileProps> = ({
   name,
-  micOn,
-  cameraOn,
-  screenSharing,
-  audioOnly,
-  avatarSize = 96,
+  media,
+  variant,
   stream = null,
   muted = false,
-  isSelf = false,
-  compact = false,
-}) => (
-  <Styled.TileBox $hasVideo={cameraOn} $isScreen={screenSharing} $isSelf={isSelf}>
-    <TileContent
-      name={name}
-      cameraOn={cameraOn}
-      screenSharing={screenSharing}
-      audioOnly={audioOnly}
-      avatarSize={avatarSize}
-      stream={stream}
-      muted={muted}
-      isSelf={isSelf}
-      compact={compact}
-    />
+}) => {
+  const config = TILE_VARIANTS[variant];
+  const micBadge = !media.micOn && (
+    <Styled.StatusBadge $size={config.badgeSize} aria-label="Микрофон выключен">
+      <MicOffIcon />
+    </Styled.StatusBadge>
+  );
 
-    {screenSharing && (
-      <Tooltip title="Демонстрация экрана">
-        <Styled.ScreenLabelPill>
-          <ScreenShareIcon fontSize="small" />
-          <Styled.ScreenLabelText>Демонстрация экрана</Styled.ScreenLabelText>
-        </Styled.ScreenLabelPill>
-      </Tooltip>
-    )}
+  return (
+    <Styled.TileBox
+      $hasVideo={media.cameraOn}
+      $isScreen={media.screenSharing}
+      $minHeight={config.minHeight}
+      $inset={config.inset}
+      $gap={config.gap}
+      data-variant={variant}
+    >
+      <TileContent name={name} media={media} stream={stream} muted={muted} config={config} />
 
-    <Styled.NameChipRow>
-      <Tooltip title={name}>
-        <Styled.NamePill>{name}</Styled.NamePill>
-      </Tooltip>
-    </Styled.NameChipRow>
+      <Styled.TopRow>
+        {media.screenSharing && (
+          <Tooltip title="Демонстрация экрана">
+            <Styled.ScreenLabelPill>
+              <ScreenShareIcon fontSize="small" />
+              <Styled.ScreenLabelText>Демонстрация экрана</Styled.ScreenLabelText>
+            </Styled.ScreenLabelPill>
+          </Tooltip>
+        )}
+        {!config.badgeInNameRow && micBadge}
+      </Styled.TopRow>
 
-    {!micOn && (
-      <Styled.TopRightBadges $compact={compact}>
-        <Styled.StatusBadge $variant="muted" $compact={compact} aria-label="Микрофон выключен">
-          <MicOffIcon fontSize="small" />
-        </Styled.StatusBadge>
-      </Styled.TopRightBadges>
-    )}
-  </Styled.TileBox>
-);
+      <Styled.NameRow>
+        <Tooltip title={name}>
+          <Styled.NamePill>{name}</Styled.NamePill>
+        </Tooltip>
+        {config.badgeInNameRow && micBadge}
+      </Styled.NameRow>
+    </Styled.TileBox>
+  );
+};

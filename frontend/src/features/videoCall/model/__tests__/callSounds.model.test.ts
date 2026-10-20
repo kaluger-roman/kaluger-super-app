@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callModel, setCallSoundsAdapter, setCallTransport, stopAllSessions } from "../index";
+import { setCallSoundsAdapter } from "../callSounds.helpers";
+import { callModel } from "../index";
+import { installTransport, resetCallFlow } from "./callFlow";
 
 const makeSoundsMock = () => ({
   startRingback: vi.fn<() => void>(),
@@ -15,27 +17,25 @@ describe("features/videoCall/model call sounds", () => {
   beforeEach(() => {
     sounds = makeSoundsMock();
     setCallSoundsAdapter(sounds);
-    setCallTransport(vi.fn());
+    installTransport();
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
-  it("plays the ringback while dialing and stops it once connected", () => {
+  it("should play the ringback while dialing and stop it once the callee answers", () => {
     callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
     expect(sounds.startRingback).toHaveBeenCalledTimes(1);
     expect(sounds.startRingtone).not.toHaveBeenCalled();
 
-    callModel.callConnected();
+    callModel.callAcceptedReceived({ callId: "c-0", iceServers: [] });
     expect(sounds.stopRingback).toHaveBeenCalled();
   });
 
-  it("plays the ringtone on an incoming call and stops it when accepted", () => {
-    callModel.incomingCallReceived({ callId: "c-1", callerName: "Анна" });
+  it("should play the ringtone on an incoming call and stop it when accepted", () => {
+    callModel.incomingCallReceived({ callId: "c-1", callerName: "Анна", role: "tutor" });
     expect(sounds.startRingtone).toHaveBeenCalledTimes(1);
     expect(sounds.startRingback).not.toHaveBeenCalled();
 
@@ -43,8 +43,8 @@ describe("features/videoCall/model call sounds", () => {
     expect(sounds.stopRingtone).toHaveBeenCalled();
   });
 
-  it("stops the ringtone when an incoming call is rejected", () => {
-    callModel.incomingCallReceived({ callId: "c-2", callerName: "Анна" });
+  it("should stop the ringtone when an incoming call is rejected", () => {
+    callModel.incomingCallReceived({ callId: "c-2", callerName: "Анна", role: "tutor" });
     sounds.stopRingtone.mockClear();
 
     callModel.rejectCall();

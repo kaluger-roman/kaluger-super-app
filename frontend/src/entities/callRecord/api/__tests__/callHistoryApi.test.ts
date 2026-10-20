@@ -43,7 +43,7 @@ describe("entities/callRecord/api/getCallHistory", () => {
         direction: "outgoing" as const,
         startedAt: "2026-06-03T14:32:00.000Z",
         durationSeconds: 10,
-        status: "completed" as const,
+        status: "COMPLETED" as const,
       },
     ];
     mockedApiGet.mockResolvedValue({ data: { items: records } });

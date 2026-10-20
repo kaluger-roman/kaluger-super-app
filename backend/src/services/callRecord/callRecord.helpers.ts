@@ -1,30 +1,35 @@
-import type { CallerKind } from "@prisma/client";
-import type { CallDirection, CallHistoryItem } from "../../types";
-import { DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT, STATUS_TO_VALUE } from "./callRecord.constants";
-import type { CallRecordWithPeer } from "./callRecord.types";
+import type { CallerKind, CallStatus } from "@prisma/client";
+import type { CallerKindValue, CallHistoryItem } from "../../types";
+import { DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT } from "./callRecord.constants";
+import type { CallRecordWithPeer, FinalizedTimes } from "./callRecord.types";
 
-const directionFor = (callerKind: CallerKind, viewer: "tutor" | "student"): CallDirection => {
-  const initiatedByViewer = viewer === "tutor" ? callerKind === "TUTOR" : callerKind === "STUDENT";
-  return initiatedByViewer ? "outgoing" : "incoming";
+export const toPrismaCallerKind = (kind: CallerKindValue): CallerKind =>
+  kind === "tutor" ? "TUTOR" : "STUDENT";
+
+export const toCallHistoryItem = (
+  record: CallRecordWithPeer,
+  viewer: CallerKindValue
+): CallHistoryItem => ({
+  id: record.id,
+  peerName: viewer === "tutor" ? record.student.name : record.tutor.name,
+  direction: record.callerKind === toPrismaCallerKind(viewer) ? "outgoing" : "incoming",
+  startedAt: record.startedAt.toISOString(),
+  durationSeconds: record.durationSeconds,
+  status: record.status,
+});
+
+// Only a completed call has an end and a duration; every other outcome never connected.
+export const toFinalizedTimes = (
+  status: CallStatus,
+  connectedAt: Date | undefined,
+  endedAt: Date
+): FinalizedTimes => {
+  if (status !== "COMPLETED") return { endedAt: null, durationSeconds: null };
+  const durationSeconds = connectedAt
+    ? Math.max(0, Math.floor((endedAt.getTime() - connectedAt.getTime()) / 1000))
+    : null;
+  return { endedAt, durationSeconds };
 };
-
-export const toCallHistoryItemForTutor = (record: CallRecordWithPeer): CallHistoryItem => ({
-  id: record.id,
-  peerName: record.student.name,
-  direction: directionFor(record.callerKind, "tutor"),
-  startedAt: record.startedAt.toISOString(),
-  durationSeconds: record.durationSeconds,
-  status: STATUS_TO_VALUE[record.status],
-});
-
-export const toCallHistoryItemForStudent = (record: CallRecordWithPeer): CallHistoryItem => ({
-  id: record.id,
-  peerName: record.tutor.name,
-  direction: directionFor(record.callerKind, "student"),
-  startedAt: record.startedAt.toISOString(),
-  durationSeconds: record.durationSeconds,
-  status: STATUS_TO_VALUE[record.status],
-});
 
 export const clampLimit = (limit?: number): number => {
   if (!limit || limit <= 0) return DEFAULT_HISTORY_LIMIT;

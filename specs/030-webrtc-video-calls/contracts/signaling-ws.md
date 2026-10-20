@@ -10,7 +10,7 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 
 | `type` | Payload | Meaning | Server action |
 |--------|---------|---------|---------------|
-| `call_invite` | `{ targetStudentId }` (tutor) **or** `{}` (student → their tutor) | Initiate a call to the linked peer | Verify pair (R4); reject if self/cross-pair → `call_error`. If callee offline → `call_unavailable`. If callee busy → `call_busy`. Else create `LiveCall(ringing)`, generate `callId`, start 40s ring timeout, forward `call_incoming` to callee. Echo `call_ringing` (+ ICE config) to caller. Dedup repeat invites from same caller→same peer (FR-018). |
+| `call_invite` | `{ inviteId, targetStudentId }` (tutor) **or** `{ inviteId }` (student → their tutor). `inviteId` — client-generated id (≤64 chars) the server echoes in every reply to this invite | Initiate a call to the linked peer | Verify pair (R4); reject if self/cross-pair → `call_error`. If callee offline → `call_unavailable`. If callee busy → `call_busy`. Else create `LiveCall(ringing)`, generate `callId`, start 40s ring timeout, forward `call_incoming` to callee. Echo `call_ringing { callId, inviteId }` to caller; the caller gets its ICE config with `call_accepted`. Dedup repeat invites from same caller→same peer (FR-018). |
 | `call_accept` | `{ callId }` | Callee accepts | Validate caller is the callee of `callId`. Forward `call_accepted` (+ minted ICE config) to caller. Clear ring timeout. Move to negotiation. |
 | `call_reject` | `{ callId }` | Callee declines | Forward `call_rejected` to caller; finalize `call_records` as `REJECTED`; drop `LiveCall`. |
 | `call_cancel` | `{ callId }` | Caller cancels before answer | Forward `call_canceled` to callee (dismiss incoming UI); finalize `CANCELED`; drop `LiveCall`. |
@@ -21,6 +21,8 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 | `call_media_state` | `{ callId, micOn, cameraOn, screenSharing }` | Local media-state change | Relay to peer so it updates indicators (FR-010/011/012, SC-005). |
 | `call_connected` | `{ callId }` | Media established locally | Mark `LiveCall.connectedAt` (first receipt) → enables duration calc. |
 
+Replies are matched to the request by `callId`, or, before the call exists, by `inviteId`: a client ignores a reply for an invite it no longer waits for and cancels a late `call_ringing` of such an invite. `call_media_state.cameraAvailable` and the `reason` of `call_canceled` / `call_ended` are always present.
+
 Validation: any inbound message referencing a `callId` the sender is not a participant of, or a target outside the sender's authorized pair, is dropped and answered with `call_error` (Russian message). Malformed JSON is ignored (matches existing manager behavior).
 
 ---
@@ -30,16 +32,16 @@ Validation: any inbound message referencing a `callId` the sender is not a parti
 | `type` | Payload | Delivered to | Triggers UI |
 |--------|---------|--------------|-------------|
 | `call_incoming` | `{ callId, callerName }` | callee | `IncomingCallModal` (`$incomingCall.callerName`) |
-| `call_ringing` | `{ callId, iceServers }` | caller | `OutgoingCallOverlay` («Вызываем…») |
+| `call_ringing` | `{ callId, inviteId }` | caller | `OutgoingCallOverlay` («Вызываем…») |
 | `call_accepted` | `{ callId, iceServers }` | caller | Begin WebRTC negotiation (create offer) |
 | `call_rejected` | `{ callId }` | caller | «Вызов отклонён» → idle |
 | `call_canceled` | `{ callId, reason }` | callee | Dismiss incoming modal → idle. `reason: "canceled"` → toast «Вызов отменён», `"timeout"` → «Пропущенный вызов от …» |
 | `call_ended` | `{ callId, reason }` | other party | Tear down, release media → idle. Toast by `reason`: `hangup` «Собеседник завершил звонок», `peer_disconnected` «Собеседник отключился», `media_unavailable` «У собеседника нет доступа к камере и микрофону» |
 | `call_history_updated` | `{}` | both parties | Sent after the call record is written (also after an invite to an offline peer); an open call history page refetches |
-| `call_unavailable` | `{ reason: "offline" }` | caller | «Ученик сейчас не в сети» (FR-013, Edge offline) |
-| `call_busy` | `{}` | caller | «Абонент занят» (Edge "Занятость") |
+| `call_unavailable` | `{ reason: "offline", inviteId }` (invite to an offline peer) **or** `{ reason: "offline", callId }` (callee dropped while ringing) | caller | «Ученик сейчас не в сети» (FR-013, Edge offline) |
+| `call_busy` | `{ inviteId }` | caller | «Абонент занят» (Edge "Занятость") |
 | `call_no_answer` | `{ callId }` | caller | «Нет ответа» on 40s timeout (FR-009) |
-| `call_error` | `{ message }` | sender | Russian error (self-call, cross-pair, unknown callId) |
+| `call_error` | `{ message, callId }` **or** `{ message, inviteId }` (error on an invite) | sender | Russian error (self-call, cross-pair, unknown callId) |
 | `webrtc_offer` / `webrtc_answer` / `webrtc_ice` | relayed verbatim | peer | Drives `RTCPeerConnection` |
 | `call_media_state` | `{ callId, micOn, cameraOn, screenSharing }` | peer | Update `$peerMediaState` indicators |
 
@@ -73,7 +75,7 @@ tutor                         server                          student
  | call_invite{targetStudentId} ->                              |
  |                              | (verify pair, online, free)   |
  |                              | -- call_incoming{callId,name} ->
- | <- call_ringing{callId,ice}  |                               |
+ | <- call_ringing{callId,inv}  |                               |
  |                              | <- call_accept{callId}        |
  | <- call_accepted{callId,ice} |                               |
  | (create RTCPeerConnection, getUserMedia)                      |

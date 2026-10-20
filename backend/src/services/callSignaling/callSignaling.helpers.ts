@@ -2,9 +2,10 @@ import { createHmac } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { CallAuthorizationError } from "../../utils";
 import { ARCHIVED_STUDENT_CALL_MESSAGE } from "./callSignaling.constants";
+import type { CallStatus } from "@prisma/client";
+import type { CallSignalingOutbound } from "../../types";
 import type {
   CallDropOutcome,
-  CallFinalizeStatus,
   CallParticipant,
   LiveCall,
   ResolvedPair,
@@ -79,16 +80,7 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
   };
 };
 
-export const computeDurationSeconds = (
-  status: CallFinalizeStatus,
-  connectedAt?: Date,
-  endedAt?: Date
-): number | null => {
-  if (status !== "COMPLETED" || !connectedAt || !endedAt) return null;
-  return Math.max(0, Math.floor((endedAt.getTime() - connectedAt.getTime()) / 1000));
-};
-
-export const resolveHangupStatus = (call: LiveCall): CallFinalizeStatus =>
+export const resolveHangupStatus = (call: LiveCall): CallStatus =>
   call.status === "connected" ? "COMPLETED" : "FAILED";
 
 export const resolveDropOutcome = (call: LiveCall, dropped: CallParticipant): CallDropOutcome => {
@@ -97,6 +89,22 @@ export const resolveDropOutcome = (call: LiveCall, dropped: CallParticipant): Ca
   if (dropped.kind === call.callerKind) return { status: "CANCELED", peerMessage: "call_canceled" };
   return { status: "MISSED", peerMessage: "call_unavailable" };
 };
+
+export const toDropPeerMessage = (
+  outcome: CallDropOutcome,
+  callId: string
+): CallSignalingOutbound => {
+  if (outcome.peerMessage === "call_unavailable") {
+    return { type: "call_unavailable", reason: "offline", callId };
+  }
+  if (outcome.peerMessage === "call_canceled") {
+    return { type: "call_canceled", callId, reason: "canceled" };
+  }
+  return { type: "call_ended", callId, reason: "peer_disconnected" };
+};
+
+export const isSamePair = (call: LiveCall, pair: ResolvedPair): boolean =>
+  call.tutorUserId === pair.tutorUserId && call.studentUserId === pair.studentUserId;
 
 export const mintTurnCredentials = (
   secret: string,

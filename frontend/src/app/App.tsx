@@ -10,6 +10,7 @@ import { useUnit } from "effector-react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
 import { studentUserModel, userModel } from "@entities";
+import { CallOverlay } from "@features/videoCall";
 import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
@@ -125,6 +126,7 @@ const App: FC = () => {
               <CircularProgress color="inherit" />
             </Styled.ModalBackdrop>
           </PullToRefresh>
+          <CallOverlay />
         </Router>
       </LocalizationProvider>
     </ThemeProvider>

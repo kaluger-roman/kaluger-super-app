@@ -4,7 +4,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import { LoginForm, RegisterForm } from "@features/auth";
 import { EmailVerificationForm } from "@features/emailVerification";
-import { CallOverlay } from "@features/videoCall";
 
 import {
   AdminPage,
@@ -142,7 +141,6 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
           element={<ProtectedRoute element={<DashboardPage />} isLoggedIn={isLoggedIn} />}
         />
       </Routes>
-      <CallOverlay />
     </Suspense>
   );
 };

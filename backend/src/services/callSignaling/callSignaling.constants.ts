@@ -8,3 +8,7 @@ export const INVITE_RATE_LIMIT = 10;
 export const INVITE_RATE_WINDOW_MS = 60 * 1000;
 
 export const ARCHIVED_STUDENT_CALL_MESSAGE = "Звонки недоступны: ученик в архиве";
+export const TUTOR_INVITE_WITHOUT_TARGET_MESSAGE = "Не выбран ученик для звонка";
+export const CALL_NOT_FOUND_MESSAGE = "Звонок не найден";
+export const ALREADY_IN_CALL_MESSAGE = "Сначала завершите текущий звонок";
+export const CALL_FAILED_MESSAGE = "Не удалось обработать звонок";

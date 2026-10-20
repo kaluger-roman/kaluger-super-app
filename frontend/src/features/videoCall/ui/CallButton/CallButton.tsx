@@ -9,7 +9,6 @@ import type { CallButtonColor, CallButtonVariant } from "./CallButton.types";
 type CallButtonProps = {
   label?: string;
   fullWidth?: boolean;
-  disabled?: boolean;
   variant?: CallButtonVariant;
   color?: CallButtonColor;
   onClick: () => void;
@@ -18,7 +17,6 @@ type CallButtonProps = {
 export const CallButton: FC<CallButtonProps> = ({
   label = "Видеозвонок",
   fullWidth,
-  disabled,
   variant = "contained",
   color = "primary",
   onClick,
@@ -28,7 +26,6 @@ export const CallButton: FC<CallButtonProps> = ({
     color={color}
     startIcon={<VideocamIcon />}
     fullWidth={fullWidth}
-    disabled={disabled}
     onClick={onClick}
   >
     {label}

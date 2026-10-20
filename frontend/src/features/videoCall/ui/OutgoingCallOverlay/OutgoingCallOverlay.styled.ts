@@ -1,19 +1,20 @@
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
 import { styled } from "@shared";
+
+import { CALL_SCREEN_BACKGROUND } from "../../videoCall.constants";
 
 export const Backdrop = styled(Box)({
   position: "relative",
   width: "100%",
   height: "100%",
-  minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
   gap: 24,
   padding: 24,
-  background: "radial-gradient(circle at 50% 30%, #0d2417 0%, #050d08 100%)",
+  background: CALL_SCREEN_BACKGROUND,
 });
 
 export const Caption = styled(Typography)({
@@ -41,15 +42,8 @@ export const Ring = styled(Box)({
   },
 });
 
-export const CancelButton = styled(IconButton)({
-  width: 64,
-  height: 64,
+export const CancelSlot = styled(Box)({
   marginTop: 16,
-  color: "#ffffff",
-  background: "#d32f2f",
-  "&:hover": {
-    background: "#b71c1c",
-  },
 });
 
 export const CancelLabel = styled(Typography)({

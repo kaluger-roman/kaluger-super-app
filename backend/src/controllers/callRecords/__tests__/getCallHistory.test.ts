@@ -121,12 +121,12 @@ describe("Call history REST API", () => {
 
       expect(res.body.items).toHaveLength(2);
       expect(res.body.items[0]).toMatchObject({
-        status: "missed",
+        status: "MISSED",
         direction: "incoming",
         peerName: "Иван Смирнов",
       });
       expect(res.body.items[1]).toMatchObject({
-        status: "completed",
+        status: "COMPLETED",
         direction: "outgoing",
         durationSeconds: 300,
       });
@@ -154,12 +154,12 @@ describe("Call history REST API", () => {
 
       expect(res.body.items).toHaveLength(2);
       expect(res.body.items[0]).toMatchObject({
-        status: "missed",
+        status: "MISSED",
         direction: "outgoing",
         peerName: "Анна Петрова",
       });
       expect(res.body.items[1]).toMatchObject({
-        status: "completed",
+        status: "COMPLETED",
         direction: "incoming",
         peerName: "Анна Петрова",
       });

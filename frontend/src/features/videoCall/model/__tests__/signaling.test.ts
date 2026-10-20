@@ -1,140 +1,141 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { callModel } from "../index";
+import { parseCallSignal } from "../signaling.helpers";
+import type { CallSignalingInbound } from "../signaling.types";
+import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
-  callModel,
-  dispatchCallSignal,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
-import { sendCallSignal } from "../signaling.helpers";
-import { startCalleeSession, startCallerSession } from "./callFlow";
-import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
+  installTransport,
+  receive,
+  resetCallFlow,
+  settleMicrotasks,
+  startCalleeSession,
+  startCallerSession,
+} from "./callFlow";
+import { createFakeAdapter, createFakeStream, triggerConnectionState } from "./fakeWebrtc";
+import type { FakeAdapter } from "./fakeWebrtc";
 import { readStore } from "./storeProbe";
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+describe("features/videoCall/model parseCallSignal", () => {
+  it("should keep a well-formed signal and drop fields it does not know", () => {
+    expect(
+      parseCallSignal({ type: "call_ringing", callId: "c-1", inviteId: "i-1", extra: true })
+    ).toEqual({ type: "call_ringing", callId: "c-1", inviteId: "i-1" });
+  });
+
+  it("should reject a signal with a missing or mistyped field", () => {
+    expect(parseCallSignal({ type: "call_ringing", callId: "c-1" })).toBeNull();
+    expect(parseCallSignal({ type: "call_ended", callId: "c-1", reason: "bored" })).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_accepted", callId: "c-1", iceServers: [{ urls: 1 }] })
+    ).toBeNull();
+    expect(
+      parseCallSignal({
+        type: "call_media_state",
+        callId: "c-1",
+        micOn: true,
+        cameraOn: true,
+        screenSharing: false,
+      })
+    ).toBeNull();
+  });
+
+  it("should accept a reply addressed by inviteId or by callId", () => {
+    expect(parseCallSignal({ type: "call_busy", inviteId: "i-1" })).toEqual({
+      type: "call_busy",
+      inviteId: "i-1",
+    });
+    expect(parseCallSignal({ type: "call_unavailable", reason: "offline", callId: "c-1" })).toEqual(
+      { type: "call_unavailable", reason: "offline", callId: "c-1" }
+    );
+    expect(parseCallSignal({ type: "call_error", message: "Ошибка" })).toBeNull();
+  });
+
+  it("should not take a lesson event for a call signal", () => {
+    expect(parseCallSignal({ type: "lesson_status_updated", lessonId: "l-1" })).toBeNull();
+    expect(parseCallSignal("call_busy")).toBeNull();
+  });
+});
 
 describe("features/videoCall/model client signaling", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
+  let sent: CallSignalingInbound[];
+  let adapter: FakeAdapter;
 
   beforeEach(() => {
-    sent = [];
-    setCallTransport((message) => sent.push(message));
-    setWebRtcAdapter(createFakeAdapter());
+    sent = installTransport();
+    adapter = createFakeAdapter();
+    setWebRtcAdapter(adapter);
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
-  describe("outbound sendCallSignal payloads", () => {
-    it("should send a tutor call_invite with targetStudentId", () => {
-      sendCallSignal({ type: "call_invite", targetStudentId: "stu-1" });
-      expect(sent[0]).toEqual({ type: "call_invite", targetStudentId: "stu-1" });
-    });
+  it("should acquire media and send a webrtc_offer when the caller receives call_accepted", async () => {
+    await startCallerSession("c-1", [{ urls: "stun:example" }]);
 
-    it("should send call_accept with the callId", () => {
-      sendCallSignal({ type: "call_accept", callId: "c-1" });
-      expect(sent[0]).toEqual({ type: "call_accept", callId: "c-1" });
-    });
+    const offer = sent.find((m) => m.type === "webrtc_offer");
+    expect(offer).toMatchObject({ type: "webrtc_offer", callId: "c-1" });
+    expect(offer).toHaveProperty("sdp");
   });
 
-  describe("inbound dispatchCallSignal negotiation", () => {
-    it("should acquire media and send a webrtc_offer when the caller receives call_accepted", async () => {
-      await startCallerSession("c-1", [{ urls: "stun:example" }]);
+  it("should answer when the callee receives a webrtc_offer", async () => {
+    await startCalleeSession("c-2", [{ urls: "stun:example" }]);
 
-      const offer = sent.find((m) => m.type === "webrtc_offer");
-      expect(offer).toMatchObject({ type: "webrtc_offer", callId: "c-1" });
-      expect(offer).toHaveProperty("sdp");
-    });
+    const answer = sent.find((m) => m.type === "webrtc_answer");
+    expect(answer).toMatchObject({ type: "webrtc_answer", callId: "c-2" });
+  });
 
-    it("should answer when the callee receives a webrtc_offer", async () => {
-      await startCalleeSession("c-2", [{ urls: "stun:example" }]);
+  it("should buffer inbound ICE until the remote description is set, then flush it", async () => {
+    await startCallerSession("c-ice");
+    const { addIceCandidate } = adapter.peerConnections[0];
 
-      const answer = sent.find((m) => m.type === "webrtc_answer");
-      expect(answer).toMatchObject({ type: "webrtc_answer", callId: "c-2" });
-    });
+    receive({ type: "webrtc_ice", callId: "c-ice", candidate: { candidate: "x" } });
+    await settleMicrotasks();
+    expect(addIceCandidate).not.toHaveBeenCalled();
 
-    it("buffers inbound ICE until the remote description is set, then flushes", async () => {
-      let pc: RTCPeerConnection | undefined;
-      setWebRtcAdapter(
-        createFakeAdapter({
-          createPeerConnection: vi.fn(() => {
-            pc = createFakePeerConnection();
-            return pc;
-          }),
-        })
-      );
+    receive({ type: "webrtc_answer", callId: "c-ice", sdp: { type: "answer", sdp: "x" } });
+    await settleMicrotasks();
+    expect(addIceCandidate).toHaveBeenCalledTimes(1);
+    expect(addIceCandidate).toHaveBeenCalledWith({ candidate: "x" });
+  });
 
-      await startCallerSession("c-ice");
+  it("should log an ICE candidate that fails outside an ignored offer", async () => {
+    await startCallerSession("c-ice-fail");
+    receive({ type: "webrtc_answer", callId: "c-ice-fail", sdp: { type: "answer", sdp: "x" } });
+    await settleMicrotasks();
+    adapter.peerConnections[0].addIceCandidate.mockRejectedValueOnce(new Error("bad candidate"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-      const addIce = pc!.addIceCandidate as unknown as ReturnType<typeof vi.fn>;
-      dispatchCallSignal({
-        type: "webrtc_ice",
-        callId: "c-ice",
-        candidate: { candidate: "x" },
-      });
-      await flush();
-      expect(addIce).not.toHaveBeenCalled();
+    receive({ type: "webrtc_ice", callId: "c-ice-fail", candidate: { candidate: "y" } });
+    await settleMicrotasks();
 
-      dispatchCallSignal({
-        type: "webrtc_answer",
-        callId: "c-ice",
-        sdp: { type: "answer", sdp: "x" },
-      });
-      await flush();
-      expect(addIce).toHaveBeenCalledTimes(1);
-      expect(addIce).toHaveBeenCalledWith({ candidate: "x" });
-    });
+    expect(logged).toHaveBeenCalledWith("Failed to apply ICE candidate:", expect.any(Error));
+  });
 
-    it("seeds the callee PeerConnection with ICE servers delivered in call_incoming", async () => {
-      let config: RTCConfiguration | undefined;
-      setWebRtcAdapter(
-        createFakeAdapter({
-          createPeerConnection: vi.fn((c: RTCConfiguration) => {
-            config = c;
-            return createFakePeerConnection();
-          }),
-        })
-      );
+  it("should seed the callee PeerConnection with ICE servers delivered in call_incoming", async () => {
+    await startCalleeSession("c-callee", [{ urls: "stun:stun.example:3478" }]);
 
-      await startCalleeSession("c-callee", [{ urls: "stun:stun.example:3478" }]);
+    const [config] = vi.mocked(adapter.createPeerConnection).mock.calls[0];
+    expect(config.iceServers).toHaveLength(1);
+    expect(config.iceServers?.[0]).toMatchObject({ urls: "stun:stun.example:3478" });
+  });
 
-      expect(config?.iceServers).toHaveLength(1);
-      expect(config?.iceServers?.[0]).toMatchObject({
-        urls: "stun:stun.example:3478",
-      });
-    });
+  it("should notify the peer with call_hangup and end the call when the connection fails", async () => {
+    await startCallerSession("c-fail");
+    sent.length = 0;
 
-    it("notifies the peer with call_hangup and ends the call when the connection fails", async () => {
-      let pc: RTCPeerConnection | undefined;
-      setWebRtcAdapter(
-        createFakeAdapter({
-          createPeerConnection: vi.fn(() => {
-            pc = createFakePeerConnection();
-            return pc;
-          }),
-        })
-      );
+    triggerConnectionState(adapter.peerConnections[0], "failed");
+    await settleMicrotasks();
 
-      await startCallerSession("c-fail");
-      sent = [];
-
-      (pc as unknown as { connectionState: RTCPeerConnectionState }).connectionState = "failed";
-      pc?.onconnectionstatechange?.(undefined as unknown as Event);
-      await flush();
-
-      expect(sent.some((m) => m.type === "call_hangup")).toBe(true);
-      expect(readStore(callModel.$callPhase)).toBe("idle");
-    });
+    expect(sent.some((m) => m.type === "call_hangup")).toBe(true);
+    expect(readStore(callModel.$callPhase)).toBe("idle");
   });
 });
 
 describe("fakeWebrtc helper", () => {
-  it("creates a stream with audio and video tracks", () => {
+  it("should create a stream with audio and video tracks", () => {
     const stream = createFakeStream();
     expect(stream.getAudioTracks()).toHaveLength(1);
     expect(stream.getVideoTracks()).toHaveLength(1);

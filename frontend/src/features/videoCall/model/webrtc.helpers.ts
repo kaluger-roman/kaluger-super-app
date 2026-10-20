@@ -43,11 +43,7 @@ export const stopSession = (callId: string): void => {
   if (!session) return;
   session.localStream?.getTracks().forEach((track) => track.stop());
   session.screenStream?.getTracks().forEach((track) => track.stop());
-  try {
-    session.pc.close();
-  } catch {
-    /* peer connection already closed */
-  }
+  session.pc.close();
   sessions.delete(callId);
 };
 

@@ -25,13 +25,6 @@ export const HeaderTitle = styled(Typography)(({ theme }) => ({
   flexGrow: 1,
 }));
 
-export const HeaderCallButton = styled(Box)(({ theme }) => ({
-  "& .MuiButton-root": {
-    color: theme.palette.primary.contrastText,
-    borderColor: "rgba(255, 255, 255, 0.7)",
-  },
-}));
-
 export const MenuButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.primary.contrastText,
 }));

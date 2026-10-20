@@ -1,27 +1,19 @@
 import { createWatch } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { callModel } from "@features/videoCall";
 import {
-  callModel,
-  setCallTransport,
+  resetCallTransportsForTests,
   setWebRtcAdapter,
   stopAllSessions,
-} from "@features/videoCall";
+} from "@features/videoCall/testSeams.helpers";
 
+import { connectStudentWebSocket, disconnectStudentWebSocket } from "../studentWebSocket.model";
 import { connectWebSocket, disconnectWebSocket } from "../webSocket.model";
 
-type MockSocket = {
-  send: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  onopen: (() => void) | null;
-  onclose: (() => void) | null;
-  onmessage: ((event: { data: string }) => void) | null;
-  onerror: ((event: unknown) => void) | null;
-};
+let sockets: MockWebSocket[] = [];
 
-let sockets: MockSocket[] = [];
-
-class MockWebSocketCtor {
+class MockWebSocket {
   send = vi.fn();
   close = vi.fn();
   onopen: (() => void) | null = null;
@@ -31,11 +23,11 @@ class MockWebSocketCtor {
   readyState = 1;
 
   constructor() {
-    sockets.push(this as unknown as MockSocket);
+    sockets.push(this);
   }
 }
 
-const fakeAdapter = {
+const idleAdapter = {
   createPeerConnection: vi.fn(),
   getUserMedia: vi.fn(),
   getDisplayMedia: vi.fn(),
@@ -43,58 +35,75 @@ const fakeAdapter = {
   supportsDisplayMedia: vi.fn(() => true),
 };
 
-describe("app/model/webSocket.model call wiring", () => {
+const incoming = (callId: string) =>
+  JSON.stringify({ type: "call_incoming", callId, callerName: "Анна", iceServers: [] });
+
+describe.each([
+  {
+    role: "tutor",
+    tokenKey: "authToken",
+    connect: connectWebSocket,
+    disconnect: disconnectWebSocket,
+  },
+  {
+    role: "student",
+    tokenKey: "studentToken",
+    connect: connectStudentWebSocket,
+    disconnect: disconnectStudentWebSocket,
+  },
+])("app/model $role socket call wiring", ({ tokenKey, connect, disconnect }) => {
   beforeEach(() => {
     sockets = [];
-    localStorage.setItem("authToken", "test-tutor-token");
-    vi.stubGlobal("WebSocket", MockWebSocketCtor);
-    setWebRtcAdapter(fakeAdapter);
+    localStorage.setItem(tokenKey, "test-token");
+    vi.stubGlobal("WebSocket", MockWebSocket);
+    setWebRtcAdapter(idleAdapter);
   });
 
   afterEach(() => {
     callModel.hangUp();
-    disconnectWebSocket();
+    disconnect();
     stopAllSessions();
-    setCallTransport(null);
+    resetCallTransportsForTests();
     vi.unstubAllGlobals();
-    localStorage.removeItem("authToken");
+    localStorage.removeItem(tokenKey);
   });
 
-  const openSocket = (): MockSocket => {
-    connectWebSocket();
+  const openSocket = (): MockWebSocket => {
+    connect();
     const socket = sockets[sockets.length - 1];
     socket.onopen?.();
     return socket;
   };
 
-  it("should route call signals from the tutor socket into the call model", () => {
-    const socket = openSocket();
+  const watchPhases = () => {
     const phases: string[] = [];
     const unwatch = createWatch({ unit: callModel.$callPhase, fn: (phase) => phases.push(phase) });
+    return { phases, unwatch };
+  };
 
-    socket.onmessage?.({
-      data: JSON.stringify({
-        type: "call_incoming",
-        callId: "c-1",
-        callerName: "Анна",
-        iceServers: [],
-      }),
-    });
+  it("should route call signals from the socket into the call model", () => {
+    const socket = openSocket();
+    const { phases, unwatch } = watchPhases();
+
+    socket.onmessage?.({ data: incoming("c-1") });
     unwatch();
 
     expect(phases).toContain("incoming");
   });
 
-  it("should send call answers back through the tutor socket", () => {
+  it("should drop a malformed call signal", () => {
     const socket = openSocket();
-    socket.onmessage?.({
-      data: JSON.stringify({
-        type: "call_incoming",
-        callId: "c-2",
-        callerName: "Анна",
-        iceServers: [],
-      }),
-    });
+    const { phases, unwatch } = watchPhases();
+
+    socket.onmessage?.({ data: JSON.stringify({ type: "call_incoming", callId: "c-x" }) });
+    unwatch();
+
+    expect(phases).not.toContain("incoming");
+  });
+
+  it("should send call answers back through the same socket", () => {
+    const socket = openSocket();
+    socket.onmessage?.({ data: incoming("c-2") });
 
     callModel.rejectCall();
 
@@ -103,18 +112,10 @@ describe("app/model/webSocket.model call wiring", () => {
     );
   });
 
-  it("should end the call when the tutor socket closes", () => {
+  it("should end the call when the socket closes", () => {
     const socket = openSocket();
-    socket.onmessage?.({
-      data: JSON.stringify({
-        type: "call_incoming",
-        callId: "c-3",
-        callerName: "Анна",
-        iceServers: [],
-      }),
-    });
-    const phases: string[] = [];
-    const unwatch = createWatch({ unit: callModel.$callPhase, fn: (phase) => phases.push(phase) });
+    socket.onmessage?.({ data: incoming("c-3") });
+    const { phases, unwatch } = watchPhases();
 
     socket.onclose?.();
     unwatch();

@@ -1,23 +1,17 @@
 import type { CallPhase } from "./call.types";
 import { RINGBACK_PATTERN, RINGTONE_PATTERN, TONE_RAMP_SECONDS } from "./callSounds.constants";
-import type {
-  AudioContextCtor,
-  CallSoundsAdapter,
-  ToneHandle,
-  TonePattern,
-} from "./callSounds.types";
+import type { CallSoundsAdapter, ToneHandle, TonePattern } from "./callSounds.types";
 
 let audioContext: AudioContext | null = null;
 
 const getAudioContext = (): AudioContext | null => {
-  if (typeof window === "undefined") return null;
-  const ctor: AudioContextCtor | undefined =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: AudioContextCtor }).webkitAudioContext;
-  if (!ctor) return null;
-  if (!audioContext) audioContext = new ctor();
+  if (typeof window === "undefined" || typeof window.AudioContext !== "function") return null;
+  if (!audioContext) audioContext = new window.AudioContext();
   if (audioContext.state === "suspended") {
-    void audioContext.resume().catch(() => undefined);
+    // Browsers keep audio suspended until the first user gesture; the next tone retries.
+    void audioContext.resume().catch((error: unknown) => {
+      console.warn("Call sound is waiting for a user gesture:", error);
+    });
   }
   return audioContext;
 };
@@ -92,10 +86,6 @@ let adapter: CallSoundsAdapter = createDefaultAdapter();
 
 export const setCallSoundsAdapter = (next: CallSoundsAdapter): void => {
   adapter = next;
-};
-
-export const resetCallSoundsAdapter = (): void => {
-  adapter = createDefaultAdapter();
 };
 
 export const getCallSoundsAdapter = (): CallSoundsAdapter => adapter;

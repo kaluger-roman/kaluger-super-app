@@ -2,58 +2,60 @@ import { allSettled, fork } from "effector";
 import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { callModel } from "../index";
+import type { CallSignalingInbound } from "../signaling.types";
+import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
-  callModel,
-  dispatchCallSignal,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
+  installTransport,
+  receive,
+  resetCallFlow,
+  ringCurrentInvite,
+  settleMicrotasks,
+} from "./callFlow";
 import { createFakeAdapter } from "./fakeWebrtc";
 import { readStore } from "./storeProbe";
 
-const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
-
 describe("features/videoCall full caller lifecycle", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
+  let sent: CallSignalingInbound[];
 
   beforeEach(() => {
-    sent = [];
-    setCallTransport((message) => sent.push(message));
+    sent = installTransport();
     setWebRtcAdapter(createFakeAdapter());
   });
 
   afterEach(() => {
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   const sentTypes = () => sent.map((m) => m.type);
 
-  it("should send call_invite on callStarted", async () => {
+  it("should send call_invite with a fresh inviteId on callStarted", async () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
       params: { studentId: "stu-1", peerName: "Иван" },
     });
-    expect(sent[0]).toEqual({ type: "call_invite", targetStudentId: "stu-1" });
+    expect(sent[0]).toEqual({
+      type: "call_invite",
+      inviteId: scope.getState(callModel.$inviteId),
+      targetStudentId: "stu-1",
+    });
+    expect(scope.getState(callModel.$inviteId)).toEqual(expect.any(String));
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
   });
 
   it("should acquire media and emit a webrtc_offer after call_accepted, then go active on connect", async () => {
     callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
-    dispatchCallSignal({ type: "call_ringing", callId: "call-1", iceServers: [] });
-    sent = [];
+    ringCurrentInvite("call-1");
+    sent.length = 0;
 
-    dispatchCallSignal({
-      type: "call_accepted",
-      callId: "call-1",
-      iceServers: [{ urls: "stun:example" }],
-    });
+    receive({ type: "call_accepted", callId: "call-1", iceServers: [{ urls: "stun:example" }] });
     await settleMicrotasks();
 
     expect(sentTypes()).toContain("webrtc_offer");
+    expect(readStore(callModel.$callPhase)).toBe("connecting");
 
     callModel.callConnected();
     expect(readStore(callModel.$callPhase)).toBe("active");
@@ -68,31 +70,30 @@ describe("features/videoCall full caller lifecycle", () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-7", callerName: "Анна" },
+      params: { callId: "call-7", callerName: "Анна", role: "tutor" },
     });
-    sent = [];
+    sent.length = 0;
     void allSettled(callModel.hangUp, { scope });
     await settleMicrotasks();
 
     expect(sent).toContainEqual({ type: "call_hangup", callId: "call-7" });
   });
 
-  it("should tick the duration while active", async () => {
+  it("should count one second per tick while active", async () => {
     vi.useFakeTimers();
     const scope: Scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-1", callerName: "Анна" },
+      params: { callId: "call-1", callerName: "Анна", role: "tutor" },
     });
     void allSettled(callModel.callConnected, { scope });
     await Promise.resolve();
 
     await vi.advanceTimersByTimeAsync(3000);
-    expect(scope.getState(callModel.$callDurationSeconds)).toBeGreaterThanOrEqual(2);
+    expect(scope.getState(callModel.$callDurationSeconds)).toBe(3);
 
     void allSettled(callModel.hangUp, { scope });
     await vi.advanceTimersByTimeAsync(0);
-    vi.useRealTimers();
   });
 
   it("should return to idle on call_rejected", async () => {
@@ -108,12 +109,11 @@ describe("features/videoCall full caller lifecycle", () => {
 
   it("should send call_invite without targetStudentId when the student starts a call", async () => {
     const scope = fork();
-    setCallTransport((message) => sent.push(message), null, "student");
     await allSettled(callModel.callStarted, {
       scope,
       params: { peerName: "Анна" },
     });
-    expect(sent[0]).toEqual({ type: "call_invite" });
+    expect(sent[0]).toEqual({ type: "call_invite", inviteId: expect.any(String) });
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
   });
 });

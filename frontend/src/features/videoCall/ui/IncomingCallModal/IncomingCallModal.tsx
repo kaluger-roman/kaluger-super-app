@@ -5,23 +5,22 @@ import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
 import { CallAvatar } from "../CallAvatar";
+import { RoundCallButton } from "../RoundCallButton";
 import { isDeclineClose } from "./IncomingCallModal.helpers";
 import * as Styled from "./IncomingCallModal.styled";
 
 export const IncomingCallModal: FC = () => {
-  const phase = useUnit(callModel.$callPhase);
   const incomingCall = useUnit(callModel.$incomingCall);
   const actions = useUnit({
     accept: callModel.acceptCall,
     reject: callModel.rejectCall,
   });
 
-  const open = phase === "incoming" && incomingCall !== null;
   const callerName = incomingCall?.callerName ?? "";
 
   return (
     <Styled.StyledDialog
-      open={open}
+      open={incomingCall !== null}
       onClose={(_, reason) => {
         if (isDeclineClose(reason)) actions.reject();
       }}
@@ -36,18 +35,28 @@ export const IncomingCallModal: FC = () => {
 
       <Styled.Actions>
         <Styled.ActionColumn>
-          <Styled.DeclineButton onClick={() => actions.reject()} aria-label="Отклонить вызов">
+          <RoundCallButton
+            $tone="danger"
+            $size={60}
+            onClick={() => actions.reject()}
+            aria-label="Отклонить вызов"
+          >
             <CallEndIcon />
-          </Styled.DeclineButton>
+          </RoundCallButton>
           <Styled.Caption variant="caption" color="text.secondary">
             Отклонить
           </Styled.Caption>
         </Styled.ActionColumn>
 
         <Styled.ActionColumn>
-          <Styled.AcceptButton onClick={() => actions.accept()} aria-label="Принять вызов">
+          <RoundCallButton
+            $tone="success"
+            $size={60}
+            onClick={() => actions.accept()}
+            aria-label="Принять вызов"
+          >
             <CallIcon />
-          </Styled.AcceptButton>
+          </RoundCallButton>
           <Styled.Caption variant="caption" color="text.secondary">
             Принять
           </Styled.Caption>

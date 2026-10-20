@@ -1,21 +1,18 @@
 import { Box, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 import { styled } from "@shared";
 
-type BannerBoxProps = {
-  $variant: "info" | "error";
-};
-
-export const BannerBox = styled(Box)<BannerBoxProps>(({ $variant }) => ({
+export const BannerBox = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: 10,
   padding: "10px 16px",
   borderRadius: 12,
-  color: "#ffffff",
-  background: $variant === "error" ? "rgba(211, 47, 47, 0.92)" : "rgba(245, 124, 0, 0.92)",
+  color: theme.palette.common.white,
+  background: alpha(theme.palette.warning.main, 0.92),
 }));
 
-export const BannerText = styled(Typography)({
-  color: "#ffffff",
-});
+export const BannerText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.common.white,
+}));

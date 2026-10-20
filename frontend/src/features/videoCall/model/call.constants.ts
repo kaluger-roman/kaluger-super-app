@@ -1,5 +1,4 @@
 import type { CallMediaState } from "../videoCall.types";
-import type { CallStatusMessage } from "./call.types";
 
 export const DEFAULT_SELF_MEDIA_STATE: CallMediaState = {
   micOn: true,
@@ -34,17 +33,10 @@ export const CANCELED_TEXT = "Вызов отменён";
 export const MEDIA_DENIED_TEXT = "Нет доступа к камере и микрофону";
 export const SCREEN_SHARE_BUSY_TEXT = "Собеседник уже демонстрирует экран";
 export const SCREEN_SHARE_FAILED_TEXT = "Не удалось начать демонстрацию экрана";
+export const SCREEN_SHARE_STOP_FAILED_TEXT = "Не удалось вернуть камеру после демонстрации экрана";
+export const RENEGOTIATION_FAILED_TEXT =
+  "Не удалось обновить видео собеседника. Если оно пропало, перезвоните";
 export const PICKER_DISMISSED_ERRORS = new Set(["NotAllowedError", "AbortError"]);
-
-export const CONNECTING_MESSAGE: CallStatusMessage = {
-  kind: "info",
-  text: "Соединение…",
-};
-
-export const MEDIA_DENIED_MESSAGE: CallStatusMessage = {
-  kind: "error",
-  text: MEDIA_DENIED_TEXT,
-};
 
 export const TRANSPORT_LOST_TEXT = "Связь с сервером потеряна, звонок завершён";
 export const NO_TRANSPORT_TEXT = "Нет связи с сервером. Проверьте интернет и попробуйте снова";

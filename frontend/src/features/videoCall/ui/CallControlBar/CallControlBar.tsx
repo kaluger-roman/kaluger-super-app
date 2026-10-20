@@ -11,11 +11,13 @@ import {
 } from "@mui/icons-material";
 import { useUnit } from "effector-react";
 
+import { callModel } from "../../model";
+import { RoundCallButton } from "../RoundCallButton";
 import * as Styled from "./CallControlBar.styled";
-import { callModel, isScreenShareSupported } from "../../model";
 
 export const CallControlBar: FC = () => {
   const selfMedia = useUnit(callModel.$selfMediaState);
+  const screenShareSupported = useUnit(callModel.$screenShareSupported);
   const actions = useUnit({
     toggleMic: callModel.toggleMic,
     toggleCamera: callModel.toggleCamera,
@@ -25,37 +27,46 @@ export const CallControlBar: FC = () => {
 
   return (
     <Styled.BarBox>
-      <Styled.ControlButton
-        $active={selfMedia.micOn}
+      <RoundCallButton
+        $tone={selfMedia.micOn ? "neutral" : "danger"}
+        $size={56}
         onClick={() => actions.toggleMic()}
         aria-label={selfMedia.micOn ? "Выключить микрофон" : "Включить микрофон"}
       >
         {selfMedia.micOn ? <MicIcon /> : <MicOffIcon />}
-      </Styled.ControlButton>
+      </RoundCallButton>
 
-      <Styled.ControlButton
-        $active={selfMedia.cameraOn}
+      <RoundCallButton
+        $tone={selfMedia.cameraOn ? "neutral" : "danger"}
+        $size={56}
         onClick={() => actions.toggleCamera()}
         aria-label={selfMedia.cameraOn ? "Выключить камеру" : "Включить камеру"}
       >
         {selfMedia.cameraOn ? <VideocamIcon /> : <VideocamOffIcon />}
-      </Styled.ControlButton>
+      </RoundCallButton>
 
-      {isScreenShareSupported() && (
-        <Styled.ScreenButton
-          $sharing={selfMedia.screenSharing}
+      {screenShareSupported && (
+        <RoundCallButton
+          $tone={selfMedia.screenSharing ? "active" : "neutral"}
+          $size={56}
           onClick={() => actions.toggleScreen()}
           aria-label={
             selfMedia.screenSharing ? "Остановить демонстрацию экрана" : "Демонстрация экрана"
           }
         >
           {selfMedia.screenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}
-        </Styled.ScreenButton>
+        </RoundCallButton>
       )}
 
-      <Styled.EndCallButton onClick={() => actions.hangUp()} aria-label="Завершить звонок">
+      <RoundCallButton
+        $tone="danger"
+        $size={56}
+        $wide
+        onClick={() => actions.hangUp()}
+        aria-label="Завершить звонок"
+      >
         <CallEndIcon />
-      </Styled.EndCallButton>
+      </RoundCallButton>
     </Styled.BarBox>
   );
 };

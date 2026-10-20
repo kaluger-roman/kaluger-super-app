@@ -6,24 +6,11 @@ import type {
   InstalledTransport,
 } from "./signaling.types";
 
-// A tab may hold both a tutor and a student socket. Each call signal goes out
-// through the socket its call arrived on (or, for an invite, the caller's role).
+// A tab may hold both a tutor and a student socket; every signal names the role it goes out on.
 const transports = new Map<CallRole, InstalledTransport>();
-const roleByCallId = new Map<string, CallRole>();
-let inviteRole: CallRole | null = null;
 
-export const setCallTransport = (
-  next: CallTransport | null,
-  owner: unknown = null,
-  role: CallRole = "tutor"
-): void => {
-  if (next) {
-    transports.set(role, { send: next, owner });
-  } else {
-    transports.clear();
-    roleByCallId.clear();
-    inviteRole = null;
-  }
+export const setCallTransport = (role: CallRole, send: CallTransport, owner: unknown): void => {
+  transports.set(role, { send, owner });
 };
 
 export const clearCallTransport = (owner: unknown): CallRole | null => {
@@ -33,39 +20,22 @@ export const clearCallTransport = (owner: unknown): CallRole | null => {
   return entry[0];
 };
 
-export const rememberCallRole = (callId: string, role: CallRole): void => {
-  roleByCallId.set(callId, role);
+export const resetCallTransportsForTests = (): void => {
+  transports.clear();
 };
 
-export const forgetCallRole = (callId: string): void => {
-  roleByCallId.delete(callId);
-};
-
-export const selectInviteRole = (role: CallRole): void => {
-  inviteRole = role;
-};
-
-export const isCallOnRole = (callId: string | null, role: CallRole): boolean =>
-  (callId ? roleByCallId.get(callId) : inviteRole) === role;
-
-const resolveTransport = (message: CallSignalingInbound): InstalledTransport | undefined => {
-  const role = "callId" in message ? roleByCallId.get(message.callId) : inviteRole;
-  if (role) return transports.get(role);
-  return transports.size === 1 ? Array.from(transports.values())[0] : transports.get("tutor");
-};
-
-export const sendOverTransport = (message: CallSignalingInbound): boolean => {
-  const installed = resolveTransport(message);
+export const sendOverTransport = (role: CallRole, message: CallSignalingInbound): boolean => {
+  const installed = transports.get(role);
   if (!installed) {
-    console.error("Call transport is not initialized");
+    console.error(`Call transport for ${role} is not initialized`);
     return false;
   }
   installed.send(message);
   return true;
 };
 
-export const sendMediaState = (callId: string, media: CallMediaState): void => {
-  sendOverTransport({
+export const sendMediaState = (role: CallRole, callId: string, media: CallMediaState): void => {
+  sendOverTransport(role, {
     type: "call_media_state",
     callId,
     micOn: media.micOn,

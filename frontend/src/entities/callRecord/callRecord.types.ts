@@ -2,7 +2,7 @@ export type CallHistoryPrincipal = "tutor" | "student";
 
 export type CallHistoryDirection = "outgoing" | "incoming";
 
-export type CallHistoryStatus = "completed" | "missed" | "rejected" | "canceled" | "failed";
+export type CallHistoryStatus = "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";
 
 export type CallHistoryRecord = {
   id: string;
@@ -11,6 +11,11 @@ export type CallHistoryRecord = {
   startedAt: string;
   durationSeconds: number | null;
   status: CallHistoryStatus;
+};
+
+export type CallHistoryRequest = {
+  principal: CallHistoryPrincipal;
+  version: number;
 };
 
 export type CallHistoryResponse = {

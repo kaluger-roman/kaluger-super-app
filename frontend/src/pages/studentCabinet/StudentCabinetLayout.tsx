@@ -35,14 +35,12 @@ export const StudentCabinetLayout: FC = () => {
           </Styled.MenuButton>
           <Styled.HeaderTitle variant="h6">Кабинет ученика</Styled.HeaderTitle>
           {session?.tutor && (
-            <Styled.HeaderCallButton>
-              <CallButton
-                label="Позвонить"
-                variant="outlined"
-                color="inherit"
-                onClick={() => actions.tutorCallRequested()}
-              />
-            </Styled.HeaderCallButton>
+            <CallButton
+              label="Позвонить"
+              variant="outlined"
+              color="inherit"
+              onClick={() => actions.tutorCallRequested()}
+            />
           )}
         </Styled.StyledToolbar>
       </Styled.StyledAppBar>

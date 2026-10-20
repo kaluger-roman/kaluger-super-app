@@ -1,16 +1,18 @@
 import type { CallMediaState } from "../videoCall.types";
 import type { CallSignalRoutingContext } from "./call.types";
-import type { CallSignalingOutbound } from "./signaling.types";
+import type { CallReplyTarget, CallSignalingOutbound, ReceivedSignal } from "./signaling.types";
 
 export const isSignalOf =
   <T extends CallSignalingOutbound["type"]>(type: T) =>
-  (message: CallSignalingOutbound): message is Extract<CallSignalingOutbound, { type: T }> =>
-    message.type === type;
+  (
+    signal: ReceivedSignal
+  ): signal is ReceivedSignal & { message: Extract<CallSignalingOutbound, { type: T }> } =>
+    signal.message.type === type;
 
 export const isCurrentCall = (context: CallSignalRoutingContext, message: { callId: string }) =>
   context.callId !== null && context.callId === message.callId;
 
-export const isAwaitingRinging = (context: CallSignalRoutingContext) =>
+const isAwaitingRinging = (context: CallSignalRoutingContext) =>
   context.phase === "outgoing" && context.callId === null;
 
 // While our own invite still waits for call_ringing the server has picked the peer's
@@ -20,13 +22,13 @@ export const canTakeIncoming = (context: CallSignalRoutingContext) =>
 
 export const isOutgoing = (context: CallSignalRoutingContext) => context.phase === "outgoing";
 
-export const isCallErrorForContext = (
-  context: CallSignalRoutingContext,
-  message: { callId?: string }
-): boolean =>
-  message.callId === undefined
-    ? context.phase === "outgoing"
-    : isCurrentCall(context, { callId: message.callId });
+export const isOwnRinging = (context: CallSignalRoutingContext, message: { inviteId: string }) =>
+  isAwaitingRinging(context) && context.inviteId === message.inviteId;
+
+export const isReplyToCurrent = (context: CallSignalRoutingContext, target: CallReplyTarget) =>
+  "callId" in target
+    ? isCurrentCall(context, target)
+    : isOutgoing(context) && context.inviteId === target.inviteId;
 
 export const toPeerMediaState = (
   message: Extract<CallSignalingOutbound, { type: "call_media_state" }>
@@ -34,5 +36,5 @@ export const toPeerMediaState = (
   micOn: message.micOn,
   cameraOn: message.cameraOn,
   screenSharing: message.screenSharing,
-  cameraAvailable: message.cameraAvailable ?? true,
+  cameraAvailable: message.cameraAvailable,
 });

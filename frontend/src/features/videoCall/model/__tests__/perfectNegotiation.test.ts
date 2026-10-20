@@ -1,87 +1,57 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { callModel } from "../index";
+import type { CallSignalingInbound } from "../signaling.types";
+import { getSession, setWebRtcAdapter } from "../webrtc.helpers";
 import {
-  callModel,
-  dispatchCallSignal,
-  getSession,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
-import { settleMicrotasks, startCalleeSession, startCallerSession } from "./callFlow";
-import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
-
-const lastPc = (pcs: RTCPeerConnection[]): RTCPeerConnection => {
-  const pc = pcs[pcs.length - 1];
-  if (!pc) throw new Error("no peer connection created");
-  return pc;
-};
-
-const setLocalDescriptionMock = (pc: RTCPeerConnection) =>
-  pc.setLocalDescription as unknown as ReturnType<typeof vi.fn>;
+  installTransport,
+  receive,
+  resetCallFlow,
+  settleMicrotasks,
+  startCalleeSession,
+  startCallerSession,
+} from "./callFlow";
+import { createFakeAdapter, createFakeStream } from "./fakeWebrtc";
+import type { FakeAdapter } from "./fakeWebrtc";
 
 describe("features/videoCall perfect negotiation (glare)", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
-  let pcs: RTCPeerConnection[];
+  let sent: CallSignalingInbound[];
 
   beforeEach(() => {
-    sent = [];
-    pcs = [];
-    setCallTransport((message) => sent.push(message));
+    sent = installTransport();
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
   it("should ignore a glaring offer on the impolite side", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        createPeerConnection: vi.fn(() => {
-          const pc = createFakePeerConnection();
-          pcs.push(pc);
-          return pc;
-        }),
-      })
-    );
+    setWebRtcAdapter(createFakeAdapter());
 
     await startCallerSession("c-impolite");
 
     const session = getSession("c-impolite");
     expect(session?.polite).toBe(false);
     expect(session?.pc.signalingState).toBe("have-local-offer");
-    sent = [];
+    sent.length = 0;
 
-    dispatchCallSignal({
-      type: "webrtc_offer",
-      callId: "c-impolite",
-      sdp: { type: "offer", sdp: "glare" },
-    });
+    receive({ type: "webrtc_offer", callId: "c-impolite", sdp: { type: "offer", sdp: "glare" } });
     await settleMicrotasks();
 
     expect(sent.find((m) => m.type === "webrtc_answer")).toBeUndefined();
+    expect(getSession("c-impolite")?.ignoreOffer).toBe(true);
   });
 
   it("should answer a glaring offer on the polite side and then resend its own offer", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) => {
-          if (constraints.video && constraints.audio) {
-            throw new Error("NotReadableError");
-          }
-          if (constraints.video) return createFakeStream(["video"]);
-          return createFakeStream(["audio"]);
-        }),
-        createPeerConnection: vi.fn(() => {
-          const pc = createFakePeerConnection();
-          pcs.push(pc);
-          return pc;
-        }),
-      })
-    );
+    const adapter: FakeAdapter = createFakeAdapter({
+      getUserMedia: async (constraints) => {
+        if (constraints.video && constraints.audio) throw new Error("NotReadableError");
+        if (constraints.video) return createFakeStream(["video"]);
+        return createFakeStream(["audio"]);
+      },
+    });
+    setWebRtcAdapter(adapter);
 
     await startCalleeSession("c-polite");
 
@@ -91,18 +61,14 @@ describe("features/videoCall perfect negotiation (glare)", () => {
     await settleMicrotasks();
     expect(getSession("c-polite")?.pc.signalingState).toBe("have-local-offer");
 
-    const pc = lastPc(pcs);
-    setLocalDescriptionMock(pc).mockClear();
-    sent = [];
+    const pc = adapter.peerConnections[adapter.peerConnections.length - 1];
+    pc.setLocalDescription.mockClear();
+    sent.length = 0;
 
-    dispatchCallSignal({
-      type: "webrtc_offer",
-      callId: "c-polite",
-      sdp: { type: "offer", sdp: "glare" },
-    });
+    receive({ type: "webrtc_offer", callId: "c-polite", sdp: { type: "offer", sdp: "glare" } });
     await settleMicrotasks();
 
-    expect(setLocalDescriptionMock(pc)).not.toHaveBeenCalledWith({ type: "rollback" });
+    expect(pc.setLocalDescription).not.toHaveBeenCalledWith({ type: "rollback" });
     expect(pc.setRemoteDescription).toHaveBeenCalledWith({ type: "offer", sdp: "glare" });
     const types = sent.map((m) => m.type);
     expect(types).toContain("webrtc_answer");

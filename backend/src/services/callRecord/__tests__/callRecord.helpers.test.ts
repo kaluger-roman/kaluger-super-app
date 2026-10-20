@@ -1,5 +1,6 @@
 import { DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT } from "../callRecord.constants";
-import { clampLimit } from "../callRecord.helpers";
+import { clampLimit, toCallHistoryItem, toFinalizedTimes } from "../callRecord.helpers";
+import type { CallRecordWithPeer } from "../callRecord.types";
 
 describe("clampLimit", () => {
   it("should use the default when no limit is given", () => {
@@ -17,5 +18,55 @@ describe("clampLimit", () => {
 
   it("should keep a limit inside the allowed range", () => {
     expect(clampLimit(10)).toBe(10);
+  });
+});
+
+describe("toFinalizedTimes", () => {
+  const connectedAt = new Date("2026-06-04T10:00:05.000Z");
+  const endedAt = new Date("2026-06-04T10:05:05.000Z");
+
+  it("should keep the end and count the duration of a completed call", () => {
+    expect(toFinalizedTimes("COMPLETED", connectedAt, endedAt)).toEqual({
+      endedAt,
+      durationSeconds: 300,
+    });
+  });
+
+  it("should drop the end and duration of a call that never completed", () => {
+    expect(toFinalizedTimes("FAILED", connectedAt, endedAt)).toEqual({
+      endedAt: null,
+      durationSeconds: null,
+    });
+  });
+});
+
+describe("toCallHistoryItem", () => {
+  const record: CallRecordWithPeer = {
+    id: "r1",
+    callerKind: "TUTOR",
+    status: "COMPLETED",
+    startedAt: new Date("2026-06-04T10:00:00.000Z"),
+    endedAt: new Date("2026-06-04T10:01:00.000Z"),
+    durationSeconds: 60,
+    tutorId: "t1",
+    studentId: "s1",
+    createdAt: new Date("2026-06-04T10:01:00.000Z"),
+    student: { name: "Иван" },
+    tutor: { name: "Анна" },
+  };
+
+  it("should show the student as an outgoing call to the tutor who called", () => {
+    expect(toCallHistoryItem(record, "tutor")).toMatchObject({
+      peerName: "Иван",
+      direction: "outgoing",
+      status: "COMPLETED",
+    });
+  });
+
+  it("should show the tutor as an incoming call to the student", () => {
+    expect(toCallHistoryItem(record, "student")).toMatchObject({
+      peerName: "Анна",
+      direction: "incoming",
+    });
   });
 });

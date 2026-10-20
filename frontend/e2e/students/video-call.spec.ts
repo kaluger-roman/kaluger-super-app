@@ -1,6 +1,10 @@
 import { test, expect } from "../fixtures";
 import { createStudentFor } from "../helpers/db";
-import { registerStudentDirect, seedStudentAuthInBrowser } from "../helpers/student";
+import {
+  isStudentOnline,
+  registerStudentDirect,
+  seedStudentAuthInBrowser,
+} from "../helpers/student";
 
 test.use({
   permissions: ["camera", "microphone"],
@@ -16,35 +20,42 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
     browser,
   }) => {
     const { student } = await createStudentFor(tutor.userId, { name: "Иван Звонков" });
-    const { token } = await registerStudentDirect(student.id, {
+    const { token, studentUser } = await registerStudentDirect(student.id, {
       name: "Иван Звонков",
       email: `student-call-${Date.now()}@e2e.local`,
       isEmailVerified: true,
     });
 
     const studentContext = await browser.newContext({ permissions: ["camera", "microphone"] });
-    const studentPage = await studentContext.newPage();
-    await seedStudentAuthInBrowser(studentPage, token);
-    await studentPage.goto("/student/cabinet/schedule");
-    await expect(studentPage.getByRole("button", { name: "Позвонить" })).toBeVisible();
+    try {
+      const studentPage = await studentContext.newPage();
+      await seedStudentAuthInBrowser(studentPage, token);
+      await studentPage.goto("/student/cabinet/schedule");
+      // The student can take the call only once its socket is registered on the server.
+      await expect.poll(() => isStudentOnline(studentUser.id)).toBe(true);
 
-    await page.goto("/students");
-    await page.getByText("Иван Звонков").click();
-    await page.getByRole("dialog").getByRole("button", { name: "Видеозвонок" }).click();
-    await expect(page.getByText("Вызываем…")).toBeVisible();
+      await page.goto("/students");
+      await page.getByText("Иван Звонков").click();
+      await page.getByRole("dialog").getByRole("button", { name: "Видеозвонок" }).click();
+      await expect(page.getByText("Вызываем…")).toBeVisible();
 
-    await expect(studentPage.getByText("Входящий вызов")).toBeVisible();
-    await studentPage.getByRole("button", { name: "Принять вызов" }).click();
+      await expect(studentPage.getByText("Входящий вызов")).toBeVisible();
+      await studentPage.getByRole("button", { name: "Принять вызов" }).click();
 
-    await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
-    await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
+      await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
+      // Media connected: the call leaves the connecting state on both sides.
+      await expect(page.getByText("Соединение…")).toBeHidden();
+      await expect(studentPage.getByText("Соединение…")).toBeHidden();
 
-    await page.getByRole("button", { name: "Завершить звонок" }).click();
-    await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeHidden();
+      await page.getByRole("button", { name: "Завершить звонок" }).click();
+      await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeHidden();
 
-    await page.goto("/call/history");
-    await expect(page.getByText("Иван Звонков")).toBeVisible();
-
-    await studentContext.close();
+      await page.goto("/call/history");
+      const row = page.getByRole("listitem").filter({ hasText: "Иван Звонков" });
+      await expect(row).toContainText("Завершён");
+    } finally {
+      await studentContext.close();
+    }
   });
 });

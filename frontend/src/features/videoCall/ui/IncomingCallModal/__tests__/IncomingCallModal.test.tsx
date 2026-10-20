@@ -3,18 +3,19 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { theme } from "@shared";
 
-import { callModel, setCallTransport, stopAllSessions } from "../../../model";
+import { callModel } from "../../../model";
+import { installTransport, resetCallFlow } from "../../../model/__tests__/callFlow";
 import { IncomingCallModal } from "../IncomingCallModal";
 
 const renderIncoming = () => {
   const scope = fork({
     values: [
       [callModel.$callPhase, "incoming"],
-      [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова" }],
+      [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
     ],
   });
   render(
@@ -28,10 +29,11 @@ const renderIncoming = () => {
 };
 
 describe("IncomingCallModal", () => {
-  beforeEach(() => setCallTransport(vi.fn()));
+  beforeEach(() => {
+    installTransport();
+  });
   afterEach(() => {
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
   });
 
   it("should render the caller name from $incomingCall", () => {
@@ -46,10 +48,10 @@ describe("IncomingCallModal", () => {
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
 
-  it("should move to the active phase when accepted (leaves incoming, not idle)", async () => {
+  it("should start connecting when accepted (leaves incoming, not idle)", async () => {
     const { scope } = renderIncoming();
     await userEvent.click(screen.getByRole("button", { name: "Принять вызов" }));
-    expect(scope.getState(callModel.$callPhase)).toBe("active");
+    expect(scope.getState(callModel.$callPhase)).toBe("connecting");
   });
 
   it("should keep ringing when the backdrop around the card is clicked", async () => {

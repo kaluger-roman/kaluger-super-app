@@ -3,18 +3,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createWatch, fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { theme } from "@shared";
 
-import {
-  callModel,
-  resetWebRtcAdapter,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../../../model";
-import { createFakeAdapter } from "../../../model/__tests__/fakeWebrtc";
+import { callModel } from "../../../model";
 import type { CallMediaState } from "../../../videoCall.types";
 import { CallControlBar } from "../CallControlBar";
 
@@ -25,12 +18,14 @@ const renderBar = (
     cameraOn: true,
     screenSharing: false,
     cameraAvailable: true,
-  }
+  },
+  screenShareSupported = true
 ) => {
   const scope = fork({
     values: [
       [callModel.$selfMediaState, self],
       [callModel.$peerMediaState, peer],
+      [callModel.$screenShareSupported, screenShareSupported],
     ],
   });
   render(
@@ -44,16 +39,6 @@ const renderBar = (
 };
 
 describe("CallControlBar", () => {
-  beforeEach(() => {
-    setCallTransport(vi.fn());
-    setWebRtcAdapter(createFakeAdapter());
-  });
-  afterEach(() => {
-    stopAllSessions();
-    setCallTransport(null);
-    resetWebRtcAdapter();
-  });
-
   it("should label the mic button by the current state", () => {
     renderBar({ micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true });
     expect(screen.getByRole("button", { name: "Выключить микрофон" })).toBeInTheDocument();
@@ -73,8 +58,11 @@ describe("CallControlBar", () => {
   });
 
   it("should hide screen share when the browser cannot capture the screen", () => {
-    setWebRtcAdapter(createFakeAdapter({ supportsDisplayMedia: () => false }));
-    renderBar({ micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true });
+    renderBar(
+      { micOn: true, cameraOn: true, screenSharing: false, cameraAvailable: true },
+      undefined,
+      false
+    );
     expect(screen.queryByRole("button", { name: "Демонстрация экрана" })).not.toBeInTheDocument();
   });
 

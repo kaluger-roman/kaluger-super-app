@@ -2,36 +2,29 @@ import type { FC } from "react";
 
 import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
 
+import type { CallMediaState } from "../../videoCall.types";
 import { CallAvatar } from "../CallAvatar";
 import { CallVideo } from "./CallVideo";
-import { getTileContentKind, getVideoFit, shouldPadVideo } from "./VideoTile.helpers";
+import {
+  getCameraLabel,
+  getTileContentKind,
+  getVideoFit,
+  getVideoLayout,
+} from "./VideoTile.helpers";
 import * as Styled from "./VideoTile.styled";
+import type { TileVariantConfig } from "./VideoTile.types";
 
 type TileContentProps = {
   name: string;
-  cameraOn: boolean;
-  screenSharing: boolean;
-  audioOnly: boolean;
-  avatarSize: number;
+  media: CallMediaState;
   stream: MediaStream | null;
   muted: boolean;
-  isSelf: boolean;
-  compact: boolean;
+  config: TileVariantConfig;
 };
 
-export const TileContent: FC<TileContentProps> = ({
-  name,
-  cameraOn,
-  screenSharing,
-  audioOnly,
-  avatarSize,
-  stream,
-  muted,
-  isSelf,
-  compact,
-}) => {
-  const contentKind = getTileContentKind(cameraOn, screenSharing);
-  const showVideo = contentKind !== "placeholder";
+export const TileContent: FC<TileContentProps> = ({ name, media, stream, muted, config }) => {
+  const kind = getTileContentKind(media);
+  const showVideo = kind !== "placeholder";
 
   return (
     <>
@@ -40,17 +33,17 @@ export const TileContent: FC<TileContentProps> = ({
           stream={stream}
           muted={muted}
           hidden={!showVideo}
-          fit={getVideoFit(contentKind)}
-          padded={shouldPadVideo(contentKind, isSelf)}
+          fit={getVideoFit(kind)}
+          layout={getVideoLayout(kind, config)}
         />
       )}
       {!showVideo && (
         <Styled.PlaceholderColumn>
-          <CallAvatar name={name} size={avatarSize} isSelf={isSelf} />
-          {!compact && (
+          <CallAvatar name={name} size={config.avatarSize} isSelf={config.selfAvatar} />
+          {config.showCameraLabel && (
             <Styled.PlaceholderLabel variant="body2">
               <VideocamOffIcon fontSize="small" />
-              {audioOnly ? "Камера недоступна" : "Камера выключена"}
+              {getCameraLabel(media)}
             </Styled.PlaceholderLabel>
           )}
         </Styled.PlaceholderColumn>

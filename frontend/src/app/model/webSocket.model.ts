@@ -6,10 +6,9 @@ import {
   callModel,
   clearCallTransport,
   dispatchCallSignal,
-  isCallSignalOutbound,
+  parseCallSignal,
   setCallTransport,
 } from "@features/videoCall";
-import type { CallSignalingOutbound } from "@features/videoCall";
 import { resolveWsUrl } from "@shared";
 
 import { WS_RECONNECT_DELAY_MS } from "./webSocket.constants";
@@ -32,7 +31,7 @@ export const connectWebSocketFx = createEffect(() => {
 
   ws.onopen = () => {
     console.log("WebSocket connected");
-    setCallTransport((message) => ws.send(JSON.stringify(message)), ws, "tutor");
+    setCallTransport("tutor", (message) => ws.send(JSON.stringify(message)), ws);
     setWebSocketConnection(ws);
   };
 
@@ -40,8 +39,9 @@ export const connectWebSocketFx = createEffect(() => {
     try {
       const data = JSON.parse(event.data);
 
-      if (isCallSignalOutbound(data.type)) {
-        dispatchCallSignal(data as CallSignalingOutbound, "tutor");
+      const callSignal = parseCallSignal(data);
+      if (callSignal) {
+        dispatchCallSignal(callSignal, "tutor");
         return;
       }
 

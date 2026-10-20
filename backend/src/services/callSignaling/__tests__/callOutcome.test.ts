@@ -1,7 +1,12 @@
 import { INVITE_RATE_LIMIT, INVITE_RATE_WINDOW_MS } from "../callSignaling.constants";
-import { resolveDropOutcome, resolveHangupStatus } from "../callSignaling.helpers";
+import {
+  isSamePair,
+  resolveDropOutcome,
+  resolveHangupStatus,
+  toDropPeerMessage,
+} from "../callSignaling.helpers";
 import type { LiveCall, LiveCallStatus } from "../callSignaling.types";
-import { __resetInviteRateLimitForTest, registerInviteAttempt } from "../inviteRateLimit";
+import { registerInviteAttempt } from "../inviteRateLimit";
 
 const buildCall = (status: LiveCallStatus): LiveCall => ({
   callId: "call-1",
@@ -9,8 +14,6 @@ const buildCall = (status: LiveCallStatus): LiveCall => ({
   tutorUserId: "tutor-1",
   studentUserId: "student-user-1",
   studentId: "student-1",
-  studentName: "Иван",
-  tutorName: "Анна",
   status,
   startedAt: new Date(),
 });
@@ -59,10 +62,6 @@ describe("resolveHangupStatus", () => {
 });
 
 describe("registerInviteAttempt", () => {
-  beforeEach(() => {
-    __resetInviteRateLimitForTest();
-  });
-
   it("should reject the attempt over the limit inside the window", () => {
     const now = 1_000_000;
     for (let attempt = 0; attempt < INVITE_RATE_LIMIT; attempt += 1) {
@@ -85,5 +84,43 @@ describe("registerInviteAttempt", () => {
       registerInviteAttempt(TUTOR, now);
     }
     expect(registerInviteAttempt(STUDENT, now)).toBe(true);
+  });
+});
+
+describe("toDropPeerMessage", () => {
+  it("should map each drop outcome to the message the peer gets", () => {
+    expect(toDropPeerMessage({ status: "COMPLETED", peerMessage: "call_ended" }, "c-1")).toEqual({
+      type: "call_ended",
+      callId: "c-1",
+      reason: "peer_disconnected",
+    });
+    expect(toDropPeerMessage({ status: "CANCELED", peerMessage: "call_canceled" }, "c-1")).toEqual({
+      type: "call_canceled",
+      callId: "c-1",
+      reason: "canceled",
+    });
+    expect(toDropPeerMessage({ status: "MISSED", peerMessage: "call_unavailable" }, "c-1")).toEqual(
+      { type: "call_unavailable", reason: "offline", callId: "c-1" }
+    );
+  });
+});
+
+describe("isSamePair", () => {
+  const pair = {
+    tutorUserId: "tutor-1",
+    studentUserId: "student-user-1",
+    studentId: "student-1",
+    studentName: "Иван",
+    tutorName: "Анна",
+  };
+
+  it("should match a call between the same tutor and student", () => {
+    expect(isSamePair(buildCall("ringing"), pair)).toBe(true);
+  });
+
+  it("should not match a call with another student", () => {
+    expect(isSamePair(buildCall("ringing"), { ...pair, studentUserId: "student-user-2" })).toBe(
+      false
+    );
   });
 });

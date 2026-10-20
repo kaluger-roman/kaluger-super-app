@@ -5,9 +5,10 @@ import type { AuthenticatedStudentWebSocket, AuthenticatedWebSocket } from "./ty
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
-import { handleCallSignal, terminateActiveCallForParticipant } from "./signaling";
+import { terminateActiveCallForParticipant } from "../../services/callSignaling";
+import { routeCallMessage } from "./signaling";
 import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
-import type { StudentLessonWsEvent } from "../../types";
+import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
 // на одном HTTP, привязанные через `path`, конфликтуют — первый при path
@@ -93,7 +94,7 @@ export class WebSocketManager {
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message.toString());
-        handleMessage(ws, data);
+        handleMessage(ws, decoded.userId, data);
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
@@ -156,7 +157,7 @@ export class WebSocketManager {
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message.toString());
-        void handleCallSignal("student", ws.studentUserId, data);
+        routeCallMessage("student", decoded.studentUserId, data);
       } catch (error) {
         console.error("Error parsing student WebSocket message:", error);
       }
@@ -237,6 +238,14 @@ export class WebSocketManager {
       return true;
     }
     return false;
+  }
+
+  public getConnection(kind: CallerKindValue, id: string): WebSocket | undefined {
+    return kind === "tutor" ? this.clients.get(id) : this.studentClients.get(id);
+  }
+
+  public sendToParticipant(kind: CallerKindValue, id: string, message: unknown): boolean {
+    return kind === "tutor" ? this.sendToUser(id, message) : this.sendToStudent(id, message);
   }
 
   // Method to get connected users count

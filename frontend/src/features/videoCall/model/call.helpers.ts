@@ -9,20 +9,22 @@ import {
   TUTOR_UNAVAILABLE_TEXT,
   UNAVAILABLE_TEXT,
 } from "./call.constants";
-import type { CallPeer, CallStatusMessage, CanceledNotice, StartCallParams } from "./call.types";
-import type { CallEndReason } from "./signaling.types";
+import type { CallAddress, CallPeer, CanceledNotice, StartCallParams } from "./call.types";
+import type { CallEndReason, CallRole } from "./signaling.types";
 
-export const toOutgoingPeer = (params: StartCallParams): CallPeer =>
-  "studentId" in params
-    ? { id: params.studentId, name: params.peerName, role: "student" }
-    : { id: "", name: params.peerName, role: "tutor" };
+// The caller's own role: a tutor calls a student, a student calls their tutor.
+export const toCallerRole = (params: StartCallParams): CallRole =>
+  "studentId" in params ? "tutor" : "student";
 
-export const toErrorMessage = (text: string): CallStatusMessage => ({
-  kind: "error",
-  text,
+export const toOutgoingPeer = (params: StartCallParams): CallPeer => ({
+  name: params.peerName,
+  role: "studentId" in params ? "student" : "tutor",
 });
 
 export const hasCallId = (callId: string | null): callId is string => callId !== null;
+
+export const isCallAddress = (address: CallAddress | null): address is CallAddress =>
+  address !== null;
 
 export const isPickerDismissed = (error: unknown): boolean =>
   typeof error === "object" &&
@@ -30,7 +32,7 @@ export const isPickerDismissed = (error: unknown): boolean =>
   "name" in error &&
   PICKER_DISMISSED_ERRORS.has(String(error.name));
 
-export const toUnavailableText = (role: CallPeer["role"] | null): string => {
+export const toUnavailableText = (role: CallRole | null): string => {
   if (role === "student") return STUDENT_UNAVAILABLE_TEXT;
   if (role === "tutor") return TUTOR_UNAVAILABLE_TEXT;
   return UNAVAILABLE_TEXT;

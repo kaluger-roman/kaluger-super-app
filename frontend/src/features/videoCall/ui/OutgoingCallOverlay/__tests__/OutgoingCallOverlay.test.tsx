@@ -3,18 +3,19 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { theme } from "@shared";
 
-import { callModel, setCallTransport, stopAllSessions } from "../../../model";
+import { callModel } from "../../../model";
+import { installTransport, resetCallFlow } from "../../../model/__tests__/callFlow";
 import { OutgoingCallOverlay } from "../OutgoingCallOverlay";
 
 const renderOutgoing = () => {
   const scope = fork({
     values: [
       [callModel.$callPhase, "outgoing"],
-      [callModel.$outgoingCallPeer, { id: "stu-1", name: "Иван Смирнов", role: "student" }],
+      [callModel.$outgoingCallPeer, { name: "Иван Смирнов", role: "student" }],
     ],
   });
   render(
@@ -28,10 +29,11 @@ const renderOutgoing = () => {
 };
 
 describe("OutgoingCallOverlay", () => {
-  beforeEach(() => setCallTransport(vi.fn()));
+  beforeEach(() => {
+    installTransport();
+  });
   afterEach(() => {
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
   });
 
   it("should render the peer name from $outgoingCallPeer", () => {

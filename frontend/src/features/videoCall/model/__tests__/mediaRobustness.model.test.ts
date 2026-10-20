@@ -2,24 +2,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { notificationsModel } from "@shared";
 
+import { callModel } from "../index";
+import type { CallSignalingInbound } from "../signaling.types";
+import { getSession, setWebRtcAdapter } from "../webrtc.helpers";
 import {
-  callModel,
-  dispatchCallSignal,
-  getSession,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
-import { connectCallerSession, settleMicrotasks, startCallerSession } from "./callFlow";
-import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
+  connectCallerSession,
+  installTransport,
+  receive,
+  resetCallFlow,
+  settleMicrotasks,
+  startCallerSession,
+} from "./callFlow";
+import { createFakeAdapter, createFakeStream, createFakeTrack } from "./fakeWebrtc";
+import type { FakeAdapter, FakeStream } from "./fakeWebrtc";
 import { collectEvents, readStore } from "./storeProbe";
 
-const audioOnlyGetUserMedia = () =>
-  vi.fn(async (constraints: MediaStreamConstraints) => {
+// A device with a microphone but a camera that is busy or still waiting for permission.
+const audioOnlyGetUserMedia =
+  (camera: () => Promise<FakeStream> = async () => createFakeStream(["video"])) =>
+  async (constraints: MediaStreamConstraints): Promise<FakeStream> => {
     if (constraints.video && constraints.audio) throw new Error("NotReadableError");
-    if (constraints.video) return createFakeStream(["video"]);
+    if (constraints.video) return camera();
     return createFakeStream(["audio"]);
-  });
+  };
 
 const deferred = <T>() => {
   let resolve: (value: T) => void = () => undefined;
@@ -30,44 +35,36 @@ const deferred = <T>() => {
 };
 
 describe("features/videoCall/model media robustness", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
-  let pcs: RTCPeerConnection[];
+  let sent: CallSignalingInbound[];
+  let adapter: FakeAdapter;
 
   beforeEach(() => {
-    sent = [];
-    pcs = [];
-    setCallTransport((message) => sent.push(message));
+    sent = installTransport();
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
-  const trackingPeerConnections = () =>
-    vi.fn(() => {
-      const pc = createFakePeerConnection();
-      pcs.push(pc);
-      return pc;
-    });
+  const useAdapter = (overrides: Parameters<typeof createFakeAdapter>[0] = {}) => {
+    adapter = createFakeAdapter(overrides);
+    setWebRtcAdapter(adapter);
+    return adapter;
+  };
 
   it("should offer a receive-only video transceiver when the caller starts without a camera", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
 
     await startCallerSession("audio-1");
 
-    expect(pcs[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
+    expect(adapter.peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", {
+      direction: "recvonly",
+    });
   });
 
   it("should tell the peer the camera is unavailable right after an audio-only start", async () => {
-    setWebRtcAdapter(createFakeAdapter({ getUserMedia: audioOnlyGetUserMedia() }));
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
 
     await startCallerSession("audio-2");
 
@@ -83,20 +80,15 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should add the screen track and renegotiate when sharing without a camera", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await connectCallerSession("audio-3");
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleScreenShare();
     await settleMicrotasks();
 
-    const [, videoTransceiver] = pcs[0].getTransceivers();
-    expect(pcs[0].addTrack).toHaveBeenCalledTimes(1);
+    const [, videoTransceiver] = adapter.peerConnections[0].getTransceivers();
+    expect(adapter.peerConnections[0].addTrack).toHaveBeenCalledTimes(1);
     expect(videoTransceiver.direction).toBe("sendrecv");
     expect(videoTransceiver.sender.replaceTrack).toHaveBeenCalled();
     expect(sent.some((m) => m.type === "webrtc_offer")).toBe(true);
@@ -104,13 +96,8 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should stop the camera track when the call ends while camera permission is pending", async () => {
-    const pendingCamera = deferred<MediaStream>();
-    const getUserMedia = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.video && constraints.audio) throw new Error("NotReadableError");
-      if (constraints.video) return pendingCamera.promise;
-      return createFakeStream(["audio"]);
-    });
-    setWebRtcAdapter(createFakeAdapter({ getUserMedia }));
+    const pendingCamera = deferred<FakeStream>();
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia(() => pendingCamera.promise) });
     await startCallerSession("cam-race");
 
     callModel.toggleCamera();
@@ -125,8 +112,8 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should stop the screen capture when the call ends while the picker is open", async () => {
-    const pendingScreen = deferred<MediaStream>();
-    setWebRtcAdapter(createFakeAdapter({ getDisplayMedia: vi.fn(() => pendingScreen.promise) }));
+    const pendingScreen = deferred<FakeStream>();
+    useAdapter({ getDisplayMedia: () => pendingScreen.promise });
     await startCallerSession("screen-race");
 
     callModel.toggleScreenShare();
@@ -141,12 +128,7 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should reuse the video transceiver when sharing again after an audio-only start", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await startCallerSession("audio-4");
 
     callModel.toggleScreenShare();
@@ -156,21 +138,16 @@ describe("features/videoCall/model media robustness", () => {
     callModel.toggleScreenShare();
     await settleMicrotasks();
 
-    expect(pcs[0].getTransceivers()).toHaveLength(2);
-    expect(pcs[0].addTransceiver).toHaveBeenCalledTimes(1);
+    expect(adapter.peerConnections[0].getTransceivers()).toHaveLength(2);
+    expect(adapter.peerConnections[0].addTransceiver).toHaveBeenCalledTimes(1);
   });
 
   it("should keep sharing the screen when the camera is turned on during a share", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await startCallerSession("audio-5");
     callModel.toggleScreenShare();
     await settleMicrotasks();
-    const [, videoTransceiver] = pcs[0].getTransceivers();
+    const [, videoTransceiver] = adapter.peerConnections[0].getTransceivers();
     const screenTrack = videoTransceiver.sender.track;
 
     callModel.toggleCamera();
@@ -188,13 +165,8 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should acquire the camera only once on a double click", async () => {
-    const pendingCamera = deferred<MediaStream>();
-    const getUserMedia = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.video && constraints.audio) throw new Error("NotReadableError");
-      if (constraints.video) return pendingCamera.promise;
-      return createFakeStream(["audio"]);
-    });
-    setWebRtcAdapter(createFakeAdapter({ getUserMedia }));
+    const pendingCamera = deferred<FakeStream>();
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia(() => pendingCamera.promise) });
     await startCallerSession("cam-double");
 
     callModel.toggleCamera();
@@ -202,18 +174,16 @@ describe("features/videoCall/model media robustness", () => {
     pendingCamera.resolve(createFakeStream(["video"]));
     await settleMicrotasks();
 
-    expect(getUserMedia.mock.calls.filter(([c]) => c.video && !c.audio)).toHaveLength(1);
+    const cameraRequests = vi
+      .mocked(adapter.getUserMedia)
+      .mock.calls.filter(([constraints]) => constraints.video && !constraints.audio);
+    expect(cameraRequests).toHaveLength(1);
     expect(readStore(callModel.$selfMediaState).cameraOn).toBe(true);
   });
 
   it("should keep a mic toggle made while the camera permission prompt was open", async () => {
-    const pendingCamera = deferred<MediaStream>();
-    const getUserMedia = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.video && constraints.audio) throw new Error("NotReadableError");
-      if (constraints.video) return pendingCamera.promise;
-      return createFakeStream(["audio"]);
-    });
-    setWebRtcAdapter(createFakeAdapter({ getUserMedia }));
+    const pendingCamera = deferred<FakeStream>();
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia(() => pendingCamera.promise) });
     await startCallerSession("cam-mic");
 
     callModel.toggleCamera();
@@ -225,11 +195,12 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should show an error toast when the camera cannot be turned on", async () => {
-    const getUserMedia = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.video) throw new Error("NotAllowedError");
-      return createFakeStream(["audio"]);
+    useAdapter({
+      getUserMedia: async (constraints) => {
+        if (constraints.video) throw new Error("NotAllowedError");
+        return createFakeStream(["audio"]);
+      },
     });
-    setWebRtcAdapter(createFakeAdapter({ getUserMedia }));
     await startCallerSession("cam-denied");
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
@@ -242,23 +213,23 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should add a remote track that arrives without a stream to the remote stream", async () => {
-    setWebRtcAdapter(createFakeAdapter({ createPeerConnection: trackingPeerConnections() }));
+    useAdapter();
     await startCallerSession("track-1");
-    const remoteStream = getSession("track-1")?.remoteStream as MediaStream;
-    const remoteTrack = { id: "remote-video", kind: "video" } as MediaStreamTrack;
+    const remoteStream = readStore(callModel.$remoteStream);
+    const remoteTrack = createFakeTrack("video");
 
-    pcs[0].ontrack?.({ track: remoteTrack, streams: [] } as unknown as RTCTrackEvent);
+    adapter.peerConnections[0].ontrack?.({ track: remoteTrack, streams: [] });
 
-    expect(remoteStream.addTrack).toHaveBeenCalledWith(remoteTrack);
+    expect(remoteStream?.getTrackById(remoteTrack.id)).toBe(remoteTrack);
   });
 
   it("should build offers with an implicit setLocalDescription", async () => {
-    setWebRtcAdapter(createFakeAdapter({ createPeerConnection: trackingPeerConnections() }));
+    useAdapter();
 
     await startCallerSession("offer-1");
 
-    expect(pcs[0].setLocalDescription).toHaveBeenCalledWith();
-    expect(pcs[0].createOffer).not.toHaveBeenCalled();
+    expect(adapter.peerConnections[0].setLocalDescription).toHaveBeenCalledWith();
+    expect(adapter.peerConnections[0].createOffer).not.toHaveBeenCalled();
     expect(sent).toContainEqual({
       type: "webrtc_offer",
       callId: "offer-1",
@@ -268,15 +239,9 @@ describe("features/videoCall/model media robustness", () => {
 
   it("should stop the capture and keep sharing off when renegotiation for the screen fails", async () => {
     const screen = createFakeStream(["video"]);
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-        getDisplayMedia: vi.fn(async () => screen),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia(), getDisplayMedia: async () => screen });
     await connectCallerSession("screen-fail");
-    (pcs[0].setLocalDescription as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    adapter.peerConnections[0].setLocalDescription.mockRejectedValueOnce(
       new Error("InvalidStateError")
     );
 
@@ -290,19 +255,14 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should renegotiate again when sharing is retried after a failed renegotiation", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await connectCallerSession("retry-1");
-    (pcs[0].setLocalDescription as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    adapter.peerConnections[0].setLocalDescription.mockRejectedValueOnce(
       new Error("InvalidStateError")
     );
     callModel.toggleScreenShare();
     await settleMicrotasks();
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleScreenShare();
     await settleMicrotasks();
@@ -312,18 +272,9 @@ describe("features/videoCall/model media robustness", () => {
 
   it("should release the camera when renegotiating for it fails", async () => {
     const camera = createFakeStream(["video"]);
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) => {
-          if (constraints.video && constraints.audio) throw new Error("NotReadableError");
-          if (constraints.video) return camera;
-          return createFakeStream(["audio"]);
-        }),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia(async () => camera) });
     await connectCallerSession("cam-fail");
-    (pcs[0].setLocalDescription as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    adapter.peerConnections[0].setLocalDescription.mockRejectedValueOnce(
       new Error("InvalidStateError")
     );
 
@@ -336,27 +287,18 @@ describe("features/videoCall/model media robustness", () => {
   });
 
   it("should postpone its own offer while answering the peer and send it afterwards", async () => {
-    setWebRtcAdapter(
-      createFakeAdapter({
-        getUserMedia: audioOnlyGetUserMedia(),
-        createPeerConnection: trackingPeerConnections(),
-      })
-    );
+    useAdapter({ getUserMedia: audioOnlyGetUserMedia() });
     await connectCallerSession("answering-1");
     let releaseRemote: () => void = () => undefined;
-    (pcs[0].setRemoteDescription as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+    adapter.peerConnections[0].setRemoteDescription.mockImplementationOnce(async () => {
       await new Promise<void>((resolve) => {
         releaseRemote = resolve;
       });
-      (pcs[0] as unknown as { signalingState: string }).signalingState = "have-remote-offer";
+      adapter.peerConnections[0].signalingState = "have-remote-offer";
     });
-    sent = [];
+    sent.length = 0;
 
-    dispatchCallSignal({
-      type: "webrtc_offer",
-      callId: "answering-1",
-      sdp: { type: "offer", sdp: "o" },
-    });
+    receive({ type: "webrtc_offer", callId: "answering-1", sdp: { type: "offer", sdp: "o" } });
     callModel.toggleScreenShare();
     await settleMicrotasks();
     releaseRemote();

@@ -24,7 +24,7 @@ export const CallHistoryList: FC = () => {
   }
 
   return (
-    <Styled.ListBox>
+    <Styled.ListBox role="list" aria-label="История звонков">
       {records.map((record) => (
         <CallHistoryRow key={record.id} record={record} />
       ))}

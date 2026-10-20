@@ -1,7 +1,5 @@
-import type { CallDropOutcome } from "../../services/callSignaling";
 import type {
   CallSignalingInbound,
-  CallSignalingOutbound,
   IceCandidatePayload,
   SessionDescriptionPayload,
 } from "../../types";
@@ -9,6 +7,7 @@ import {
   CALL_SIGNAL_TYPES,
   ICE_CANDIDATE_MAX_LENGTH,
   ICE_FIELD_MAX_LENGTH,
+  INVITE_ID_MAX_LENGTH,
   SDP_MAX_LENGTH,
 } from "./signaling.constants";
 import type { CallSignalType } from "./signaling.types";
@@ -19,13 +18,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
-const isOptionalShortString = (value: unknown): boolean =>
+const isOptionalShortString = (value: unknown): value is string | null | undefined =>
   value === undefined ||
   value === null ||
   (typeof value === "string" && value.length <= ICE_FIELD_MAX_LENGTH);
 
-export const isCallSignalType = (value: unknown): value is CallSignalType =>
+const isCallSignalType = (value: unknown): value is CallSignalType =>
   typeof value === "string" && (CALL_SIGNAL_TYPES as readonly string[]).includes(value);
+
+export const isCallSignalMessage = (
+  data: unknown
+): data is Record<string, unknown> & { type: CallSignalType } =>
+  isRecord(data) && isCallSignalType(data.type);
 
 export const toSessionDescription = (value: unknown): SessionDescriptionPayload | null => {
   if (!isRecord(value)) return null;
@@ -39,10 +43,10 @@ export const toIceCandidate = (value: unknown): IceCandidatePayload | null => {
   if (typeof value.candidate !== "string" || value.candidate.length > ICE_CANDIDATE_MAX_LENGTH) {
     return null;
   }
-  if (!isOptionalShortString(value.sdpMid) || !isOptionalShortString(value.usernameFragment)) {
+  const { sdpMid, usernameFragment, sdpMLineIndex } = value;
+  if (!isOptionalShortString(sdpMid) || !isOptionalShortString(usernameFragment)) {
     return null;
   }
-  const { sdpMLineIndex } = value;
   if (
     sdpMLineIndex !== undefined &&
     sdpMLineIndex !== null &&
@@ -52,19 +56,21 @@ export const toIceCandidate = (value: unknown): IceCandidatePayload | null => {
   }
   return {
     candidate: value.candidate,
-    sdpMid: (value.sdpMid as string | null | undefined) ?? null,
+    sdpMid: sdpMid ?? null,
     sdpMLineIndex: sdpMLineIndex ?? null,
-    usernameFragment: (value.usernameFragment as string | null | undefined) ?? null,
+    usernameFragment: usernameFragment ?? null,
   };
 };
 
 export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
-  if (!isRecord(data) || !isCallSignalType(data.type)) return null;
+  if (!isCallSignalMessage(data)) return null;
 
   if (data.type === "call_invite") {
-    if (data.targetStudentId === undefined) return { type: "call_invite" };
-    return isNonEmptyString(data.targetStudentId)
-      ? { type: "call_invite", targetStudentId: data.targetStudentId }
+    const { inviteId, targetStudentId } = data;
+    if (!isNonEmptyString(inviteId) || inviteId.length > INVITE_ID_MAX_LENGTH) return null;
+    if (targetStudentId === undefined) return { type: "call_invite", inviteId };
+    return isNonEmptyString(targetStudentId)
+      ? { type: "call_invite", inviteId, targetStudentId }
       : null;
   }
 
@@ -85,7 +91,7 @@ export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
       return typeof data.micOn === "boolean" &&
         typeof data.cameraOn === "boolean" &&
         typeof data.screenSharing === "boolean" &&
-        (data.cameraAvailable === undefined || typeof data.cameraAvailable === "boolean")
+        typeof data.cameraAvailable === "boolean"
         ? {
             type: "call_media_state",
             callId,
@@ -102,16 +108,4 @@ export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
     default:
       return { type: data.type, callId };
   }
-};
-
-export const toDropPeerMessage = (
-  outcome: CallDropOutcome,
-  callId: string
-): CallSignalingOutbound => {
-  if (outcome.peerMessage === "call_unavailable")
-    return { type: "call_unavailable", reason: "offline" };
-  if (outcome.peerMessage === "call_canceled") {
-    return { type: "call_canceled", callId, reason: "canceled" };
-  }
-  return { type: "call_ended", callId, reason: "peer_disconnected" };
 };

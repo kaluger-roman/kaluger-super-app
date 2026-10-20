@@ -1,3 +1,3 @@
-export type CallButtonVariant = "contained" | "outlined" | "text";
+export type CallButtonVariant = "contained" | "outlined";
 
-export type CallButtonColor = "primary" | "secondary" | "inherit";
+export type CallButtonColor = "primary" | "inherit";

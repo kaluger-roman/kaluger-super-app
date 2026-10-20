@@ -1,3 +1,3 @@
 export { getCallHistoryForTutor, getCallHistoryForStudent } from "./getCallHistory";
-export type { CallHistoryQuery } from "./callRecord.types";
-export { clampLimit } from "./callRecord.helpers";
+export { createCallRecord } from "./createCallRecord";
+export type { CallHistoryQuery, CreateCallRecordArgs } from "./callRecord.types";

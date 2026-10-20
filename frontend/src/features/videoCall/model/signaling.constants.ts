@@ -1,17 +1,2 @@
-export const CALL_SIGNAL_OUTBOUND_TYPES = [
-  "call_incoming",
-  "call_ringing",
-  "call_accepted",
-  "call_rejected",
-  "call_canceled",
-  "call_ended",
-  "call_unavailable",
-  "call_busy",
-  "call_no_answer",
-  "call_error",
-  "webrtc_offer",
-  "webrtc_answer",
-  "webrtc_ice",
-  "call_media_state",
-  "call_history_updated",
-] as const;
+export const CALL_END_REASONS = ["hangup", "peer_disconnected", "media_unavailable"] as const;
+export const CALL_CANCEL_REASONS = ["canceled", "timeout"] as const;

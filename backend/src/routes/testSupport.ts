@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { Router } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import { prisma } from "../lib/prisma";
+import { getWebSocketManager } from "../lib/wsManager";
 import { generateAdminToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
 import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
@@ -267,6 +268,12 @@ testRouter.post("/students/:studentId/student-user", async (req: Request, res: R
     token,
     verificationCode: code,
   });
+});
+
+// Lets e2e wait until a student's socket is registered before the tutor calls them.
+testRouter.get("/ws/students/:studentUserId", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("student", req.params.studentUserId);
+  res.json({ connected: socket !== undefined });
 });
 
 testRouter.post("/call-records", async (req: Request, res: Response) => {

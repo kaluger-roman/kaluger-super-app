@@ -1,14 +1,22 @@
 import type { CallSession } from "./webrtc.types";
 
+// Candidates of an offer we ignored are expected to fail; any other failure is worth a log.
+export const addIceCandidateSafely = async (
+  session: CallSession,
+  candidate: RTCIceCandidateInit
+): Promise<void> => {
+  try {
+    await session.pc.addIceCandidate(candidate);
+  } catch (error) {
+    if (!session.ignoreOffer) console.error("Failed to apply ICE candidate:", error);
+  }
+};
+
 const flushPendingIce = async (session: CallSession): Promise<void> => {
   const pending = session.pendingIce;
   session.pendingIce = [];
   for (const candidate of pending) {
-    try {
-      await session.pc.addIceCandidate(candidate);
-    } catch {
-      /* candidate can no longer be applied */
-    }
+    await addIceCandidateSafely(session, candidate);
   }
 };
 

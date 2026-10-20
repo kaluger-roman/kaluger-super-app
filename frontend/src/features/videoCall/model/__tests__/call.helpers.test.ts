@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isCallAddress,
   isPickerDismissed,
+  toCallerRole,
+  toOutgoingPeer,
   toCanceledText,
   toPeerEndedText,
   toUnavailableText,
@@ -42,5 +45,22 @@ describe("features/videoCall/model/call.helpers toast texts", () => {
     expect(toPeerEndedText("media_unavailable")).toBe(
       "У собеседника нет доступа к камере и микрофону"
     );
+  });
+});
+
+describe("features/videoCall/model/call.helpers call roles", () => {
+  it("should let a tutor call a student and a student call the tutor", () => {
+    expect(toCallerRole({ studentId: "s-1", peerName: "Иван" })).toBe("tutor");
+    expect(toOutgoingPeer({ studentId: "s-1", peerName: "Иван" })).toEqual({
+      name: "Иван",
+      role: "student",
+    });
+    expect(toCallerRole({ peerName: "Анна" })).toBe("student");
+    expect(toOutgoingPeer({ peerName: "Анна" })).toEqual({ name: "Анна", role: "tutor" });
+  });
+
+  it("should recognise a complete call address", () => {
+    expect(isCallAddress({ callId: "c-1", role: "tutor" })).toBe(true);
+    expect(isCallAddress(null)).toBe(false);
   });
 });

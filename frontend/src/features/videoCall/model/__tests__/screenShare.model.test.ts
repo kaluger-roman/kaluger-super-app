@@ -3,40 +3,36 @@ import type { Mock } from "vitest";
 
 import { notificationsModel } from "@shared";
 
-import {
-  callModel,
-  getSession,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
-import { settleMicrotasks, startCallerSession } from "./callFlow";
+import { callModel } from "../index";
+import type { CallSignalingInbound } from "../signaling.types";
+import { setWebRtcAdapter } from "../webrtc.helpers";
+import { installTransport, resetCallFlow, settleMicrotasks, startCallerSession } from "./callFlow";
 import { createFakeAdapter, createFakeStream } from "./fakeWebrtc";
+import type { FakeAdapter, FakeStream } from "./fakeWebrtc";
 import { collectEvents, readStore } from "./storeProbe";
 
 describe("features/videoCall/model screen share", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
-  let displayStream: MediaStream;
-  let getDisplayMedia: Mock<() => Promise<MediaStream>>;
+  let sent: CallSignalingInbound[];
+  let displayStream: FakeStream;
+  let getDisplayMedia: Mock<() => Promise<FakeStream>>;
+  let adapter: FakeAdapter;
 
   beforeEach(() => {
-    sent = [];
+    sent = installTransport();
     displayStream = createFakeStream(["video"]);
     getDisplayMedia = vi.fn(async () => displayStream);
-    setCallTransport((message) => sent.push(message));
-    setWebRtcAdapter(createFakeAdapter({ getDisplayMedia }));
+    adapter = createFakeAdapter({ getDisplayMedia });
+    setWebRtcAdapter(adapter);
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
   it("should start sharing and broadcast screenSharing:true", async () => {
     await startCallerSession("call-1");
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleScreenShare();
     await settleMicrotasks();
@@ -52,12 +48,9 @@ describe("features/videoCall/model screen share", () => {
     await startCallerSession("call-2");
     callModel.toggleScreenShare();
     await settleMicrotasks();
-    sent = [];
+    sent.length = 0;
 
-    const screenTrack = displayStream.getVideoTracks()[0] as unknown as {
-      dispatchEnded: () => void;
-    };
-    screenTrack.dispatchEnded();
+    displayStream.getVideoTracks()[0].dispatchEnded();
     await settleMicrotasks();
 
     expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
@@ -75,7 +68,7 @@ describe("features/videoCall/model screen share", () => {
       screenSharing: true,
       cameraAvailable: true,
     });
-    sent = [];
+    sent.length = 0;
     getDisplayMedia.mockClear();
     const toasts = collectEvents(notificationsModel.showInfoEvent);
 
@@ -126,22 +119,39 @@ describe("features/videoCall/model screen share", () => {
     expect(errors.calls).toHaveLength(0);
   });
 
-  it("should report screenSharing:false even when restoring the camera track fails", async () => {
+  it("should report screenSharing:false and warn when restoring the camera track fails", async () => {
     await startCallerSession("call-7");
     callModel.toggleScreenShare();
     await settleMicrotasks();
-    const sender = getSession("call-7")?.videoTransceiver?.sender as unknown as {
-      replaceTrack: Mock;
-    };
-    sender.replaceTrack.mockRejectedValueOnce(new Error("replace failed"));
-    sent = [];
+    const [videoTransceiver] = adapter.peerConnections[0]
+      .getTransceivers()
+      .filter((transceiver) => transceiver.receiver.track.kind === "video");
+    videoTransceiver.sender.replaceTrack.mockRejectedValueOnce(new Error("replace failed"));
+    sent.length = 0;
+    const errors = collectEvents(notificationsModel.showErrorEvent);
 
     callModel.toggleScreenShare();
     await settleMicrotasks();
+    errors.unwatch();
 
     expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
+    expect(readStore(callModel.$screenStream)).toBeNull();
     expect(sent.find((m) => m.type === "call_media_state")).toMatchObject({
       screenSharing: false,
     });
+    expect(errors.calls).toContain("Не удалось вернуть камеру после демонстрации экрана");
+  });
+
+  it("should preview the shared screen in the own tile while sharing", async () => {
+    await startCallerSession("call-8");
+    const camera = readStore(callModel.$localTileStream);
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    expect(readStore(callModel.$localTileStream)).toBe(displayStream);
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    expect(readStore(callModel.$localTileStream)).toBe(camera);
   });
 });

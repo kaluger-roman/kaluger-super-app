@@ -1,10 +1,9 @@
-import { ICE_CANDIDATE_MAX_LENGTH, ICE_FIELD_MAX_LENGTH } from "../signaling.constants";
 import {
-  parseCallSignal,
-  toDropPeerMessage,
-  toIceCandidate,
-  toSessionDescription,
-} from "../signaling.helpers";
+  ICE_CANDIDATE_MAX_LENGTH,
+  ICE_FIELD_MAX_LENGTH,
+  INVITE_ID_MAX_LENGTH,
+} from "../signaling.constants";
+import { parseCallSignal, toIceCandidate, toSessionDescription } from "../signaling.helpers";
 
 const CANDIDATE = {
   candidate: "candidate:1 1 udp 1 10.0.0.1 5000 typ host",
@@ -64,6 +63,16 @@ describe("parseCallSignal", () => {
         micOn: "yes",
         cameraOn: true,
         screenSharing: false,
+        cameraAvailable: true,
+      })
+    ).toBeNull();
+    expect(
+      parseCallSignal({
+        type: "call_media_state",
+        callId: "c-1",
+        micOn: true,
+        cameraOn: true,
+        screenSharing: false,
       })
     ).toBeNull();
     expect(
@@ -84,8 +93,21 @@ describe("parseCallSignal", () => {
   });
 
   it("should accept an invite without a target and drop an empty target", () => {
-    expect(parseCallSignal({ type: "call_invite" })).toEqual({ type: "call_invite" });
-    expect(parseCallSignal({ type: "call_invite", targetStudentId: "" })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1" })).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+    });
+    expect(
+      parseCallSignal({ type: "call_invite", inviteId: "i-1", targetStudentId: "" })
+    ).toBeNull();
+  });
+
+  it("should drop an invite without a usable inviteId", () => {
+    expect(parseCallSignal({ type: "call_invite" })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "" })).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_invite", inviteId: "i".repeat(INVITE_ID_MAX_LENGTH + 1) })
+    ).toBeNull();
   });
 
   it("should strip unknown fields from simple signals", () => {
@@ -103,23 +125,5 @@ describe("parseCallSignal", () => {
       type: "call_hangup",
       callId: "c-1",
     });
-  });
-});
-
-describe("toDropPeerMessage", () => {
-  it("should map each drop outcome to the message the peer gets", () => {
-    expect(toDropPeerMessage({ status: "COMPLETED", peerMessage: "call_ended" }, "c-1")).toEqual({
-      type: "call_ended",
-      callId: "c-1",
-      reason: "peer_disconnected",
-    });
-    expect(toDropPeerMessage({ status: "CANCELED", peerMessage: "call_canceled" }, "c-1")).toEqual({
-      type: "call_canceled",
-      callId: "c-1",
-      reason: "canceled",
-    });
-    expect(toDropPeerMessage({ status: "MISSED", peerMessage: "call_unavailable" }, "c-1")).toEqual(
-      { type: "call_unavailable", reason: "offline" }
-    );
   });
 });

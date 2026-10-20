@@ -1,5 +1,6 @@
 import type { FC } from "react";
 
+import { Portal } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
@@ -15,13 +16,16 @@ export const CallOverlay: FC = () => {
     return <IncomingCallModal />;
   }
 
-  if (phase === "outgoing" || phase === "active") {
-    return (
+  if (phase === "idle") {
+    return null;
+  }
+
+  // A portal, so a transformed ancestor (pull-to-refresh) never becomes the fixed box's frame.
+  return (
+    <Portal>
       <Styled.FullScreen>
         {phase === "outgoing" ? <OutgoingCallOverlay /> : <ActiveCallScreen />}
       </Styled.FullScreen>
-    );
-  }
-
-  return null;
+    </Portal>
+  );
 };

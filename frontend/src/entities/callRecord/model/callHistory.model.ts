@@ -1,94 +1,103 @@
-import { combine, createEffect, createEvent, createStore, sample } from "effector";
+import { createEffect, createEvent, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 
 import { notificationsModel } from "@shared";
 
 import { getCallHistory } from "../api";
 import { CALL_HISTORY_LOAD_ERROR_TEXT } from "../callRecord.constants";
-import type { CallHistoryPrincipal, CallHistoryRecord } from "../callRecord.types";
+import type {
+  CallHistoryPrincipal,
+  CallHistoryRecord,
+  CallHistoryRequest,
+} from "../callRecord.types";
 
 export const CallHistoryGate = createGate<CallHistoryPrincipal>();
 
 export const $callHistory = createStore<CallHistoryRecord[]>([]);
 export const $loadFailed = createStore(false);
-const $refreshQueued = createStore(false);
+// Every request gets the next version. A response is applied only when it is newer than the
+// last one applied, so an older answer never overwrites a newer one; closing the page moves
+// the floor up so nothing still in flight lands on the next visit.
+const $requestedVersion = createStore(0);
+const $appliedVersion = createStore(0);
 
 export const retryRequested = createEvent();
 export const refreshRequested = createEvent();
-const queuedRefreshStarted = createEvent();
+const loadStarted = createEvent<CallHistoryPrincipal>();
+const refreshStarted = createEvent<CallHistoryPrincipal>();
 
 // Page load and retry: blocking, a failure clears the list and shows the error.
 export const loadCallHistoryFx = createEffect(
-  async (principal: CallHistoryPrincipal): Promise<CallHistoryRecord[]> => getCallHistory(principal)
+  async ({ principal }: CallHistoryRequest): Promise<CallHistoryRecord[]> =>
+    getCallHistory(principal)
 );
 
 // Background refresh after a call: not blocking, a failure keeps what is shown.
 export const refreshCallHistoryFx = createEffect(
-  async (principal: CallHistoryPrincipal): Promise<CallHistoryRecord[]> => getCallHistory(principal)
+  async ({ principal }: CallHistoryRequest): Promise<CallHistoryRecord[]> =>
+    getCallHistory(principal)
 );
 
 export const $isLoading = loadCallHistoryFx.pending;
-const $isFetching = combine(
-  loadCallHistoryFx.pending,
-  refreshCallHistoryFx.pending,
-  (loading, refreshing) => loading || refreshing
-);
-const $gate = combine({ open: CallHistoryGate.status, principal: CallHistoryGate.state });
 
-sample({ clock: CallHistoryGate.open, target: loadCallHistoryFx });
+sample({ clock: CallHistoryGate.open, target: loadStarted });
 sample({
   clock: retryRequested,
   source: CallHistoryGate.state,
   filter: CallHistoryGate.status,
-  target: loadCallHistoryFx,
-});
-// One request at a time, so an older response never overwrites a newer one.
-sample({
-  clock: refreshRequested,
-  source: CallHistoryGate.state,
-  filter: combine(CallHistoryGate.status, $isFetching, (open, fetching) => open && !fetching),
-  target: refreshCallHistoryFx,
+  target: loadStarted,
 });
 sample({
   clock: refreshRequested,
-  filter: combine(CallHistoryGate.status, $isFetching, (open, fetching) => open && fetching),
-  fn: () => true,
-  target: $refreshQueued,
-});
-sample({
-  clock: [loadCallHistoryFx.finally, refreshCallHistoryFx.finally],
-  filter: $refreshQueued,
-  target: queuedRefreshStarted,
-});
-sample({ clock: queuedRefreshStarted, fn: () => false, target: $refreshQueued });
-sample({
-  clock: queuedRefreshStarted,
   source: CallHistoryGate.state,
   filter: CallHistoryGate.status,
-  target: refreshCallHistoryFx,
+  target: refreshStarted,
 });
 
-// A response that outlives its page (or its account) is dropped.
+const versionedLoad = sample({
+  clock: loadStarted,
+  source: $requestedVersion,
+  fn: (version, principal): CallHistoryRequest => ({ principal, version: version + 1 }),
+});
+const versionedRefresh = sample({
+  clock: refreshStarted,
+  source: $requestedVersion,
+  fn: (version, principal): CallHistoryRequest => ({ principal, version: version + 1 }),
+});
+sample({
+  clock: [versionedLoad, versionedRefresh],
+  fn: ({ version }) => version,
+  target: $requestedVersion,
+});
+sample({ clock: versionedLoad, target: loadCallHistoryFx });
+sample({ clock: versionedRefresh, target: refreshCallHistoryFx });
+sample({ clock: CallHistoryGate.close, source: $requestedVersion, target: $appliedVersion });
+
 const historyReceived = sample({
   clock: [loadCallHistoryFx.done, refreshCallHistoryFx.done],
-  source: $gate,
-  filter: ({ open, principal }, { params }) => open && principal === params,
-  fn: (_, { result }) => result,
+  source: $appliedVersion,
+  filter: (applied, { params }) => params.version > applied,
+  fn: (_, done) => done,
 });
 const loadFailed = sample({
   clock: loadCallHistoryFx.fail,
-  source: $gate,
-  filter: ({ open, principal }, { params }) => open && principal === params,
+  source: $appliedVersion,
+  filter: (applied, { params }) => params.version > applied,
+  fn: (_, failed) => failed,
 });
 
-sample({ clock: historyReceived, target: $callHistory });
+sample({
+  clock: [historyReceived, loadFailed],
+  fn: ({ params }) => params.version,
+  target: $appliedVersion,
+});
+sample({ clock: historyReceived, fn: ({ result }) => result, target: $callHistory });
 // Reset on success only, so a retry keeps the error on screen instead of flashing the empty state.
 sample({
   clock: [historyReceived, CallHistoryGate.close],
   fn: () => false,
   target: $loadFailed,
 });
-sample({ clock: CallHistoryGate.close, fn: () => false, target: $refreshQueued });
 sample({ clock: loadFailed, fn: () => true, target: $loadFailed });
 sample({
   clock: [CallHistoryGate.close, loadFailed],

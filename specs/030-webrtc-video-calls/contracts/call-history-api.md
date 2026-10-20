@@ -22,7 +22,7 @@ All responses in JSON. All user-facing error messages in Russian.
       "direction": "outgoing",
       "startedAt": "2026-06-03T14:32:00.000Z",
       "durationSeconds": 1845,
-      "status": "completed"
+      "status": "COMPLETED"
     }
   ]
 }
@@ -54,7 +54,7 @@ type CallHistoryItem = {
   direction: "outgoing" | "incoming";
   startedAt: string; // ISO 8601
   durationSeconds: number | null;
-  status: "completed" | "missed" | "rejected" | "canceled" | "failed";
+  status: "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";
 };
 
 type CallHistoryResponse = {

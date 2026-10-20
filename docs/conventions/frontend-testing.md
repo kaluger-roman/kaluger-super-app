@@ -15,6 +15,9 @@ Stack: Vitest + React Testing Library + MSW + Playwright
 - **Real**: Effector stores, utils, simple components
 - **No `export default`** — only named exports/imports
 - **Don't test styled files** — no separate tests for `*.styled.ts`
+- **Test seams stay out of the public API** — a feature's swappable adapters and resets for tests (e.g. `setWebRtcAdapter`, `resetCallTransportsForTests`) are exported from `<feature>/testSeams.helpers.ts`, never from the feature's `index.ts`; production code never imports that file. Tests inside the feature import the model files directly
+- **No pixel assertions from styled files** — assert observable differences (text, roles, `data-*` state such as `data-layout` / `data-compact`), not `top: "44px"`; layout pixels belong to `@visual` e2e
+- **Reset mocks, not just clear them** — `mockReset()` (or `vi.resetAllMocks()`) in `beforeEach` when tests queue `mockResolvedValueOnce` / `mockReturnValueOnce`; `clearAllMocks` keeps the queued implementations and leaks them into the next test
 - **No ESLint errors** — run `npm run lint` and fix all errors before finishing
 - **No TypeScript errors** — run `npx tsc --noEmit` and fix all errors before finishing
 

@@ -1,13 +1,7 @@
 import { randomUUID } from "crypto";
 import type { CallerKindValue } from "../../types";
-import { createFinalizedCallRecord } from "./callRecord";
 import { RING_TIMEOUT_MS } from "./callSignaling.constants";
-import type {
-  CallFinalizeStatus,
-  CallParticipant,
-  LiveCall,
-  ResolvedPair,
-} from "./callSignaling.types";
+import type { CallParticipant, LiveCall, ResolvedPair } from "./callSignaling.types";
 
 const liveCalls = new Map<string, LiveCall>();
 
@@ -20,18 +14,6 @@ export const findActiveCallForParticipant = (
 ): LiveCall | undefined => {
   for (const call of liveCalls.values()) {
     if (matchesParticipant(call, kind, id)) return call;
-  }
-  return undefined;
-};
-
-export const findActiveCallForPair = (
-  tutorUserId: string,
-  studentUserId: string
-): LiveCall | undefined => {
-  for (const call of liveCalls.values()) {
-    if (call.tutorUserId === tutorUserId && call.studentUserId === studentUserId) {
-      return call;
-    }
   }
   return undefined;
 };
@@ -50,8 +32,6 @@ export const startCall = (
     tutorUserId: pair.tutorUserId,
     studentUserId: pair.studentUserId,
     studentId: pair.studentId,
-    studentName: pair.studentName,
-    tutorName: pair.tutorName,
     status: "ringing",
     startedAt: new Date(),
   };
@@ -90,45 +70,15 @@ export const getCaller = (call: LiveCall): CallParticipant => ({
   id: call.callerKind === "tutor" ? call.tutorUserId : call.studentUserId,
 });
 
-export const terminateCall = async (
-  callId: string,
-  status: CallFinalizeStatus,
-  notifyEnded: (call: LiveCall) => void = () => undefined
-): Promise<LiveCall | undefined> => {
+export const removeCall = (callId: string): LiveCall | undefined => {
   const call = liveCalls.get(callId);
   if (!call) return undefined;
   if (call.ringTimeout) clearTimeout(call.ringTimeout);
   liveCalls.delete(callId);
-  // Peers learn about the end before the DB write, so signals sent in that window are not met with "call not found".
-  notifyEnded(call);
-
-  await createFinalizedCallRecord({
-    tutorId: call.tutorUserId,
-    studentId: call.studentId,
-    callerKind: call.callerKind,
-    status,
-    startedAt: call.startedAt,
-    endedAt: status === "COMPLETED" ? new Date() : undefined,
-    connectedAt: call.connectedAt,
-  });
-
   return call;
 };
 
-// The callee was offline, so no live call exists; the attempt still shows up as missed.
-export const recordUnreachableCall = (
-  pair: ResolvedPair,
-  callerKind: CallerKindValue
-): Promise<void> =>
-  createFinalizedCallRecord({
-    tutorId: pair.tutorUserId,
-    studentId: pair.studentId,
-    callerKind,
-    status: "MISSED",
-    startedAt: new Date(),
-  });
-
-export const __resetLiveCallsForTest = (): void => {
+export const __resetLiveCallsForTests = (): void => {
   for (const call of liveCalls.values()) {
     if (call.ringTimeout) clearTimeout(call.ringTimeout);
   }

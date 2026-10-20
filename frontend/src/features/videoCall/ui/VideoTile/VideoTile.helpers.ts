@@ -1,6 +1,11 @@
-import type { TileContentKind, VideoFit } from "./VideoTile.types";
+import { CAMERA_OFF_LABEL, CAMERA_UNAVAILABLE_LABEL } from "./VideoTile.constants";
+import type { TileContentKind, TileVariantConfig, VideoFit, VideoLayout } from "./VideoTile.types";
+import type { CallMediaState } from "../../videoCall.types";
 
-export const getTileContentKind = (cameraOn: boolean, screenSharing: boolean): TileContentKind => {
+export const getTileContentKind = ({
+  cameraOn,
+  screenSharing,
+}: CallMediaState): TileContentKind => {
   if (screenSharing) return "screen";
   if (cameraOn) return "video";
   return "placeholder";
@@ -10,6 +15,9 @@ export const getTileContentKind = (cameraOn: boolean, screenSharing: boolean): T
 export const getVideoFit = (kind: TileContentKind): VideoFit =>
   kind === "screen" ? "contain" : "cover";
 
-// The own PiP is too small to give up space for the pills, so only a peer's shared screen is padded.
-export const shouldPadVideo = (kind: TileContentKind, isSelf: boolean): boolean =>
-  kind === "screen" && !isSelf;
+// Only a peer's shared screen gives up room to the pills; a camera and the own preview fill the tile.
+export const getVideoLayout = (kind: TileContentKind, config: TileVariantConfig): VideoLayout =>
+  kind === "screen" && config.frameScreen ? "framed" : "overlay";
+
+export const getCameraLabel = (media: CallMediaState): string =>
+  media.cameraAvailable ? CAMERA_OFF_LABEL : CAMERA_UNAVAILABLE_LABEL;

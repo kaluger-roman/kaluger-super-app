@@ -9,7 +9,6 @@ import {
   $isLoading,
   $loadFailed,
   CallHistoryGate,
-  loadCallHistoryFx,
   refreshRequested,
   retryRequested,
 } from "../callHistory.model";
@@ -20,6 +19,8 @@ vi.mock("../../api/callHistoryApi", () => ({
 
 const mockedGetCallHistory = vi.mocked(getCallHistory);
 
+const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
+
 const sampleRecords = [
   {
     id: "1",
@@ -27,7 +28,7 @@ const sampleRecords = [
     direction: "outgoing" as const,
     startedAt: "2026-06-03T14:32:00.000Z",
     durationSeconds: 1845,
-    status: "completed" as const,
+    status: "COMPLETED" as const,
   },
 ];
 
@@ -56,15 +57,6 @@ describe("entities/callRecord/model/callHistory.model", () => {
     expect(mockedGetCallHistory).toHaveBeenCalledWith("student");
   });
 
-  it("should keep an empty list and not throw when the request fails", async () => {
-    mockedGetCallHistory.mockRejectedValue(new Error("network"));
-    const scope = fork();
-
-    await allSettled(loadCallHistoryFx, { scope, params: "tutor" });
-
-    expect(scope.getState($callHistory)).toEqual([]);
-  });
-
   it("should show an error toast and clear stale records when the request fails", async () => {
     mockedGetCallHistory.mockResolvedValueOnce(sampleRecords);
     const scope = fork();
@@ -77,9 +69,10 @@ describe("entities/callRecord/model/callHistory.model", () => {
       scope,
     });
     mockedGetCallHistory.mockRejectedValueOnce(new Error("network"));
-    await allSettled(loadCallHistoryFx, { scope, params: "tutor" });
+    await allSettled(retryRequested, { scope });
 
     expect(scope.getState($callHistory)).toEqual([]);
+    expect(scope.getState($loadFailed)).toBe(true);
     expect(errors).toEqual(["Не удалось загрузить историю звонков"]);
   });
 
@@ -207,13 +200,13 @@ describe("entities/callRecord/model/callHistory.model", () => {
     expect(errors).toEqual([]);
   });
 
-  it("should run a refresh requested mid-flight after the current request", async () => {
+  it("should keep the newer answer when an older request finishes last", async () => {
     const newerRecords = [{ ...sampleRecords[0], id: "2" }, ...sampleRecords];
-    let release: (records: typeof sampleRecords) => void = () => undefined;
+    let releaseOlder: (records: typeof sampleRecords) => void = () => undefined;
     mockedGetCallHistory
       .mockReturnValueOnce(
         new Promise((resolve) => {
-          release = resolve;
+          releaseOlder = resolve;
         })
       )
       .mockResolvedValueOnce(newerRecords);
@@ -221,11 +214,50 @@ describe("entities/callRecord/model/callHistory.model", () => {
     const load = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
 
     const refresh = allSettled(refreshRequested, { scope });
-    expect(mockedGetCallHistory).toHaveBeenCalledTimes(1);
-    release(sampleRecords);
+    await settleMicrotasks();
+    releaseOlder(sampleRecords);
     await Promise.all([load, refresh]);
 
     expect(mockedGetCallHistory).toHaveBeenCalledTimes(2);
     expect(scope.getState($callHistory)).toEqual(newerRecords);
+  });
+
+  it("should still show an older answer while the newer request is in flight", async () => {
+    let releaseNewer: (records: typeof sampleRecords) => void = () => undefined;
+    mockedGetCallHistory.mockResolvedValueOnce(sampleRecords).mockReturnValueOnce(
+      new Promise((resolve) => {
+        releaseNewer = resolve;
+      })
+    );
+    const scope = fork();
+    await allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+
+    const refresh = allSettled(refreshRequested, { scope });
+    expect(scope.getState($callHistory)).toEqual(sampleRecords);
+    releaseNewer([]);
+    await refresh;
+
+    expect(scope.getState($callHistory)).toEqual([]);
+  });
+
+  it("should drop an answer from the previous visit after the page is reopened", async () => {
+    let releaseOld: (records: typeof sampleRecords) => void = () => undefined;
+    mockedGetCallHistory
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseOld = resolve;
+        })
+      )
+      .mockResolvedValueOnce([]);
+    const scope = fork();
+    const oldVisit = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+    const close = allSettled(CallHistoryGate.close, { scope, params: "tutor" });
+    const newVisit = allSettled(CallHistoryGate.open, { scope, params: "tutor" });
+    await settleMicrotasks();
+
+    releaseOld(sampleRecords);
+    await Promise.all([oldVisit, close, newVisit]);
+
+    expect(scope.getState($callHistory)).toEqual([]);
   });
 });

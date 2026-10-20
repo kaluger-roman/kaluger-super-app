@@ -69,16 +69,15 @@ export type {
   StudentLessonWsEvent,
 } from "./studentCabinet";
 export type {
-  CallStatusValue,
   CallDirection,
   CallerKindValue,
   CallEndReason,
   CallCancelReason,
+  CallReplyTarget,
   IceServer,
   SessionDescriptionPayload,
   IceCandidatePayload,
   CallSignalingInbound,
   CallSignalingOutbound,
   CallHistoryItem,
-  CallHistoryResponse,
 } from "./call";

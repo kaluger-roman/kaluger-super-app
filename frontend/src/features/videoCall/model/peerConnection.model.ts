@@ -6,12 +6,18 @@ import type {
   IcePayload,
   IceServerPayload,
   LocalMediaParams,
-  MediaStateBroadcast,
+  LocalMediaReady,
+  MediaStateUpdate,
   SdpPayload,
 } from "./call.types";
 import { buildRtcConfiguration } from "./iceConfig.helpers";
 import { acquireLocalMedia, getCameraTrack, mediaStateOf } from "./negotiation.helpers";
-import { findVideoTransceiver, markRemoteDescriptionSet } from "./peerConnection.helpers";
+import {
+  addIceCandidateSafely,
+  findVideoTransceiver,
+  markRemoteDescriptionSet,
+} from "./peerConnection.helpers";
+import type { CallRole } from "./signaling.types";
 import { sendMediaState, sendOverTransport } from "./transport.helpers";
 import {
   createMediaStreamSafe,
@@ -22,6 +28,7 @@ import {
 
 const attachPeerConnection = (
   callId: string,
+  role: CallRole,
   iceServers: IceServerPayload[],
   polite: boolean
 ): RTCPeerConnection => {
@@ -34,12 +41,11 @@ const attachPeerConnection = (
   pc.ontrack = (event) => {
     // A track replaced into a stream-less transceiver arrives with empty event.streams.
     if (!remoteStream.getTrackById(event.track.id)) remoteStream.addTrack(event.track);
-    callModel.remoteTrackReceived();
   };
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      sendOverTransport({
+      sendOverTransport(role, {
         type: "webrtc_ice",
         callId,
         candidate: event.candidate.toJSON(),
@@ -49,7 +55,7 @@ const attachPeerConnection = (
 
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") {
-      sendOverTransport({ type: "call_connected", callId });
+      sendOverTransport(role, { type: "call_connected", callId });
       callModel.callConnected();
     }
     if (pc.connectionState === "failed") {
@@ -59,6 +65,7 @@ const attachPeerConnection = (
 
   registerSession(callId, {
     pc,
+    role,
     localStream: null,
     remoteStream,
     cameraTrack: null,
@@ -70,19 +77,25 @@ const attachPeerConnection = (
     makingOffer: false,
     answeringOffer: false,
     offerPending: false,
+    ignoreOffer: false,
   });
   return pc;
 };
 
 export const addLocalMediaFx = createEffect(
-  async ({ callId, iceServers, polite }: LocalMediaParams): Promise<void> => {
-    const pc = attachPeerConnection(callId, iceServers, polite);
-    if (getSession(callId)?.localStream) return;
+  async ({
+    callId,
+    role,
+    iceServers,
+    polite,
+  }: LocalMediaParams): Promise<LocalMediaReady | null> => {
+    const pc = attachPeerConnection(callId, role, iceServers, polite);
+    if (getSession(callId)?.localStream) return null;
     const { stream, cameraOn } = await acquireLocalMedia();
     const session = getSession(callId);
     if (!session || session.localStream) {
       stream.getTracks().forEach((track) => track.stop());
-      return;
+      return null;
     }
     session.localStream = stream;
     session.cameraTrack = getCameraTrack(stream);
@@ -92,9 +105,11 @@ export const addLocalMediaFx = createEffect(
     if (!polite && !session.videoTransceiver) {
       session.videoTransceiver = pc.addTransceiver("video", { direction: "recvonly" });
     }
-    const mediaState = mediaStateOf(stream, cameraOn);
-    callModel.selfMediaStateChanged(mediaState);
-    sendMediaState(callId, mediaState);
+    return {
+      media: mediaStateOf(stream, cameraOn),
+      localStream: stream,
+      remoteStream: session.remoteStream,
+    };
   }
 );
 
@@ -114,7 +129,11 @@ export const sendOfferFx = createEffect(async (callId: string): Promise<void> =>
     await session.pc.setLocalDescription();
     const offer = session.pc.localDescription;
     if (offer?.type !== "offer") return;
-    sendOverTransport({ type: "webrtc_offer", callId, sdp: { type: offer.type, sdp: offer.sdp } });
+    sendOverTransport(session.role, {
+      type: "webrtc_offer",
+      callId,
+      sdp: { type: offer.type, sdp: offer.sdp },
+    });
   } finally {
     session.makingOffer = false;
   }
@@ -125,7 +144,9 @@ export const sendAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Pr
   if (!session) return;
 
   const offerCollides = session.makingOffer || session.pc.signalingState !== "stable";
-  if (offerCollides && !session.polite) return;
+  // Perfect negotiation: the impolite side ignores a colliding offer and its candidates.
+  session.ignoreOffer = offerCollides && !session.polite;
+  if (session.ignoreOffer) return;
 
   session.answeringOffer = true;
   try {
@@ -135,7 +156,7 @@ export const sendAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Pr
     await markRemoteDescriptionSet(session);
     const answer = await session.pc.createAnswer();
     await session.pc.setLocalDescription(answer);
-    sendOverTransport({ type: "webrtc_answer", callId, sdp: answer });
+    sendOverTransport(session.role, { type: "webrtc_answer", callId, sdp: answer });
   } finally {
     session.answeringOffer = false;
   }
@@ -163,13 +184,9 @@ export const applyIceFx = createEffect(async ({ callId, candidate }: IcePayload)
     session.pendingIce.push(candidate);
     return;
   }
-  try {
-    await session.pc.addIceCandidate(candidate);
-  } catch {
-    /* ignore late or invalid ICE candidate */
-  }
+  await addIceCandidateSafely(session, candidate);
 });
 
-export const sendMediaStateFx = createEffect(({ callId, media }: MediaStateBroadcast): void => {
-  if (callId) sendMediaState(callId, media);
+export const sendMediaStateFx = createEffect(({ callId, role, media }: MediaStateUpdate): void => {
+  sendMediaState(role, callId, media);
 });

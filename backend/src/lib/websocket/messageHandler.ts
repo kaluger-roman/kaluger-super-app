@@ -1,19 +1,11 @@
 import { WebSocket } from "ws";
 import type { AuthenticatedWebSocket } from "./types";
-import { handleCallSignal } from "./signaling";
-import { isCallSignalType } from "./signaling.helpers";
+import { routeCallMessage } from "./signaling";
 
-export const handleMessage = (ws: AuthenticatedWebSocket, data: unknown): void => {
-  if (
-    typeof data === "object" &&
-    data !== null &&
-    isCallSignalType((data as { type?: unknown }).type)
-  ) {
-    void handleCallSignal("tutor", ws.userId, data);
-    return;
-  }
+export const handleMessage = (ws: AuthenticatedWebSocket, userId: string, data: unknown): void => {
+  if (routeCallMessage("tutor", userId, data)) return;
 
-  console.log(`Received message from ${ws.userId}:`, data);
+  console.log(`Received message from ${userId}:`, data);
 
   // Skip the echo when the socket has already started closing — `ws.send`
   // would throw synchronously on a non-OPEN readyState and the surrounding

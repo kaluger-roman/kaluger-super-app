@@ -6,10 +6,9 @@ import {
   callModel,
   clearCallTransport,
   dispatchCallSignal,
-  isCallSignalOutbound,
+  parseCallSignal,
   setCallTransport,
 } from "@features/videoCall";
-import type { CallSignalingOutbound } from "@features/videoCall";
 import type { StudentLessonWsEvent } from "@shared";
 import { getStudentToken, resolveWsUrl } from "@shared";
 
@@ -42,11 +41,13 @@ const $reconnectGeneration = createStore(0);
 // etc.) is a single new `if (data.type === ...)` branch here.
 const dispatchMessage = (raw: string): void => {
   try {
-    const data = JSON.parse(raw) as StudentLessonWsEvent | CallSignalingOutbound;
-    if (isCallSignalOutbound(data.type)) {
-      dispatchCallSignal(data as CallSignalingOutbound, "student");
+    const parsed: unknown = JSON.parse(raw);
+    const callSignal = parseCallSignal(parsed);
+    if (callSignal) {
+      dispatchCallSignal(callSignal, "student");
       return;
     }
+    const data = parsed as StudentLessonWsEvent;
     if (data.type === "lesson_created") {
       studentScheduleModel.lessonCreated(data.lesson);
     } else if (data.type === "lesson_updated") {
@@ -72,7 +73,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
 
   ws.onopen = () => {
     console.log("Student WS connected");
-    setCallTransport((message) => ws.send(JSON.stringify(message)), ws, "student");
+    setCallTransport("student", (message) => ws.send(JSON.stringify(message)), ws);
     studentWebSocketOpened();
   };
 

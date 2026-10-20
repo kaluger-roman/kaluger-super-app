@@ -5,15 +5,19 @@ import { callHistoryModel } from "@entities";
 import * as callModel from "./call.model";
 import {
   canTakeIncoming,
-  isAwaitingRinging,
-  isCallErrorForContext,
   isCurrentCall,
   isOutgoing,
+  isOwnRinging,
+  isReplyToCurrent,
   isSignalOf,
   toPeerMediaState,
 } from "./signalRouting.helpers";
 
-const callContext = { callId: callModel.$callId, phase: callModel.$callPhase };
+const callContext = {
+  callId: callModel.$callId,
+  phase: callModel.$callPhase,
+  inviteId: callModel.$inviteId,
+};
 
 const signals = split(callModel.signalReceived, {
   incoming: isSignalOf("call_incoming"),
@@ -39,70 +43,76 @@ sample({ clock: signals.historyUpdated, target: callHistoryModel.refreshRequeste
 const incomingDecided = sample({
   clock: signals.incoming,
   source: callContext,
-  fn: (context, message) => ({ message, take: canTakeIncoming(context) }),
+  fn: (context, signal) => ({ signal, take: canTakeIncoming(context) }),
 });
 
 sample({
   clock: incomingDecided,
   filter: ({ take }) => take,
-  fn: ({ message }) => message.iceServers,
+  fn: ({ signal }) => signal.message.iceServers,
   target: callModel.iceServersReceived,
 });
 sample({
   clock: incomingDecided,
   filter: ({ take }) => take,
-  fn: ({ message }) => ({ callId: message.callId, callerName: message.callerName }),
+  fn: ({ signal: { message, role } }) => ({
+    callId: message.callId,
+    callerName: message.callerName,
+    role,
+  }),
   target: callModel.incomingCallReceived,
 });
 sample({
   clock: incomingDecided,
   filter: ({ take }) => !take,
-  fn: ({ message }) => message.callId,
+  fn: ({ signal: { message, role } }) => ({ callId: message.callId, role }),
   target: callModel.incomingWhileBusy,
 });
 
 sample({
   clock: signals.ringing,
   source: callContext,
-  filter: isAwaitingRinging,
-  fn: (_, { callId, iceServers }) => ({ callId, iceServers }),
+  filter: (context, { message }) => isOwnRinging(context, message),
+  fn: (_, { message }) => message.callId,
   target: callModel.callRinging,
 });
+// A ringing for an invite we no longer wait for (canceled before the server answered).
 sample({
   clock: signals.ringing,
   source: callContext,
-  filter: (context) => context.phase === "idle",
-  fn: (_, { callId }) => callId,
+  filter: (context, { message }) =>
+    !isOwnRinging(context, message) && !isCurrentCall(context, message),
+  fn: (_, { message, role }) => ({ callId: message.callId, role }),
   target: callModel.staleRingingReceived,
 });
 
 sample({
   clock: signals.accepted,
   source: callContext,
-  filter: (context, message) => isOutgoing(context) && isCurrentCall(context, message),
-  fn: (_, { callId, iceServers }) => ({ callId, iceServers }),
+  filter: (context, { message }) => isOutgoing(context) && isCurrentCall(context, message),
+  fn: (_, { message }) => ({ callId: message.callId, iceServers: message.iceServers }),
   target: callModel.callAcceptedReceived,
 });
 sample({
   clock: signals.accepted,
   source: callContext,
-  filter: (context, message) => !isCurrentCall(context, message),
-  fn: (_, { callId }) => callId,
+  filter: (context, { message }) => !isCurrentCall(context, message),
+  fn: (_, { message, role }) => ({ callId: message.callId, role }),
   target: callModel.staleAcceptReceived,
 });
 
 sample({
   clock: signals.rejected,
   source: callContext,
-  filter: isCurrentCall,
+  filter: (context, { message }) => isCurrentCall(context, message),
   target: callModel.rejectedReceived,
 });
 sample({
   clock: signals.canceled,
   source: { ...callContext, incoming: callModel.$incomingCall },
-  filter: isCurrentCall,
-  fn: ({ incoming }, { reason }) => ({
-    reason: reason ?? "canceled",
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: ({ incoming }, { message }) => ({
+    reason: message.reason,
     callerName: incoming?.callerName ?? "",
   }),
   target: callModel.canceledReceived,
@@ -110,62 +120,62 @@ sample({
 sample({
   clock: signals.ended,
   source: callContext,
-  filter: isCurrentCall,
-  fn: (_, { reason }) => reason ?? "hangup",
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: (_, { message }) => message.reason,
   target: callModel.callEnded,
 });
 sample({
   clock: signals.noAnswer,
   source: callContext,
-  filter: isCurrentCall,
+  filter: (context, { message }) => isCurrentCall(context, message),
   target: callModel.noAnswerReceived,
 });
 sample({
   clock: signals.unavailable,
   source: { ...callContext, peer: callModel.$outgoingCallPeer },
-  filter: isOutgoing,
+  filter: (context, { message }) => isOutgoing(context) && isReplyToCurrent(context, message),
   fn: ({ peer }) => peer?.role ?? null,
   target: callModel.unavailableReceived,
 });
 sample({
   clock: signals.busy,
   source: callContext,
-  filter: isOutgoing,
+  filter: (context, { message }) => isReplyToCurrent(context, message),
   target: callModel.busyReceived,
 });
 sample({
   clock: signals.error,
   source: callContext,
-  filter: isCallErrorForContext,
-  fn: (_, { message }) => message,
+  filter: (context, { message }) => isReplyToCurrent(context, message),
+  fn: (_, { message }) => message.message,
   target: callModel.callErrorReceived,
 });
 
 sample({
   clock: signals.offer,
   source: callContext,
-  filter: (context, message) => context.phase !== "incoming" && isCurrentCall(context, message),
-  fn: (_, { callId, sdp }) => ({ callId, sdp }),
+  filter: (context, { message }) => context.phase !== "incoming" && isCurrentCall(context, message),
+  fn: (_, { message }) => ({ callId: message.callId, sdp: message.sdp }),
   target: callModel.offerReceived,
 });
 sample({
   clock: signals.answer,
   source: callContext,
-  filter: isCurrentCall,
-  fn: (_, { callId, sdp }) => ({ callId, sdp }),
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: (_, { message }) => ({ callId: message.callId, sdp: message.sdp }),
   target: callModel.answerReceived,
 });
 sample({
   clock: signals.ice,
   source: callContext,
-  filter: isCurrentCall,
-  fn: (_, { callId, candidate }) => ({ callId, candidate }),
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: (_, { message }) => ({ callId: message.callId, candidate: message.candidate }),
   target: callModel.iceReceived,
 });
 sample({
   clock: signals.mediaState,
   source: callContext,
-  filter: isCurrentCall,
-  fn: (_, message) => toPeerMediaState(message),
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: (_, { message }) => toPeerMediaState(message),
   target: callModel.peerMediaStateChanged,
 });

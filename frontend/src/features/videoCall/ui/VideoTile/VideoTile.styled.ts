@@ -3,57 +3,80 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@shared";
 
 import { SHORT_STAGE_MEDIA } from "./VideoTile.constants";
-import type { VideoFit } from "./VideoTile.types";
+import type { VideoFit, VideoLayout } from "./VideoTile.types";
 
 type TileBoxProps = {
   $hasVideo: boolean;
   $isScreen: boolean;
-  $isSelf: boolean;
+  $minHeight: number;
+  $inset: number;
+  $gap: number;
 };
 
-export const TileBox = styled(Box)<TileBoxProps>(({ $hasVideo, $isScreen, $isSelf }) => ({
-  position: "relative",
+// Three rows: the screen label and badges, the content, the name. Pills take their own rows,
+// so nothing is offset by hand; `isolation` keeps the z-indexes below local to the tile.
+export const TileBox = styled(Box)<TileBoxProps>(
+  ({ $hasVideo, $isScreen, $minHeight, $inset, $gap }) => ({
+    position: "relative",
+    isolation: "isolate",
+    width: "100%",
+    height: "100%",
+    minHeight: $minHeight,
+    display: "grid",
+    gridTemplateRows: "auto minmax(0, 1fr) auto",
+    gridTemplateColumns: "minmax(0, 1fr)",
+    gap: $gap,
+    padding: $inset,
+    boxSizing: "border-box",
+    borderRadius: 16,
+    overflow: "hidden",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    background: $isScreen
+      ? "linear-gradient(160deg, #102a17 0%, #0a1f10 100%)"
+      : $hasVideo
+        ? "linear-gradient(140deg, #1f5132 0%, #0c2a17 55%, #06160c 100%)"
+        : "#10231a",
+  })
+);
+
+const OVERLAY_VIDEO = {
+  position: "absolute",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
   width: "100%",
   height: "100%",
-  // The own tile fills the PiP, which is shorter than the minimum of the main tile.
-  minHeight: $isSelf ? 0 : 180,
-  borderRadius: 16,
-  overflow: "hidden",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "16px 12px 52px",
-  boxSizing: "border-box",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  background: $isScreen
-    ? "linear-gradient(160deg, #102a17 0%, #0a1f10 100%)"
-    : $hasVideo
-      ? "linear-gradient(140deg, #1f5132 0%, #0c2a17 55%, #06160c 100%)"
-      : "#10231a",
-}));
+} as const;
 
 type VideoElementProps = {
   $hidden: boolean;
   $fit: VideoFit;
-  $padded: boolean;
+  $layout: VideoLayout;
 };
 
-export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit, $padded }) => ({
-  position: "absolute",
-  // A padded screen stays clear of the label pill on top and the name pill below.
-  top: $padded ? 44 : 0,
-  bottom: $padded ? 44 : 0,
-  left: 0,
-  right: 0,
-  width: "100%",
-  height: $padded ? "calc(100% - 88px)" : "100%",
+export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit, $layout }) => ({
+  ...($layout === "framed"
+    ? {
+        position: "relative",
+        gridRow: "2",
+        gridColumn: "1",
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        [SHORT_STAGE_MEDIA]: OVERLAY_VIDEO,
+      }
+    : OVERLAY_VIDEO),
+  zIndex: 0,
   objectFit: $fit,
   visibility: $hidden ? "hidden" : "visible",
-  [SHORT_STAGE_MEDIA]: { top: 0, bottom: 0, height: "100%" },
 }));
 
 export const PlaceholderColumn = styled(Box)({
-  position: "relative",
+  gridRow: "2",
+  gridColumn: "1",
+  alignSelf: "center",
+  justifySelf: "center",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -68,15 +91,24 @@ export const PlaceholderLabel = styled(Typography)({
   gap: 6,
 });
 
-export const NameChipRow = styled(Box)({
-  position: "absolute",
-  left: 12,
-  right: 12,
-  bottom: 12,
-  zIndex: 2,
+export const TopRow = styled(Box)({
+  gridRow: "1",
+  gridColumn: "1",
+  zIndex: 1,
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 8,
+  minWidth: 0,
+});
+
+export const NameRow = styled(Box)({
+  gridRow: "3",
+  gridColumn: "1",
+  zIndex: 1,
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: 6,
+  minWidth: 0,
 });
 
 export const NamePill = styled(Box)({
@@ -94,42 +126,24 @@ export const NamePill = styled(Box)({
   textOverflow: "ellipsis",
 });
 
-type StatusBadgeProps = {
-  $variant: "muted" | "screen";
-  $compact: boolean;
-};
-
-export const StatusBadge = styled(Box)<StatusBadgeProps>(({ $variant, $compact }) => ({
+export const StatusBadge = styled(Box)<{ $size: number }>(({ theme, $size }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  width: $compact ? 20 : 28,
-  height: $compact ? 20 : 28,
+  flexShrink: 0,
+  marginLeft: "auto",
+  width: $size,
+  height: $size,
   borderRadius: "50%",
-  color: "#ffffff",
-  background: $variant === "screen" ? "rgba(46, 125, 71, 0.9)" : "rgba(211, 47, 47, 0.9)",
+  color: theme.palette.common.white,
+  background: theme.palette.error.main,
   "& .MuiSvgIcon-root": {
-    fontSize: $compact ? 14 : 20,
+    fontSize: Math.round($size * 0.7),
   },
 }));
 
-export const TopRightBadges = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({
-  position: "absolute",
-  top: $compact ? 6 : 12,
-  right: $compact ? 6 : 12,
-  zIndex: 2,
-  display: "flex",
-  gap: 8,
-}));
-
 export const ScreenLabelPill = styled(Box)({
-  position: "absolute",
-  top: 12,
-  left: 12,
-  right: 12,
-  zIndex: 3,
-  width: "fit-content",
-  maxWidth: "calc(100% - 24px)",
+  minWidth: 0,
   display: "flex",
   alignItems: "center",
   gap: 6,

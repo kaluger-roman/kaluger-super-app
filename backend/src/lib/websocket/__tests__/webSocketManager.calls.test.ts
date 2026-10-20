@@ -3,7 +3,10 @@ import { createServer } from "http";
 import { WebSocket } from "ws";
 
 import { authenticateWebSocket } from "../auth";
-import { handleCallSignal, terminateActiveCallForParticipant } from "../signaling";
+import {
+  processCallSignal,
+  terminateActiveCallForParticipant,
+} from "../../../services/callSignaling";
 import { WebSocketManager } from "../webSocketManager";
 
 jest.mock("../auth", () => ({
@@ -22,8 +25,8 @@ jest.mock("../messageHandler", () => ({
   sendWelcomeMessage: jest.fn(),
 }));
 
-jest.mock("../signaling", () => ({
-  handleCallSignal: jest.fn(async () => undefined),
+jest.mock("../../../services/callSignaling", () => ({
+  processCallSignal: jest.fn(async () => undefined),
   terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
 
@@ -97,12 +100,29 @@ describe("WebSocketManager call lifecycle", () => {
     expect(manager.getConnectedStudents()).toContain("student-1");
   });
 
-  it("should route student socket messages to handleCallSignal", async () => {
+  it("should route student socket messages to the call flow", async () => {
     const ws = makeSocket();
     await connectStudent(ws);
 
-    ws.emit("message", Buffer.from(JSON.stringify({ type: "call_invite" })));
+    ws.emit("message", Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" })));
 
-    expect(handleCallSignal).toHaveBeenCalledWith("student", "student-1", { type: "call_invite" });
+    expect(processCallSignal).toHaveBeenCalledWith(
+      { kind: "student", id: "student-1" },
+      { type: "call_invite", inviteId: "invite-1" }
+    );
+  });
+
+  it("should look up and message a participant by kind", async () => {
+    const tutor = makeSocket();
+    const student = makeSocket();
+    await connectTutor(tutor);
+    await connectStudent(student);
+
+    expect(manager.getConnection("tutor", "tutor-1")).toBe(tutor);
+    expect(manager.getConnection("student", "student-1")).toBe(student);
+    expect(manager.getConnection("student", "nobody")).toBeUndefined();
+    expect(manager.sendToParticipant("student", "student-1", { type: "call_busy" })).toBe(true);
+    expect(student.send).toHaveBeenCalledWith(JSON.stringify({ type: "call_busy" }));
+    expect(manager.sendToParticipant("tutor", "nobody", { type: "call_busy" })).toBe(false);
   });
 });

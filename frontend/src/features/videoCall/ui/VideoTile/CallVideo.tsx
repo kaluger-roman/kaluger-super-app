@@ -2,23 +2,17 @@ import type { FC } from "react";
 import { useEffect, useRef } from "react";
 
 import * as Styled from "./VideoTile.styled";
-import type { VideoFit } from "./VideoTile.types";
+import type { VideoFit, VideoLayout } from "./VideoTile.types";
 
 type CallVideoProps = {
   stream: MediaStream | null;
   muted: boolean;
-  hidden?: boolean;
-  fit?: VideoFit;
-  padded?: boolean;
+  hidden: boolean;
+  fit: VideoFit;
+  layout: VideoLayout;
 };
 
-export const CallVideo: FC<CallVideoProps> = ({
-  stream,
-  muted,
-  hidden = false,
-  fit = "cover",
-  padded = false,
-}) => {
+export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layout }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -34,9 +28,10 @@ export const CallVideo: FC<CallVideoProps> = ({
       autoPlay
       playsInline
       muted={muted}
+      data-layout={layout}
       $hidden={hidden}
       $fit={fit}
-      $padded={padded}
+      $layout={layout}
     />
   );
 };

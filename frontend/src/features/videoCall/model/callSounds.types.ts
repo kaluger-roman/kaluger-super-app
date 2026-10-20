@@ -13,5 +13,3 @@ export type TonePattern = {
 };
 
 export type ToneHandle = { stop: () => void };
-
-export type AudioContextCtor = typeof AudioContext;

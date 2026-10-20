@@ -1,4 +1,4 @@
-import { Box, Dialog, IconButton, Typography } from "@mui/material";
+import { Box, Dialog, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -38,24 +38,4 @@ export const ActionColumn = styled(Box)({
   flexDirection: "column",
   alignItems: "center",
   gap: 6,
-});
-
-export const AcceptButton = styled(IconButton)(({ theme }) => ({
-  width: 60,
-  height: 60,
-  color: "#ffffff",
-  background: theme.palette.success.main,
-  "&:hover": {
-    background: theme.palette.success.dark,
-  },
-}));
-
-export const DeclineButton = styled(IconButton)({
-  width: 60,
-  height: 60,
-  color: "#ffffff",
-  background: "#d32f2f",
-  "&:hover": {
-    background: "#b71c1c",
-  },
 });

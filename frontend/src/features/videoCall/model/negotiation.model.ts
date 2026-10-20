@@ -1,162 +1,137 @@
 import { createEffect, sample } from "effector";
 
-import { NO_TRANSPORT_TEXT, CONNECTION_FAILED_TEXT } from "./call.constants";
-import { hasCallId } from "./call.helpers";
+import { notificationsModel } from "@shared";
+
+import { CONNECTION_FAILED_TEXT, RENEGOTIATION_FAILED_TEXT } from "./call.constants";
+import { hasCallId, isCallAddress } from "./call.helpers";
 import * as callModel from "./call.model";
-import type {
-  CallSignalTarget,
-  HangupParams,
-  LostTransportCheck,
-  OfferWithIceServers,
-  StartCallParams,
-} from "./call.types";
+import type { AcceptedCall, LocalMediaReady, OfferParams } from "./call.types";
 import * as peerConnectionModel from "./peerConnection.model";
-import {
-  forgetCallRole,
-  isCallOnRole,
-  selectInviteRole,
-  sendOverTransport,
-} from "./transport.helpers";
-import { stopSession } from "./webrtc.helpers";
+import { getSession } from "./webrtc.helpers";
 
-const sendInviteFx = createEffect((params: StartCallParams): void => {
-  selectInviteRole("studentId" in params ? "tutor" : "student");
-  const sent = sendOverTransport(
-    "studentId" in params
-      ? { type: "call_invite", targetStudentId: params.studentId }
-      : { type: "call_invite" }
-  );
-  if (!sent) throw new Error(NO_TRANSPORT_TEXT);
-});
-
-const callAcceptedReceivedFx = createEffect<CallSignalTarget, void>(
-  async ({ callId, iceServers }) => {
-    await peerConnectionModel.addLocalMediaFx({ callId, iceServers, polite: false });
+const callAcceptedReceivedFx = createEffect<AcceptedCall, void>(
+  async ({ callId, role, iceServers }) => {
+    await peerConnectionModel.addLocalMediaFx({ callId, role, iceServers, polite: false });
     await peerConnectionModel.sendOfferFx(callId);
   }
 );
 
-const offerReceivedFx = createEffect<OfferWithIceServers, void>(
-  async ({ callId, sdp, iceServers }) => {
-    await peerConnectionModel.addLocalMediaFx({ callId, iceServers, polite: true });
+const offerReceivedFx = createEffect<OfferParams, void>(
+  async ({ callId, role, sdp, iceServers }) => {
+    await peerConnectionModel.addLocalMediaFx({ callId, role, iceServers, polite: true });
     await peerConnectionModel.sendAnswerFx({ callId, sdp });
   }
 );
 
-const teardownFx = createEffect((callId: string | null): void => {
-  if (!callId) return;
-  stopSession(callId);
-  forgetCallRole(callId);
+// A renegotiation that failed mid-call leaves the connection in a half-applied offer;
+// rolling back keeps the call going and lets the next toggle renegotiate cleanly.
+const recoverNegotiationFx = createEffect(async (callId: string): Promise<void> => {
+  const session = getSession(callId);
+  if (!session || session.pc.signalingState === "stable") return;
+  await session.pc.setLocalDescription({ type: "rollback" });
 });
 
-const isCallOnLostTransportFx = createEffect(({ callId, role }: LostTransportCheck): boolean =>
-  isCallOnRole(callId, role)
-);
-
-const sendAcceptFx = createEffect((callId: string): void => {
-  sendOverTransport({ type: "call_accept", callId });
+const acceptedCall = sample({
+  clock: callModel.callAcceptedReceived,
+  source: callModel.$callRole,
+  fn: (role, target): AcceptedCall | null => (role ? { ...target, role } : null),
 });
-const sendRejectFx = createEffect((callId: string): void => {
-  sendOverTransport({ type: "call_reject", callId });
-});
-const sendCancelFx = createEffect((callId: string): void => {
-  sendOverTransport({ type: "call_cancel", callId });
-});
-const sendHangupFx = createEffect(({ callId, reason }: HangupParams): void => {
-  sendOverTransport(
-    reason ? { type: "call_hangup", callId, reason } : { type: "call_hangup", callId }
-  );
-});
-
-sample({ clock: callModel.callStarted, target: sendInviteFx });
-sample({ clock: sendInviteFx.failData, fn: () => NO_TRANSPORT_TEXT, target: callModel.callFailed });
-
-sample({ clock: callModel.callAcceptedReceived, target: callAcceptedReceivedFx });
 sample({
+  clock: acceptedCall,
+  filter: (call): call is AcceptedCall => call !== null,
+  target: callAcceptedReceivedFx,
+});
+const offerToAnswer = sample({
   clock: callModel.offerReceived,
-  source: callModel.$iceServers,
-  fn: (iceServers, offer) => ({ ...offer, iceServers }),
+  source: { iceServers: callModel.$iceServers, role: callModel.$callRole },
+  fn: ({ iceServers, role }, offer): OfferParams | null =>
+    role ? { ...offer, iceServers, role } : null,
+});
+sample({
+  clock: offerToAnswer,
+  filter: (offer): offer is OfferParams => offer !== null,
   target: offerReceivedFx,
 });
 sample({ clock: callModel.answerReceived, target: peerConnectionModel.applyAnswerFx });
 sample({ clock: callModel.iceReceived, target: peerConnectionModel.applyIceFx });
 
-sample({
-  clock: callModel.acceptCall,
-  source: callModel.$callId,
-  filter: hasCallId,
-  target: sendAcceptFx,
-});
-sample({
-  clock: callModel.rejectCall,
-  source: callModel.$callId,
-  filter: hasCallId,
-  target: sendRejectFx,
-});
-sample({
-  clock: callModel.cancelCall,
-  source: callModel.$callId,
-  filter: hasCallId,
-  target: sendCancelFx,
-});
-sample({
-  clock: [callModel.hangUp, callModel.callFailed],
-  source: callModel.$callId,
-  filter: hasCallId,
-  fn: (callId): HangupParams => ({ callId }),
-  target: sendHangupFx,
-});
-sample({
-  clock: callModel.mediaAcquisitionFailed,
-  source: callModel.$callId,
-  filter: hasCallId,
-  fn: (callId): HangupParams => ({ callId, reason: "media_unavailable" }),
-  target: sendHangupFx,
-});
+const peerNegotiationFailed = [
+  peerConnectionModel.sendAnswerFx.fail.map(({ params }) => params.callId),
+  peerConnectionModel.applyAnswerFx.fail.map(({ params }) => params.callId),
+  offerReceivedFx.fail.map(({ params }) => params.callId),
+];
 
-sample({ clock: callModel.incomingWhileBusy, target: sendRejectFx });
-sample({ clock: callModel.staleRingingReceived, target: sendCancelFx });
+// Before media connects any failed negotiation means the call cannot start.
 sample({
-  clock: callModel.staleAcceptReceived,
-  fn: (callId): HangupParams => ({ callId }),
-  target: sendHangupFx,
-});
-
-const negotiationFailed = sample({
   clock: [
     peerConnectionModel.sendOfferFx.fail.map(({ params }) => params),
-    peerConnectionModel.sendAnswerFx.fail.map(({ params }) => params.callId),
-    peerConnectionModel.applyAnswerFx.fail.map(({ params }) => params.callId),
+    ...peerNegotiationFailed,
   ],
-  source: { wasConnected: callModel.$wasConnected, callId: callModel.$callId },
-  filter: ({ wasConnected, callId }, failedCallId) => !wasConnected && callId === failedCallId,
+  source: { phase: callModel.$callPhase, callId: callModel.$callId },
+  filter: ({ phase, callId }, failedCallId) => phase === "connecting" && callId === failedCallId,
+  fn: () => CONNECTION_FAILED_TEXT,
+  target: callModel.callFailed,
 });
-
+// Mid-call it only loses the peer's latest media change, so the call stays up. A failed offer
+// of our own is reported by the toggle that made it.
+const midCallNegotiationFailed = sample({
+  clock: peerNegotiationFailed,
+  source: { phase: callModel.$callPhase, callId: callModel.$callId },
+  filter: ({ phase, callId }, failedCallId) => phase === "active" && callId === failedCallId,
+});
+const midCallFailedCallId = sample({
+  clock: midCallNegotiationFailed,
+  fn: ({ callId }) => callId,
+});
 sample({
-  clock: negotiationFailed,
+  clock: midCallFailedCallId,
+  filter: hasCallId,
+  target: recoverNegotiationFx,
+});
+sample({
+  clock: midCallNegotiationFailed,
+  fn: () => RENEGOTIATION_FAILED_TEXT,
+  target: notificationsModel.showErrorEvent,
+});
+sample({
+  clock: recoverNegotiationFx.fail,
   fn: () => CONNECTION_FAILED_TEXT,
   target: callModel.callFailed,
 });
 
-sample({
-  clock: callModel.transportDisconnected,
-  source: { callId: callModel.$callId, phase: callModel.$callPhase },
-  filter: ({ phase }) => phase !== "idle",
-  fn: ({ callId }, role) => ({ callId, role }),
-  target: isCallOnLostTransportFx,
+const localMediaResult = sample({
+  clock: peerConnectionModel.addLocalMediaFx.done,
+  source: callModel.$callId,
+  filter: (callId, { params }) => callId === params.callId,
+  fn: (_, { result }) => result,
+});
+const localMediaReady = sample({
+  clock: localMediaResult,
+  filter: (result): result is LocalMediaReady => result !== null,
 });
 sample({
-  clock: isCallOnLostTransportFx.doneData,
-  filter: Boolean,
-  target: callModel.callConnectionLost,
+  clock: localMediaReady,
+  fn: ({ media }) => media,
+  target: callModel.selfMediaStateChanged,
 });
-
-sample({ clock: callModel.callTerminated, source: callModel.$callId, target: teardownFx });
-sample({ clock: teardownFx.done, target: callModel.callResourcesReleased });
+sample({
+  clock: localMediaReady,
+  fn: ({ localStream, remoteStream }) => ({ localStream, remoteStream }),
+  target: callModel.localMediaAttached,
+});
 sample({
   clock: peerConnectionModel.addLocalMediaFx.fail,
   source: callModel.$callId,
   filter: (callId, { params }) => callId === params.callId,
   fn: () => undefined,
   target: callModel.mediaAcquisitionFailed,
+});
+
+// Every change of the own media state reaches the peer from this one place.
+sample({
+  clock: callModel.selfMediaStateChanged,
+  source: callModel.$callAddress,
+  filter: isCallAddress,
+  fn: (address, media) => ({ ...address, media }),
+  target: peerConnectionModel.sendMediaStateFx,
 });

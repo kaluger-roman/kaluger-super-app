@@ -5,41 +5,36 @@ import { notificationsModel } from "@shared";
 import type { CallMediaState } from "../videoCall.types";
 import { CAMERA_FAILED_TEXT } from "./call.constants";
 import * as callModel from "./call.model";
-import type { CameraToggleResult, MediaToggleContext } from "./call.types";
+import type { MediaPatch, MediaToggleContext } from "./call.types";
 import { CAMERA_ONLY_CONSTRAINTS } from "./negotiation.constants";
 import { getCameraTrack } from "./negotiation.helpers";
 import { sendVideoTrack } from "./peerConnection.helpers";
 import * as peerConnectionModel from "./peerConnection.model";
-import { sendMediaState } from "./transport.helpers";
 import { getSession, getUserMediaSafe } from "./webrtc.helpers";
 
-const toggleMicFx = createEffect(({ callId, media }: MediaToggleContext): void => {
-  if (!callId) return;
-  const session = getSession(callId);
-  if (!session?.localStream) return;
-  const nextMicOn = !media.micOn;
+// Each toggle returns the media fields it changed, or null when nothing changed. The patch is
+// applied to the state current at the end, so a toggle that finished meanwhile is kept.
+const toggleMicFx = createEffect(({ callId, media }: MediaToggleContext): MediaPatch | null => {
+  const session = callId ? getSession(callId) : undefined;
+  if (!session?.localStream) return null;
+  const micOn = !media.micOn;
   session.localStream.getAudioTracks().forEach((track) => {
-    track.enabled = nextMicOn;
+    track.enabled = micOn;
   });
-  const next: CallMediaState = { ...media, micOn: nextMicOn };
-  callModel.selfMediaStateChanged(next);
-  sendMediaState(callId, next);
+  return { micOn };
 });
 
 const toggleCameraFx = createEffect(
-  async ({ callId, media }: MediaToggleContext): Promise<CameraToggleResult> => {
-    if (!callId) return "unchanged";
+  async ({ callId, media }: MediaToggleContext): Promise<MediaPatch | null> => {
+    if (!callId) return null;
     const session = getSession(callId);
-    if (!session) return "unchanged";
+    if (!session) return null;
 
     const existingTrack = session.cameraTrack;
     if (existingTrack) {
-      const nextCameraOn = !media.cameraOn;
-      existingTrack.enabled = nextCameraOn;
-      const next: CallMediaState = { ...media, cameraOn: nextCameraOn };
-      callModel.selfMediaStateChanged(next);
-      sendMediaState(callId, next);
-      return "unchanged";
+      const cameraOn = !media.cameraOn;
+      existingTrack.enabled = cameraOn;
+      return { cameraOn };
     }
 
     const videoStream = await getUserMediaSafe(CAMERA_ONLY_CONSTRAINTS);
@@ -47,7 +42,7 @@ const toggleCameraFx = createEffect(
     const sessionGone = getSession(callId) !== session || !session.localStream;
     if (!videoTrack || sessionGone || session.cameraTrack) {
       videoStream.getTracks().forEach((track) => track.stop());
-      return "unchanged";
+      return null;
     }
     session.localStream?.addTrack(videoTrack);
     session.cameraTrack = videoTrack;
@@ -64,7 +59,7 @@ const toggleCameraFx = createEffect(
         throw error;
       }
     }
-    return "enabled";
+    return { cameraOn: true, cameraAvailable: true };
   }
 );
 
@@ -86,19 +81,18 @@ sample({
   target: toggleCameraFx,
 });
 
-const cameraEnabled = sample({
-  clock: toggleCameraFx.doneData,
-  source: callModel.$selfMediaState,
-  filter: (_, result) => result === "enabled",
-  fn: (media): CallMediaState => ({ ...media, cameraOn: true, cameraAvailable: true }),
-});
-
-sample({ clock: cameraEnabled, target: callModel.selfMediaStateChanged });
-sample({
-  clock: cameraEnabled,
+const mediaToggled = sample({
+  clock: [toggleMicFx.done, toggleCameraFx.done],
   source: callModel.$callId,
-  fn: (callId, media) => ({ callId, media }),
-  target: peerConnectionModel.sendMediaStateFx,
+  filter: (callId, { params }) => callId === params.callId,
+  fn: (_, { result }) => result,
+});
+sample({
+  clock: mediaToggled,
+  source: callModel.$selfMediaState,
+  filter: (_, patch): patch is MediaPatch => patch !== null,
+  fn: (media, patch): CallMediaState => ({ ...media, ...patch }),
+  target: callModel.selfMediaStateChanged,
 });
 
 sample({

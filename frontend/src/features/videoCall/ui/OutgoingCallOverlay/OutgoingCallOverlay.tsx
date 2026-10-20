@@ -6,6 +6,7 @@ import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
 import { CallAvatar } from "../CallAvatar";
+import { RoundCallButton } from "../RoundCallButton";
 import * as Styled from "./OutgoingCallOverlay.styled";
 
 export const OutgoingCallOverlay: FC = () => {
@@ -25,9 +26,16 @@ export const OutgoingCallOverlay: FC = () => {
       <Styled.Name variant="h5">{peerName}</Styled.Name>
 
       <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
-        <Styled.CancelButton onClick={() => actions.cancel()} aria-label="Отменить вызов">
-          <CallEndIcon />
-        </Styled.CancelButton>
+        <Styled.CancelSlot>
+          <RoundCallButton
+            $tone="danger"
+            $size={64}
+            onClick={() => actions.cancel()}
+            aria-label="Отменить вызов"
+          >
+            <CallEndIcon />
+          </RoundCallButton>
+        </Styled.CancelSlot>
         <Styled.CancelLabel variant="body2">Отменить</Styled.CancelLabel>
       </Box>
     </Styled.Backdrop>

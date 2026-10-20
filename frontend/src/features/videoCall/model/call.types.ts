@@ -1,25 +1,18 @@
 import type { CallMediaState } from "../videoCall.types";
 import type { CallCancelReason, CallRole } from "./signaling.types";
 
-export type CallPhase = "idle" | "outgoing" | "incoming" | "active";
+export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active";
 
 export type CallPeer = {
-  id: string;
   name: string;
-  role: "tutor" | "student";
+  role: CallRole;
 };
 
 export type IncomingCall = {
   callId: string;
   callerName: string;
+  role: CallRole;
 };
-
-type CallStatusKind = "info" | "error";
-
-export type CallStatusMessage = {
-  kind: CallStatusKind;
-  text: string;
-} | null;
 
 export type IceServerPayload = {
   urls: string;
@@ -39,8 +32,26 @@ export type CallSignalTarget = {
   iceServers: IceServerPayload[];
 };
 
-export type LocalMediaParams = CallSignalTarget & {
+// The socket a call's signals go through, named by the role that call arrived on.
+export type CallAddress = {
+  callId: string;
+  role: CallRole;
+};
+
+export type AcceptedCall = CallSignalTarget & CallAddress;
+
+export type LocalMediaParams = CallAddress & {
+  iceServers: IceServerPayload[];
   polite: boolean;
+};
+
+export type LocalStreams = {
+  localStream: MediaStream;
+  remoteStream: MediaStream;
+};
+
+export type LocalMediaReady = LocalStreams & {
+  media: CallMediaState;
 };
 
 export type SdpPayload = {
@@ -53,16 +64,15 @@ export type IcePayload = {
   candidate: RTCIceCandidateInit;
 };
 
+export type OfferParams = SdpPayload &
+  CallAddress & {
+    iceServers: IceServerPayload[];
+  };
+
 export type CallSignalRoutingContext = {
   callId: string | null;
   phase: CallPhase;
-};
-
-export type CameraToggleResult = "enabled" | "unchanged";
-
-export type MediaStateBroadcast = {
-  callId: string | null;
-  media: CallMediaState;
+  inviteId: string | null;
 };
 
 export type MediaToggleContext = {
@@ -70,17 +80,10 @@ export type MediaToggleContext = {
   media: CallMediaState;
 };
 
-export type ScreenShareContext = {
-  callId: string | null;
-  self: CallMediaState;
-  peerSharing: boolean;
-};
+export type MediaPatch = Partial<CallMediaState>;
 
-export type OfferWithIceServers = SdpPayload & { iceServers: IceServerPayload[] };
-
-export type LostTransportCheck = {
-  callId: string | null;
-  role: CallRole;
+export type MediaStateUpdate = CallAddress & {
+  media: CallMediaState;
 };
 
 export type CanceledNotice = {
@@ -88,7 +91,11 @@ export type CanceledNotice = {
   callerName: string;
 };
 
-export type HangupParams = {
-  callId: string;
+export type HangupParams = CallAddress & {
   reason?: "media_unavailable";
+};
+
+export type InviteParams = {
+  call: StartCallParams;
+  role: CallRole;
 };

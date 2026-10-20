@@ -1,40 +1,26 @@
-import { uniqueEmail } from "../../../__tests__/helpers";
+import { callWebSocket, uniqueEmail } from "../../../__tests__/helpers";
 
 import { prisma } from "../../../lib/prisma";
 import { handleCallSignal } from "../../../lib/websocket/signaling";
-import { callRegistry } from "../index";
-import type { CallerKindValue, CallSignalingOutbound } from "../../../types";
 
-const onlineUsers = new Set<string>();
-const onlineStudents = new Set<string>();
-
-jest.mock("../../../lib/wsManager", () => ({
-  getWebSocketManager: () => ({
-    getConnectedUsers: () => Array.from(onlineUsers),
-    getConnectedStudents: () => Array.from(onlineStudents),
-    sendToUser: jest.fn(),
-    sendToStudent: jest.fn(),
-  }),
-}));
+jest.mock(
+  "../../../lib/wsManager",
+  () => jest.requireActual("../../../__tests__/helpers").callWebSocketManagerModule
+);
 
 describe("call lifecycle → call_records persistence", () => {
   let tutorId: string;
   let studentId: string;
   let studentUserId: string;
-  let sent: CallSignalingOutbound[];
-
-  const send = (_kind: CallerKindValue, _id: string, message: CallSignalingOutbound): void => {
-    sent.push(message);
-  };
+  const sent = () => callWebSocket.sent.map((captured) => captured.message);
 
   const inviteByTutor = async (): Promise<string> => {
-    await handleCallSignal(
-      "tutor",
-      tutorId,
-      { type: "call_invite", targetStudentId: studentId },
-      send
-    );
-    const ringing = sent.find((m) => m.type === "call_ringing");
+    await handleCallSignal("tutor", tutorId, {
+      type: "call_invite",
+      inviteId: "invite-1",
+      targetStudentId: studentId,
+    });
+    const ringing = sent().find((m) => m.type === "call_ringing");
     if (!ringing || ringing.type !== "call_ringing") throw new Error("no ringing");
     return ringing.callId;
   };
@@ -70,16 +56,12 @@ describe("call lifecycle → call_records persistence", () => {
   });
 
   beforeEach(() => {
-    sent = [];
-    callRegistry.__resetLiveCallsForTest();
-    onlineUsers.clear();
-    onlineStudents.clear();
-    onlineUsers.add(tutorId);
-    onlineStudents.add(studentUserId);
+    callWebSocket.reset();
+    callWebSocket.connect("tutor", tutorId);
+    callWebSocket.connect("student", studentUserId);
   });
 
   afterEach(async () => {
-    callRegistry.__resetLiveCallsForTest();
     await prisma.callRecord.deleteMany({ where: { tutorId } });
   });
 
@@ -93,9 +75,9 @@ describe("call lifecycle → call_records persistence", () => {
 
   it("should write a COMPLETED record after connect → hangup", async () => {
     const callId = await inviteByTutor();
-    await handleCallSignal("student", studentUserId, { type: "call_accept", callId }, send);
-    await handleCallSignal("tutor", tutorId, { type: "call_connected", callId }, send);
-    await handleCallSignal("tutor", tutorId, { type: "call_hangup", callId }, send);
+    await handleCallSignal("student", studentUserId, { type: "call_accept", callId });
+    await handleCallSignal("tutor", tutorId, { type: "call_connected", callId });
+    await handleCallSignal("tutor", tutorId, { type: "call_hangup", callId });
 
     const record = await latestRecord();
     expect(record.status).toBe("COMPLETED");
@@ -106,27 +88,27 @@ describe("call lifecycle → call_records persistence", () => {
 
   it("should write a REJECTED record when the callee rejects", async () => {
     const callId = await inviteByTutor();
-    await handleCallSignal("student", studentUserId, { type: "call_reject", callId }, send);
+    await handleCallSignal("student", studentUserId, { type: "call_reject", callId });
 
     const record = await latestRecord();
     expect(record.status).toBe("REJECTED");
     expect(record.durationSeconds).toBeNull();
-    expect(sent.some((m) => m.type === "call_rejected")).toBe(true);
+    expect(sent().some((m) => m.type === "call_rejected")).toBe(true);
   });
 
   it("should write a CANCELED record when the caller cancels before answer", async () => {
     const callId = await inviteByTutor();
-    await handleCallSignal("tutor", tutorId, { type: "call_cancel", callId }, send);
+    await handleCallSignal("tutor", tutorId, { type: "call_cancel", callId });
 
     const record = await latestRecord();
     expect(record.status).toBe("CANCELED");
-    expect(sent.some((m) => m.type === "call_canceled")).toBe(true);
+    expect(sent().some((m) => m.type === "call_canceled")).toBe(true);
   });
 
   it("should write a FAILED record when hanging up before media connected", async () => {
     const callId = await inviteByTutor();
-    await handleCallSignal("student", studentUserId, { type: "call_accept", callId }, send);
-    await handleCallSignal("tutor", tutorId, { type: "call_hangup", callId }, send);
+    await handleCallSignal("student", studentUserId, { type: "call_accept", callId });
+    await handleCallSignal("tutor", tutorId, { type: "call_hangup", callId });
 
     const record = await latestRecord();
     expect(record.status).toBe("FAILED");
@@ -134,15 +116,14 @@ describe("call lifecycle → call_records persistence", () => {
   });
 
   it("should answer call_unavailable and write a MISSED record when the callee is offline", async () => {
-    onlineStudents.clear();
-    await handleCallSignal(
-      "tutor",
-      tutorId,
-      { type: "call_invite", targetStudentId: studentId },
-      send
-    );
+    callWebSocket.disconnect("student", studentUserId);
+    await handleCallSignal("tutor", tutorId, {
+      type: "call_invite",
+      inviteId: "invite-1",
+      targetStudentId: studentId,
+    });
 
-    expect(sent.some((m) => m.type === "call_unavailable")).toBe(true);
+    expect(sent().some((m) => m.type === "call_unavailable")).toBe(true);
     const records = await prisma.callRecord.findMany({ where: { tutorId } });
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({

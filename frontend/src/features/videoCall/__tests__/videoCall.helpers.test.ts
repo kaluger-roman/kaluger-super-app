@@ -30,11 +30,11 @@ describe("features/videoCall helpers", () => {
   });
 
   it("should label every call status in Russian", () => {
-    expect(getCallStatusLabel("completed")).toBe("Завершён");
-    expect(getCallStatusLabel("missed")).toBe("Пропущен");
-    expect(getCallStatusLabel("rejected")).toBe("Отклонён");
-    expect(getCallStatusLabel("canceled")).toBe("Отменён");
-    expect(getCallStatusLabel("failed")).toBe("Не удалось соединиться");
+    expect(getCallStatusLabel("COMPLETED")).toBe("Завершён");
+    expect(getCallStatusLabel("MISSED")).toBe("Пропущен");
+    expect(getCallStatusLabel("REJECTED")).toBe("Отклонён");
+    expect(getCallStatusLabel("CANCELED")).toBe("Отменён");
+    expect(getCallStatusLabel("FAILED")).toBe("Не удалось соединиться");
   });
 
   it("should label the call direction", () => {

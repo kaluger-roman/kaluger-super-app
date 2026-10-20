@@ -1,30 +1,35 @@
 import { allSettled, fork } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callModel, setCallTransport, setWebRtcAdapter, stopAllSessions } from "../index";
-import { connectCallerSession, settleMicrotasks, startCallerSession } from "./callFlow";
+import { callModel } from "../index";
+import type { CallSignalingInbound } from "../signaling.types";
+import { setWebRtcAdapter } from "../webrtc.helpers";
+import {
+  connectCallerSession,
+  installTransport,
+  resetCallFlow,
+  settleMicrotasks,
+  startCallerSession,
+} from "./callFlow";
 import { createFakeAdapter, createFakeStream } from "./fakeWebrtc";
 import { readStore } from "./storeProbe";
 
 describe("features/videoCall/model media controls", () => {
-  let sent: Array<{ type: string; [key: string]: unknown }>;
+  let sent: CallSignalingInbound[];
 
   beforeEach(() => {
-    sent = [];
-    setCallTransport((message) => sent.push(message));
+    sent = installTransport();
     setWebRtcAdapter(createFakeAdapter());
   });
 
   afterEach(() => {
-    callModel.hangUp();
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
     vi.restoreAllMocks();
   });
 
   it("should flip the audio track and broadcast call_media_state on toggleMic", async () => {
     await startCallerSession("call-mic");
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleMic();
     await settleMicrotasks();
@@ -36,7 +41,7 @@ describe("features/videoCall/model media controls", () => {
 
   it("should turn the camera off and broadcast when toggled", async () => {
     await startCallerSession("call-cam");
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleCamera();
     await settleMicrotasks();
@@ -49,19 +54,19 @@ describe("features/videoCall/model media controls", () => {
   it("renegotiates with a new offer when the camera is enabled after an audio-only start", async () => {
     setWebRtcAdapter(
       createFakeAdapter({
-        getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) => {
+        getUserMedia: async (constraints) => {
           if (constraints.video && constraints.audio) {
             throw new Error("NotReadableError");
           }
           if (constraints.video) return createFakeStream(["video"]);
           return createFakeStream(["audio"]);
-        }),
+        },
       })
     );
 
     await connectCallerSession("call-reneg");
     expect(readStore(callModel.$selfMediaState).cameraOn).toBe(false);
-    sent = [];
+    sent.length = 0;
 
     callModel.toggleCamera();
     await settleMicrotasks();
@@ -90,10 +95,10 @@ describe("features/videoCall/model media controls", () => {
   it("should fall back to audio-only when video acquisition fails", async () => {
     setWebRtcAdapter(
       createFakeAdapter({
-        getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) => {
+        getUserMedia: async (constraints) => {
           if (constraints.video) throw new Error("NotAllowedError");
           return createFakeStream(["audio"]);
-        }),
+        },
       })
     );
 
@@ -106,17 +111,46 @@ describe("features/videoCall/model media controls", () => {
   it("should abort the call when both camera and microphone fail", async () => {
     setWebRtcAdapter(
       createFakeAdapter({
-        getUserMedia: vi.fn(async () => {
+        getUserMedia: async () => {
           throw new Error("NotAllowedError");
-        }),
+        },
       })
     );
 
     await startCallerSession("call-x");
 
-    expect(readStore(callModel.$callStatusMessage)).toEqual({
-      kind: "error",
-      text: "Нет доступа к камере и микрофону",
+    expect(readStore(callModel.$callPhase)).toBe("idle");
+    expect(sent).toContainEqual({
+      type: "call_hangup",
+      callId: "call-x",
+      reason: "media_unavailable",
     });
+  });
+
+  it("should keep a mic toggled while the camera was being turned on", async () => {
+    let grantCamera: (stream: ReturnType<typeof createFakeStream>) => void = () => undefined;
+    setWebRtcAdapter(
+      createFakeAdapter({
+        getUserMedia: (constraints) => {
+          if (constraints.video && constraints.audio) return Promise.reject(new Error("busy"));
+          if (constraints.video) {
+            return new Promise((resolve) => {
+              grantCamera = resolve;
+            });
+          }
+          return Promise.resolve(createFakeStream(["audio"]));
+        },
+      })
+    );
+    await connectCallerSession("call-both");
+
+    callModel.toggleCamera();
+    await settleMicrotasks();
+    callModel.toggleMic();
+    await settleMicrotasks();
+    grantCamera(createFakeStream(["video"]));
+    await settleMicrotasks();
+
+    expect(readStore(callModel.$selfMediaState)).toMatchObject({ micOn: false, cameraOn: true });
   });
 });

@@ -2,14 +2,17 @@ import { Box, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
+import { CALL_SCREEN_BACKGROUND } from "../../videoCall.constants";
+
+// Stacking order of the screen: stage < own PiP < connection banner.
 export const Root = styled(Box)({
   position: "relative",
+  isolation: "isolate",
   width: "100%",
   height: "100%",
-  minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
-  background: "radial-gradient(circle at 50% 20%, #0d2417 0%, #050d08 100%)",
+  background: CALL_SCREEN_BACKGROUND,
 });
 
 export const Header = styled(Box)({
@@ -18,7 +21,6 @@ export const Header = styled(Box)({
   justifyContent: "space-between",
   gap: 12,
   padding: "16px 20px",
-  zIndex: 3,
 });
 
 export const HeaderInfo = styled(Box)({
@@ -61,7 +63,7 @@ export const LocalPip = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({
   bottom: 24,
   width: $compact ? 132 : 220,
   height: $compact ? 80 : 132,
-  zIndex: 4,
+  zIndex: 1,
   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
   borderRadius: 16,
   "@media (max-width: 600px)": {
@@ -77,11 +79,7 @@ export const BannerSlot = styled(Box)({
   top: 12,
   left: "50%",
   transform: "translateX(-50%)",
-  zIndex: 5,
+  zIndex: 2,
   width: "max-content",
   maxWidth: "90%",
-});
-
-export const Controls = styled(Box)({
-  zIndex: 3,
 });

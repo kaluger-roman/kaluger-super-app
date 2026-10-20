@@ -1,15 +1,14 @@
 import { allSettled, fork } from "effector";
 import type { Scope } from "effector";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { callModel, setCallTransport, stopAllSessions } from "../index";
-
-const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
+import { callModel } from "../index";
+import { installTransport, resetCallFlow, settleMicrotasks } from "./callFlow";
 
 const startConnectedCall = async (scope: Scope): Promise<void> => {
   await allSettled(callModel.incomingCallReceived, {
     scope,
-    params: { callId: "call-1", callerName: "Анна" },
+    params: { callId: "call-1", callerName: "Анна", role: "tutor" },
   });
   void allSettled(callModel.callConnected, { scope });
   await settleMicrotasks();
@@ -17,12 +16,11 @@ const startConnectedCall = async (scope: Scope): Promise<void> => {
 
 describe("features/videoCall/model/call.model transitions", () => {
   beforeEach(() => {
-    setCallTransport(vi.fn());
+    installTransport();
   });
 
   afterEach(() => {
-    stopAllSessions();
-    setCallTransport(null);
+    resetCallFlow();
   });
 
   it("should move to outgoing and set the peer on callStarted", async () => {
@@ -35,15 +33,14 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
     expect(scope.getState(callModel.$outgoingCallPeer)).toEqual({
-      id: "stu-1",
       name: "Иван Смирнов",
       role: "student",
     });
+    expect(scope.getState(callModel.$callRole)).toBe("tutor");
   });
 
-  it("should set a tutor peer with an empty id when the student starts a call without an id", async () => {
+  it("should set the tutor as the peer when the student starts a call", async () => {
     const scope = fork();
-    setCallTransport(vi.fn(), null, "student");
 
     await allSettled(callModel.callStarted, {
       scope,
@@ -52,10 +49,10 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
     expect(scope.getState(callModel.$outgoingCallPeer)).toEqual({
-      id: "",
       name: "Анна Петрова",
       role: "tutor",
     });
+    expect(scope.getState(callModel.$callRole)).toBe("student");
   });
 
   it("should move to incoming and store the caller on incomingCallReceived", async () => {
@@ -63,14 +60,16 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-1", callerName: "Анна Петрова" },
+      params: { callId: "call-1", callerName: "Анна Петрова", role: "student" },
     });
 
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
     expect(scope.getState(callModel.$incomingCall)).toEqual({
       callId: "call-1",
       callerName: "Анна Петрова",
+      role: "student",
     });
+    expect(scope.getState(callModel.$callRole)).toBe("student");
   });
 
   it("should move to active on callConnected", async () => {
@@ -79,7 +78,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     await startConnectedCall(scope);
 
     expect(scope.getState(callModel.$callPhase)).toBe("active");
-    expect(scope.getState(callModel.$callStatusMessage)).toBeNull();
+    expect(scope.getState(callModel.$isConnecting)).toBe(false);
 
     void allSettled(callModel.hangUp, { scope });
     await settleMicrotasks();
@@ -102,7 +101,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const rejectScope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope: rejectScope,
-      params: { callId: "c", callerName: "A" },
+      params: { callId: "c", callerName: "A", role: "tutor" },
     });
     await allSettled(callModel.rejectCall, { scope: rejectScope });
     expect(rejectScope.getState(callModel.$callPhase)).toBe("idle");
@@ -127,28 +126,52 @@ describe("features/videoCall/model/call.model transitions", () => {
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
 
-  it("leaves the incoming phase and shows a connecting status when the callee accepts", async () => {
+  it("should be connecting, not active, once the callee accepts", async () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-acc", callerName: "Анна" },
+      params: { callId: "call-acc", callerName: "Анна", role: "tutor" },
     });
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
 
     await allSettled(callModel.acceptCall, { scope });
 
-    expect(scope.getState(callModel.$callPhase)).toBe("active");
-    expect(scope.getState(callModel.$callStatusMessage)).toEqual({
-      kind: "info",
-      text: "Соединение…",
+    expect(scope.getState(callModel.$callPhase)).toBe("connecting");
+    expect(scope.getState(callModel.$isConnecting)).toBe(true);
+  });
+
+  it("should be connecting, not outgoing, once the callee answers the caller", async () => {
+    const scope = fork();
+    await allSettled(callModel.callStarted, {
+      scope,
+      params: { studentId: "s", peerName: "N" },
     });
+
+    await allSettled(callModel.callAcceptedReceived, {
+      scope,
+      params: { callId: "call-out", iceServers: [{ urls: "stun:example" }] },
+    });
+
+    expect(scope.getState(callModel.$callPhase)).toBe("connecting");
+    expect(scope.getState(callModel.$iceServers)).toEqual([{ urls: "stun:example" }]);
+  });
+
+  it("should forget the call address only after the call resources are released", async () => {
+    const scope = fork();
+    await startConnectedCall(scope);
+
+    void allSettled(callModel.hangUp, { scope });
+    await settleMicrotasks();
+
+    expect(scope.getState(callModel.$callAddress)).toBeNull();
+    expect(scope.getState(callModel.$remoteStream)).toBeNull();
   });
 
   it("should return to idle on canceledReceived", async () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-cancel", callerName: "Анна" },
+      params: { callId: "call-cancel", callerName: "Анна", role: "tutor" },
     });
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
 

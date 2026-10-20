@@ -26,7 +26,7 @@ export const CallHistoryRow: FC<CallHistoryRowProps> = ({ record }) => {
   const incoming = record.direction === "incoming";
 
   return (
-    <Styled.RowCard variant="outlined">
+    <Styled.RowCard variant="outlined" role="listitem">
       <Styled.DirectionIconBox $incoming={incoming}>
         {incoming ? <CallReceivedIcon /> : <CallMadeIcon />}
       </Styled.DirectionIconBox>

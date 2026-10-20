@@ -17,6 +17,6 @@ export const registerInviteAttempt = (sender: CallParticipant, now = Date.now())
   return true;
 };
 
-export const __resetInviteRateLimitForTest = (): void => {
+export const __resetInviteRateLimitForTests = (): void => {
   invitesBySender.clear();
 };

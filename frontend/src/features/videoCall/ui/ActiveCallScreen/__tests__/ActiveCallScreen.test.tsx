@@ -7,11 +7,13 @@ import { describe, expect, it } from "vitest";
 import { theme } from "@shared";
 
 import { callModel } from "../../../model";
+import type { CallPhase } from "../../../model/call.types";
 import { ActiveCallScreen } from "../ActiveCallScreen";
 
-const renderScreen = (peerSharing: boolean, selfCameraOn = true) => {
+const renderScreen = (peerSharing: boolean, selfCameraOn = true, phase: CallPhase = "active") => {
   const scope = fork({
     values: [
+      [callModel.$callPhase, phase],
       [
         callModel.$peerMediaState,
         { micOn: true, cameraOn: true, screenSharing: peerSharing, cameraAvailable: true },
@@ -34,12 +36,22 @@ const renderScreen = (peerSharing: boolean, selfCameraOn = true) => {
 describe("ActiveCallScreen", () => {
   it("should shrink the own tile while the peer shares a screen", () => {
     renderScreen(true);
-    expect(screen.getByTestId("local-pip")).toHaveStyle({ width: "132px", height: "80px" });
+    expect(screen.getByTestId("local-pip")).toHaveAttribute("data-compact", "true");
   });
 
-  it("should keep the regular own tile size otherwise", () => {
+  it("should keep the regular own tile otherwise", () => {
     renderScreen(false);
-    expect(screen.getByTestId("local-pip")).toHaveStyle({ width: "220px", height: "132px" });
+    expect(screen.getByTestId("local-pip")).toHaveAttribute("data-compact", "false");
+  });
+
+  it("should show the connecting banner until media connects", () => {
+    renderScreen(false, true, "connecting");
+    expect(screen.getByRole("status")).toHaveTextContent("Соединение…");
+  });
+
+  it("should not show the connecting banner once connected", () => {
+    renderScreen(false);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("should drop the camera-off label from the compact own tile", () => {
