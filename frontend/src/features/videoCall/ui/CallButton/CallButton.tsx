@@ -4,8 +4,7 @@ import { Videocam as VideocamIcon } from "@mui/icons-material";
 
 import { Button } from "@shared";
 
-type CallButtonVariant = "contained" | "outlined" | "text";
-type CallButtonColor = "primary" | "secondary" | "inherit";
+import type { CallButtonColor, CallButtonVariant } from "./CallButton.types";
 
 type CallButtonProps = {
   label?: string;

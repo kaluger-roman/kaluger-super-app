@@ -1,25 +1,6 @@
 import { prisma } from "../../lib/prisma";
-import type { CallerKindValue } from "../../types";
-import type { CallFinalizeStatus } from "./callSignaling.types";
-
-type CreateFinalizedCallRecordArgs = {
-  tutorId: string;
-  studentId: string;
-  callerKind: CallerKindValue;
-  status: CallFinalizeStatus;
-  startedAt: Date;
-  endedAt?: Date;
-  connectedAt?: Date;
-};
-
-const computeDurationSeconds = (
-  status: CallFinalizeStatus,
-  connectedAt?: Date,
-  endedAt?: Date
-): number | null => {
-  if (status !== "COMPLETED" || !connectedAt || !endedAt) return null;
-  return Math.max(0, Math.floor((endedAt.getTime() - connectedAt.getTime()) / 1000));
-};
+import { computeDurationSeconds } from "./callSignaling.helpers";
+import type { CreateFinalizedCallRecordArgs } from "./callSignaling.types";
 
 export const createFinalizedCallRecord = async ({
   tutorId,

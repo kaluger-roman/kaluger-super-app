@@ -1,5 +1,5 @@
 import request from "supertest";
-import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
@@ -20,7 +20,7 @@ describe("Call history REST API", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Анна Петрова",
         isEmailVerified: true,
@@ -31,7 +31,7 @@ describe("Call history REST API", () => {
 
     const otherTutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Чужой",
         isEmailVerified: true,
@@ -47,7 +47,7 @@ describe("Call history REST API", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Иван Смирнов",
         isEmailVerified: true,
@@ -64,7 +64,7 @@ describe("Call history REST API", () => {
 
     const unlinked = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Без репетитора",
         isEmailVerified: true,

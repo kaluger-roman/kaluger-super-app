@@ -13,4 +13,5 @@ export const CALL_SIGNAL_OUTBOUND_TYPES = [
   "webrtc_answer",
   "webrtc_ice",
   "call_media_state",
+  "call_history_updated",
 ] as const;

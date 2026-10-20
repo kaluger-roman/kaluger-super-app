@@ -1,4 +1,5 @@
 import type { CallMediaState } from "../videoCall.types";
+import type { CallCancelReason, CallRole } from "./signaling.types";
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "active";
 
@@ -52,6 +53,18 @@ export type IcePayload = {
   candidate: RTCIceCandidateInit;
 };
 
+export type CallSignalRoutingContext = {
+  callId: string | null;
+  phase: CallPhase;
+};
+
+export type CameraToggleResult = "enabled" | "unchanged";
+
+export type MediaStateBroadcast = {
+  callId: string | null;
+  media: CallMediaState;
+};
+
 export type MediaToggleContext = {
   callId: string | null;
   media: CallMediaState;
@@ -63,4 +76,19 @@ export type ScreenShareContext = {
   peerSharing: boolean;
 };
 
-export type { CallMediaState };
+export type OfferWithIceServers = SdpPayload & { iceServers: IceServerPayload[] };
+
+export type LostTransportCheck = {
+  callId: string | null;
+  role: CallRole;
+};
+
+export type CanceledNotice = {
+  reason: CallCancelReason;
+  callerName: string;
+};
+
+export type HangupParams = {
+  callId: string;
+  reason?: "media_unavailable";
+};

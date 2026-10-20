@@ -1,6 +1,14 @@
+import { createHmac } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { CallAuthorizationError } from "../../utils";
-import type { ResolvedPair } from "./callSignaling.types";
+import { ARCHIVED_STUDENT_CALL_MESSAGE } from "./callSignaling.constants";
+import type {
+  CallDropOutcome,
+  CallFinalizeStatus,
+  CallParticipant,
+  LiveCall,
+  ResolvedPair,
+} from "./callSignaling.types";
 
 export const resolvePairForTutor = async (
   tutorUserId: string,
@@ -12,6 +20,7 @@ export const resolvePairForTutor = async (
       id: true,
       name: true,
       tutorId: true,
+      archived: true,
       tutor: { select: { name: true } },
       studentUser: { select: { id: true } },
     },
@@ -19,6 +28,9 @@ export const resolvePairForTutor = async (
 
   if (!student || student.tutorId !== tutorUserId) {
     throw new CallAuthorizationError();
+  }
+  if (student.archived) {
+    throw new CallAuthorizationError(ARCHIVED_STUDENT_CALL_MESSAGE);
   }
   if (!student.studentUser) {
     throw new CallAuthorizationError("У ученика нет кабинета для звонков");
@@ -44,6 +56,7 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
           id: true,
           name: true,
           tutorId: true,
+          archived: true,
           tutor: { select: { name: true } },
         },
       },
@@ -53,6 +66,9 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
   if (!studentUser?.student) {
     throw new CallAuthorizationError();
   }
+  if (studentUser.student.archived) {
+    throw new CallAuthorizationError(ARCHIVED_STUDENT_CALL_MESSAGE);
+  }
 
   return {
     tutorUserId: studentUser.student.tutorId,
@@ -61,4 +77,34 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
     studentName: studentUser.student.name,
     tutorName: studentUser.student.tutor.name,
   };
+};
+
+export const computeDurationSeconds = (
+  status: CallFinalizeStatus,
+  connectedAt?: Date,
+  endedAt?: Date
+): number | null => {
+  if (status !== "COMPLETED" || !connectedAt || !endedAt) return null;
+  return Math.max(0, Math.floor((endedAt.getTime() - connectedAt.getTime()) / 1000));
+};
+
+export const resolveHangupStatus = (call: LiveCall): CallFinalizeStatus =>
+  call.status === "connected" ? "COMPLETED" : "FAILED";
+
+export const resolveDropOutcome = (call: LiveCall, dropped: CallParticipant): CallDropOutcome => {
+  if (call.status === "connected") return { status: "COMPLETED", peerMessage: "call_ended" };
+  if (call.status === "accepted") return { status: "FAILED", peerMessage: "call_ended" };
+  if (dropped.kind === call.callerKind) return { status: "CANCELED", peerMessage: "call_canceled" };
+  return { status: "MISSED", peerMessage: "call_unavailable" };
+};
+
+export const mintTurnCredentials = (
+  secret: string,
+  ttlSeconds: number,
+  participant: CallParticipant
+): { username: string; credential: string } => {
+  const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const username = `${expiry}:${participant.kind}-${participant.id}`;
+  const credential = createHmac("sha1", secret).update(username).digest("base64");
+  return { username, credential };
 };

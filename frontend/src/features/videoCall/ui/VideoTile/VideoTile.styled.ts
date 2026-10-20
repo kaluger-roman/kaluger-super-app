@@ -2,16 +2,21 @@ import { Box, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
+import { SHORT_STAGE_MEDIA } from "./VideoTile.constants";
+import type { VideoFit } from "./VideoTile.types";
+
 type TileBoxProps = {
   $hasVideo: boolean;
   $isScreen: boolean;
+  $isSelf: boolean;
 };
 
-export const TileBox = styled(Box)<TileBoxProps>(({ $hasVideo, $isScreen }) => ({
+export const TileBox = styled(Box)<TileBoxProps>(({ $hasVideo, $isScreen, $isSelf }) => ({
   position: "relative",
   width: "100%",
   height: "100%",
-  minHeight: 180,
+  // The own tile fills the PiP, which is shorter than the minimum of the main tile.
+  minHeight: $isSelf ? 0 : 180,
   borderRadius: 16,
   overflow: "hidden",
   display: "flex",
@@ -27,70 +32,24 @@ export const TileBox = styled(Box)<TileBoxProps>(({ $hasVideo, $isScreen }) => (
       : "#10231a",
 }));
 
-export const FakeVideoPattern = styled(Box)({
-  position: "absolute",
-  inset: 0,
-  opacity: 0.5,
-  backgroundImage:
-    "radial-gradient(circle at 30% 25%, rgba(129, 199, 132, 0.45) 0, transparent 38%), radial-gradient(circle at 75% 70%, rgba(76, 175, 80, 0.35) 0, transparent 42%)",
-});
-
-export const VideoElement = styled("video")<{ $hidden: boolean }>(({ $hidden }) => ({
-  position: "absolute",
-  inset: 0,
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  visibility: $hidden ? "hidden" : "visible",
-}));
-
-export const ScreenMock = styled(Box)({
-  position: "absolute",
-  top: 52,
-  right: 16,
-  bottom: 52,
-  left: 16,
-  borderRadius: 8,
-  background: "#f4f7f5",
-  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.45)",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-});
-
-export const ScreenMockBar = styled(Box)({
-  height: 26,
-  background: "#dfe7e1",
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  paddingLeft: 10,
-});
-
-export const ScreenMockDot = styled(Box)({
-  width: 9,
-  height: 9,
-  borderRadius: "50%",
-  background: "#b6c4bb",
-});
-
-export const ScreenMockBody = styled(Box)({
-  flex: 1,
-  padding: 12,
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-});
-
-type ScreenMockLineProps = {
-  $width: string;
+type VideoElementProps = {
+  $hidden: boolean;
+  $fit: VideoFit;
+  $padded: boolean;
 };
 
-export const ScreenMockLine = styled(Box)<ScreenMockLineProps>(({ $width }) => ({
-  height: 12,
-  width: $width,
-  borderRadius: 6,
-  background: "#c8e6c8",
+export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit, $padded }) => ({
+  position: "absolute",
+  // A padded screen stays clear of the label pill on top and the name pill below.
+  top: $padded ? 44 : 0,
+  bottom: $padded ? 44 : 0,
+  left: 0,
+  right: 0,
+  width: "100%",
+  height: $padded ? "calc(100% - 88px)" : "100%",
+  objectFit: $fit,
+  visibility: $hidden ? "hidden" : "visible",
+  [SHORT_STAGE_MEDIA]: { top: 0, bottom: 0, height: "100%" },
 }));
 
 export const PlaceholderColumn = styled(Box)({
@@ -137,27 +96,31 @@ export const NamePill = styled(Box)({
 
 type StatusBadgeProps = {
   $variant: "muted" | "screen";
+  $compact: boolean;
 };
 
-export const StatusBadge = styled(Box)<StatusBadgeProps>(({ $variant }) => ({
+export const StatusBadge = styled(Box)<StatusBadgeProps>(({ $variant, $compact }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 28,
-  height: 28,
+  width: $compact ? 20 : 28,
+  height: $compact ? 20 : 28,
   borderRadius: "50%",
   color: "#ffffff",
   background: $variant === "screen" ? "rgba(46, 125, 71, 0.9)" : "rgba(211, 47, 47, 0.9)",
+  "& .MuiSvgIcon-root": {
+    fontSize: $compact ? 14 : 20,
+  },
 }));
 
-export const TopRightBadges = styled(Box)({
+export const TopRightBadges = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({
   position: "absolute",
-  top: 12,
-  right: 12,
+  top: $compact ? 6 : 12,
+  right: $compact ? 6 : 12,
   zIndex: 2,
   display: "flex",
   gap: 8,
-});
+}));
 
 export const ScreenLabelPill = styled(Box)({
   position: "absolute",
@@ -180,6 +143,9 @@ export const ScreenLabelPill = styled(Box)({
   overflow: "hidden",
   "& .MuiSvgIcon-root": {
     flexShrink: 0,
+  },
+  [SHORT_STAGE_MEDIA]: {
+    background: "rgba(46, 125, 71, 0.6)",
   },
 });
 

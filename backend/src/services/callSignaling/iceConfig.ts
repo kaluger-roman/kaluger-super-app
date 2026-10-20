@@ -1,20 +1,9 @@
-import { createHmac } from "crypto";
 import type { IceServer } from "../../types";
+import { DEFAULT_STUN_URL, DEFAULT_TURN_TTL_SECONDS } from "./callSignaling.constants";
+import { mintTurnCredentials } from "./callSignaling.helpers";
+import type { CallParticipant } from "./callSignaling.types";
 
-const DEFAULT_STUN_URL = "stun:stun.l.google.com:19302";
-const DEFAULT_TURN_TTL_SECONDS = 86400;
-
-const mintTurnCredentials = (
-  secret: string,
-  ttlSeconds: number
-): { username: string; credential: string } => {
-  const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const username = String(expiry);
-  const credential = createHmac("sha1", secret).update(username).digest("base64");
-  return { username, credential };
-};
-
-export const buildIceServers = (): IceServer[] => {
+export const buildIceServers = (participant: CallParticipant): IceServer[] => {
   const iceServers: IceServer[] = [{ urls: process.env.STUN_URL || DEFAULT_STUN_URL }];
 
   const turnUrl = process.env.TURN_URL;
@@ -22,7 +11,7 @@ export const buildIceServers = (): IceServer[] => {
 
   if (turnUrl && turnSecret) {
     const ttl = Number(process.env.TURN_CREDENTIAL_TTL) || DEFAULT_TURN_TTL_SECONDS;
-    const { username, credential } = mintTurnCredentials(turnSecret, ttl);
+    const { username, credential } = mintTurnCredentials(turnSecret, ttl, participant);
     iceServers.push({ urls: turnUrl, username, credential });
   }
 

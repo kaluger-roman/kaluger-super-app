@@ -20,6 +20,7 @@ export const ActiveCallScreen: FC = () => {
   const { localStream, remoteStream } = useCallStreams();
 
   const banner = toBanner(statusMessage);
+  const compactPip = peerMedia.screenSharing;
 
   return (
     <Styled.Root>
@@ -37,7 +38,7 @@ export const ActiveCallScreen: FC = () => {
           </Styled.BannerSlot>
         )}
 
-        <Styled.RemoteWrap>
+        <Styled.RemoteWrap $screen={peerMedia.screenSharing}>
           <VideoTile
             name={peerName}
             micOn={peerMedia.micOn}
@@ -50,16 +51,18 @@ export const ActiveCallScreen: FC = () => {
           />
         </Styled.RemoteWrap>
 
-        <Styled.LocalPip>
+        <Styled.LocalPip $compact={compactPip} data-testid="local-pip">
           <VideoTile
             name="Вы"
             micOn={selfMedia.micOn}
             cameraOn={selfMedia.cameraOn}
             screenSharing={selfMedia.screenSharing}
             audioOnly={isAudioOnly(selfMedia)}
-            avatarSize={56}
+            avatarSize={compactPip ? 32 : 56}
             stream={localStream}
             muted
+            isSelf
+            compact={compactPip}
           />
         </Styled.LocalPip>
       </Styled.StageBox>

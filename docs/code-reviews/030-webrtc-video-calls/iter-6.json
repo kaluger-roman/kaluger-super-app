@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 6,
+  "timestamp": "2026-10-19T11:30:00Z",
+  "diff_mode": "working-tree",
+  "diff_cmd": "git add -N -- . && git diff origin/main -- . ':(exclude)specs' ':(exclude)docs/mockups' ':(exclude)CLAUDE.md' ':(exclude)CHANGELOG.md' ':(exclude)docs/code-reviews' ':(exclude).claude' ':(exclude)frontend/test-results'; git reset -q",
+  "diff_stats": {
+    "files_changed": 183,
+    "insertions": 8836,
+    "deletions": 70
+  },
+  "summary": {
+    "raw_findings": 2,
+    "after_dedup": 2,
+    "after_score_filter": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 1
+    },
+    "by_category": {
+      "convention": 2
+    },
+    "agents_failed": [],
+    "raw_by_agent": {
+      "claude-md": 2,
+      "shallow-bug": 0,
+      "deep-logic": 0,
+      "security": 0,
+      "type-safety": 0,
+      "removed-behavior": 0,
+      "cross-file": 0,
+      "wrapper-proxy": 0
+    }
+  },
+  "notes": "Working-tree режим: незакоммиченные фиксы iter-1..iter-5 поверх ветки. Фиксы iter-5 (terminateCall с notifyEnded до записи в БД, тост при сбое старта демонстрации кроме закрытия пикера, сброс screenSharing при сбое stopScreenShareFx, скрытие кнопки при отсутствии getDisplayMedia, toLocalTileStream для PIP) проверены всеми 8 reviewer'ами — регрессий не найдено. Сознательно пропущенные пункты переданы reviewer'ам как исключения. Обе находки — нарушения конвенций frontend.md без влияния на функциональность; дубликатов нет.",
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Тест хелпера VideoTile лежит в ActiveCallScreen и глубоко импортирует ../../VideoTile/VideoTile.helpers в обход index.ts",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/ui/ActiveCallScreen/__tests__/ActiveCallScreen.helpers.test.ts",
+      "line_start": 3,
+      "line_end": 3,
+      "snippet": "import { getTileContentKind } from \"../../VideoTile/VideoTile.helpers\";",
+      "rationale": "CLAUDE.md (\"Every folder has index.ts re-exporting public API; no deep imports\") и docs/conventions/frontend.md:69 (\"No deep imports — max 1 level\"). Тест лезет во внутренний файл соседнего компонента: VideoTile/index.ts экспортирует только VideoTile. Исключение для тестов в frontend.md:245 касается только внутренностей моделей. Это единственный такой импорт во frontend/src, при этом у VideoTile есть своя папка __tests__.",
+      "fix_hint": "Перенести кейс \"should prefer the screen over the camera in a tile\" в frontend/src/features/videoCall/ui/VideoTile/__tests__/ (например, в VideoTile.helpers.test.ts) с импортом из ../VideoTile.helpers.",
+      "score": 75,
+      "verification_note": "Импорт `../../VideoTile/VideoTile.helpers` в тесте ActiveCallScreen явно нарушает правило «No deep imports — max 1 level» (docs/conventions/frontend.md:69) и CLAUDE.md «no deep imports»: VideoTile/index.ts экспортирует только VideoTile, а исключение для тестов в frontend.md:245 касается только внутренностей *.model файлов, не helpers; конвенция нарушена явно, но влияние на функциональность нулевое, поэтому не выше 75.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Фикс iter-5 f1 добавил константу PICKER_DISMISSED_ERRORS в call.helpers.ts, хотя рядом есть call.constants.ts",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/model/call.helpers.ts",
+      "line_start": 15,
+      "line_end": 21,
+      "snippet": "const PICKER_DISMISSED_ERRORS = new Set([\"NotAllowedError\", \"AbortError\"]);\n\nexport const isPickerDismissed = (error: unknown): boolean =>\n  typeof error === \"object\" &&\n  error !== null &&",
+      "rationale": "Правило docs/conventions/frontend.md:70: \"Separate files for: constants, helpers, hooks, types — never mix in one file\". Константа лежит в helpers-файле, а соседний call.constants.ts в этом же фиксе уже пополнили (SCREEN_SHARE_FAILED_TEXT). Ровно такие же случаи в iter-1 приняли: CALL_STATUS_LABELS в videoCall.helpers.ts и константа в CallHistoryList.helpers.ts.",
+      "fix_hint": "Перенести PICKER_DISMISSED_ERRORS в call.constants.ts (с export) и импортировать её в call.helpers.ts.",
+      "score": 70,
+      "verification_note": "Правило docs/conventions/frontend.md:70 прямо запрещает смешивать константы и хелперы в одном файле, а константа PICKER_DISMISSED_ERRORS лежит в call.helpers.ts, хотя соседний call.constants.ts в этом же фиксе уже пополнили; нарушение подтверждено, но функционально безвредно и в рамках оценки снижено до 70.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": []
+}

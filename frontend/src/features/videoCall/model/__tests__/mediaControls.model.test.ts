@@ -1,23 +1,10 @@
 import { allSettled, fork } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  callModel,
-  dispatchCallSignal,
-  setCallTransport,
-  setWebRtcAdapter,
-  stopAllSessions,
-} from "../index";
+import { callModel, setCallTransport, setWebRtcAdapter, stopAllSessions } from "../index";
+import { connectCallerSession, settleMicrotasks, startCallerSession } from "./callFlow";
 import { createFakeAdapter, createFakeStream } from "./fakeWebrtc";
 import { readStore } from "./storeProbe";
-
-const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
-
-const startCallerSession = async (callId: string): Promise<void> => {
-  dispatchCallSignal({ type: "call_ringing", callId, iceServers: [] });
-  dispatchCallSignal({ type: "call_accepted", callId, iceServers: [] });
-  await settleMicrotasks();
-};
 
 describe("features/videoCall/model media controls", () => {
   let sent: Array<{ type: string; [key: string]: unknown }>;
@@ -72,7 +59,7 @@ describe("features/videoCall/model media controls", () => {
       })
     );
 
-    await startCallerSession("call-reneg");
+    await connectCallerSession("call-reneg");
     expect(readStore(callModel.$selfMediaState).cameraOn).toBe(false);
     sent = [];
 
@@ -90,12 +77,13 @@ describe("features/videoCall/model media controls", () => {
     const scope = fork();
     await allSettled(callModel.peerMediaStateChanged, {
       scope,
-      params: { micOn: false, cameraOn: false, screenSharing: false },
+      params: { micOn: false, cameraOn: false, screenSharing: false, cameraAvailable: true },
     });
     expect(scope.getState(callModel.$peerMediaState)).toEqual({
       micOn: false,
       cameraOn: false,
       screenSharing: false,
+      cameraAvailable: true,
     });
   });
 
@@ -124,9 +112,7 @@ describe("features/videoCall/model media controls", () => {
       })
     );
 
-    dispatchCallSignal({ type: "call_ringing", callId: "call-x", iceServers: [] });
-    dispatchCallSignal({ type: "call_accepted", callId: "call-x", iceServers: [] });
-    await settleMicrotasks();
+    await startCallerSession("call-x");
 
     expect(readStore(callModel.$callStatusMessage)).toEqual({
       kind: "error",

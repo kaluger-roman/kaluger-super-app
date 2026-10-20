@@ -1,13 +1,7 @@
-import type { CallStatus } from "../../videoCall.types";
+import type { CallHistoryStatus } from "@entities";
 
-type ChipColor = "success" | "warning" | "error" | "default";
+import { STATUS_CHIP_COLOR } from "./CallHistoryList.constants";
+import type { ChipColor } from "./CallHistoryList.types";
 
-const STATUS_CHIP_COLOR: Record<CallStatus, ChipColor> = {
-  completed: "success",
-  missed: "warning",
-  rejected: "error",
-  canceled: "default",
-  failed: "error",
-};
-
-export const getStatusChipColor = (status: CallStatus): ChipColor => STATUS_CHIP_COLOR[status];
+export const getStatusChipColor = (status: CallHistoryStatus): ChipColor =>
+  STATUS_CHIP_COLOR[status];

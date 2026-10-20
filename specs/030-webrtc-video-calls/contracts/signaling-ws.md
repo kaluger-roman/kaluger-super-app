@@ -14,7 +14,7 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 | `call_accept` | `{ callId }` | Callee accepts | Validate caller is the callee of `callId`. Forward `call_accepted` (+ minted ICE config) to caller. Clear ring timeout. Move to negotiation. |
 | `call_reject` | `{ callId }` | Callee declines | Forward `call_rejected` to caller; finalize `call_records` as `REJECTED`; drop `LiveCall`. |
 | `call_cancel` | `{ callId }` | Caller cancels before answer | Forward `call_canceled` to callee (dismiss incoming UI); finalize `CANCELED`; drop `LiveCall`. |
-| `call_hangup` | `{ callId }` | Either party ends an active call | Forward `call_ended` to the other party; finalize `COMPLETED` (if connected) or `FAILED`; drop `LiveCall`. |
+| `call_hangup` | `{ callId, reason? }` | Either party ends an active call; `reason: "media_unavailable"` when it could not get camera/mic | Forward `call_ended { reason: "hangup" \| "media_unavailable" }` to the other party; finalize `COMPLETED` (if connected) or `FAILED`; drop `LiveCall`. |
 | `webrtc_offer` | `{ callId, sdp }` | SDP offer | Relay verbatim to the peer (`webrtc_offer`). |
 | `webrtc_answer` | `{ callId, sdp }` | SDP answer | Relay verbatim to the peer (`webrtc_answer`). |
 | `webrtc_ice` | `{ callId, candidate }` | ICE candidate (trickle) | Relay verbatim to the peer (`webrtc_ice`). |
@@ -33,8 +33,9 @@ Validation: any inbound message referencing a `callId` the sender is not a parti
 | `call_ringing` | `{ callId, iceServers }` | caller | `OutgoingCallOverlay` («Вызываем…») |
 | `call_accepted` | `{ callId, iceServers }` | caller | Begin WebRTC negotiation (create offer) |
 | `call_rejected` | `{ callId }` | caller | «Вызов отклонён» → idle |
-| `call_canceled` | `{ callId }` | callee | Dismiss incoming modal → idle |
-| `call_ended` | `{ callId }` | other party | Tear down, release media → idle |
+| `call_canceled` | `{ callId, reason }` | callee | Dismiss incoming modal → idle. `reason: "canceled"` → toast «Вызов отменён», `"timeout"` → «Пропущенный вызов от …» |
+| `call_ended` | `{ callId, reason }` | other party | Tear down, release media → idle. Toast by `reason`: `hangup` «Собеседник завершил звонок», `peer_disconnected` «Собеседник отключился», `media_unavailable` «У собеседника нет доступа к камере и микрофону» |
+| `call_history_updated` | `{}` | both parties | Sent after the call record is written (also after an invite to an offline peer); an open call history page refetches |
 | `call_unavailable` | `{ reason: "offline" }` | caller | «Ученик сейчас не в сети» (FR-013, Edge offline) |
 | `call_busy` | `{}` | caller | «Абонент занят» (Edge "Занятость") |
 | `call_no_answer` | `{ callId }` | caller | «Нет ответа» on 40s timeout (FR-009) |

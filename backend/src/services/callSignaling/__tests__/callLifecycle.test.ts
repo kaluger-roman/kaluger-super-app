@@ -1,4 +1,4 @@
-import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 import { prisma } from "../../../lib/prisma";
 import { handleCallSignal } from "../../../lib/websocket/signaling";
@@ -48,7 +48,7 @@ describe("call lifecycle → call_records persistence", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Анна",
       },
@@ -60,7 +60,7 @@ describe("call lifecycle → call_records persistence", () => {
     studentId = student.id;
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Иван",
         studentId,
@@ -133,7 +133,7 @@ describe("call lifecycle → call_records persistence", () => {
     expect(record.durationSeconds).toBeNull();
   });
 
-  it("should answer call_unavailable and write no record when the callee is offline", async () => {
+  it("should answer call_unavailable and write a MISSED record when the callee is offline", async () => {
     onlineStudents.clear();
     await handleCallSignal(
       "tutor",
@@ -143,7 +143,12 @@ describe("call lifecycle → call_records persistence", () => {
     );
 
     expect(sent.some((m) => m.type === "call_unavailable")).toBe(true);
-    const count = await prisma.callRecord.count({ where: { tutorId } });
-    expect(count).toBe(0);
+    const records = await prisma.callRecord.findMany({ where: { tutorId } });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      status: "MISSED",
+      callerKind: "TUTOR",
+      durationSeconds: null,
+    });
   });
 });

@@ -2,7 +2,13 @@ import { createStore, createEvent, createEffect, sample } from "effector";
 import { delay } from "patronum";
 
 import { lessonModel } from "@entities/lesson";
-import { dispatchCallSignal, isCallSignalOutbound, setCallTransport } from "@features/videoCall";
+import {
+  callModel,
+  clearCallTransport,
+  dispatchCallSignal,
+  isCallSignalOutbound,
+  setCallTransport,
+} from "@features/videoCall";
 import type { CallSignalingOutbound } from "@features/videoCall";
 import { resolveWsUrl } from "@shared";
 
@@ -26,7 +32,7 @@ export const connectWebSocketFx = createEffect(() => {
 
   ws.onopen = () => {
     console.log("WebSocket connected");
-    setCallTransport((message) => ws.send(JSON.stringify(message)));
+    setCallTransport((message) => ws.send(JSON.stringify(message)), ws, "tutor");
     setWebSocketConnection(ws);
   };
 
@@ -35,7 +41,7 @@ export const connectWebSocketFx = createEffect(() => {
       const data = JSON.parse(event.data);
 
       if (isCallSignalOutbound(data.type)) {
-        dispatchCallSignal(data as CallSignalingOutbound);
+        dispatchCallSignal(data as CallSignalingOutbound, "tutor");
         return;
       }
 
@@ -52,7 +58,8 @@ export const connectWebSocketFx = createEffect(() => {
 
   ws.onclose = () => {
     console.log("WebSocket disconnected");
-    setCallTransport(null);
+    const lostRole = clearCallTransport(ws);
+    if (lostRole) callModel.transportDisconnected(lostRole);
     setWebSocketConnection(null);
     webSocketClosed();
   };

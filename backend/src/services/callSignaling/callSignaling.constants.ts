@@ -1,1 +1,10 @@
 export const RING_TIMEOUT_MS = 40000;
+
+export const DEFAULT_STUN_URL = "stun:stun.l.google.com:19302";
+// Long enough for a lesson-length call: coturn re-checks credentials on allocation refresh.
+export const DEFAULT_TURN_TTL_SECONDS = 4 * 60 * 60;
+
+export const INVITE_RATE_LIMIT = 10;
+export const INVITE_RATE_WINDOW_MS = 60 * 1000;
+
+export const ARCHIVED_STUDENT_CALL_MESSAGE = "Звонки недоступны: ученик в архиве";

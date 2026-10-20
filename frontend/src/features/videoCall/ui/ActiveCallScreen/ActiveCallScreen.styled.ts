@@ -45,29 +45,32 @@ export const StageBox = styled(Box)({
   minHeight: 0,
 });
 
-export const RemoteWrap = styled(Box)({
+// A shared screen gets the full stage height: a portrait window in a 16:9 box is tiny on a phone.
+export const RemoteWrap = styled(Box)<{ $screen: boolean }>(({ $screen }) => ({
   width: "100%",
   maxWidth: 1040,
-  aspectRatio: "16 / 9",
+  aspectRatio: $screen ? "auto" : "16 / 9",
+  alignSelf: $screen ? "stretch" : "auto",
   maxHeight: "100%",
-});
+}));
 
-export const LocalPip = styled(Box)({
+// While the peer shares a screen the PiP shrinks so it covers less of the shared content.
+export const LocalPip = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({
   position: "absolute",
   right: 36,
   bottom: 24,
-  width: 220,
-  height: 132,
+  width: $compact ? 132 : 220,
+  height: $compact ? 80 : 132,
   zIndex: 4,
   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
   borderRadius: 16,
   "@media (max-width: 600px)": {
     right: 16,
     bottom: 16,
-    width: 118,
-    height: 158,
+    width: $compact ? 72 : 118,
+    height: $compact ? 96 : 158,
   },
-});
+}));
 
 export const BannerSlot = styled(Box)({
   position: "absolute",

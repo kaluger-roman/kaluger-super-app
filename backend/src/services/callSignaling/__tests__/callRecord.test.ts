@@ -1,4 +1,4 @@
-import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 import { prisma } from "../../../lib/prisma";
 import { createFinalizedCallRecord } from "../callRecord";
@@ -10,7 +10,7 @@ describe("createFinalizedCallRecord", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Tutor",
       },

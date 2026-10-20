@@ -10,6 +10,7 @@ import {
   stopAllSessions,
 } from "../index";
 import { createFakeAdapter } from "./fakeWebrtc";
+import { readStore } from "./storeProbe";
 
 const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -41,11 +42,8 @@ describe("features/videoCall full caller lifecycle", () => {
   });
 
   it("should acquire media and emit a webrtc_offer after call_accepted, then go active on connect", async () => {
-    const scope = fork();
-    await allSettled(callModel.callStarted, {
-      scope,
-      params: { studentId: "stu-1", peerName: "Иван" },
-    });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    dispatchCallSignal({ type: "call_ringing", callId: "call-1", iceServers: [] });
     sent = [];
 
     dispatchCallSignal({
@@ -57,13 +55,13 @@ describe("features/videoCall full caller lifecycle", () => {
 
     expect(sentTypes()).toContain("webrtc_offer");
 
-    void allSettled(callModel.callConnected, { scope });
-    await settleMicrotasks();
-    expect(scope.getState(callModel.$callPhase)).toBe("active");
+    callModel.callConnected();
+    expect(readStore(callModel.$callPhase)).toBe("active");
 
-    void allSettled(callModel.hangUp, { scope });
+    callModel.hangUp();
     await settleMicrotasks();
-    expect(scope.getState(callModel.$callPhase)).toBe("idle");
+    expect(readStore(callModel.$callPhase)).toBe("idle");
+    expect(sent).toContainEqual({ type: "call_hangup", callId: "call-1" });
   });
 
   it("should send call_hangup with the current callId on hangUp", async () => {
@@ -110,6 +108,7 @@ describe("features/videoCall full caller lifecycle", () => {
 
   it("should send call_invite without targetStudentId when the student starts a call", async () => {
     const scope = fork();
+    setCallTransport((message) => sent.push(message), null, "student");
     await allSettled(callModel.callStarted, {
       scope,
       params: { peerName: "Анна" },

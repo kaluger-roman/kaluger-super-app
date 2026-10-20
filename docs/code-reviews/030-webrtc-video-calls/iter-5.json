@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 5,
+  "timestamp": "2026-10-18T21:29:50Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 182,
+    "insertions": 8686,
+    "deletions": 70
+  },
+  "summary": {
+    "raw_findings": 5,
+    "after_dedup": 3,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 1
+    },
+    "by_category": {
+      "logic": 3
+    },
+    "agents_failed": [],
+    "raw_by_agent": {
+      "claude-md": 0,
+      "shallow-bug": 1,
+      "deep-logic": 2,
+      "security": 0,
+      "type-safety": 1,
+      "removed-behavior": 0,
+      "cross-file": 1,
+      "wrapper-proxy": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "type-safety",
+      "title": "Ошибки startScreenShareFx/stopScreenShareFx никак не обрабатываются: при сбое демонстрация экрана молча не происходит (на мобильных getDisplayMedia нет вообще)",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/screenShare.model.ts",
+      "line_start": 23,
+      "line_end": 24,
+      "snippet": "    const screenStream = await getDisplayMediaSafe();\n    const screenTrack = screenStream.getVideoTracks()[0];",
+      "rationale": "В screenShare.model.ts нет ни одного sample на startScreenShareFx.fail или stopScreenShareFx.fail. Если демонстрация не стартовала из-за сбоя ренеготиации (sendVideoTrack/sendOfferFx, откат строки 35-40) или потому что getDisplayMedia не поддерживается (мобильные браузеры, которые spec.md:160 называет целевой платформой, а кнопка в CallControlBar показывается всегда), пользователь не получает никакого сообщения. Камера в той же ситуации показывает тост: после принятого iter-2 f6 у toggleCameraFx.fail есть CAMERA_FAILED_TEXT (mediaControls.model.ts:104-108). Если упал stopScreenShareFx, захват уже остановлен, а $selfMediaState.screenSharing остаётся true, и собеседнику продолжает уходить screenSharing:true.",
+      "fix_hint": "Добавить sample по startScreenShareFx.fail с тостом вроде «Не удалось начать демонстрацию экрана». Отмену в системном окне выбора (NotAllowedError/AbortError) отфильтровать хелпером, чтобы на неё тост не показывался. Кнопку экрана скрывать или блокировать, когда navigator.mediaDevices.getDisplayMedia недоступен. По stopScreenShareFx.fail всё равно сбрасывать screenSharing в false и отправлять media state. Добавить регрессионные тесты в mediaRobustness.model.test.ts.",
+      "score": 75,
+      "verification_note": "Подтверждено чтением кода: в screenShare.model.ts нет sample ни на startScreenShareFx.fail, ни на stopScreenShareFx.fail, тогда как для камеры есть тост CAMERA_FAILED_TEXT (mediaControls.model.ts:104-108), а кнопка экрана показывается всегда, так что при сбое или отсутствии getDisplayMedia пользователь не получает обратной связи; это реальный функциональный дефект, но не падение прода и не блокер.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "shallow-bug",
+      "title": "Во время демонстрации экрана собственная плитка (PIP) показывает поток камеры с подписью «Демонстрация экрана», а при выключенной или отсутствующей камере вместо заглушки выводит чёрный кадр",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/ActiveCallScreen/ActiveCallScreen.tsx",
+      "line_start": 54,
+      "line_end": 63,
+      "snippet": "          <VideoTile\n            name=\"Вы\"\n            cameraOn={selfMedia.cameraOn}\n            screenSharing={selfMedia.screenSharing}\n            stream={localStream}",
+      "rationale": "При screenSharing=true getTileContentKind возвращает \"screen\", поэтому TileContent показывает видео, но в плитку уходит localStream (микрофон и камера). Трек экрана лежит только в session.screenStream и в localStream не попадает. В итоге при включённой камере в PIP видна камера под пилюлей «Демонстрация экрана». При выключенной камере (track.enabled=false) там чёрный кадр, а в режиме только аудио пустое видео без аватара и надписи «Камера выключена/недоступна»: заглушка пропадает, хотя камера не работает. (also flagged by: deep-logic)",
+      "fix_hint": "Пока идёт демонстрация, передавать в локальную плитку session.screenStream (например, добавить screenStream в useCallStreams и выбирать его при selfMedia.screenSharing). Другой вариант: решать showVideo для своей плитки по cameraOn, а не по screenSharing, и оставить только индикатор демонстрации.",
+      "score": 75,
+      "verification_note": "Подтверждено по коду: getTileContentKind возвращает \"screen\" при screenSharing, TileContent тогда показывает CallVideo с localStream (камера/микрофон), а трек экрана лежит только в session.screenStream и в localStream не попадает, так что собственный PIP показывает камеру с подписью «Демонстрация экрана» и при выключенной камере чёрный кадр вместо заглушки. Функциональный баг в новом коде этого PR, а не pre-existing, поэтому оценка высокая, но не 100, так как сценарий не воспроизводил.",
+      "severity": "high"
+    },
+    {
+      "id": "f3",
+      "agent": "deep-logic",
+      "title": "Гонка при завершении звонка на сервере: сигнал собеседника в окне записи в БД получает call_error «Звонок не найден» раньше call_ended/call_canceled, и клиент показывает ошибку вместо обычного завершения",
+      "category": "logic",
+      "file": "backend/src/lib/websocket/signaling.ts",
+      "line_start": 196,
+      "line_end": 200,
+      "snippet": "  const isTerminating =\n    data.type === \"call_reject\" || data.type === \"call_cancel\" || data.type === \"call_hangup\";\n  if (isTerminating && !callRegistry.getCall(data.callId)) return;\n\n  const call = requireParticipantCall(data.callId, sender);",
+      "rationale": "terminateCall (services/callSignaling/callSignaling.ts:97-110) сразу удаляет LiveCall, но call_ended/call_canceled уходит собеседнику только после await createFinalizedCallRecord. Если в это окно собеседник присылает webrtc_ice, call_media_state, call_connected или call_accept, requireParticipantCall бросает CALL_NOT_FOUND и ему сразу уходит call_error с текущим callId. Фронт (isCallErrorForContext -> callErrorReceived) завершает звонок с тостом-ошибкой «Звонок не найден», а пришедший следом call_ended/call_canceled уже отфильтрован. Пример: звонящий отменяет во время «Соединение…», пока принявший шлёт ICE, или ученик принимает звонок ровно на ring-timeout. Тогда вместо «Вызов отменён» или тихого завершения показывается ошибка. (also flagged by: cross-file)",
+      "fix_hint": "Отправлять собеседнику call_ended/call_canceled/call_no_answer до await записи в БД: terminateCall синхронно возвращает LiveCall, а запись сохраняется отдельно. Либо молча отбрасывать нетерминирующие медиасигналы (webrtc_*, call_media_state, call_connected) для неизвестного callId так же, как сейчас отбрасываются reject/cancel/hangup. Добавить регрессионный тест: hangup, затем webrtc_ice до завершения записи, ожидается без call_error.",
+      "score": 50,
+      "verification_note": "Гонка реальна: terminateCall удаляет звонок из liveCalls до await createFinalizedCallRecord, и сигнал от оставшегося участника в этом окне (webrtc_ice, call_media_state, call_connected, call_accept) получает call_error с callId, а фронт (isCallErrorForContext -> isCurrentCall) показывает ошибку вместо штатного завершения; но окно ограничено задержкой одной записи в БД, так что это редкий случай, а не систематическое поведение.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": []
+}

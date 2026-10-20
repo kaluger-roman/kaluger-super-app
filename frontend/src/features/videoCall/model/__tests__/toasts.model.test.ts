@@ -16,9 +16,13 @@ const collectToasts = (trigger: () => void) => {
 };
 
 describe("features/videoCall/model call toasts", () => {
-  it("should show an error toast when the peer is offline", () => {
-    const toasts = collectToasts(() => callModel.unavailableReceived());
-    expect(toasts.errors).toContain("Собеседник сейчас не в сети");
+  it("should name the peer role in the offline toast", () => {
+    expect(collectToasts(() => callModel.unavailableReceived("student")).errors).toContain(
+      "Ученик сейчас не в сети"
+    );
+    expect(collectToasts(() => callModel.unavailableReceived("tutor")).errors).toContain(
+      "Репетитор сейчас не в сети"
+    );
   });
 
   it("should show an error toast when the peer is busy", () => {
@@ -37,9 +41,33 @@ describe("features/videoCall/model call toasts", () => {
   });
 
   it("should show an info toast when the caller cancels", () => {
-    const toasts = collectToasts(() => callModel.canceledReceived());
+    const toasts = collectToasts(() =>
+      callModel.canceledReceived({ reason: "canceled", callerName: "Анна" })
+    );
     expect(toasts.infos).toContain("Вызов отменён");
     expect(toasts.errors).toHaveLength(0);
+  });
+
+  it("should show a missed-call toast when ringing timed out", () => {
+    const toasts = collectToasts(() =>
+      callModel.canceledReceived({ reason: "timeout", callerName: "Анна" })
+    );
+    expect(toasts.infos).toContain("Пропущенный вызов от Анна");
+  });
+
+  it("should show an info toast when the peer hangs up", () => {
+    const toasts = collectToasts(() => callModel.callEnded("hangup"));
+    expect(toasts.infos).toContain("Собеседник завершил звонок");
+    expect(toasts.errors).toHaveLength(0);
+  });
+
+  it("should show an error toast when the peer drops off or has no devices", () => {
+    expect(collectToasts(() => callModel.callEnded("peer_disconnected")).errors).toContain(
+      "Собеседник отключился"
+    );
+    expect(collectToasts(() => callModel.callEnded("media_unavailable")).errors).toContain(
+      "У собеседника нет доступа к камере и микрофону"
+    );
   });
 
   it("should show an error toast when media acquisition fails", () => {

@@ -224,3 +224,17 @@ export const extractInviteToken = (inviteUrl: string): string => {
   }
   return match[1];
 };
+
+export const seedCallRecord = async (input: {
+  tutorId: string;
+  studentId: string;
+  callerKind?: "TUTOR" | "STUDENT";
+  status?: "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";
+  durationSeconds?: number;
+}): Promise<void> => {
+  await apiRequest("/api/__test__/call-records", {
+    method: "POST",
+    body: input,
+    expectStatus: 201,
+  });
+};

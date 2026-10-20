@@ -1,26 +1,28 @@
 import { ThemeProvider } from "@mui/material";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callHistoryModel } from "@entities";
+import { callHistoryModel, getCallHistory } from "@entities";
+import type { CallHistoryPrincipal } from "@entities";
 import { theme } from "@shared";
 
 import { CallHistoryPage } from "../CallHistoryPage";
 
-vi.mock("@entities/callRecord/api/callHistoryApi", () => ({
+vi.mock("@entities/callRecord/api", () => ({
   getCallHistory: vi.fn(async () => []),
 }));
 
-const renderPage = (records: unknown): void => {
+const renderPage = (records: unknown, principal: CallHistoryPrincipal = "tutor"): void => {
   const scope = fork({
     values: [[callHistoryModel.$callHistory, records]],
   });
   render(
     <EffectorProvider value={scope}>
       <ThemeProvider theme={theme}>
-        <CallHistoryPage />
+        <CallHistoryPage principal={principal} />
       </ThemeProvider>
     </EffectorProvider>
   );
@@ -46,5 +48,44 @@ describe("CallHistoryPage", () => {
       },
     ]);
     expect(screen.getByText("Иван Смирнов")).toBeInTheDocument();
+  });
+
+  it("should load the history of the principal given by the route", async () => {
+    renderPage([], "student");
+    await screen.findByText("История звонков");
+    expect(getCallHistory).toHaveBeenCalledWith("student");
+  });
+
+  it("should show a load error with a retry instead of the empty state", async () => {
+    vi.mocked(getCallHistory).mockRejectedValueOnce(new Error("network"));
+    renderPage([], "tutor");
+
+    expect(await screen.findByText("Не удалось загрузить историю звонков")).toBeInTheDocument();
+    expect(screen.queryByText("Звонков пока нет")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Повторить" }));
+
+    expect(getCallHistory).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Звонков пока нет")).toBeInTheDocument();
+  });
+
+  it("should keep the error and disable retry while the retry is loading", async () => {
+    vi.mocked(getCallHistory).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(getCallHistory).mockReturnValueOnce(new Promise(() => undefined));
+    renderPage([], "tutor");
+    await screen.findByText("Не удалось загрузить историю звонков");
+
+    await userEvent.click(screen.getByRole("button", { name: "Повторить" }));
+
+    expect(screen.getByText("Не удалось загрузить историю звонков")).toBeInTheDocument();
+    expect(screen.queryByText("Звонков пока нет")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить" })).toBeDisabled();
+  });
+
+  it("should not show the empty state during the first load", async () => {
+    vi.mocked(getCallHistory).mockReturnValueOnce(new Promise(() => undefined));
+    renderPage([], "tutor");
+
+    await waitFor(() => expect(getCallHistory).toHaveBeenCalled());
+    expect(screen.queryByText("Звонков пока нет")).not.toBeInTheDocument();
   });
 });

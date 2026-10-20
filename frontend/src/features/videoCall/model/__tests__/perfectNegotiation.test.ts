@@ -8,9 +8,8 @@ import {
   setWebRtcAdapter,
   stopAllSessions,
 } from "../index";
+import { settleMicrotasks, startCalleeSession, startCallerSession } from "./callFlow";
 import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
-
-const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
 const lastPc = (pcs: RTCPeerConnection[]): RTCPeerConnection => {
   const pc = pcs[pcs.length - 1];
@@ -38,7 +37,7 @@ describe("features/videoCall perfect negotiation (glare)", () => {
     vi.restoreAllMocks();
   });
 
-  it("an impolite session ignores a glaring offer instead of answering", async () => {
+  it("should ignore a glaring offer on the impolite side", async () => {
     setWebRtcAdapter(
       createFakeAdapter({
         createPeerConnection: vi.fn(() => {
@@ -49,9 +48,7 @@ describe("features/videoCall perfect negotiation (glare)", () => {
       })
     );
 
-    dispatchCallSignal({ type: "call_ringing", callId: "c-impolite", iceServers: [] });
-    dispatchCallSignal({ type: "call_accepted", callId: "c-impolite", iceServers: [] });
-    await settleMicrotasks();
+    await startCallerSession("c-impolite");
 
     const session = getSession("c-impolite");
     expect(session?.polite).toBe(false);
@@ -68,7 +65,7 @@ describe("features/videoCall perfect negotiation (glare)", () => {
     expect(sent.find((m) => m.type === "webrtc_answer")).toBeUndefined();
   });
 
-  it("a polite session rolls back its pending offer and answers a glaring offer", async () => {
+  it("should answer a glaring offer on the polite side and then resend its own offer", async () => {
     setWebRtcAdapter(
       createFakeAdapter({
         getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) => {
@@ -86,18 +83,7 @@ describe("features/videoCall perfect negotiation (glare)", () => {
       })
     );
 
-    dispatchCallSignal({
-      type: "call_incoming",
-      callId: "c-polite",
-      callerName: "Анна",
-      iceServers: [],
-    });
-    dispatchCallSignal({
-      type: "webrtc_offer",
-      callId: "c-polite",
-      sdp: { type: "offer", sdp: "initial" },
-    });
-    await settleMicrotasks();
+    await startCalleeSession("c-polite");
 
     expect(getSession("c-polite")?.polite).toBe(true);
 
@@ -116,10 +102,10 @@ describe("features/videoCall perfect negotiation (glare)", () => {
     });
     await settleMicrotasks();
 
-    expect(setLocalDescriptionMock(pc)).toHaveBeenCalledWith({ type: "rollback" });
-    expect(sent.find((m) => m.type === "webrtc_answer")).toMatchObject({
-      type: "webrtc_answer",
-      callId: "c-polite",
-    });
+    expect(setLocalDescriptionMock(pc)).not.toHaveBeenCalledWith({ type: "rollback" });
+    expect(pc.setRemoteDescription).toHaveBeenCalledWith({ type: "offer", sdp: "glare" });
+    const types = sent.map((m) => m.type);
+    expect(types).toContain("webrtc_answer");
+    expect(types.indexOf("webrtc_offer")).toBeGreaterThan(types.indexOf("webrtc_answer"));
   });
 });

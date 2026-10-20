@@ -4,17 +4,24 @@ import { VideoCall as VideoCallIcon } from "@mui/icons-material";
 import { Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
-import { callHistoryModel, studentUserModel } from "@entities";
+import { callHistoryModel } from "@entities";
 import type { CallHistoryPrincipal } from "@entities";
 import { CallHistoryList } from "@features";
 
 import * as Styled from "./CallHistoryPage.styled";
 
-export const CallHistoryPage: FC = () => {
-  const isStudent = useUnit(studentUserModel.$isStudentAuthenticated);
-  const principal: CallHistoryPrincipal = isStudent ? "student" : "tutor";
+type CallHistoryPageProps = {
+  principal: CallHistoryPrincipal;
+};
+
+export const CallHistoryPage: FC<CallHistoryPageProps> = ({ principal }) => {
   useGate(callHistoryModel.CallHistoryGate, principal);
-  const records = useUnit(callHistoryModel.$callHistory);
+  const { records, loadFailed, loading, refresh } = useUnit({
+    records: callHistoryModel.$callHistory,
+    loadFailed: callHistoryModel.$loadFailed,
+    loading: callHistoryModel.$isLoading,
+    refresh: callHistoryModel.refreshRequested,
+  });
 
   return (
     <Styled.StyledContainer maxWidth="md">
@@ -31,7 +38,12 @@ export const CallHistoryPage: FC = () => {
       </Styled.HeaderBox>
 
       <Styled.StyledPaper>
-        <CallHistoryList records={records} />
+        <CallHistoryList
+          records={records}
+          loadFailed={loadFailed}
+          loading={loading}
+          onRetry={() => refresh()}
+        />
       </Styled.StyledPaper>
     </Styled.StyledContainer>
   );

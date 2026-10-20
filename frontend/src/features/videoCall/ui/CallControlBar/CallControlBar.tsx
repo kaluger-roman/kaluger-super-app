@@ -12,7 +12,7 @@ import {
 import { useUnit } from "effector-react";
 
 import * as Styled from "./CallControlBar.styled";
-import { callModel } from "../../model";
+import { callModel, isScreenShareSupported } from "../../model";
 
 export const CallControlBar: FC = () => {
   const selfMedia = useUnit(callModel.$selfMediaState);
@@ -41,15 +41,17 @@ export const CallControlBar: FC = () => {
         {selfMedia.cameraOn ? <VideocamIcon /> : <VideocamOffIcon />}
       </Styled.ControlButton>
 
-      <Styled.ScreenButton
-        $sharing={selfMedia.screenSharing}
-        onClick={() => actions.toggleScreen()}
-        aria-label={
-          selfMedia.screenSharing ? "Остановить демонстрацию экрана" : "Демонстрация экрана"
-        }
-      >
-        {selfMedia.screenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}
-      </Styled.ScreenButton>
+      {isScreenShareSupported() && (
+        <Styled.ScreenButton
+          $sharing={selfMedia.screenSharing}
+          onClick={() => actions.toggleScreen()}
+          aria-label={
+            selfMedia.screenSharing ? "Остановить демонстрацию экрана" : "Демонстрация экрана"
+          }
+        >
+          {selfMedia.screenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}
+        </Styled.ScreenButton>
+      )}
 
       <Styled.EndCallButton onClick={() => actions.hangUp()} aria-label="Завершить звонок">
         <CallEndIcon />

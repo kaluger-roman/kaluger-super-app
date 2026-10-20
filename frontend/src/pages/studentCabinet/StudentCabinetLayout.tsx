@@ -6,21 +6,21 @@ import { useGate, useUnit } from "effector-react";
 import { Outlet } from "react-router-dom";
 
 import { studentUserModel } from "@entities";
-import { CallButton, callModel } from "@features";
+import { CallButton } from "@features";
 import { StudentSidebar } from "@widgets";
 
 import { DRAWER_WIDTH } from "./StudentCabinetLayout.constants";
+import * as studentCabinetLayoutModel from "./StudentCabinetLayout.model";
 import * as Styled from "./StudentCabinetLayout.styled";
 
 export const StudentCabinetLayout: FC = () => {
   useGate(studentUserModel.StudentCabinetGate);
   const session = useUnit(studentUserModel.$studentSession);
-  const callStarted = useUnit(callModel.callStarted);
+  const actions = useUnit({
+    tutorCallRequested: studentCabinetLayoutModel.tutorCallRequested,
+  });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const tutorName = session?.tutor?.name ?? "Репетитор";
-  const handleCall = () => callStarted({ peerName: tutorName });
 
   return (
     <Styled.RootBox>
@@ -40,7 +40,7 @@ export const StudentCabinetLayout: FC = () => {
                 label="Позвонить"
                 variant="outlined"
                 color="inherit"
-                onClick={handleCall}
+                onClick={() => actions.tutorCallRequested()}
               />
             </Styled.HeaderCallButton>
           )}

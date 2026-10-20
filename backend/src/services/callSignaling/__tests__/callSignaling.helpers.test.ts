@@ -1,4 +1,4 @@
-import { faker } from "@faker-js/faker";
+import { uniqueEmail } from "../../../__tests__/helpers";
 
 import { prisma } from "../../../lib/prisma";
 import { CallAuthorizationError } from "../../../utils";
@@ -14,7 +14,7 @@ describe("callSignaling pair resolution", () => {
   beforeAll(async () => {
     const tutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Анна Петрова",
       },
@@ -23,7 +23,7 @@ describe("callSignaling pair resolution", () => {
 
     const otherTutor = await prisma.user.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Другой Репетитор",
       },
@@ -37,7 +37,7 @@ describe("callSignaling pair resolution", () => {
 
     const studentUser = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Иван Смирнов",
         studentId,
@@ -47,7 +47,7 @@ describe("callSignaling pair resolution", () => {
 
     const unlinked = await prisma.studentUser.create({
       data: {
-        email: faker.internet.email().toLowerCase(),
+        email: uniqueEmail().toLowerCase(),
         password: "hash",
         name: "Не привязан",
       },
@@ -96,6 +96,17 @@ describe("callSignaling pair resolution", () => {
     await expect(resolvePairForTutor(tutorId, "non-existent-id")).rejects.toThrow(
       CallAuthorizationError
     );
+  });
+
+  it("should reject a student whose Student record is archived", async () => {
+    await prisma.student.update({ where: { id: studentId }, data: { archived: true } });
+    try {
+      await expect(resolvePairForStudent(studentUserId)).rejects.toThrow(
+        "Звонки недоступны: ученик в архиве"
+      );
+    } finally {
+      await prisma.student.update({ where: { id: studentId }, data: { archived: false } });
+    }
   });
 
   it("should reject a student with no linked Student record", async () => {

@@ -10,7 +10,7 @@ import * as Styled from "./OutgoingCallOverlay.styled";
 
 export const OutgoingCallOverlay: FC = () => {
   const peer = useUnit(callModel.$outgoingCallPeer);
-  const cancel = useUnit(callModel.cancelCall);
+  const actions = useUnit({ cancel: callModel.cancelCall });
 
   const peerName = peer?.name ?? "";
 
@@ -25,7 +25,7 @@ export const OutgoingCallOverlay: FC = () => {
       <Styled.Name variant="h5">{peerName}</Styled.Name>
 
       <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
-        <Styled.CancelButton onClick={() => cancel()} aria-label="Отменить вызов">
+        <Styled.CancelButton onClick={() => actions.cancel()} aria-label="Отменить вызов">
           <CallEndIcon />
         </Styled.CancelButton>
         <Styled.CancelLabel variant="body2">Отменить</Styled.CancelLabel>

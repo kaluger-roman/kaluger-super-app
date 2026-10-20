@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callModel, dispatchCallSignal, setCallTransport, setWebRtcAdapter } from "../index";
+import {
+  callModel,
+  dispatchCallSignal,
+  setCallTransport,
+  setWebRtcAdapter,
+  stopAllSessions,
+} from "../index";
 import { sendCallSignal } from "../signaling.helpers";
+import { startCalleeSession, startCallerSession } from "./callFlow";
 import { createFakeAdapter, createFakePeerConnection, createFakeStream } from "./fakeWebrtc";
 import { readStore } from "./storeProbe";
 
@@ -17,6 +24,8 @@ describe("features/videoCall/model client signaling", () => {
   });
 
   afterEach(() => {
+    callModel.hangUp();
+    stopAllSessions();
     setCallTransport(null);
     vi.restoreAllMocks();
   });
@@ -35,12 +44,7 @@ describe("features/videoCall/model client signaling", () => {
 
   describe("inbound dispatchCallSignal negotiation", () => {
     it("should acquire media and send a webrtc_offer when the caller receives call_accepted", async () => {
-      dispatchCallSignal({
-        type: "call_accepted",
-        callId: "c-1",
-        iceServers: [{ urls: "stun:example" }],
-      });
-      await flush();
+      await startCallerSession("c-1", [{ urls: "stun:example" }]);
 
       const offer = sent.find((m) => m.type === "webrtc_offer");
       expect(offer).toMatchObject({ type: "webrtc_offer", callId: "c-1" });
@@ -48,17 +52,7 @@ describe("features/videoCall/model client signaling", () => {
     });
 
     it("should answer when the callee receives a webrtc_offer", async () => {
-      dispatchCallSignal({
-        type: "call_ringing",
-        callId: "c-2",
-        iceServers: [{ urls: "stun:example" }],
-      });
-      dispatchCallSignal({
-        type: "webrtc_offer",
-        callId: "c-2",
-        sdp: { type: "offer", sdp: "x" },
-      });
-      await flush();
+      await startCalleeSession("c-2", [{ urls: "stun:example" }]);
 
       const answer = sent.find((m) => m.type === "webrtc_answer");
       expect(answer).toMatchObject({ type: "webrtc_answer", callId: "c-2" });
@@ -75,13 +69,7 @@ describe("features/videoCall/model client signaling", () => {
         })
       );
 
-      dispatchCallSignal({ type: "call_ringing", callId: "c-ice", iceServers: [] });
-      dispatchCallSignal({
-        type: "call_accepted",
-        callId: "c-ice",
-        iceServers: [],
-      });
-      await flush();
+      await startCallerSession("c-ice");
 
       const addIce = pc!.addIceCandidate as unknown as ReturnType<typeof vi.fn>;
       dispatchCallSignal({
@@ -113,18 +101,7 @@ describe("features/videoCall/model client signaling", () => {
         })
       );
 
-      dispatchCallSignal({
-        type: "call_incoming",
-        callId: "c-callee",
-        callerName: "Анна",
-        iceServers: [{ urls: "stun:stun.example:3478" }],
-      });
-      dispatchCallSignal({
-        type: "webrtc_offer",
-        callId: "c-callee",
-        sdp: { type: "offer", sdp: "x" },
-      });
-      await flush();
+      await startCalleeSession("c-callee", [{ urls: "stun:stun.example:3478" }]);
 
       expect(config?.iceServers).toHaveLength(1);
       expect(config?.iceServers?.[0]).toMatchObject({
@@ -143,13 +120,7 @@ describe("features/videoCall/model client signaling", () => {
         })
       );
 
-      dispatchCallSignal({ type: "call_ringing", callId: "c-fail", iceServers: [] });
-      dispatchCallSignal({
-        type: "call_accepted",
-        callId: "c-fail",
-        iceServers: [],
-      });
-      await flush();
+      await startCallerSession("c-fail");
       sent = [];
 
       (pc as unknown as { connectionState: RTCPeerConnectionState }).connectionState = "failed";

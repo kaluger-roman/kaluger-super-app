@@ -5,6 +5,7 @@ import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
 import { CallAvatar } from "../CallAvatar";
+import { isDeclineClose } from "./IncomingCallModal.helpers";
 import * as Styled from "./IncomingCallModal.styled";
 
 export const IncomingCallModal: FC = () => {
@@ -19,7 +20,12 @@ export const IncomingCallModal: FC = () => {
   const callerName = incomingCall?.callerName ?? "";
 
   return (
-    <Styled.StyledDialog open={open} onClose={() => actions.reject()}>
+    <Styled.StyledDialog
+      open={open}
+      onClose={(_, reason) => {
+        if (isDeclineClose(reason)) actions.reject();
+      }}
+    >
       <Styled.Content>
         <Styled.Caption variant="overline" color="text.secondary">
           Входящий вызов

@@ -2,7 +2,13 @@ import { createEffect, createEvent, createStore, sample } from "effector";
 import { delay } from "patronum";
 
 import { studentScheduleModel } from "@features/studentSchedule";
-import { dispatchCallSignal, isCallSignalOutbound, setCallTransport } from "@features/videoCall";
+import {
+  callModel,
+  clearCallTransport,
+  dispatchCallSignal,
+  isCallSignalOutbound,
+  setCallTransport,
+} from "@features/videoCall";
 import type { CallSignalingOutbound } from "@features/videoCall";
 import type { StudentLessonWsEvent } from "@shared";
 import { getStudentToken, resolveWsUrl } from "@shared";
@@ -38,7 +44,7 @@ const dispatchMessage = (raw: string): void => {
   try {
     const data = JSON.parse(raw) as StudentLessonWsEvent | CallSignalingOutbound;
     if (isCallSignalOutbound(data.type)) {
-      dispatchCallSignal(data as CallSignalingOutbound);
+      dispatchCallSignal(data as CallSignalingOutbound, "student");
       return;
     }
     if (data.type === "lesson_created") {
@@ -66,7 +72,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
 
   ws.onopen = () => {
     console.log("Student WS connected");
-    setCallTransport((message) => ws.send(JSON.stringify(message)));
+    setCallTransport((message) => ws.send(JSON.stringify(message)), ws, "student");
     studentWebSocketOpened();
   };
 
@@ -76,7 +82,8 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
 
   ws.onclose = () => {
     console.log("Student WS disconnected");
-    setCallTransport(null);
+    const lostRole = clearCallTransport(ws);
+    if (lostRole) callModel.transportDisconnected(lostRole);
     setStudentWebSocketConnection(null);
     studentWebSocketClosed();
   };

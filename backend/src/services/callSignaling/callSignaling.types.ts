@@ -1,3 +1,4 @@
+import type { CallStatus } from "@prisma/client";
 import type { CallerKindValue } from "../../types";
 
 export type ResolvedPair = {
@@ -8,7 +9,7 @@ export type ResolvedPair = {
   tutorName: string;
 };
 
-export type LiveCallStatus = "ringing" | "connected";
+export type LiveCallStatus = "ringing" | "accepted" | "connected";
 
 export type LiveCall = {
   callId: string;
@@ -24,4 +25,24 @@ export type LiveCall = {
   ringTimeout?: ReturnType<typeof setTimeout>;
 };
 
-export type CallFinalizeStatus = "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";
+export type CallFinalizeStatus = CallStatus;
+
+export type CallParticipant = {
+  kind: CallerKindValue;
+  id: string;
+};
+
+export type CallDropOutcome = {
+  status: CallFinalizeStatus;
+  peerMessage: "call_ended" | "call_canceled" | "call_unavailable";
+};
+
+export type CreateFinalizedCallRecordArgs = {
+  tutorId: string;
+  studentId: string;
+  callerKind: CallerKindValue;
+  status: CallFinalizeStatus;
+  startedAt: Date;
+  endedAt?: Date;
+  connectedAt?: Date;
+};

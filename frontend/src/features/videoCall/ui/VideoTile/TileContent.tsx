@@ -4,7 +4,7 @@ import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
 
 import { CallAvatar } from "../CallAvatar";
 import { CallVideo } from "./CallVideo";
-import { getTileContentKind } from "./VideoTile.helpers";
+import { getTileContentKind, getVideoFit, shouldPadVideo } from "./VideoTile.helpers";
 import * as Styled from "./VideoTile.styled";
 
 type TileContentProps = {
@@ -15,6 +15,8 @@ type TileContentProps = {
   avatarSize: number;
   stream: MediaStream | null;
   muted: boolean;
+  isSelf: boolean;
+  compact: boolean;
 };
 
 export const TileContent: FC<TileContentProps> = ({
@@ -25,19 +27,32 @@ export const TileContent: FC<TileContentProps> = ({
   avatarSize,
   stream,
   muted,
+  isSelf,
+  compact,
 }) => {
-  const showVideo = getTileContentKind(cameraOn, screenSharing) !== "placeholder";
+  const contentKind = getTileContentKind(cameraOn, screenSharing);
+  const showVideo = contentKind !== "placeholder";
 
   return (
     <>
-      {stream && <CallVideo stream={stream} muted={muted} hidden={!showVideo} />}
+      {stream && (
+        <CallVideo
+          stream={stream}
+          muted={muted}
+          hidden={!showVideo}
+          fit={getVideoFit(contentKind)}
+          padded={shouldPadVideo(contentKind, isSelf)}
+        />
+      )}
       {!showVideo && (
         <Styled.PlaceholderColumn>
-          <CallAvatar name={name} size={avatarSize} />
-          <Styled.PlaceholderLabel variant="body2">
-            <VideocamOffIcon fontSize="small" />
-            {audioOnly ? "Камера недоступна" : "Камера выключена"}
-          </Styled.PlaceholderLabel>
+          <CallAvatar name={name} size={avatarSize} isSelf={isSelf} />
+          {!compact && (
+            <Styled.PlaceholderLabel variant="body2">
+              <VideocamOffIcon fontSize="small" />
+              {audioOnly ? "Камера недоступна" : "Камера выключена"}
+            </Styled.PlaceholderLabel>
+          )}
         </Styled.PlaceholderColumn>
       )}
     </>

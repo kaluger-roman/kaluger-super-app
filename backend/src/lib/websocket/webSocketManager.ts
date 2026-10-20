@@ -6,6 +6,7 @@ import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
 import { handleCallSignal, terminateActiveCallForParticipant } from "./signaling";
+import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
 import type { StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
@@ -21,10 +22,10 @@ export class WebSocketManager {
   private studentClients: Map<string, AuthenticatedStudentWebSocket> = new Map();
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ noServer: true });
+    this.wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
     this.wss.on("connection", this.handleConnection.bind(this));
 
-    this.studentWss = new WebSocketServer({ noServer: true });
+    this.studentWss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
     this.studentWss.on("connection", this.handleStudentConnection.bind(this));
 
     server.on("upgrade", this.handleUpgrade.bind(this));
@@ -62,6 +63,8 @@ export class WebSocketManager {
     // because of the identity check below.
     const previous = this.clients.get(decoded.userId);
     if (previous && previous !== ws) {
+      // The replaced socket's close handler no longer owns the user, so end its call here.
+      void terminateActiveCallForParticipant("tutor", decoded.userId);
       try {
         previous.close(4000, "Replaced by newer connection");
       } catch (error) {
@@ -71,19 +74,20 @@ export class WebSocketManager {
 
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в clients.
+    const release = () => {
+      if (this.clients.get(decoded.userId) !== ws) return;
+      this.clients.delete(decoded.userId);
+      void terminateActiveCallForParticipant("tutor", decoded.userId);
+    };
+
     ws.on("close", () => {
       console.log(`WebSocket disconnected: ${decoded.email} (${decoded.userId})`);
-      if (this.clients.get(decoded.userId) === ws) {
-        this.clients.delete(decoded.userId);
-        void terminateActiveCallForParticipant("tutor", decoded.userId);
-      }
+      release();
     });
 
     ws.on("error", (error) => {
       console.error(`WebSocket error for user ${decoded.userId}:`, error);
-      if (this.clients.get(decoded.userId) === ws) {
-        this.clients.delete(decoded.userId);
-      }
+      release();
     });
 
     ws.on("message", (message) => {
@@ -123,6 +127,7 @@ export class WebSocketManager {
 
     const previous = this.studentClients.get(decoded.studentUserId);
     if (previous && previous !== ws) {
+      void terminateActiveCallForParticipant("student", decoded.studentUserId);
       try {
         previous.close(4000, "Replaced by newer connection");
       } catch (error) {
@@ -132,19 +137,20 @@ export class WebSocketManager {
 
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в studentClients.
+    const release = () => {
+      if (this.studentClients.get(decoded.studentUserId) !== ws) return;
+      this.studentClients.delete(decoded.studentUserId);
+      void terminateActiveCallForParticipant("student", decoded.studentUserId);
+    };
+
     ws.on("close", () => {
       console.log(`Student WebSocket disconnected: ${decoded.email} (${decoded.studentUserId})`);
-      if (this.studentClients.get(decoded.studentUserId) === ws) {
-        this.studentClients.delete(decoded.studentUserId);
-        void terminateActiveCallForParticipant("student", decoded.studentUserId);
-      }
+      release();
     });
 
     ws.on("error", (error) => {
       console.error(`Student WebSocket error for ${decoded.studentUserId}:`, error);
-      if (this.studentClients.get(decoded.studentUserId) === ws) {
-        this.studentClients.delete(decoded.studentUserId);
-      }
+      release();
     });
 
     ws.on("message", (message) => {

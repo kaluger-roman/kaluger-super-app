@@ -1,11 +1,8 @@
 import { useUnit } from "effector-react";
 
+import { toLocalTileStream } from "./ActiveCallScreen.helpers";
+import type { CallStreams } from "./ActiveCallScreen.types";
 import { callModel, getSession } from "../../model";
-
-type CallStreams = {
-  localStream: MediaStream | null;
-  remoteStream: MediaStream | null;
-};
 
 export const useCallStreams = (): CallStreams => {
   const callId = useUnit(callModel.$callId);
@@ -13,8 +10,6 @@ export const useCallStreams = (): CallStreams => {
 
   if (!callId) return { localStream: null, remoteStream: null };
   const session = getSession(callId);
-  return {
-    localStream: session?.localStream ?? null,
-    remoteStream: session?.remoteStream ?? null,
-  };
+  if (!session) return { localStream: null, remoteStream: null };
+  return { localStream: toLocalTileStream(session), remoteStream: session.remoteStream };
 };

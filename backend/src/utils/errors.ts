@@ -73,3 +73,10 @@ export class CallPeerBusyError extends Error {
     this.name = "CallPeerBusyError";
   }
 }
+
+export class CallRateLimitError extends Error {
+  constructor(message = "Слишком много звонков. Попробуйте через минуту") {
+    super(message);
+    this.name = "CallRateLimitError";
+  }
+}

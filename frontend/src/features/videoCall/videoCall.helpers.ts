@@ -1,4 +1,6 @@
-import type { CallDirection, CallStatus } from "./videoCall.types";
+import type { CallHistoryDirection, CallHistoryStatus } from "@entities";
+
+import { CALL_STATUS_LABELS } from "./videoCall.constants";
 
 export const getInitials = (name: string): string =>
   name
@@ -21,15 +23,7 @@ export const formatCallDuration = (seconds: number | null): string => {
   return `${hours}:${restMinutes}:${paddedSeconds}`;
 };
 
-const CALL_STATUS_LABELS: Record<CallStatus, string> = {
-  completed: "Завершён",
-  missed: "Пропущен",
-  rejected: "Отклонён",
-  canceled: "Отменён",
-  failed: "Не удалось соединиться",
-};
+export const getCallStatusLabel = (status: CallHistoryStatus): string => CALL_STATUS_LABELS[status];
 
-export const getCallStatusLabel = (status: CallStatus): string => CALL_STATUS_LABELS[status];
-
-export const getCallDirectionLabel = (direction: CallDirection): string =>
+export const getCallDirectionLabel = (direction: CallHistoryDirection): string =>
   direction === "outgoing" ? "Исходящий" : "Входящий";

@@ -51,4 +51,19 @@ describe("IncomingCallModal", () => {
     await userEvent.click(screen.getByRole("button", { name: "Принять вызов" }));
     expect(scope.getState(callModel.$callPhase)).toBe("active");
   });
+
+  it("should keep ringing when the backdrop around the card is clicked", async () => {
+    const { scope } = renderIncoming();
+    const container = document.querySelector(".MuiDialog-container");
+    expect(container).not.toBeNull();
+    await userEvent.click(container as HTMLElement);
+    expect(scope.getState(callModel.$callPhase)).toBe("incoming");
+    expect(screen.getByText("Входящий вызов")).toBeInTheDocument();
+  });
+
+  it("should decline the call on Escape", async () => {
+    const { scope } = renderIncoming();
+    await userEvent.keyboard("{Escape}");
+    expect(scope.getState(callModel.$callPhase)).toBe("idle");
+  });
 });

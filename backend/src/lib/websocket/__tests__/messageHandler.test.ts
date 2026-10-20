@@ -1,6 +1,11 @@
 import { WebSocket } from "ws";
 import type { AuthenticatedWebSocket } from "../types";
 import { handleMessage, sendWelcomeMessage } from "../messageHandler";
+import { handleCallSignal } from "../signaling";
+
+jest.mock("../signaling", () => ({
+  handleCallSignal: jest.fn(async () => undefined),
+}));
 
 const makeWs = (overrides: Partial<AuthenticatedWebSocket> = {}): AuthenticatedWebSocket =>
   ({
@@ -34,6 +39,16 @@ describe("messageHandler", () => {
     const ws = makeWs({ readyState: WebSocket.CLOSING });
 
     expect(() => handleMessage(ws, { text: "hi" })).not.toThrow();
+    expect(ws.send).not.toHaveBeenCalled();
+  });
+
+  it("should route call signals to handleCallSignal without echoing them", () => {
+    const ws = makeWs();
+    const signal = { type: "call_hangup", callId: "c-1" };
+
+    handleMessage(ws, signal);
+
+    expect(handleCallSignal).toHaveBeenCalledWith("tutor", "user-1", signal);
     expect(ws.send).not.toHaveBeenCalled();
   });
 

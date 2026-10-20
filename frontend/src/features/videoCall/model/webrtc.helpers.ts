@@ -4,6 +4,7 @@ const defaultAdapter: WebRtcAdapter = {
   createPeerConnection: (config) => new RTCPeerConnection(config),
   getUserMedia: (constraints) => navigator.mediaDevices.getUserMedia(constraints),
   getDisplayMedia: () => navigator.mediaDevices.getDisplayMedia({ video: true }),
+  supportsDisplayMedia: () => typeof navigator.mediaDevices?.getDisplayMedia === "function",
   createMediaStream: () => new MediaStream(),
 };
 
@@ -24,6 +25,8 @@ export const getUserMediaSafe = (constraints: MediaStreamConstraints): Promise<M
   adapter.getUserMedia(constraints);
 
 export const getDisplayMediaSafe = (): Promise<MediaStream> => adapter.getDisplayMedia();
+
+export const isScreenShareSupported = (): boolean => adapter.supportsDisplayMedia();
 
 export const createMediaStreamSafe = (): MediaStream => adapter.createMediaStream();
 

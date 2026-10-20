@@ -1,20 +1,13 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { CallHistoryItem } from "../../types";
-import { toCallHistoryItemForStudent, toCallHistoryItemForTutor } from "./callRecord.helpers";
-import type { CallHistoryQuery } from "./callRecord.types";
-import { DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT } from "./callRecord.constants";
-
-const callRecordWithPeer = {
-  include: { student: { select: { name: true } }, tutor: { select: { name: true } } },
-} satisfies Prisma.CallRecordDefaultArgs;
-
-type CallRecordWithPeer = Prisma.CallRecordGetPayload<typeof callRecordWithPeer>;
-
-const clampLimit = (limit?: number): number => {
-  if (!limit || limit <= 0) return DEFAULT_HISTORY_LIMIT;
-  return Math.min(limit, MAX_HISTORY_LIMIT);
-};
+import { CALL_RECORD_WITH_PEER } from "./callRecord.constants";
+import {
+  clampLimit,
+  toCallHistoryItemForStudent,
+  toCallHistoryItemForTutor,
+} from "./callRecord.helpers";
+import type { CallHistoryQuery, CallRecordWithPeer } from "./callRecord.types";
 
 const queryRecords = async (
   where: Prisma.CallRecordWhereInput,
@@ -23,7 +16,7 @@ const queryRecords = async (
   const take = clampLimit(query.limit);
   return prisma.callRecord.findMany({
     where,
-    include: callRecordWithPeer.include,
+    include: CALL_RECORD_WITH_PEER.include,
     orderBy: [{ startedAt: "desc" }, { id: "desc" }],
     take,
   });

@@ -1,11 +1,9 @@
-export * as callHistoryModel from "./model/callHistory.model";
-export { getCallHistory } from "./api/callHistoryApi";
+export { callHistoryModel } from "./model";
+export { getCallHistory } from "./api";
 export type {
   CallHistoryRecord,
   CallHistoryResponse,
   CallHistoryDirection,
   CallHistoryStatus,
   CallHistoryPrincipal,
-  CallHistoryDirection as CallDirection,
-  CallHistoryStatus as CallStatus,
 } from "./callRecord.types";

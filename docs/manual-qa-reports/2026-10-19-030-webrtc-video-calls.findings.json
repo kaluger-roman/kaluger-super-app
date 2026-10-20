@@ -1,0 +1,394 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32769",
+  "run_at": "2026-10-19T15:25:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 30,
+    "passed": 24,
+    "failed": 1,
+    "warned": 5,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "Репетитор звонит из карточки ученика: «Вызываем…» с отменой",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Ученик видит входящий вызов с именем и «Принять»/«Отклонить»",
+        "priority": "P1",
+        "status": "warn",
+        "finding_ids": [4]
+      },
+      {
+        "id": "P1.3",
+        "title": "Принятие: оба видят видео и слышат аудио",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "«Завершить» закрывает звонок у обоих и освобождает устройства",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "«Отклонить»: репетитор получает «Вызов отклонён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Отмена до ответа убирает входящий у ученика",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "Таймаут 40 с: «Нет ответа» у звонящего",
+        "priority": "P1",
+        "status": "pass",
+        "finding_ids": [6]
+      },
+      {
+        "id": "P2.1-2.2",
+        "title": "Микрофон выкл/вкл с индикатором у обоих",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.3-2.4",
+        "title": "Камера выкл/вкл, заглушка у собеседника",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.5",
+        "title": "Звонок с заранее выключенными микрофоном/камерой",
+        "priority": "P2",
+        "status": "fail",
+        "finding_ids": [7]
+      },
+      {
+        "id": "P2.6",
+        "title": "Режим «только аудио» при запрете камеры",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Включение камеры позже в аудио-режиме",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1",
+        "title": "Демонстрация экрана видна собеседнику, индикатор у обоих",
+        "priority": "P3",
+        "status": "warn",
+        "finding_ids": [1]
+      },
+      {
+        "id": "P3.2",
+        "title": "Остановка демонстрации кнопкой и системно",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.3",
+        "title": "Одна демонстрация за раз, понятное сообщение",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.4",
+        "title": "Завершение во время демонстрации освобождает захват",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.1",
+        "title": "Завершённый звонок в истории у обоих",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.2",
+        "title": "Пропущен/отклонён/отменён без длительности",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.3",
+        "title": "Изоляция истории и кросс-ролевой доступ",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.4",
+        "title": "Сортировка от новых к старым",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат не в сети",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [3, 5]
+      },
+      {
+        "id": "E2",
+        "title": "Нет ни камеры, ни микрофона",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [2]
+      },
+      {
+        "id": "E3",
+        "title": "Абонент занят",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E4",
+        "title": "Повторные «Позвонить» — одна сессия",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E5",
+        "title": "Звонок вне пары / несуществующему / без кабинета / архивному",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E6",
+        "title": "Обрыв: закрытие вкладки собеседника",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [2]
+      },
+      {
+        "id": "E7",
+        "title": "Встречный вызов (glare)",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E8",
+        "title": "Звонок ученик → репетитор",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "S1",
+        "title": "Smoke: вход обеих ролей, защита роутов, 401",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S2",
+        "title": "Мобильная вёрстка 375×812",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 7,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 4
+    },
+    "by_category": {
+      "spec-mismatch": 3,
+      "bug": 1,
+      "ux": 3,
+      "improvement": 0
+    },
+    "unambiguous_fix_count": 2
+  },
+  "findings": [
+    {
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.types.ts",
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.helpers.ts",
+        "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts",
+        "frontend/src/features/videoCall/ui/VideoTile/TileContent.tsx",
+        "frontend/src/features/videoCall/ui/VideoTile/CallVideo.tsx"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/videoCall/ui/VideoTile/__tests__/ScreenShare.test.tsx",
+        "frontend/src/features/videoCall/ui/VideoTile/__tests__/VideoTile.helpers.test.ts"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": "remote <video>: box 1038x583, stream 800x1000, object-fit: cover",
+      "id": 1,
+      "title": "Демонстрация окна с другим соотношением сторон обрезается у собеседника",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "P3.1",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts",
+      "line_hint": 35,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/34-student-sees-portrait-window-share-cropped.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/36-after-fix-portrait-window-share-whole.png"
+      ],
+      "expected": "Собеседник видит транслируемое окно целиком",
+      "actual": "object-fit: cover: у окна 800×1000 в плитке 16:9 обрезаны верх и низ",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "fix_suggestion": "object-fit: contain для демонстрации экрана, cover для камеры"
+    },
+    {
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Нужна причина завершения в контракте call_ended и тексты сообщений",
+      "console_excerpt": null,
+      "network_excerpt": "tutor << call_ended (ученик закрыл вкладку), тостов нет",
+      "id": 2,
+      "title": "Звонок, завершённый или оборванный собеседником, закрывается молча",
+      "category": "ux",
+      "severity": "medium",
+      "scenario_id": "E6",
+      "file": "frontend/src/features/videoCall/model/toasts.model.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/18-tutor-idle-after-peer-hangup.png"
+      ],
+      "expected": "Вторая сторона видит, что собеседник отключился / у него нет устройств (FR-016, SC-007)",
+      "actual": "Экран звонка исчезает без сообщения; при отказе устройств у одной стороны вторая получает только call_ended",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "fix_suggestion": "call_ended { reason: hangup | peer_disconnected | media_unavailable } и тосты «Собеседник завершил звонок» / «Собеседник отключился»"
+    },
+    {
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Реализация и тест сознательно расходятся со спекой — нужно решение",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "id": 3,
+      "title": "Попытка звонка адресату не в сети не записывается в историю",
+      "category": "spec-mismatch",
+      "severity": "medium",
+      "scenario_id": "E1",
+      "file": "backend/src/lib/websocket/signaling.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/22-tutor-callee-offline-toast.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/20-tutor-call-history.png"
+      ],
+      "expected": "data-model.md / tasks.md T033: офлайн-адресат → запись MISSED",
+      "actual": "call_unavailable без записи; callLifecycle.test.ts:136 явно ожидает 0 записей",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "fix_suggestion": "Создавать MISSED-запись при CallPeerOfflineError и поправить тест, либо обновить data-model.md/tasks.md"
+    },
+    {
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/ui/IncomingCallModal/IncomingCallModal.tsx",
+        "frontend/src/features/videoCall/ui/IncomingCallModal/IncomingCallModal.helpers.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/videoCall/ui/IncomingCallModal/__tests__/IncomingCallModal.test.tsx"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": "student >> call_reject после клика по фону",
+      "id": 4,
+      "title": "Клик по фону окна входящего вызова отклоняет вызов",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P1.2",
+      "file": "frontend/src/features/videoCall/ui/IncomingCallModal/IncomingCallModal.tsx",
+      "line_hint": 22,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/05-student-incoming-call.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/35-after-fix-backdrop-click-keeps-ringing.png"
+      ],
+      "expected": "Случайный тап мимо кнопок не сбрасывает вызов",
+      "actual": "backdropClick вызывает reject: у репетитора «Вызов отклонён»",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "fix_suggestion": "Игнорировать reason === backdropClick в onClose, Esc оставить отклонением"
+    },
+    {
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Решение по копирайту (нейтральный текст удобен для звонка ученик → репетитор)",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "id": 5,
+      "title": "Сообщение об офлайн-адресате отличается от текста спеки",
+      "category": "spec-mismatch",
+      "severity": "low",
+      "scenario_id": "E1",
+      "file": "frontend/src/features/videoCall/model/call.constants.ts",
+      "line_hint": 23,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/22-tutor-callee-offline-toast.png"
+      ],
+      "expected": "«Ученик сейчас не в сети»",
+      "actual": "«Собеседник сейчас не в сети»",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "fix_suggestion": "Текст по роли собеседника из $outgoingCallPeer.role или обновить спеку"
+    },
+    {
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Нужен отдельный сигнал или причина для таймаута — меняет контракт",
+      "console_excerpt": null,
+      "network_excerpt": "student << call_canceled через 40 с после call_incoming",
+      "id": 6,
+      "title": "У адресата пропущенный по таймауту вызов называется «Вызов отменён»",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P1.7",
+      "file": "backend/src/lib/websocket/signaling.ts",
+      "line_hint": null,
+      "screenshots": [],
+      "expected": "Адресат понимает, что пропустил вызов (в истории — «Пропущен»)",
+      "actual": "Тост «Вызов отменён», хотя звонящий не отменял",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "fix_suggestion": "call_canceled { reason: timeout } и текст «Пропущенный вызов от …»"
+    },
+    {
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Новый элемент UI — решение PO",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "id": 7,
+      "title": "Нельзя начать звонок с заранее выключенными микрофоном или камерой",
+      "category": "spec-mismatch",
+      "severity": "low",
+      "scenario_id": "P2.5",
+      "file": "frontend/src/features/videoCall/ui/OutgoingCallOverlay/OutgoingCallOverlay.tsx",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/04-tutor-outgoing-calling.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls/screenshots/05-student-incoming-call.png"
+      ],
+      "expected": "US2-5: звонок можно начать с выключенными микрофоном/камерой",
+      "actual": "До соединения нет переключателей, медиа всегда стартует включённым",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "fix_suggestion": "Переключатели микрофона/камеры на экране исходящего и в окне входящего вызова, учитывать в addLocalMediaFx"
+    }
+  ]
+}

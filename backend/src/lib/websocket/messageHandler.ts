@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import type { AuthenticatedWebSocket } from "./types";
 import { handleCallSignal } from "./signaling";
-import { isCallSignalType } from "./signaling.types";
+import { isCallSignalType } from "./signaling.helpers";
 
 export const handleMessage = (ws: AuthenticatedWebSocket, data: unknown): void => {
   if (

@@ -43,6 +43,7 @@ describe("features/videoCall/model/call.model transitions", () => {
 
   it("should set a tutor peer with an empty id when the student starts a call without an id", async () => {
     const scope = fork();
+    setCallTransport(vi.fn(), null, "student");
 
     await allSettled(callModel.callStarted, {
       scope,
@@ -121,7 +122,7 @@ describe("features/videoCall/model/call.model transitions", () => {
       scope,
       params: { studentId: "s", peerName: "N" },
     });
-    await allSettled(callModel.unavailableReceived, { scope });
+    await allSettled(callModel.unavailableReceived, { scope, params: "student" });
 
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
@@ -151,16 +152,29 @@ describe("features/videoCall/model/call.model transitions", () => {
     });
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
 
-    await allSettled(callModel.canceledReceived, { scope });
+    await allSettled(callModel.canceledReceived, {
+      scope,
+      params: { reason: "canceled", callerName: "Анна" },
+    });
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
 
   it("should return to idle on busy and no-answer", async () => {
     const busyScope = fork();
+    await allSettled(callModel.callStarted, {
+      scope: busyScope,
+      params: { studentId: "s", peerName: "N" },
+    });
+    expect(busyScope.getState(callModel.$callPhase)).toBe("outgoing");
     await allSettled(callModel.busyReceived, { scope: busyScope });
     expect(busyScope.getState(callModel.$callPhase)).toBe("idle");
 
     const noAnswerScope = fork();
+    await allSettled(callModel.callStarted, {
+      scope: noAnswerScope,
+      params: { studentId: "s", peerName: "N" },
+    });
+    expect(noAnswerScope.getState(callModel.$callPhase)).toBe("outgoing");
     await allSettled(callModel.noAnswerReceived, { scope: noAnswerScope });
     expect(noAnswerScope.getState(callModel.$callPhase)).toBe("idle");
   });

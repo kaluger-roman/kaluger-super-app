@@ -15,6 +15,8 @@ type VideoTileProps = {
   avatarSize?: number;
   stream?: MediaStream | null;
   muted?: boolean;
+  isSelf?: boolean;
+  compact?: boolean;
 };
 
 export const VideoTile: FC<VideoTileProps> = ({
@@ -26,8 +28,10 @@ export const VideoTile: FC<VideoTileProps> = ({
   avatarSize = 96,
   stream = null,
   muted = false,
+  isSelf = false,
+  compact = false,
 }) => (
-  <Styled.TileBox $hasVideo={cameraOn} $isScreen={screenSharing}>
+  <Styled.TileBox $hasVideo={cameraOn} $isScreen={screenSharing} $isSelf={isSelf}>
     <TileContent
       name={name}
       cameraOn={cameraOn}
@@ -36,6 +40,8 @@ export const VideoTile: FC<VideoTileProps> = ({
       avatarSize={avatarSize}
       stream={stream}
       muted={muted}
+      isSelf={isSelf}
+      compact={compact}
     />
 
     {screenSharing && (
@@ -54,8 +60,8 @@ export const VideoTile: FC<VideoTileProps> = ({
     </Styled.NameChipRow>
 
     {!micOn && (
-      <Styled.TopRightBadges>
-        <Styled.StatusBadge $variant="muted" aria-label="Микрофон выключен">
+      <Styled.TopRightBadges $compact={compact}>
+        <Styled.StatusBadge $variant="muted" $compact={compact} aria-label="Микрофон выключен">
           <MicOffIcon fontSize="small" />
         </Styled.StatusBadge>
       </Styled.TopRightBadges>

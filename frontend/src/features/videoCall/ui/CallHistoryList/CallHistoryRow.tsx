@@ -7,6 +7,7 @@ import {
 } from "@mui/icons-material";
 import { Chip, Typography } from "@mui/material";
 
+import type { CallHistoryRecord } from "@entities";
 import { formatDateTime } from "@shared";
 
 import { getStatusChipColor } from "./CallHistoryList.helpers";
@@ -16,7 +17,6 @@ import {
   getCallDirectionLabel,
   getCallStatusLabel,
 } from "../../videoCall.helpers";
-import type { CallHistoryRecord } from "../../videoCall.types";
 
 type CallHistoryRowProps = {
   record: CallHistoryRecord;

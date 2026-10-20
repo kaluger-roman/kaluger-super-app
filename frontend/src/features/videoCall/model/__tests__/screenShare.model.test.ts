@@ -5,21 +5,14 @@ import { notificationsModel } from "@shared";
 
 import {
   callModel,
-  dispatchCallSignal,
+  getSession,
   setCallTransport,
   setWebRtcAdapter,
   stopAllSessions,
 } from "../index";
+import { settleMicrotasks, startCallerSession } from "./callFlow";
 import { createFakeAdapter, createFakeStream } from "./fakeWebrtc";
 import { collectEvents, readStore } from "./storeProbe";
-
-const settleMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
-
-const startCallerSession = async (callId: string): Promise<void> => {
-  dispatchCallSignal({ type: "call_ringing", callId, iceServers: [] });
-  dispatchCallSignal({ type: "call_accepted", callId, iceServers: [] });
-  await settleMicrotasks();
-};
 
 describe("features/videoCall/model screen share", () => {
   let sent: Array<{ type: string; [key: string]: unknown }>;
@@ -51,6 +44,7 @@ describe("features/videoCall/model screen share", () => {
     expect(readStore(callModel.$selfMediaState).screenSharing).toBe(true);
     expect(sent.find((m) => m.type === "call_media_state")).toMatchObject({
       screenSharing: true,
+      cameraAvailable: true,
     });
   });
 
@@ -69,6 +63,7 @@ describe("features/videoCall/model screen share", () => {
     expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
     expect(sent.find((m) => m.type === "call_media_state")).toMatchObject({
       screenSharing: false,
+      cameraAvailable: true,
     });
   });
 
@@ -78,6 +73,7 @@ describe("features/videoCall/model screen share", () => {
       micOn: true,
       cameraOn: true,
       screenSharing: true,
+      cameraAvailable: true,
     });
     sent = [];
     getDisplayMedia.mockClear();
@@ -103,5 +99,49 @@ describe("features/videoCall/model screen share", () => {
 
     const screenTrack = displayStream.getVideoTracks()[0];
     expect(screenTrack.stop).toHaveBeenCalled();
+  });
+
+  it("should show an error toast when the screen share cannot start", async () => {
+    getDisplayMedia.mockRejectedValueOnce(new DOMException("busy", "NotReadableError"));
+    await startCallerSession("call-5");
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toContain("Не удалось начать демонстрацию экрана");
+    expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
+  });
+
+  it("should stay silent when the user closes the screen picker", async () => {
+    getDisplayMedia.mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+    await startCallerSession("call-6");
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toHaveLength(0);
+  });
+
+  it("should report screenSharing:false even when restoring the camera track fails", async () => {
+    await startCallerSession("call-7");
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+    const sender = getSession("call-7")?.videoTransceiver?.sender as unknown as {
+      replaceTrack: Mock;
+    };
+    sender.replaceTrack.mockRejectedValueOnce(new Error("replace failed"));
+    sent = [];
+
+    callModel.toggleScreenShare();
+    await settleMicrotasks();
+
+    expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
+    expect(sent.find((m) => m.type === "call_media_state")).toMatchObject({
+      screenSharing: false,
+    });
   });
 });

@@ -17,6 +17,7 @@ export const mediaStateOf = (stream: MediaStream, cameraOn: boolean): CallMediaS
   micOn: stream.getAudioTracks().some((track) => track.enabled),
   cameraOn,
   screenSharing: false,
+  cameraAvailable: cameraOn,
 });
 
 export const getCameraTrack = (stream: MediaStream): MediaStreamTrack | null =>

@@ -3,7 +3,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { StudentRequest } from "../../types";
 import { getCallHistoryForStudent, getCallHistoryForTutor } from "../../services";
-import { parseHistoryQuery } from "./getCallHistory.helpers";
+import { parseHistoryQuery } from "./getCallHistory.validators";
 
 export const getTutorCallHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

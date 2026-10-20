@@ -13,6 +13,7 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.scheduledReminder.deleteMany();
   await prisma.pushSubscription.deleteMany();
   await prisma.reminderSettings.deleteMany();
+  await prisma.callRecord.deleteMany();
   await prisma.lesson.deleteMany();
   await prisma.studentInvitation.deleteMany();
   await prisma.studentUser.deleteMany();
@@ -266,6 +267,23 @@ testRouter.post("/students/:studentId/student-user", async (req: Request, res: R
     token,
     verificationCode: code,
   });
+});
+
+testRouter.post("/call-records", async (req: Request, res: Response) => {
+  const { tutorId, studentId, callerKind, status, startedAt, durationSeconds } = req.body;
+  const started = startedAt ? new Date(startedAt) : new Date();
+  const record = await prisma.callRecord.create({
+    data: {
+      tutorId,
+      studentId,
+      callerKind: callerKind ?? "TUTOR",
+      status: status ?? "COMPLETED",
+      startedAt: started,
+      endedAt: durationSeconds ? new Date(started.getTime() + durationSeconds * 1000) : null,
+      durationSeconds: durationSeconds ?? null,
+    },
+  });
+  res.status(201).json({ record });
 });
 
 testRouter.post("/admin/token", (_req: Request, res: Response) => {

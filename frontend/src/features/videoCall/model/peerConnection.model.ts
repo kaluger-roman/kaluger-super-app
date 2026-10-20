@@ -2,11 +2,17 @@ import { createEffect } from "effector";
 
 import { CONNECTION_FAILED_TEXT } from "./call.constants";
 import * as callModel from "./call.model";
-import type { IcePayload, IceServerPayload, LocalMediaParams, SdpPayload } from "./call.types";
+import type {
+  IcePayload,
+  IceServerPayload,
+  LocalMediaParams,
+  MediaStateBroadcast,
+  SdpPayload,
+} from "./call.types";
 import { buildRtcConfiguration } from "./iceConfig.helpers";
 import { acquireLocalMedia, getCameraTrack, mediaStateOf } from "./negotiation.helpers";
-import { markRemoteDescriptionSet } from "./peerConnection.helpers";
-import { sendOverTransport } from "./transport.helpers";
+import { findVideoTransceiver, markRemoteDescriptionSet } from "./peerConnection.helpers";
+import { sendMediaState, sendOverTransport } from "./transport.helpers";
 import {
   createMediaStreamSafe,
   createPeerConnection,
@@ -26,7 +32,8 @@ const attachPeerConnection = (
   const remoteStream = createMediaStreamSafe();
 
   pc.ontrack = (event) => {
-    event.streams[0]?.getTracks().forEach((track) => remoteStream.addTrack(track));
+    // A track replaced into a stream-less transceiver arrives with empty event.streams.
+    if (!remoteStream.getTrackById(event.track.id)) remoteStream.addTrack(event.track);
     callModel.remoteTrackReceived();
   };
 
@@ -46,7 +53,6 @@ const attachPeerConnection = (
       callModel.callConnected();
     }
     if (pc.connectionState === "failed") {
-      sendOverTransport({ type: "call_hangup", callId });
       callModel.callFailed(CONNECTION_FAILED_TEXT);
     }
   };
@@ -56,11 +62,14 @@ const attachPeerConnection = (
     localStream: null,
     remoteStream,
     cameraTrack: null,
+    videoTransceiver: null,
     screenStream: null,
     remoteDescriptionSet: false,
     pendingIce: [],
     polite,
     makingOffer: false,
+    answeringOffer: false,
+    offerPending: false,
   });
   return pc;
 };
@@ -78,18 +87,34 @@ export const addLocalMediaFx = createEffect(
     session.localStream = stream;
     session.cameraTrack = getCameraTrack(stream);
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-    callModel.selfMediaStateChanged(mediaStateOf(stream, cameraOn));
+    session.videoTransceiver = findVideoTransceiver(pc);
+    // Without a video m-line in the caller's offer the callee's camera could never be sent.
+    if (!polite && !session.videoTransceiver) {
+      session.videoTransceiver = pc.addTransceiver("video", { direction: "recvonly" });
+    }
+    const mediaState = mediaStateOf(stream, cameraOn);
+    callModel.selfMediaStateChanged(mediaState);
+    sendMediaState(callId, mediaState);
   }
 );
 
 export const sendOfferFx = createEffect(async (callId: string): Promise<void> => {
   const session = getSession(callId);
   if (!session) return;
+  // An implicit setLocalDescription during an answer would apply our own answer
+  // and swallow the peer's offer; renegotiate once the answer has gone out.
+  if (session.answeringOffer || session.pc.signalingState !== "stable") {
+    session.offerPending = true;
+    return;
+  }
   session.makingOffer = true;
   try {
-    const offer = await session.pc.createOffer();
-    await session.pc.setLocalDescription(offer);
-    sendOverTransport({ type: "webrtc_offer", callId, sdp: offer });
+    // Implicit setLocalDescription builds the offer in the current signaling state,
+    // so a glaring remote offer can't slip in between createOffer and applying it.
+    await session.pc.setLocalDescription();
+    const offer = session.pc.localDescription;
+    if (offer?.type !== "offer") return;
+    sendOverTransport({ type: "webrtc_offer", callId, sdp: { type: offer.type, sdp: offer.sdp } });
   } finally {
     session.makingOffer = false;
   }
@@ -100,16 +125,24 @@ export const sendAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Pr
   if (!session) return;
 
   const offerCollides = session.makingOffer || session.pc.signalingState !== "stable";
-  if (offerCollides) {
-    if (!session.polite) return;
-    await session.pc.setLocalDescription({ type: "rollback" });
-  }
+  if (offerCollides && !session.polite) return;
 
-  await session.pc.setRemoteDescription(sdp);
-  await markRemoteDescriptionSet(session);
-  const answer = await session.pc.createAnswer();
-  await session.pc.setLocalDescription(answer);
-  sendOverTransport({ type: "webrtc_answer", callId, sdp: answer });
+  session.answeringOffer = true;
+  try {
+    // setRemoteDescription rolls back our pending offer implicitly; an explicit rollback
+    // throws while createOffer is still running and signalingState is "stable".
+    await session.pc.setRemoteDescription(sdp);
+    await markRemoteDescriptionSet(session);
+    const answer = await session.pc.createAnswer();
+    await session.pc.setLocalDescription(answer);
+    sendOverTransport({ type: "webrtc_answer", callId, sdp: answer });
+  } finally {
+    session.answeringOffer = false;
+  }
+  if (offerCollides || session.offerPending) {
+    session.offerPending = false;
+    await sendOfferFx(callId);
+  }
 });
 
 export const applyAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Promise<void> => {
@@ -117,6 +150,10 @@ export const applyAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): P
   if (!session) return;
   await session.pc.setRemoteDescription(sdp);
   await markRemoteDescriptionSet(session);
+  if (session.offerPending) {
+    session.offerPending = false;
+    await sendOfferFx(callId);
+  }
 });
 
 export const applyIceFx = createEffect(async ({ callId, candidate }: IcePayload): Promise<void> => {
@@ -131,4 +168,8 @@ export const applyIceFx = createEffect(async ({ callId, candidate }: IcePayload)
   } catch {
     /* ignore late or invalid ICE candidate */
   }
+});
+
+export const sendMediaStateFx = createEffect(({ callId, media }: MediaStateBroadcast): void => {
+  if (callId) sendMediaState(callId, media);
 });
