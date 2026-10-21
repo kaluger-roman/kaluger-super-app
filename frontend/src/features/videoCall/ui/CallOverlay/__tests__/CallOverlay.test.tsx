@@ -10,6 +10,20 @@ import { callModel } from "../../../model";
 import type { CallPhase } from "../../../model/call.types";
 import { CallOverlay } from "../CallOverlay";
 
+// The app's full-screen blocking spinner (App.styled `ModalBackdrop`) sits at modal + 1.
+const BLOCKING_OVERLAY_Z_INDEX = theme.zIndex.modal + 1;
+
+const zIndexOf = (element: Element | null): number =>
+  element ? Number(getComputedStyle(element).zIndex) : Number.NaN;
+
+const fixedAncestorOf = (element: Element): Element | null => {
+  let current: Element | null = element;
+  while (current && getComputedStyle(current).position !== "fixed") {
+    current = current.parentElement;
+  }
+  return current;
+};
+
 const renderOverlay = (phase: CallPhase) => {
   const scope = fork({
     values: [
@@ -59,5 +73,17 @@ describe("CallOverlay", () => {
     const { container } = renderOverlay("outgoing");
     expect(container).toBeEmptyDOMElement();
     expect(document.body).toHaveTextContent("Иван Смирнов");
+  });
+
+  it("should keep the incoming call above the app's blocking overlay", () => {
+    renderOverlay("incoming");
+    const dialogRoot = screen.getByRole("dialog").closest(".MuiDialog-root");
+    expect(zIndexOf(dialogRoot)).toBeGreaterThan(BLOCKING_OVERLAY_Z_INDEX);
+  });
+
+  it("should keep the call screen above the app's blocking overlay", () => {
+    renderOverlay("active");
+    const callScreen = fixedAncestorOf(screen.getByRole("button", { name: /завершить/i }));
+    expect(zIndexOf(callScreen)).toBeGreaterThan(BLOCKING_OVERLAY_Z_INDEX);
   });
 });

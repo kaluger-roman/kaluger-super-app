@@ -2,13 +2,16 @@ import { Box, Dialog, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
-export const StyledDialog = styled(Dialog)({
+import { CALL_LAYER_Z_INDEX_OFFSET } from "../../videoCall.constants";
+
+export const StyledDialog = styled(Dialog)(({ theme }) => ({
+  zIndex: theme.zIndex.modal + CALL_LAYER_Z_INDEX_OFFSET,
   "& .MuiDialog-paper": {
     borderRadius: 24,
     padding: 8,
     minWidth: 320,
   },
-});
+}));
 
 export const Content = styled(Box)({
   display: "flex",

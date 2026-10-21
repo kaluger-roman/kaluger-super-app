@@ -51,7 +51,7 @@ export const authenticateStudentWebSocket = async (
     return { studentUserId: decoded.studentUserId, email: decoded.email };
   } catch (error) {
     console.error("Student WebSocket authentication error:", error);
-    ws.close(1008, "Authentication failed");
+    ws.close(1011, "Authentication unavailable");
     return null;
   }
 };

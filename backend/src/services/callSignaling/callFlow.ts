@@ -302,3 +302,6 @@ export const terminateActiveCallForParticipant = async (
   relayToPeer(call, kind, toDropPeerMessage(outcome, call.callId));
   await finishCall(call, outcome.status);
 };
+
+export const hasActiveCall = (kind: CallerKindValue, id: string): boolean =>
+  callRegistry.findActiveCallForParticipant(kind, id) !== undefined;

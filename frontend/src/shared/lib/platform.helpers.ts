@@ -13,3 +13,6 @@ export const isInStandaloneMode = (): boolean => {
     (window.navigator as unknown as { standalone: boolean }).standalone === true
   );
 };
+
+export const isPageVisible = (): boolean =>
+  typeof document === "undefined" || document.visibilityState !== "hidden";

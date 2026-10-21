@@ -4,14 +4,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { lessonModel } from "@entities";
 import { changePasswordModel } from "@features";
 
+import * as appInitModel from "../appInit.model";
 import { WS_RECONNECT_DELAY_MS } from "../webSocket.constants";
 import {
   connectWebSocket,
   connectWebSocketFx,
   disconnectWebSocket,
   handleLessonStatusUpdate,
+  tokenStorageChanged,
   webSocketClosed,
-  $isReplacedElsewhere,
+  $elsewhere,
   $isWebSocketEnabled,
 } from "../webSocket.model";
 
@@ -27,22 +29,53 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const PLAIN_CLOSE = { revokedToken: null, replaced: false };
+const PLAIN_CLOSE = { revokedToken: null, elsewhere: null };
 
 const createScope = () => {
-  const connectHandler = vi.fn(() => undefined);
+  const connectHandler = vi.fn((_resume: boolean) => undefined);
   const scope = fork({ handlers: [[connectWebSocketFx, connectHandler]] });
   return { scope, connectHandler };
 };
 
 describe("app/model/webSocket.model — reconnect", () => {
+  it("marks automatic reconnects as resumes and explicit connects as take-overs", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    const closeRun = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+    await closeRun;
+
+    expect(connectHandler.mock.calls.map(([resume]) => resume)).toEqual([false, true]);
+  });
+
+  it("lets a hidden tab reconnect only once it is shown again", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+
+    try {
+      const closeRun = allSettled(webSocketClosed, { scope, params: PLAIN_CLOSE });
+      await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+      await closeRun;
+      expect(connectHandler).toHaveBeenCalledTimes(1);
+
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      await allSettled(appInitModel.appResumed, { scope });
+      expect(connectHandler).toHaveBeenCalledTimes(2);
+      expect(connectHandler).toHaveBeenLastCalledWith(true);
+    } finally {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    }
+  });
+
   it("ends the session instead of reconnecting when the server revoked the current token", async () => {
     const { scope, connectHandler } = createScope();
     await allSettled(connectWebSocket, { scope });
 
     const closeRun = allSettled(webSocketClosed, {
       scope,
-      params: { revokedToken: "test-token", replaced: false },
+      params: { revokedToken: "test-token", elsewhere: null },
     });
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await closeRun;
@@ -57,7 +90,7 @@ describe("app/model/webSocket.model — reconnect", () => {
 
     void allSettled(webSocketClosed, {
       scope,
-      params: { revokedToken: "test-token", replaced: false },
+      params: { revokedToken: "test-token", elsewhere: null },
     });
     await vi.advanceTimersByTimeAsync(0);
     // The pending reconnect delay keeps the scope busy, so allSettled would wait for it.
@@ -73,13 +106,39 @@ describe("app/model/webSocket.model — reconnect", () => {
 
     const closeRun = allSettled(webSocketClosed, {
       scope,
-      params: { revokedToken: null, replaced: true },
+      params: { revokedToken: null, elsewhere: "tab" },
     });
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
     await closeRun;
 
     expect(connectHandler).toHaveBeenCalledTimes(1);
-    expect(scope.getState($isReplacedElsewhere)).toBe(true);
+    expect(scope.getState($elsewhere)).toBe("tab");
+  });
+
+  it("reconnects at once when another tab of this browser stored a new token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    void allSettled(webSocketClosed, {
+      scope,
+      params: { revokedToken: "test-token", elsewhere: null },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    void allSettled(tokenStorageChanged, { scope });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a resume connect when the user comes back to a tab held elsewhere", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+    await allSettled(webSocketClosed, { scope, params: { revokedToken: null, elsewhere: "call" } });
+
+    await allSettled(appInitModel.appResumed, { scope });
+
+    expect(connectHandler).toHaveBeenLastCalledWith(true);
+    expect(scope.getState($elsewhere)).toBe("call");
   });
 
   it("reconnects with the new token when this tab replaced the revoked one", async () => {
@@ -88,7 +147,7 @@ describe("app/model/webSocket.model — reconnect", () => {
 
     const closeRun = allSettled(webSocketClosed, {
       scope,
-      params: { revokedToken: "test-token", replaced: false },
+      params: { revokedToken: "test-token", elsewhere: null },
     });
     localStorage.setItem("authToken", "fresh-token");
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);

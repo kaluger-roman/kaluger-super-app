@@ -27,7 +27,11 @@ export const getCachedTokenVersion = (userId: string): number | undefined => {
   return entry.tokenVersion;
 };
 
+// Versions only grow: a lookup that read the DB before a revocation must not put the old
+// version back over the one the revocation stored.
 export const setCachedTokenVersion = (userId: string, tokenVersion: number): void => {
+  const current = getCachedTokenVersion(userId);
+  if (current !== undefined && current > tokenVersion) return;
   cache.set(userId, {
     tokenVersion,
     expiresAt: Date.now() + CACHE_TTL_MS,

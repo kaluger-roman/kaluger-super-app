@@ -8,7 +8,7 @@ import type { AuthenticatedWebSocket } from "./types";
 export const authenticateWebSocket = async (
   ws: AuthenticatedWebSocket,
   request: IncomingMessage
-): Promise<{ userId: string; email: string } | null> => {
+): Promise<{ userId: string; email: string; tokenVersion: number } | null> => {
   try {
     // Extract token from query parameters
     const { query } = parse(request.url || "", true);
@@ -49,10 +49,11 @@ export const authenticateWebSocket = async (
       setCachedTokenVersion(decoded.userId, dbUser.tokenVersion);
     }
 
-    return { userId: decoded.userId, email: decoded.email };
+    return { userId: decoded.userId, email: decoded.email, tokenVersion };
   } catch (error) {
+    // A server-side failure is not a verdict on the token: 1008 would make the client log out.
     console.error("WebSocket authentication error:", error);
-    ws.close(1008, "Authentication failed");
+    ws.close(1011, "Authentication unavailable");
     return null;
   }
 };

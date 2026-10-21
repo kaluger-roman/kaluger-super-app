@@ -124,4 +124,30 @@ describe("authenticateStudentWebSocket", () => {
       data: { tokenVersion: studentVersion },
     });
   });
+
+  it("closes with a server error, not a token verdict, when the tokenVersion lookup fails", async () => {
+    const token = generateStudentToken({
+      studentUserId,
+      email: studentEmail,
+      isStudent: true,
+      tokenVersion: studentVersion,
+    });
+    const findUnique = jest
+      .spyOn(prisma.studentUser, "findUnique")
+      .mockRejectedValueOnce(new Error("db down"));
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      const ws: any = { close: jest.fn() };
+      const request: any = { url: `/?token=${encodeURIComponent(token)}` };
+
+      const result = await authenticateStudentWebSocket(ws, request);
+
+      expect(result).toBeNull();
+      expect(ws.close).toHaveBeenCalledWith(1011, "Authentication unavailable");
+    } finally {
+      findUnique.mockRestore();
+      consoleError.mockRestore();
+    }
+  });
 });

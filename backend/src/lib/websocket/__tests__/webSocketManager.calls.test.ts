@@ -5,6 +5,7 @@ import { WebSocket } from "ws";
 import { authenticateWebSocket } from "../auth";
 import { handleMessage } from "../messageHandler";
 import {
+  hasActiveCall,
   processCallSignal,
   terminateActiveCallForParticipant,
 } from "../../../services/callSignaling";
@@ -27,6 +28,7 @@ jest.mock("../messageHandler", () => ({
 }));
 
 jest.mock("../../../services/callSignaling", () => ({
+  hasActiveCall: jest.fn(() => false),
   processCallSignal: jest.fn(async () => undefined),
   terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
@@ -58,13 +60,15 @@ describe("WebSocketManager call lifecycle", () => {
   let server: ReturnType<typeof createServer>;
   let manager: WebSocketManager;
 
-  const connectStudent = (ws: SocketStub) =>
-    (manager as unknown as ConnectionHandlers).handleStudentConnection.call(manager, ws, {});
-  const connectTutor = (ws: SocketStub) =>
-    (manager as unknown as ConnectionHandlers).handleConnection.call(manager, ws, {});
+  const connectStudent = (ws: SocketStub, request: { url?: string } = {}) =>
+    (manager as unknown as ConnectionHandlers).handleStudentConnection.call(manager, ws, request);
+  const connectTutor = (ws: SocketStub, request: { url?: string } = {}) =>
+    (manager as unknown as ConnectionHandlers).handleConnection.call(manager, ws, request);
+  const resumeRequest = { url: "/ws?token=t&resume=1" };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(hasActiveCall).mockReturnValue(false);
     jest.spyOn(console, "log").mockImplementation(() => undefined);
     jest.spyOn(console, "error").mockImplementation(() => undefined);
     (authenticateWebSocket as jest.Mock).mockResolvedValue({ userId: "tutor-1", email: "t@e.com" });
@@ -151,6 +155,91 @@ describe("WebSocketManager call lifecycle", () => {
     ws.emit("close");
 
     expect(terminateActiveCallForParticipant).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([["tutor", connectTutor] as const, ["student", connectStudent] as const])(
+    "should keep the live %s socket when another tab reconnects automatically",
+    async (kind, connect) => {
+      const live = makeSocket();
+      const resumed = makeSocket();
+      await connect(live);
+
+      await connect(resumed, resumeRequest);
+
+      expect(resumed.close).toHaveBeenCalledWith(4000, "Connection held by another tab");
+      expect(live.close).not.toHaveBeenCalled();
+      expect(terminateActiveCallForParticipant).not.toHaveBeenCalled();
+      const id = kind === "tutor" ? "tutor-1" : "student-1";
+      expect(manager.getConnection(kind, id)).toBe(live);
+      live.emit("message", inviteMessage);
+      const routed = kind === "tutor" ? handleMessage : processCallSignal;
+      expect(routed).toHaveBeenCalled();
+    }
+  );
+
+  it.each([["tutor", connectTutor] as const, ["student", connectStudent] as const])(
+    "should register an automatic %s reconnect when no tab holds the connection",
+    async (kind, connect) => {
+      const stale = makeSocket();
+      await connect(stale);
+      stale.readyState = WebSocket.CLOSED;
+      const resumed = makeSocket();
+
+      await connect(resumed, resumeRequest);
+
+      expect(resumed.close).not.toHaveBeenCalled();
+      expect(manager.getConnection(kind, kind === "tutor" ? "tutor-1" : "student-1")).toBe(resumed);
+    }
+  );
+
+  it.each([["tutor", connectTutor] as const, ["student", connectStudent] as const])(
+    "should keep the live %s socket and its call when another tab opens during the call",
+    async (kind, connect) => {
+      const live = makeSocket();
+      const fresh = makeSocket();
+      await connect(live);
+      jest.mocked(hasActiveCall).mockReturnValue(true);
+
+      await connect(fresh, { url: "/ws?token=t" });
+
+      const id = kind === "tutor" ? "tutor-1" : "student-1";
+      expect(hasActiveCall).toHaveBeenCalledWith(kind, id);
+      expect(fresh.close).toHaveBeenCalledWith(4002, "Call in progress in another tab");
+      expect(live.close).not.toHaveBeenCalled();
+      expect(terminateActiveCallForParticipant).not.toHaveBeenCalled();
+      expect(manager.getConnection(kind, id)).toBe(live);
+      live.emit("message", inviteMessage);
+      const routed = kind === "tutor" ? handleMessage : processCallSignal;
+      expect(routed).toHaveBeenCalled();
+    }
+  );
+
+  it.each([["tutor", connectTutor] as const, ["student", connectStudent] as const])(
+    "should let a fresh %s tab take over once the call has ended",
+    async (kind, connect) => {
+      const live = makeSocket();
+      const fresh = makeSocket();
+      await connect(live);
+      jest.mocked(hasActiveCall).mockReturnValue(true);
+      await connect(makeSocket(), { url: "/ws?token=t" });
+      jest.mocked(hasActiveCall).mockReturnValue(false);
+
+      await connect(fresh, { url: "/ws?token=t" });
+
+      expect(live.close).toHaveBeenCalledWith(4000, "Replaced by newer connection");
+      expect(manager.getConnection(kind, kind === "tutor" ? "tutor-1" : "student-1")).toBe(fresh);
+    }
+  );
+
+  it("should still replace the live socket on a fresh connect", async () => {
+    const live = makeSocket();
+    const fresh = makeSocket();
+    await connectTutor(live);
+
+    await connectTutor(fresh, { url: "/ws?token=t" });
+
+    expect(live.close).toHaveBeenCalledWith(4000, "Replaced by newer connection");
+    expect(manager.getConnection("tutor", "tutor-1")).toBe(fresh);
   });
 
   it("should ignore messages from a replaced student socket", async () => {

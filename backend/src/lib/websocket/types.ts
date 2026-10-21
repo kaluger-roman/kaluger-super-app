@@ -9,3 +9,8 @@ export type AuthenticatedStudentWebSocket = WebSocket & {
   studentUserId?: string;
   email?: string;
 };
+
+export type TakeoverRefusal = {
+  code: number;
+  reason: string;
+};

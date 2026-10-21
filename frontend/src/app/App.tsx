@@ -54,6 +54,9 @@ const App: FC = () => {
       appInitModel.appBootedUnauthenticated();
     }
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "authToken") webSocketModel.tokenStorageChanged();
+    };
     const handleOnline = () => appInitModel.onlineStatusChanged(true);
     const handleOffline = () => appInitModel.onlineStatusChanged(false);
 
@@ -68,12 +71,14 @@ const App: FC = () => {
       }
     };
 
+    window.addEventListener("storage", handleStorage);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.removeEventListener("storage", handleStorage);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);

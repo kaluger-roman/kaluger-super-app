@@ -35,7 +35,7 @@ describe("authenticateWebSocket", () => {
   it("should return the user when the token is valid and current", async () => {
     const { ws, result } = await connect(generateToken({ userId, email, tokenVersion }));
 
-    expect(result).toEqual({ userId, email });
+    expect(result).toEqual({ userId, email, tokenVersion });
     expect(ws.close).not.toHaveBeenCalled();
   });
 
@@ -75,13 +75,13 @@ describe("authenticateWebSocket", () => {
     expect(ws.close).toHaveBeenCalledWith(1008, "Token revoked");
   });
 
-  it("should close ws when the tokenVersion lookup fails", async () => {
+  it("should close with a server error, not a token verdict, when the tokenVersion lookup fails", async () => {
     jest.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("db down"));
     jest.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { ws, result } = await connect(generateToken({ userId, email, tokenVersion }));
 
     expect(result).toBeNull();
-    expect(ws.close).toHaveBeenCalledWith(1008, "Authentication failed");
+    expect(ws.close).toHaveBeenCalledWith(1011, "Authentication unavailable");
   });
 });

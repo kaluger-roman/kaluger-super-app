@@ -3,15 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { STUDENT_WS_RECONNECT_DELAY_MS } from "../studentWebSocket.constants";
 import {
-  $isReplacedElsewhere,
+  $elsewhere,
   $studentWebSocketConnection,
   connectStudentWebSocket,
   disconnectStudentWebSocket,
   studentWebSocketClosed,
+  studentWebSocketOpened,
 } from "../studentWebSocket.model";
 
 const STUDENT_TOKEN_KEY = "studentToken";
-const PLAIN_CLOSE = { replaced: false };
+const PLAIN_CLOSE = { elsewhere: null };
 
 type MockWebSocket = {
   url: string;
@@ -90,16 +91,21 @@ describe("app/model/studentWebSocket.model — reconnect", () => {
     const scope = fork();
     await allSettled(connectStudentWebSocket, { scope });
 
-    const closeRun = allSettled(studentWebSocketClosed, { scope, params: { replaced: true } });
+    const closeRun = allSettled(studentWebSocketClosed, {
+      scope,
+      params: { elsewhere: "tab" as const },
+    });
     await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS);
     await closeRun;
 
     expect(createdSockets).toHaveLength(1);
-    expect(scope.getState($isReplacedElsewhere)).toBe(true);
+    expect(scope.getState($elsewhere)).toBe("tab");
 
     await allSettled(connectStudentWebSocket, { scope });
     expect(createdSockets).toHaveLength(2);
-    expect(scope.getState($isReplacedElsewhere)).toBe(false);
+    expect(scope.getState($elsewhere)).toBe("tab");
+    await allSettled(studentWebSocketOpened, { scope });
+    expect(scope.getState($elsewhere)).toBeNull();
   });
 
   it("reconnects after the delay while the session is still enabled", async () => {

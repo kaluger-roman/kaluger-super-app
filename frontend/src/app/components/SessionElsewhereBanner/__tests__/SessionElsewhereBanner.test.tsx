@@ -8,13 +8,17 @@ import { describe, expect, it } from "vitest";
 import { theme } from "@shared";
 
 import { studentWebSocketModel, webSocketModel } from "../../../model";
+import type { ElsewhereReason } from "../../../model";
 import { SessionElsewhereBanner } from "../SessionElsewhereBanner";
 
-const setupBanner = (tutorElsewhere: boolean, studentElsewhere = false) => {
+const setupBanner = (
+  tutorElsewhere: ElsewhereReason | null,
+  studentElsewhere: ElsewhereReason | null = null
+) => {
   const scope = fork({
     values: [
-      [webSocketModel.$isReplacedElsewhere, tutorElsewhere],
-      [studentWebSocketModel.$isReplacedElsewhere, studentElsewhere],
+      [webSocketModel.$elsewhere, tutorElsewhere],
+      [studentWebSocketModel.$elsewhere, studentElsewhere],
     ],
     handlers: [
       [webSocketModel.connectWebSocketFx, () => undefined],
@@ -33,12 +37,12 @@ const setupBanner = (tutorElsewhere: boolean, studentElsewhere = false) => {
 
 describe("SessionElsewhereBanner", () => {
   it("should stay hidden while this tab holds the connection", () => {
-    setupBanner(false);
+    setupBanner(null);
     expect(screen.queryByText(/открыто в другой вкладке/)).not.toBeInTheDocument();
   });
 
   it("should take the tutor connection back to this tab", async () => {
-    const scope = setupBanner(true);
+    const scope = setupBanner("tab");
     const connects: unknown[] = [];
     createWatch({ unit: webSocketModel.connectWebSocket, fn: () => connects.push(1), scope });
 
@@ -46,17 +50,23 @@ describe("SessionElsewhereBanner", () => {
     await userEvent.click(screen.getByRole("button", { name: "Использовать здесь" }));
 
     expect(connects).toHaveLength(1);
-    expect(scope.getState(webSocketModel.$isReplacedElsewhere)).toBe(false);
   });
 
   it("should take the student connection back without touching the tutor one", async () => {
-    const scope = setupBanner(false, true);
+    const scope = setupBanner(null, "tab");
     const tutorConnects: unknown[] = [];
     createWatch({ unit: webSocketModel.connectWebSocket, fn: () => tutorConnects.push(1), scope });
 
     await userEvent.click(screen.getByRole("button", { name: "Использовать здесь" }));
 
     expect(tutorConnects).toHaveLength(0);
-    expect(scope.getState(studentWebSocketModel.$isReplacedElsewhere)).toBe(false);
+    expect(scope.getState(studentWebSocketModel.$isStudentWebSocketEnabled)).toBe(true);
+  });
+
+  it("should not offer a take-over while a call goes on in the other tab", () => {
+    setupBanner("call");
+
+    expect(screen.getByText(/В другой вкладке идёт звонок/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Использовать здесь" })).toBeDisabled();
   });
 });

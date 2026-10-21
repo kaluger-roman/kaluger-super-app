@@ -20,12 +20,11 @@ describe("revokeTutorSessions", () => {
     expect(mockDisconnectUser).toHaveBeenCalledWith("user-1");
   });
 
-  it("should clear the cached version when no fresh token is issued", () => {
-    setCachedTokenVersion("user-2", 3);
+  it("should keep the revoked version when an older lookup tries to cache its result later", () => {
+    revokeTutorSessions("user-2", 5);
 
-    revokeTutorSessions("user-2", null);
+    setCachedTokenVersion("user-2", 4);
 
-    expect(getCachedTokenVersion("user-2")).toBeUndefined();
-    expect(mockDisconnectUser).toHaveBeenCalledWith("user-2");
+    expect(getCachedTokenVersion("user-2")).toBe(5);
   });
 });

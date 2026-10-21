@@ -31,7 +31,12 @@ sample({
   target: sendInviteFx,
 });
 sample({ clock: sendInviteFx.doneData, target: callModel.inviteSent });
-sample({ clock: sendInviteFx.failData, fn: () => NO_TRANSPORT_TEXT, target: callModel.callFailed });
+sample({
+  clock: sendInviteFx.failData,
+  source: callModel.$callsUnavailableText,
+  fn: (unavailableText) => unavailableText ?? NO_TRANSPORT_TEXT,
+  target: callModel.callFailed,
+});
 
 sample({
   clock: [callModel.callStarted, callModel.incomingCallReceived],

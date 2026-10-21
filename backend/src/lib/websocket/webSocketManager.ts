@@ -1,12 +1,18 @@
+import { parse } from "url";
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server, IncomingMessage } from "http";
 import type { Socket } from "net";
-import type { AuthenticatedStudentWebSocket, AuthenticatedWebSocket } from "./types";
+import type {
+  AuthenticatedStudentWebSocket,
+  AuthenticatedWebSocket,
+  TakeoverRefusal,
+} from "./types";
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
-import { terminateActiveCallForParticipant } from "../../services/callSignaling";
+import { hasActiveCall, terminateActiveCallForParticipant } from "../../services/callSignaling";
 import { routeCallMessage } from "./signaling";
+import { getCachedTokenVersion } from "../tokenVersionCache";
 import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
 import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 
@@ -15,9 +21,35 @@ import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 // mismatch вызывает `socket.destroy()` и убивает рукопожатие второго.
 const TUTOR_WS_PATH = "/ws";
 const STUDENT_WS_PATH = "/ws/student";
+const REPLACED_CLOSE_CODE = 4000;
 const TOKEN_REVOKED_CLOSE_CODE = 4001;
+const CALL_IN_PROGRESS_CLOSE_CODE = 4002;
 // A client that never answers the close frame would otherwise hold the socket for ws's 30 s.
 const REVOKED_SOCKET_TERMINATE_MS = 1000;
+
+// An automatic reconnect (`resume=1`) must not take the connection from another live tab of the
+// same user; only a fresh page load or an explicit take-over replaces it.
+const isResumeRequest = (request: IncomingMessage): boolean =>
+  parse(request.url ?? "", true).query.resume === "1";
+
+// A live socket keeps the connection while its user is in a call, so opening another tab never
+// drops the call; otherwise an automatic reconnect leaves it alone and a fresh connect takes over.
+const toTakeoverRefusal = (
+  kind: CallerKindValue,
+  id: string,
+  previous: WebSocket | undefined,
+  ws: WebSocket,
+  request: IncomingMessage
+): TakeoverRefusal | null => {
+  if (!previous || previous === ws || previous.readyState !== WebSocket.OPEN) return null;
+  if (hasActiveCall(kind, id)) {
+    return { code: CALL_IN_PROGRESS_CLOSE_CODE, reason: "Call in progress in another tab" };
+  }
+  if (isResumeRequest(request)) {
+    return { code: REPLACED_CLOSE_CODE, reason: "Connection held by another tab" };
+  }
+  return null;
+};
 
 export class WebSocketManager {
   private wss: WebSocketServer;
@@ -58,19 +90,33 @@ export class WebSocketManager {
     const decoded = await authenticateWebSocket(ws, request);
     if (!decoded) return;
 
+    // The token may have been revoked while its version was read from the DB; nothing below
+    // awaits, so this check holds until the socket is registered.
+    const currentVersion = getCachedTokenVersion(decoded.userId);
+    if (currentVersion !== undefined && currentVersion !== decoded.tokenVersion) {
+      ws.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+      return;
+    }
+
     // Attach user info to WebSocket
     ws.userId = decoded.userId;
     ws.email = decoded.email;
 
+    const previous = this.clients.get(decoded.userId);
+    const refusal = toTakeoverRefusal("tutor", decoded.userId, previous, ws, request);
+    if (refusal) {
+      ws.close(refusal.code, refusal.reason);
+      return;
+    }
+
     // If a previous connection exists for this user, close it before replacing.
     // The old socket's close-handler will fire later but won't affect the new one
     // because of the identity check below.
-    const previous = this.clients.get(decoded.userId);
     if (previous && previous !== ws) {
       // The replaced socket's close handler no longer owns the user, so end its call here.
       void terminateActiveCallForParticipant("tutor", decoded.userId);
       try {
-        previous.close(4000, "Replaced by newer connection");
+        previous.close(REPLACED_CLOSE_CODE, "Replaced by newer connection");
       } catch (error) {
         console.error("Error closing previous WebSocket:", error);
       }
@@ -132,10 +178,16 @@ export class WebSocketManager {
     ws.email = decoded.email;
 
     const previous = this.studentClients.get(decoded.studentUserId);
+    const refusal = toTakeoverRefusal("student", decoded.studentUserId, previous, ws, request);
+    if (refusal) {
+      ws.close(refusal.code, refusal.reason);
+      return;
+    }
+
     if (previous && previous !== ws) {
       void terminateActiveCallForParticipant("student", decoded.studentUserId);
       try {
-        previous.close(4000, "Replaced by newer connection");
+        previous.close(REPLACED_CLOSE_CODE, "Replaced by newer connection");
       } catch (error) {
         console.error("Error closing previous student WebSocket:", error);
       }

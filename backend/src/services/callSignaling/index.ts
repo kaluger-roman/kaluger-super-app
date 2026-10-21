@@ -1,1 +1,1 @@
-export { processCallSignal, terminateActiveCallForParticipant } from "./callFlow";
+export { hasActiveCall, processCallSignal, terminateActiveCallForParticipant } from "./callFlow";

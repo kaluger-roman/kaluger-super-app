@@ -44,7 +44,7 @@ const attachPeerConnection = (
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      callTransportModel.sendCallSignalFx({
+      callTransportModel.signalQueued({
         role,
         message: { type: "webrtc_ice", callId, candidate: event.candidate.toJSON() },
       });
@@ -53,7 +53,7 @@ const attachPeerConnection = (
 
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") {
-      callTransportModel.sendCallSignalFx({ role, message: { type: "call_connected", callId } });
+      callTransportModel.signalQueued({ role, message: { type: "call_connected", callId } });
       callModel.callConnected();
     }
     if (pc.connectionState === "failed") {
@@ -127,7 +127,7 @@ export const sendOfferFx = createEffect(async (callId: string): Promise<void> =>
     await session.pc.setLocalDescription();
     const offer = session.pc.localDescription;
     if (offer?.type !== "offer") return;
-    await callTransportModel.sendCallSignalFx({
+    callTransportModel.signalQueued({
       role: session.role,
       message: { type: "webrtc_offer", callId, sdp: { type: offer.type, sdp: offer.sdp } },
     });
@@ -153,7 +153,7 @@ export const sendAnswerFx = createEffect(async ({ callId, sdp }: SdpPayload): Pr
     await markRemoteDescriptionSet(session);
     const answer = await session.pc.createAnswer();
     await session.pc.setLocalDescription(answer);
-    await callTransportModel.sendCallSignalFx({
+    callTransportModel.signalQueued({
       role: session.role,
       message: { type: "webrtc_answer", callId, sdp: answer },
     });

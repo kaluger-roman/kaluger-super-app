@@ -39,6 +39,7 @@ export const $localStream = createStore<MediaStream | null>(null);
 export const $screenStream = createStore<MediaStream | null>(null);
 export const $remoteStream = createStore<MediaStream | null>(null);
 export const $screenShareSupported = createStore(false);
+export const $callsUnavailableText = createStore<string | null>(null);
 export const $isConnecting = $callPhase.map((phase) => phase === "connecting");
 // Mic, camera and screen share can be switched only once the own tracks exist.
 export const $localMediaReady = $localStream.map(Boolean);
@@ -84,6 +85,7 @@ export const toggleScreenShare = createEvent();
 export const selfMediaStateChanged = createEvent<CallMediaState>();
 export const peerMediaStateChanged = createEvent<CallMediaState>();
 export const screenShareSupportChecked = createEvent<boolean>();
+export const callsUnavailableChanged = createEvent<string | null>();
 export const localMediaAttached = createEvent<LocalStreams>();
 export const screenStreamChanged = createEvent<MediaStream | null>();
 
@@ -102,8 +104,6 @@ const callEnding = createEvent<TerminalSignal | null>();
 
 sample({ clock: callStarted, fn: (): CallPhase => "outgoing", target: $callPhase });
 sample({ clock: callStarted, fn: toCallerRole, target: $callRole });
-sample({ clock: callStarted, fn: () => DEFAULT_SELF_MEDIA_STATE, target: $selfMediaState });
-sample({ clock: callStarted, fn: () => DEFAULT_PEER_MEDIA_STATE, target: $peerMediaState });
 sample({ clock: callStarted, fn: toOutgoingPeer, target: $outgoingCallPeer });
 sample({ clock: inviteSent, target: $inviteId });
 
@@ -122,12 +122,12 @@ sample({ clock: incomingCallReceived, fn: () => null, target: $outgoingCallPeer 
 sample({ clock: incomingCallReceived, fn: ({ callId }) => callId, target: $callId });
 sample({ clock: incomingCallReceived, fn: ({ role }) => role, target: $callRole });
 sample({
-  clock: incomingCallReceived,
+  clock: [callStarted, incomingCallReceived],
   fn: () => DEFAULT_SELF_MEDIA_STATE,
   target: $selfMediaState,
 });
 sample({
-  clock: incomingCallReceived,
+  clock: [callStarted, incomingCallReceived],
   fn: () => DEFAULT_PEER_MEDIA_STATE,
   target: $peerMediaState,
 });
@@ -138,6 +138,7 @@ sample({ clock: callConnected, fn: (): CallPhase => "active", target: $callPhase
 sample({ clock: selfMediaStateChanged, target: $selfMediaState });
 sample({ clock: peerMediaStateChanged, target: $peerMediaState });
 sample({ clock: screenShareSupportChecked, target: $screenShareSupported });
+sample({ clock: callsUnavailableChanged, target: $callsUnavailableText });
 sample({ clock: localMediaAttached, fn: ({ localStream }) => localStream, target: $localStream });
 sample({
   clock: localMediaAttached,

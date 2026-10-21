@@ -1,20 +1,14 @@
 import { createEffect, createEvent, createStore, sample } from "effector";
 import { delay } from "patronum";
 
-import { studentScheduleModel } from "@features/studentSchedule";
-import {
-  callModel,
-  clearCallTransport,
-  dispatchCallSignal,
-  parseCallSignal,
-  setCallTransport,
-} from "@features/videoCall";
-import type { StudentLessonWsEvent } from "@shared";
-import { getStudentToken, resolveWsUrl } from "@shared";
+import { callModel, clearCallTransport, setCallTransport } from "@features/videoCall";
+import { getStudentToken, isPageVisible, resolveWsUrl } from "@shared";
 
+import * as appInitModel from "./appInit.model";
 import { STUDENT_WS_RECONNECT_DELAY_MS } from "./studentWebSocket.constants";
-import { WS_REPLACED_CLOSE_CODE } from "./webSocket.constants";
-import type { StudentWebSocketClose } from "./webSocket.types";
+import { dispatchStudentMessage } from "./studentWebSocket.helpers";
+import { WS_ELSEWHERE_CLOSE_CODES } from "./webSocket.constants";
+import type { ElsewhereReason, StudentWebSocketClose } from "./webSocket.types";
 
 // Connection lifecycle is bound to the **session**, not to any individual page.
 // Future cabinet features (calls, push, etc.) just subscribe to incoming events
@@ -31,7 +25,7 @@ export const $studentWebSocketConnection = createStore<WebSocket | null>(null);
 export const $isStudentWebSocketEnabled = createStore(false);
 export const $isStudentWebSocketConnected = createStore(false);
 // Another tab or device of the same student holds the connection; this tab waits to be taken back.
-export const $isReplacedElsewhere = createStore(false);
+export const $elsewhere = createStore<ElsewhereReason | null>(null);
 
 const $isReconnectScheduled = createStore(false);
 // patronum `delay` cannot be cancelled. Every explicit connect/disconnect bumps
@@ -39,41 +33,24 @@ const $isReconnectScheduled = createStore(false);
 // still current — otherwise leaving and re-entering the cabinet inside the
 // delay opens a second socket.
 const $reconnectGeneration = createStore(0);
+const $isReconnectDeferred = createStore(false);
 
-// Dispatcher for inbound messages — keep it dumb: parse, route to the relevant
-// feature event. Adding a new event type later (video_call_incoming, push_*,
-// etc.) is a single new `if (data.type === ...)` branch here.
-const dispatchMessage = (raw: string): void => {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const callSignal = parseCallSignal(parsed);
-    if (callSignal) {
-      dispatchCallSignal(callSignal, "student");
-      return;
-    }
-    const data = parsed as StudentLessonWsEvent;
-    if (data.type === "lesson_created") {
-      studentScheduleModel.lessonCreated(data.lesson);
-    } else if (data.type === "lesson_updated") {
-      studentScheduleModel.lessonUpdated(data.lesson);
-    } else if (data.type === "lesson_deleted") {
-      studentScheduleModel.lessonDeleted(data.lessonId);
-    } else if (data.type === "lesson_status_updated") {
-      studentScheduleModel.lessonStatusUpdated({
-        lessonId: data.lessonId,
-        status: data.status,
-      });
-    }
-  } catch (error) {
-    console.error("Student WS message parsing error:", error);
-  }
-};
+// true for an automatic reconnect, false for an explicit connect.
+const socketOpenRequested = createEvent<boolean>();
 
-export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
+// A hidden tab waits until it is shown, so after a server restart the tab in use reconnects
+// first and keeps the connection.
+const isPageVisibleFx = createEffect((): boolean => isPageVisible());
+
+// `resume` marks an automatic reconnect: the server then keeps another tab's live socket
+// instead of handing the connection to this tab.
+export const connectStudentWebSocketFx = createEffect((resume: boolean): WebSocket | null => {
   const token = getStudentToken();
   if (!token) return null;
 
-  const ws = new WebSocket(`${resolveWsUrl("/ws/student")}?token=${encodeURIComponent(token)}`);
+  const ws = new WebSocket(
+    `${resolveWsUrl("/ws/student")}?token=${encodeURIComponent(token)}${resume ? "&resume=1" : ""}`
+  );
 
   ws.onopen = () => {
     console.log("Student WS connected");
@@ -82,7 +59,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
   };
 
   ws.onmessage = (event) => {
-    dispatchMessage(event.data);
+    dispatchStudentMessage(event.data);
   };
 
   ws.onclose = (event) => {
@@ -90,7 +67,7 @@ export const connectStudentWebSocketFx = createEffect((): WebSocket | null => {
     const lostRole = clearCallTransport(ws);
     if (lostRole) callModel.transportDisconnected(lostRole);
     setStudentWebSocketConnection(null);
-    studentWebSocketClosed({ replaced: event.code === WS_REPLACED_CLOSE_CODE });
+    studentWebSocketClosed({ elsewhere: WS_ELSEWHERE_CLOSE_CODES.get(event.code) ?? null });
   };
 
   ws.onerror = (error) => {
@@ -112,39 +89,18 @@ export const disconnectStudentWebSocketFx = createEffect((ws: WebSocket | null) 
   }
 });
 
-sample({
-  clock: setStudentWebSocketConnection,
-  target: $studentWebSocketConnection,
-});
+sample({ clock: setStudentWebSocketConnection, target: $studentWebSocketConnection });
 
-sample({
-  clock: studentWebSocketOpened,
-  fn: () => true,
-  target: $isStudentWebSocketConnected,
-});
+sample({ clock: studentWebSocketOpened, fn: () => true, target: $isStudentWebSocketConnected });
 
-sample({
-  clock: studentWebSocketClosed,
-  fn: () => false,
-  target: $isStudentWebSocketConnected,
-});
+sample({ clock: studentWebSocketClosed, fn: () => false, target: $isStudentWebSocketConnected });
 
-sample({
-  clock: connectStudentWebSocket,
-  fn: () => true,
-  target: $isStudentWebSocketEnabled,
-});
+sample({ clock: connectStudentWebSocket, fn: () => true, target: $isStudentWebSocketEnabled });
 
-sample({
-  clock: disconnectStudentWebSocket,
-  fn: () => false,
-  target: $isStudentWebSocketEnabled,
-});
+sample({ clock: disconnectStudentWebSocket, fn: () => false, target: $isStudentWebSocketEnabled });
 
-sample({
-  clock: connectStudentWebSocket,
-  target: connectStudentWebSocketFx,
-});
+sample({ clock: connectStudentWebSocket, fn: () => false, target: socketOpenRequested });
+sample({ clock: socketOpenRequested, target: connectStudentWebSocketFx });
 
 sample({
   clock: disconnectStudentWebSocket,
@@ -155,14 +111,14 @@ sample({
 // Auto-reconnect after STUDENT_WS_RECONNECT_DELAY_MS while the session is
 // still enabled. Close events during a scheduled reconnect are collapsed.
 sample({
-  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
+  clock: [socketOpenRequested, disconnectStudentWebSocket],
   source: $reconnectGeneration,
   fn: (generation) => generation + 1,
   target: $reconnectGeneration,
 });
 
 sample({
-  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
+  clock: [socketOpenRequested, disconnectStudentWebSocket],
   fn: () => false,
   target: $isReconnectScheduled,
 });
@@ -174,26 +130,27 @@ const reconnectScheduled = sample({
     isScheduled: $isReconnectScheduled,
     generation: $reconnectGeneration,
   },
-  filter: ({ isEnabled, isScheduled }, { replaced }) => isEnabled && !isScheduled && !replaced,
+  filter: ({ isEnabled, isScheduled }, { elsewhere }) => isEnabled && !isScheduled && !elsewhere,
   fn: ({ generation }) => generation,
 });
 
+sample({ clock: studentWebSocketClosed, fn: ({ elsewhere }) => elsewhere, target: $elsewhere });
+// Cleared only once this tab holds the connection again, so a failed retry does not flicker.
 sample({
-  clock: studentWebSocketClosed,
-  fn: ({ replaced }) => replaced,
-  target: $isReplacedElsewhere,
+  clock: [studentWebSocketOpened, disconnectStudentWebSocket],
+  fn: () => null,
+  target: $elsewhere,
 });
+// Coming back to the tab retries: if the holder tab was closed meanwhile, this one takes over.
 sample({
-  clock: [connectStudentWebSocket, disconnectStudentWebSocket],
-  fn: () => false,
-  target: $isReplacedElsewhere,
+  clock: appInitModel.appResumed,
+  source: { elsewhere: $elsewhere, isEnabled: $isStudentWebSocketEnabled },
+  filter: ({ elsewhere, isEnabled }) => elsewhere !== null && isEnabled,
+  fn: () => true,
+  target: socketOpenRequested,
 });
 
-sample({
-  clock: reconnectScheduled,
-  fn: () => true,
-  target: $isReconnectScheduled,
-});
+sample({ clock: reconnectScheduled, fn: () => true, target: $isReconnectScheduled });
 
 const reconnectDelayPassed = delay({
   source: reconnectScheduled,
@@ -206,5 +163,28 @@ sample({
   filter: ({ isEnabled, generation }, scheduledGeneration) =>
     isEnabled && generation === scheduledGeneration,
   fn: () => undefined,
-  target: connectStudentWebSocket,
+  target: isPageVisibleFx,
+});
+sample({
+  clock: isPageVisibleFx.doneData,
+  filter: Boolean,
+  fn: () => true,
+  target: socketOpenRequested,
+});
+sample({
+  clock: isPageVisibleFx.doneData,
+  fn: (visible) => !visible,
+  target: $isReconnectDeferred,
+});
+sample({
+  clock: [socketOpenRequested, disconnectStudentWebSocket],
+  fn: () => false,
+  target: $isReconnectDeferred,
+});
+sample({
+  clock: appInitModel.appResumed,
+  source: { isDeferred: $isReconnectDeferred, isEnabled: $isStudentWebSocketEnabled },
+  filter: ({ isDeferred, isEnabled }) => isDeferred && isEnabled,
+  fn: () => true,
+  target: socketOpenRequested,
 });

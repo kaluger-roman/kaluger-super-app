@@ -5,3 +5,4 @@ export * as blockingModel from "./blocking.model";
 export * as sessionTakeoverModel from "./sessionTakeover.model";
 
 export * from "./appInit.types";
+export type { ElsewhereReason } from "./webSocket.types";

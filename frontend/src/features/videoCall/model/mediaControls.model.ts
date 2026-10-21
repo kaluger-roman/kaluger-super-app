@@ -95,11 +95,8 @@ sample({
   target: callModel.selfMediaStateChanged,
 });
 
-// A toggle that failed because its call is already over (e.g. the socket is gone) needs no toast.
 sample({
   clock: toggleCameraFx.fail,
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params.callId,
   fn: () => CAMERA_FAILED_TEXT,
   target: notificationsModel.showErrorEvent,
 });

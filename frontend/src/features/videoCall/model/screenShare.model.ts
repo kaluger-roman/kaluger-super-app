@@ -130,9 +130,8 @@ sample({
 });
 
 sample({
-  clock: startScreenShareFx.fail,
-  source: callModel.$callId,
-  filter: (callId, { params, error }) => callId === params && !isPickerDismissed(error),
+  clock: startScreenShareFx.failData,
+  filter: (error) => !isPickerDismissed(error),
   fn: () => SCREEN_SHARE_FAILED_TEXT,
   target: notificationsModel.showErrorEvent,
 });
