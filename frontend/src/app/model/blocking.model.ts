@@ -2,6 +2,7 @@ import { combine, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 import { debounce } from "patronum";
 
+import { callHistoryModel } from "@entities/callRecord";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
@@ -82,6 +83,7 @@ export const $isBlocking = combine(
     tutorInvitationLoadStatus: tutorStudentInvitationModel.loadStatusFx.pending,
     tutorInvitationIssue: tutorStudentInvitationModel.issueInvitationFx.pending,
     tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
+    loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

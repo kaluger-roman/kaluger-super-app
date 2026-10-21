@@ -76,3 +76,16 @@ export type {
   ValidateInvitationResponse,
   StudentLessonWsEvent,
 } from "./studentCabinet";
+export type {
+  CallDirection,
+  CallerKindValue,
+  CallEndReason,
+  CallCancelReason,
+  CallReplyTarget,
+  IceServer,
+  SessionDescriptionPayload,
+  IceCandidatePayload,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  CallHistoryItem,
+} from "./call";

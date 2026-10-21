@@ -108,7 +108,7 @@ describe("WebSocketManager", () => {
     expect(handler).toBeDefined();
     handler(JSON.stringify(payload));
 
-    expect(handleMessage).toHaveBeenCalledWith(ws, payload);
+    expect(handleMessage).toHaveBeenCalledWith(ws, "u1", payload);
 
     // simulate close and ensure client removed
     const closeHandler = messageHandlers["close"];

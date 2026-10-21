@@ -54,3 +54,6 @@ export const StudentVerifyEmailPage = lazy(() =>
     default: m.StudentVerifyEmailPage,
   }))
 );
+export const CallHistoryPage = lazy(() =>
+  import("@pages/callHistory").then((m) => ({ default: m.CallHistoryPage }))
+);

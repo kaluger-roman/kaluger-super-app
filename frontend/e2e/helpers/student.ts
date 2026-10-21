@@ -33,6 +33,13 @@ export const registerStudentDirect = async (
     expectStatus: 201,
   });
 
+export const isStudentOnline = async (studentUserId: string): Promise<boolean> => {
+  const { connected } = await apiRequest<{ connected: boolean }>(
+    `/api/__test__/ws/students/${studentUserId}`
+  );
+  return connected;
+};
+
 export const seedStudentAuthInBrowser = async (page: Page, token: string): Promise<void> => {
   await page.addInitScript((studentToken) => {
     window.localStorage.setItem("studentToken", studentToken);

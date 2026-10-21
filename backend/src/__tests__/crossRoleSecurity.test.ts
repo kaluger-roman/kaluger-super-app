@@ -60,6 +60,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
       ["GET", "/api/statistics"],
       ["GET", "/api/statistics/income-history"],
       ["GET", "/api/tax-periods"],
+      ["GET", "/api/calls/history"],
       ["GET", "/api/news"],
       ["GET", "/api/reminder-settings"],
     ] as const;
@@ -74,7 +75,11 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
   });
 
   describe("Tutor JWT must NOT access student endpoints", () => {
-    const studentEndpoints = ["/api/student-auth/me", "/api/student-cabinet/lessons"];
+    const studentEndpoints = [
+      "/api/student-auth/me",
+      "/api/student-cabinet/lessons",
+      "/api/student/calls/history",
+    ];
 
     test.each(studentEndpoints)("GET %s rejects tutor JWT", async (path) => {
       const res = await request(app).get(path).set("Authorization", `Bearer ${tutorToken}`);

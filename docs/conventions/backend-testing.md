@@ -7,6 +7,7 @@ Stack: Jest + Supertest + Faker + test database
 - **Do NOT mock Prisma** — use separate test database (ESLint enforced: `no-restricted-syntax` rejects `jest.mock("…prisma…")`)
 - **Clean up after tests** — delete created records
 - **Tests must be independent** — no shared state between tests
+- **Module state resets live in `src/__tests__/setup.ts`** — an in-memory registry or cache gets an `__reset…ForTests()` export next to it, called from the global `beforeEach` in `setup.ts`; never re-export it from a barrel (`index.ts`), and never add a parameter or default to production code only so a test can inject something (mock the module, e.g. `lib/wsManager`, instead)
 - **Always async/await** — never `done` callbacks (ESLint `jest/no-done-callback`); wrap callback APIs in a promise: `await new Promise<void>((resolve) => server.close(() => resolve()))`
 - **No `.only` / `.skip` in committed tests** (ESLint `jest/no-focused-tests`, `jest/no-disabled-tests`)
 - **Test edge cases** — invalid input, empty arrays, null values

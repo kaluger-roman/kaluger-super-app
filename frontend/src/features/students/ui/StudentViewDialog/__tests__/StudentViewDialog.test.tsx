@@ -1,7 +1,7 @@
 import { ThemeProvider, useMediaQuery } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -382,6 +382,44 @@ describe("StudentViewDialog", () => {
 
       expect(screen.getByText(/Archived Student/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /из архива/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("Call button", () => {
+    const linkedStudent = {
+      ...mockStudent,
+      studentUser: { id: "su-1" },
+    } as Student;
+
+    it("should show the call button for a student with a cabinet and request a call on click", async () => {
+      const { scope } = renderWithProviders(
+        <StudentViewDialog open={true} student={linkedStudent} />
+      );
+      const requested: Student[] = [];
+      createWatch({
+        unit: studentViewDialogModel.callRequested,
+        fn: (student) => requested.push(student),
+        scope,
+      });
+
+      await userEvent.click(screen.getByRole("button", { name: "Видеозвонок" }));
+
+      expect(requested).toEqual([linkedStudent]);
+    });
+
+    it("should hide the call button for a student without a cabinet", () => {
+      renderWithProviders(<StudentViewDialog open={true} student={mockStudent} />);
+      expect(screen.queryByRole("button", { name: "Видеозвонок" })).not.toBeInTheDocument();
+    });
+
+    it("should hide the call button for an archived student", () => {
+      renderWithProviders(
+        <StudentViewDialog
+          open={true}
+          student={{ ...archivedStudent, studentUser: linkedStudent.studentUser } as Student}
+        />
+      );
+      expect(screen.queryByRole("button", { name: "Видеозвонок" })).not.toBeInTheDocument();
     });
   });
 });

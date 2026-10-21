@@ -1,0 +1,426 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32780",
+  "run_at": "2026-10-21T18:14:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 48,
+    "passed": 44,
+    "failed": 1,
+    "warned": 3,
+    "scenarios": [
+      {
+        "id": "MT1",
+        "title": "Новая вкладка забирает соединение (репетитор, ученик)",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT2",
+        "title": "Перезапуск сервера: переподключается только держатель",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT3",
+        "title": "Скрытый держатель ждёт показа",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT4",
+        "title": "Возврат в вытесненную вкладку при живом держателе",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT5",
+        "title": "Возврат после закрытия держателя",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT6",
+        "title": "Обрыв сети без FIN у единственной вкладки (покой, звонок, heartbeat)",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "MT7",
+        "title": "Единственная скрытая вкладка после рестарта; видимая выигрывает",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CH1",
+        "title": "Новая вкладка, пока звонит свой вызов",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CH2",
+        "title": "Новая вкладка и новое устройство во время звонка",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CH3",
+        "title": "«Использовать здесь» при звонке в другой вкладке",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CH4",
+        "title": "После звонка вкладка с 4002 может забрать соединение",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CH5",
+        "title": "Тексты «в другой вкладке или на другом устройстве»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "TB",
+        "title": "Двойной клик «Использовать здесь»",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "FL",
+        "title": "Нет мигания баннера на отказанных повторах",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "LO",
+        "title": "Выход в держателе разлогинивает вытесненную вкладку",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "XS",
+        "title": "Выход репетитора не трогает кабинет ученика и публичные страницы того же браузера",
+        "priority": "Edge",
+        "status": "fail",
+        "finding_ids": [
+          2
+        ]
+      },
+      {
+        "id": "PW1",
+        "title": "Смена пароля при второй вкладке того же браузера",
+        "priority": "P1",
+        "status": "warn",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "PW3",
+        "title": "Входящий во время своей смены пароля",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [
+          4
+        ]
+      },
+      {
+        "id": "EM",
+        "title": "Своя смена email в держателе",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "DB",
+        "title": "Ошибка БД при авторизации сокета",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "OFF1",
+        "title": "Офлайн-плашка во время звонка",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "BL1",
+        "title": "Входящий и экран звонка над блокирующим спиннером",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "BL2",
+        "title": "Входящий во время первой загрузки",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "CAM",
+        "title": "Отказ камеры после конца звонка без тоста",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "SQ2",
+        "title": "Переключения при пропаже транспорта",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "P1.1",
+        "title": "Репетитор звонит: «Вызываем…»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Ученик видит входящий с именем",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "Принятие: оба видят и слышат",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "«Завершить»: idle, устройства освобождены",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "«Отклонить»: «Вызов отклонён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Отмена до ответа: «Вызов отменён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "40 с без ответа",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P2.1-2.4",
+        "title": "Микрофон и камера, индикаторы",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "M2",
+        "title": "Кнопки до своих медиа заблокированы",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.6",
+        "title": "Нет камеры: только аудио",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Камера стала доступна",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1-3.4",
+        "title": "Демонстрация экрана",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.1-4.4",
+        "title": "История: статусы, изоляция, 401",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат не в сети",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E3",
+        "title": "Занятость",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E4",
+        "title": "Двойной клик «Видеозвонок»",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E6",
+        "title": "Собеседник закрыл вкладку в звонке",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E7",
+        "title": "Встречный вызов",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E8",
+        "title": "Звонок ученик → репетитор",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E9",
+        "title": "Звонящий закрыл вкладку",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "L4",
+        "title": "Телефон 375×812 и 812×375",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "PH",
+        "title": "Гудки и рингтон",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "SM",
+        "title": "Смоук: вход, список учеников",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 4,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 2,
+      "low": 2
+    },
+    "by_category": {
+      "spec-mismatch": 0,
+      "bug": 1,
+      "ux": 3,
+      "improvement": 0
+    },
+    "unambiguous_fix_count": 1
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "После своей смены пароля или email вкладка-держатель отдаёт соединение фоновой вкладке того же браузера",
+      "category": "ux",
+      "severity": "medium",
+      "scenario_id": "PW1",
+      "file": "frontend/src/app/model/socketReconnect.model.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10/screenshots/26-holder-loses-connection-after-own-password-change.png",
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10/screenshots/27-incoming-rings-in-hidden-tab.png"
+      ],
+      "expected": "Вкладка, где сменили пароль, остаётся на связи, звонок приходит в неё",
+      "actual": "Вытесненная (даже скрытая) вкладка по storage сразу подключается с resume=1 и забирает соединение; у пользователя баннер «Приложение открыто в другой вкладке…», входящий звонит в скрытой вкладке",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Политика переподключения по новому токену; socketReconnect.model.ts сейчас переписывает другой агент (iter 12, tokenRenewedHere), находка есть в iter 12",
+      "console_excerpt": null,
+      "network_excerpt": "tuH hidden: OPEN resume=1 -> connection_ready; tu: CLOSE(4001) -> OPEN resume=1 -> CLOSE(4000)",
+      "fix_suggestion": "Вкладка, сменившая токен, подключается без resume; вытесненные по storage не переподключаются или проходят проверку видимости"
+    },
+    {
+      "id": 2,
+      "title": "Выход репетитора в одной вкладке уводит на /login кабинет ученика и публичные страницы того же браузера",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "XS",
+      "file": "frontend/src/app/model/webSocket.helpers.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10/screenshots/42-student-tab-kicked-by-tutor-logout.png"
+      ],
+      "expected": "Кабинет ученика и /student-invite не меняются при выходе репетитора в другой вкладке",
+      "actual": "Обе вкладки уходят на /login (followStoredTutorToken -> expireTutorSession без проверки сессии репетитора)",
+      "unambiguous_fix": true,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "App.tsx и webSocket.helpers.ts в момент прогона правит другой агент (iter 12, незакоммиченные правки), находка уже есть в iter 12",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Завершать сессию по удалению authToken только во вкладке с сессией репетитора; тест на кабинет ученика"
+    },
+    {
+      "id": 3,
+      "title": "У ученика выход в держателе не разлогинивает вытесненную вкладку, «Использовать здесь» молча ничего не делает",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "LO",
+      "file": "frontend/src/app/App.tsx",
+      "line_hint": 57,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10/screenshots/19-student-replaced-tab-after-holder-logout.png"
+      ],
+      "expected": "Как у репетитора: вытесненная вкладка уходит на /login",
+      "actual": "Вкладка остаётся в кабинете с баннером, токена нет, кнопка не создаёт сокета",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "App.tsx и модели соединения сейчас переписывает другой агент (iter 12)",
+      "console_excerpt": null,
+      "network_excerpt": "stB logout; st click «Использовать здесь» -> 0 new sockets",
+      "fix_suggestion": "Обрабатывать storage по studentToken: нет токена при сессии ученика -> очистить сессию и /login"
+    },
+    {
+      "id": 4,
+      "title": "Входящий во время своей смены пароля: ученику «Репетитор сейчас не в сети» (run 9 #7)",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "PW3",
+      "file": "backend/src/lib/websocket/webSocketManager.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run10/screenshots/25-student-call-during-password-change.png"
+      ],
+      "expected": "Вызов доходит или ученик получает честное сообщение",
+      "actual": "call_incoming пришёл, через 0,7 с сокет отозван (4001), вызов завершён: «Репетитор сейчас не в сети»",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Известная открытая Low, поведение звонка при отзыве токена",
+      "console_excerpt": null,
+      "network_excerpt": "st: call_invite -> call_ringing -> call_unavailable; tu: call_incoming -> CLOSE(4001) -> OPEN resume=1 (+7 ms)",
+      "fix_suggestion": "Без изменений относительно run 9 #7"
+    }
+  ]
+}
