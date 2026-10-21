@@ -50,6 +50,7 @@ const makeSocket = (): SocketStub => {
 };
 
 const inviteMessage = Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" }));
+const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 
 type ConnectionHandlers = {
   handleConnection: (ws: unknown, request: unknown) => Promise<void>;
@@ -204,7 +205,8 @@ describe("WebSocketManager call lifecycle", () => {
 
       const id = kind === "tutor" ? "tutor-1" : "student-1";
       expect(hasActiveCall).toHaveBeenCalledWith(kind, id);
-      expect(fresh.close).toHaveBeenCalledWith(4002, "Call in progress in another tab");
+      expect(fresh.close).not.toHaveBeenCalled();
+      expect(fresh.send).toHaveBeenCalledWith(WAITING);
       expect(live.close).not.toHaveBeenCalled();
       expect(terminateActiveCallForParticipant).not.toHaveBeenCalled();
       expect(manager.getConnection(kind, id)).toBe(live);

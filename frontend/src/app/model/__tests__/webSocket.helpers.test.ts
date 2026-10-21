@@ -11,7 +11,7 @@ describe("app/model/webSocket.helpers dispatchTutorMessage", () => {
     const onLessonStatus = vi.fn();
 
     dispatchTutorMessage(
-      JSON.stringify({ type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" }),
+      { type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" },
       onLessonStatus
     );
 
@@ -21,23 +21,9 @@ describe("app/model/webSocket.helpers dispatchTutorMessage", () => {
   it("should drop a lesson status update with missing fields", () => {
     const onLessonStatus = vi.fn();
 
-    dispatchTutorMessage(
-      JSON.stringify({ type: "lesson_status_updated", lessonId: 1 }),
-      onLessonStatus
-    );
+    dispatchTutorMessage({ type: "lesson_status_updated", lessonId: 1 }, onLessonStatus);
 
     expect(onLessonStatus).not.toHaveBeenCalled();
-  });
-
-  it("should log and ignore a message that is not JSON", () => {
-    const onLessonStatus = vi.fn();
-    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    dispatchTutorMessage("not json", onLessonStatus);
-
-    expect(onLessonStatus).not.toHaveBeenCalled();
-    expect(logged).toHaveBeenCalled();
-    logged.mockRestore();
   });
 });
 

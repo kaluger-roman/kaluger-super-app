@@ -1,10 +1,12 @@
 import { createEffect, createEvent, createStore, sample, scopeBind } from "effector";
 
 import { callModel, clearCallTransport, setCallTransport } from "@features/videoCall";
+import type { CallRole } from "@features/videoCall";
 
 import {
   buildSocketUrl,
-  isConnectionReadyMessage,
+  parseSocketMessage,
+  toControlMessage,
   toSocketClose,
 } from "./socketConnection.helpers";
 import type {
@@ -13,15 +15,13 @@ import type {
   SocketOpenParams,
 } from "./socketConnection.types";
 import * as socketReconnectModel from "./socketReconnect.model";
+import { NO_REVOKED_CLOSE_CODES } from "./webSocket.constants";
 import type { ElsewhereReason, WebSocketClose } from "./webSocket.types";
-
-const NO_REVOKED_CLOSE_CODES: ReadonlySet<number> = new Set();
 
 // One session-scoped socket of the tab: hands over between tabs and feeds the call transport.
 export const createSocketConnection = (config: SocketConnectionConfig) => {
   const revokedCloseCodes = config.revokedCloseCodes ?? NO_REVOKED_CLOSE_CODES;
 
-  // Stores
   const $connection = createStore<WebSocket | null>(null);
   const $isConnected = createStore(false);
   const $isEnabled = createStore(false);
@@ -29,36 +29,39 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   const $elsewhere = createStore<ElsewhereReason | null>(null);
   const $revokedToken = createStore<string | null>(null);
 
-  // Events
   const connect = createEvent();
   const disconnect = createEvent();
   const ready = createEvent();
   const closed = createEvent<WebSocketClose>();
-  // The stored token was replaced: this tab's own password change, or another tab of the browser.
+  // Another tab of the browser replaced the stored token.
   const tokenRenewed = createEvent();
+  // This tab replaced the stored token itself (own password or email change).
+  const tokenRenewedHere = createEvent();
   // true for an automatic reconnect, false for an explicit connect.
   const openRequested = createEvent<boolean>();
   const socketCreated = createEvent<WebSocket>();
   const socketReady = createEvent<WebSocket>();
+  const socketWaiting = createEvent<WebSocket>();
   const socketClosed = createEvent<SocketClosedPayload>();
 
-  // Effects
   const connectFx = createEffect(({ resume, previous }: SocketOpenParams): WebSocket | null => {
     previous?.close();
     const token = config.getToken();
     if (!token) return null;
 
     const onReady = scopeBind(socketReady, { safe: true });
+    const onWaiting = scopeBind(socketWaiting, { safe: true });
     const onClosed = scopeBind(socketClosed, { safe: true });
     const ws = new WebSocket(buildSocketUrl(config.path, token, resume));
     ws.onmessage = (event) => {
-      if (isConnectionReadyMessage(event.data)) onReady(ws);
-      else config.dispatch(event.data);
+      const data = parseSocketMessage(event.data, config.logLabel);
+      const control = toControlMessage(data);
+      if (control === "ready") onReady(ws);
+      else if (control === "waiting") onWaiting(ws);
+      else if (data !== undefined) config.dispatch(data);
     };
     ws.onclose = (event) => {
       console.log(`${config.logLabel} disconnected`);
-      const lostRole = clearCallTransport(ws);
-      if (lostRole) callModel.transportDisconnected(lostRole);
       onClosed({ ws, code: event.code, token });
     };
     ws.onerror = (error) => {
@@ -74,11 +77,15 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
     setCallTransport(config.role, (message) => ws.send(JSON.stringify(message)), ws);
   });
 
+  // The transport registry knows which socket carries a role, so any closed socket may detach.
+  const detachTransportFx = createEffect((ws: WebSocket): CallRole | null =>
+    clearCallTransport(ws)
+  );
+
   const disconnectFx = createEffect((ws: WebSocket | null) => {
     ws?.close();
   });
 
-  // Samples
   sample({ clock: connect, fn: () => true, target: $isEnabled });
   sample({ clock: disconnect, fn: () => false, target: $isEnabled });
   sample({ clock: connect, fn: () => false, target: openRequested });
@@ -92,6 +99,13 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   sample({ clock: disconnect, source: $connection, target: disconnectFx });
   sample({ clock: disconnectFx.done, fn: () => null, target: $connection });
 
+  sample({ clock: socketClosed, fn: ({ ws }) => ws, target: detachTransportFx });
+  sample({
+    clock: detachTransportFx.doneData,
+    filter: (role): role is CallRole => role !== null,
+    target: callModel.transportDisconnected,
+  });
+
   // Events of a socket this tab already replaced must not touch the state of the current one.
   const currentReady = sample({
     clock: socketReady,
@@ -101,6 +115,13 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   });
   sample({ clock: currentReady, target: attachTransportFx });
   sample({ clock: currentReady, fn: () => undefined, target: ready });
+  sample({
+    clock: socketWaiting,
+    source: $connection,
+    filter: (current, ws) => current === ws,
+    fn: (): ElsewhereReason => "call",
+    target: $elsewhere,
+  });
   sample({
     clock: socketClosed,
     source: $connection,
@@ -124,6 +145,7 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
     disconnect,
     closed,
     tokenRenewed,
+    tokenRenewedHere,
     $isEnabled,
     $elsewhere,
     $revokedToken,
@@ -135,6 +157,7 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
     ready,
     closed,
     tokenRenewed,
+    tokenRenewedHere,
     connectFx,
     $connection,
     $isConnected,

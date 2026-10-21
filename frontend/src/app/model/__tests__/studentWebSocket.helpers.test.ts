@@ -26,7 +26,7 @@ describe("app/model/studentWebSocket.helpers dispatchStudentMessage", () => {
   });
 
   it("should route a call signal to the call model as the student", () => {
-    dispatchStudentMessage(JSON.stringify({ type: "call_busy", inviteId: "i-1" }));
+    dispatchStudentMessage({ type: "call_busy", inviteId: "i-1" });
 
     expect(dispatchCallSignal).toHaveBeenCalledWith(
       { type: "call_busy", inviteId: "i-1" },
@@ -40,12 +40,10 @@ describe("app/model/studentWebSocket.helpers dispatchStudentMessage", () => {
     const deleted = collect(studentScheduleModel.lessonDeleted);
     const statuses = collect(studentScheduleModel.lessonStatusUpdated);
 
-    dispatchStudentMessage(JSON.stringify({ type: "lesson_created", lesson }));
-    dispatchStudentMessage(JSON.stringify({ type: "lesson_updated", lesson }));
-    dispatchStudentMessage(JSON.stringify({ type: "lesson_deleted", lessonId: "l-1" }));
-    dispatchStudentMessage(
-      JSON.stringify({ type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" })
-    );
+    dispatchStudentMessage({ type: "lesson_created", lesson });
+    dispatchStudentMessage({ type: "lesson_updated", lesson });
+    dispatchStudentMessage({ type: "lesson_deleted", lessonId: "l-1" });
+    dispatchStudentMessage({ type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" });
     [created, updated, deleted, statuses].forEach((probe) => probe.unwatch());
 
     expect(created.calls).toEqual([lesson]);
@@ -55,13 +53,9 @@ describe("app/model/studentWebSocket.helpers dispatchStudentMessage", () => {
     expect(dispatchCallSignal).not.toHaveBeenCalled();
   });
 
-  it("should log and ignore a message that is not JSON", () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("should ignore a message that is not an object", () => {
+    dispatchStudentMessage("lesson_deleted");
 
-    dispatchStudentMessage("not json");
-
-    expect(logged).toHaveBeenCalled();
     expect(dispatchCallSignal).not.toHaveBeenCalled();
-    logged.mockRestore();
   });
 });

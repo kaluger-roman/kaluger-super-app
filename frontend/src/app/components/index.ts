@@ -7,6 +7,7 @@ export { StudentProtectedRoute } from "./StudentProtectedRoute";
 export { AuthRoute } from "./AuthRoute";
 export { AppRoutes } from "./AppRoutes";
 export { AppContent } from "./AppContent";
+export { AppFrame } from "./AppFrame";
 export { AppLoadingScreen } from "./AppLoadingScreen";
 export { OfflineIndicator } from "./OfflineIndicator";
 export { SessionElsewhereBanner } from "./SessionElsewhereBanner";

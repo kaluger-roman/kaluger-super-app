@@ -35,6 +35,13 @@ describe("WebSocketManager — upgrade routing", () => {
       ws.once("error", reject);
     });
 
+  // Waits for the close handshake, so the server logs the disconnect inside the test.
+  const closeWs = (ws: WebSocket): Promise<void> =>
+    new Promise((resolve) => {
+      ws.once("close", () => setImmediate(resolve));
+      ws.close();
+    });
+
   beforeAll(async () => {
     server = createServer();
     manager = new WebSocketManager(server);
@@ -49,21 +56,20 @@ describe("WebSocketManager — upgrade routing", () => {
   it("accepts /ws upgrade", async () => {
     const ws = await openWs("/ws");
     expect(ws.readyState).toBe(WebSocket.OPEN);
-    ws.close();
+    await closeWs(ws);
   });
 
   it("accepts /ws/student upgrade", async () => {
     const ws = await openWs("/ws/student");
     expect(ws.readyState).toBe(WebSocket.OPEN);
-    ws.close();
+    await closeWs(ws);
   });
 
   it("accepts /ws and /ws/student in parallel — single HTTP server", async () => {
     const [tutorWs, studentWs] = await Promise.all([openWs("/ws"), openWs("/ws/student")]);
     expect(tutorWs.readyState).toBe(WebSocket.OPEN);
     expect(studentWs.readyState).toBe(WebSocket.OPEN);
-    tutorWs.close();
-    studentWs.close();
+    await Promise.all([closeWs(tutorWs), closeWs(studentWs)]);
     expect(manager.getConnectedStudents()).not.toContain("tutor-1");
   });
 

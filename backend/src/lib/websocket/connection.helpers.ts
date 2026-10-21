@@ -4,12 +4,11 @@ import type { IncomingMessage } from "http";
 import { hasActiveCall } from "../../services/callSignaling";
 import type { CallerKindValue } from "../../types";
 import {
-  CALL_IN_PROGRESS_CLOSE_CODE,
   CONNECTION_READY_MESSAGE,
   REPLACED_CLOSE_CODE,
   TAB_ID_PATTERN,
 } from "./connection.constants";
-import type { TabSocket, TakeoverRefusal } from "./types";
+import type { TabSocket, TakeoverDecision } from "./types";
 
 // An automatic reconnect (`resume=1`) must not take the connection from another live tab of the
 // same user; only a fresh page load or an explicit take-over replaces it.
@@ -23,25 +22,37 @@ export const readTabId = (request: IncomingMessage): string | undefined => {
 };
 
 // A live socket keeps the connection while its user is in a call, so opening another tab never
-// drops the call; otherwise an automatic reconnect leaves it alone and a fresh connect takes over.
-// The same tab reconnecting replaces its own socket, which the server may still see as open
-// after the network dropped.
-export const toTakeoverRefusal = (
+// drops the call: the new socket waits for the call to end. Otherwise an automatic reconnect
+// leaves the live socket alone and a fresh connect takes over. The same tab reconnecting
+// replaces its own socket, which the server may still see as open after the network dropped.
+export const toTakeoverDecision = (
   kind: CallerKindValue,
   id: string,
   previous: TabSocket | undefined,
   ws: TabSocket,
   request: IncomingMessage
-): TakeoverRefusal | null => {
-  if (!previous || previous === ws || previous.readyState !== WebSocket.OPEN) return null;
-  if (ws.tabId !== undefined && previous.tabId === ws.tabId) return null;
-  if (hasActiveCall(kind, id)) {
-    return { code: CALL_IN_PROGRESS_CLOSE_CODE, reason: "Call in progress in another tab" };
+): TakeoverDecision => {
+  if (!previous || previous === ws || previous.readyState !== WebSocket.OPEN) {
+    return { action: "register" };
   }
+  if (ws.tabId !== undefined && previous.tabId === ws.tabId) return { action: "register" };
+  if (hasActiveCall(kind, id)) return { action: "wait" };
   if (isResumeRequest(request)) {
-    return { code: REPLACED_CLOSE_CODE, reason: "Connection held by another tab" };
+    return {
+      action: "refuse",
+      code: REPLACED_CLOSE_CODE,
+      reason: "Connection held by another tab",
+    };
   }
-  return null;
+  return { action: "register" };
+};
+
+export const closeSafely = (ws: WebSocket, code: number, reason: string): void => {
+  try {
+    ws.close(code, reason);
+  } catch (error) {
+    console.error("Error closing WebSocket:", error);
+  }
 };
 
 export const sendConnectionReady = (ws: WebSocket): void => {

@@ -3,14 +3,11 @@ import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSocketConnection } from "../socketConnection.model";
-import {
-  CALL_ELSEWHERE_RETRY_DELAY_MS,
-  HIDDEN_TAB_RECONNECT_DELAY_MS,
-} from "../webSocket.constants";
 
 const RECONNECT_DELAY_MS = 1000;
 const CONNECTION_READY = JSON.stringify({ type: "connection_ready" });
-const PLAIN_CLOSE = { revokedToken: null, elsewhere: null };
+const CONNECTION_WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
+const PLAIN_CLOSE = { revokedToken: null, elsewhere: null, callEnded: false };
 
 class MockWebSocket {
   url: string;
@@ -54,19 +51,15 @@ const connection = createSocketConnection({
   canResume,
 });
 
-const setVisibility = (state: DocumentVisibilityState) => {
-  Object.defineProperty(document, "visibilityState", { value: state, configurable: true });
-};
-
 // patronum `delay` keeps the scope busy until its timer fires, so units are launched
 // fire-and-forget and the clock is driven explicitly.
-const launch = async (scope: Scope, run: () => unknown) => {
+const launch = async (run: () => unknown) => {
   void run();
   await vi.advanceTimersByTimeAsync(0);
 };
 
 const connectReady = async (scope: Scope): Promise<MockWebSocket> => {
-  await launch(scope, () => allSettled(connection.connect, { scope }));
+  await launch(() => allSettled(connection.connect, { scope }));
   const socket = sockets[sockets.length - 1];
   socket.ready();
   await vi.advanceTimersByTimeAsync(0);
@@ -89,7 +82,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  setVisibility("visible");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -104,14 +96,13 @@ describe("app/model/socketConnection.model — handshake", () => {
 
     expect(first.query.get("resume")).toBeNull();
     expect(sockets[1].query.get("resume")).toBe("1");
-    expect(first.query.get("tab")).toMatch(/^[A-Za-z0-9-]{1,64}$/);
     expect(sockets[1].query.get("tab")).toBe(first.query.get("tab"));
     expect(first.query.get("token")).toBe("token-1");
   });
 
   it("should count the socket as connected only once the server registered it", async () => {
     const scope = fork();
-    await launch(scope, () => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
     sockets[0].onopen?.();
 
     expect(scope.getState(connection.$isConnected)).toBe(false);
@@ -120,7 +111,7 @@ describe("app/model/socketConnection.model — handshake", () => {
     expect(dispatch).not.toHaveBeenCalled();
 
     sockets[0].onmessage?.({ data: '{"type":"lesson_deleted"}' });
-    expect(dispatch).toHaveBeenCalledWith('{"type":"lesson_deleted"}');
+    expect(dispatch).toHaveBeenCalledWith({ type: "lesson_deleted" });
   });
 
   it("should keep the elsewhere state steady while a retry is refused", async () => {
@@ -130,7 +121,7 @@ describe("app/model/socketConnection.model — handshake", () => {
     const seen: unknown[] = [];
     const watcher = createWatch({ unit: connection.$elsewhere, fn: (v) => seen.push(v), scope });
 
-    await launch(scope, () => allSettled(resumed, { scope }));
+    await launch(() => allSettled(resumed, { scope }));
     sockets[1].onopen?.();
     await closeSocket(sockets[1], 4000);
     watcher.unsubscribe();
@@ -141,9 +132,9 @@ describe("app/model/socketConnection.model — handshake", () => {
 
   it("should close a still-opening socket on an early disconnect", async () => {
     const scope = fork();
-    await launch(scope, () => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
 
-    await launch(scope, () => allSettled(connection.disconnect, { scope }));
+    await launch(() => allSettled(connection.disconnect, { scope }));
 
     expect(sockets[0].close).toHaveBeenCalledTimes(1);
   });
@@ -155,8 +146,8 @@ describe("app/model/socketConnection.model — replaced sockets", () => {
     const first = await connectReady(scope);
     await closeSocket(first, 4000);
 
-    await launch(scope, () => allSettled(connection.connect, { scope }));
-    await launch(scope, () => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
     const [, second, third] = sockets;
     expect(second.close).toHaveBeenCalledTimes(1);
 
@@ -170,8 +161,8 @@ describe("app/model/socketConnection.model — replaced sockets", () => {
 
   it("should not let a replaced socket take the connection back", async () => {
     const scope = fork();
-    await launch(scope, () => allSettled(connection.connect, { scope }));
-    await launch(scope, () => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
     const [first, second] = sockets;
 
     first.onmessage?.({ data: CONNECTION_READY });
@@ -186,11 +177,23 @@ describe("app/model/socketConnection.model — reconnect", () => {
     const scope = fork();
     await connectReady(scope);
 
-    await launch(scope, () => allSettled(connection.closed, { scope, params: PLAIN_CLOSE }));
-    await launch(scope, () => allSettled(connection.closed, { scope, params: PLAIN_CLOSE }));
+    await launch(() => allSettled(connection.closed, { scope, params: PLAIN_CLOSE }));
+    await launch(() => allSettled(connection.closed, { scope, params: PLAIN_CLOSE }));
     await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
 
     expect(sockets).toHaveLength(2);
+  });
+
+  it("should schedule a fresh reconnect after the previous one has fired (regression: one reconnect per page)", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+
+    await closeSocket(first, 1006);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
+    await closeSocket(sockets[1], 1006);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
+
+    expect(sockets).toHaveLength(3);
   });
 
   it("should not reconnect after a logout and login inside the delay", async () => {
@@ -198,11 +201,24 @@ describe("app/model/socketConnection.model — reconnect", () => {
     const first = await connectReady(scope);
 
     await closeSocket(first, 1006);
-    await launch(scope, () => allSettled(connection.disconnect, { scope }));
-    await launch(scope, () => allSettled(connection.connect, { scope }));
+    await launch(() => allSettled(connection.disconnect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
     await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
 
     expect(sockets).toHaveLength(2);
+  });
+
+  it("should still reconnect after a close that follows re-login while a stale delay is pending (regression: stale delay swallowing the next reconnect)", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+
+    await closeSocket(first, 1006);
+    await launch(() => allSettled(connection.disconnect, { scope }));
+    await launch(() => allSettled(connection.connect, { scope }));
+    await closeSocket(sockets[1], 1006);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
+
+    expect(sockets).toHaveLength(3);
   });
 
   it("should stop reconnecting when the session can no longer resume", async () => {
@@ -227,35 +243,19 @@ describe("app/model/socketConnection.model — reconnect", () => {
     expect(sockets).toHaveLength(2);
     expect(sockets[1].query.get("token")).toBe("token-2");
   });
-});
 
-describe("app/model/socketConnection.model — hidden tab", () => {
-  it("should let a hidden tab yield first, then reconnect on its own", async () => {
+  it("should take the connection with a fresh connect after its own token change", async () => {
     const scope = fork();
     const first = await connectReady(scope);
-    setVisibility("hidden");
+    token = "token-2";
 
-    await closeSocket(first, 1006);
-    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
-    expect(sockets).toHaveLength(1);
+    await launch(() => allSettled(connection.tokenRenewedHere, { scope }));
+    await closeSocket(first, 4001);
 
-    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_RECONNECT_DELAY_MS);
     expect(sockets).toHaveLength(2);
-    expect(sockets[1].query.get("resume")).toBe("1");
-  });
-
-  it("should reconnect a deferred hidden tab as soon as it is shown", async () => {
-    const scope = fork();
-    const first = await connectReady(scope);
-    setVisibility("hidden");
-    await closeSocket(first, 1006);
+    expect(first.close).toHaveBeenCalled();
+    expect(sockets[1].query.get("resume")).toBeNull();
     await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
-
-    setVisibility("visible");
-    await launch(scope, () => allSettled(resumed, { scope }));
-    expect(sockets).toHaveLength(2);
-
-    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_RECONNECT_DELAY_MS);
     expect(sockets).toHaveLength(2);
   });
 });
@@ -266,27 +266,40 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
     const first = await connectReady(scope);
 
     await closeSocket(first, 4000);
-    await vi.advanceTimersByTimeAsync(CALL_ELSEWHERE_RETRY_DELAY_MS + RECONNECT_DELAY_MS);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS * 10);
 
     expect(sockets).toHaveLength(1);
     expect(scope.getState(connection.$elsewhere)).toBe("tab");
   });
 
-  it("should keep asking while another tab is in a call and stop once it ends", async () => {
+  it("should wait on the open socket while another tab is in a call and ask again once it ends", async () => {
     const scope = fork();
-    const first = await connectReady(scope);
+    await launch(() => allSettled(connection.connect, { scope }));
+    const [waiting] = sockets;
+    waiting.onopen?.();
+    waiting.onmessage?.({ data: CONNECTION_WAITING });
 
-    await closeSocket(first, 4002);
     expect(scope.getState(connection.$elsewhere)).toBe("call");
-    await vi.advanceTimersByTimeAsync(CALL_ELSEWHERE_RETRY_DELAY_MS);
+    expect(scope.getState(connection.$isConnected)).toBe(false);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS * 10);
+    expect(sockets).toHaveLength(1);
+
+    await closeSocket(waiting, 4003);
     expect(sockets).toHaveLength(2);
     expect(sockets[1].query.get("resume")).toBe("1");
 
     await closeSocket(sockets[1], 4000);
-    await vi.advanceTimersByTimeAsync(CALL_ELSEWHERE_RETRY_DELAY_MS * 2);
-
-    expect(sockets).toHaveLength(2);
     expect(scope.getState(connection.$elsewhere)).toBe("tab");
+  });
+
+  it("should not reopen a waiting socket when the user comes back to the tab", async () => {
+    const scope = fork();
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await launch(() => allSettled(resumed, { scope }));
+
+    expect(sockets).toHaveLength(1);
   });
 
   it("should retry at once when the token changes while the connection is held elsewhere", async () => {
@@ -295,7 +308,7 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
     await closeSocket(first, 4000);
     token = "token-2";
 
-    await launch(scope, () => allSettled(connection.tokenRenewed, { scope }));
+    await launch(() => allSettled(connection.tokenRenewed, { scope }));
 
     expect(sockets).toHaveLength(2);
     expect(sockets[1].query.get("resume")).toBe("1");
@@ -306,7 +319,7 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
     const first = await connectReady(scope);
     await closeSocket(first, 4000);
 
-    await launch(scope, () => allSettled(resumed, { scope }));
+    await launch(() => allSettled(resumed, { scope }));
     sockets[1].ready();
 
     expect(scope.getState(connection.$elsewhere)).toBeNull();

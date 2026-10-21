@@ -26,17 +26,27 @@ const renderIndicator = (phase: "idle" | "active") => {
   );
 };
 
-const placementOf = (text: RegExp) =>
-  screen.getByText(text).closest("[data-placement]")?.getAttribute("data-placement");
+const fixedBoxOf = (text: RegExp): HTMLElement => {
+  let current: HTMLElement | null = screen.getByText(text);
+  while (current && getComputedStyle(current).position !== "fixed") {
+    current = current.parentElement;
+  }
+  if (!current) throw new Error("No fixed ancestor");
+  return current;
+};
 
 describe("OfflineIndicator", () => {
   it("should sit at the bottom outside a call", () => {
     renderIndicator("idle");
-    expect(placementOf(/Нет подключения/)).toBe("bottom");
+    const style = getComputedStyle(fixedBoxOf(/Нет подключения/));
+    expect(style.bottom).not.toBe("");
+    expect(style.top).toBe("");
   });
 
   it("should move to the top during a call so it does not cover the call controls", () => {
     renderIndicator("active");
-    expect(placementOf(/Нет подключения/)).toBe("top");
+    const style = getComputedStyle(fixedBoxOf(/Нет подключения/));
+    expect(style.top).not.toBe("");
+    expect(style.bottom).toBe("");
   });
 });

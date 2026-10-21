@@ -42,6 +42,15 @@ const send = (to: CallParticipant, message: CallSignalingOutbound): void => {
 const connectionOf = (participant: CallParticipant) =>
   getWebSocketManager()?.getConnection(participant.kind, participant.id);
 
+// Tabs of either participant that waited for this call to end may ask for the connection again.
+const removeCall = (call: LiveCall): boolean => {
+  if (!callRegistry.removeCall(call.callId)) return false;
+  const manager = getWebSocketManager();
+  manager?.releaseWaitingSockets("tutor", call.tutorUserId);
+  manager?.releaseWaitingSockets("student", call.studentUserId);
+  return true;
+};
+
 const relayToPeer = (
   call: LiveCall,
   senderKind: CallerKindValue,
@@ -85,7 +94,7 @@ const sendRinging = (call: LiveCall, inviteId: string): void => {
 };
 
 const expireRinging = async (call: LiveCall): Promise<void> => {
-  if (!callRegistry.removeCall(call.callId)) return;
+  if (!removeCall(call)) return;
   const caller = callRegistry.getCaller(call);
   send(caller, { type: "call_no_answer", callId: call.callId });
   relayToPeer(call, caller.kind, { type: "call_canceled", callId: call.callId, reason: "timeout" });
@@ -99,7 +108,7 @@ const resolvePair = (sender: CallParticipant, targetStudentId?: string): Promise
 };
 
 const cancelRinging = (call: LiveCall): Promise<void> => {
-  if (!callRegistry.removeCall(call.callId)) return Promise.resolve();
+  if (!removeCall(call)) return Promise.resolve();
   relayToPeer(call, call.callerKind, {
     type: "call_canceled",
     callId: call.callId,
@@ -184,7 +193,7 @@ const hangUp = async (
   reason: CallEndReason
 ): Promise<void> => {
   const status = resolveHangupStatus(call);
-  if (!callRegistry.removeCall(call.callId)) return;
+  if (!removeCall(call)) return;
   relayToPeer(call, senderKind, { type: "call_ended", callId: call.callId, reason });
   await finishCall(call, status);
 };
@@ -205,7 +214,7 @@ const handleRingingAnswer = async (
     });
     return;
   }
-  if (!callRegistry.removeCall(call.callId)) return;
+  if (!removeCall(call)) return;
   relayToPeer(call, sender.kind, { type: "call_rejected", callId: call.callId });
   await finishCall(call, "REJECTED");
 };
@@ -298,7 +307,7 @@ export const terminateActiveCallForParticipant = async (
   const call = callRegistry.findActiveCallForParticipant(kind, id);
   if (!call) return;
   const outcome = resolveDropOutcome(call, { kind, id });
-  if (!callRegistry.removeCall(call.callId)) return;
+  if (!removeCall(call)) return;
   relayToPeer(call, kind, toDropPeerMessage(outcome, call.callId));
   await finishCall(call, outcome.status);
 };

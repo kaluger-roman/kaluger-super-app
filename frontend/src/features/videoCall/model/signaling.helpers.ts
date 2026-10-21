@@ -1,3 +1,5 @@
+import { isRecord } from "@shared";
+
 import * as callModel from "./call.model";
 import type { IceServerPayload } from "./call.types";
 import { CALL_CANCEL_REASONS, CALL_END_REASONS } from "./signaling.constants";
@@ -8,9 +10,6 @@ import type {
   CallRole,
   CallSignalingOutbound,
 } from "./signaling.types";
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
 

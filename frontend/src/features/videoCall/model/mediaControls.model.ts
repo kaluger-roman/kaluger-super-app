@@ -6,6 +6,7 @@ import type { CallMediaState } from "../videoCall.types";
 import { CAMERA_FAILED_TEXT } from "./call.constants";
 import * as callModel from "./call.model";
 import type { MediaPatch, MediaToggleContext } from "./call.types";
+import * as currentCallModel from "./currentCall.model";
 import { CAMERA_ONLY_CONSTRAINTS } from "./negotiation.constants";
 import { getCameraTrack } from "./negotiation.helpers";
 import { sendVideoTrack } from "./peerConnection.helpers";
@@ -82,10 +83,11 @@ sample({
 });
 
 const mediaToggled = sample({
-  clock: [toggleMicFx.done, toggleCameraFx.done],
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params.callId,
-  fn: (_, { result }) => result,
+  clock: [
+    currentCallModel.forCurrentCall(toggleMicFx.done, ({ params }) => params.callId),
+    currentCallModel.forCurrentCall(toggleCameraFx.done, ({ params }) => params.callId),
+  ],
+  fn: ({ result }) => result,
 });
 sample({
   clock: mediaToggled,
@@ -97,9 +99,7 @@ sample({
 
 // A permission prompt answered after the call ended belongs to no call: stay silent.
 sample({
-  clock: toggleCameraFx.fail,
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params.callId,
+  clock: currentCallModel.forCurrentCall(toggleCameraFx.fail, ({ params }) => params.callId),
   fn: () => CAMERA_FAILED_TEXT,
   target: notificationsModel.showErrorEvent,
 });

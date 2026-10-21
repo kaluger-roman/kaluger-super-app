@@ -1,7 +1,8 @@
-import { fork, allSettled } from "effector";
+import { fork, allSettled, createWatch } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as appInitModel from "../appInit.model";
+import { studentUserModel } from "@entities";
+
 import { STUDENT_WS_RECONNECT_DELAY_MS } from "../studentWebSocket.constants";
 import {
   $elsewhere,
@@ -9,8 +10,8 @@ import {
   $studentWebSocketConnection,
   connectStudentWebSocket,
   disconnectStudentWebSocket,
+  tokenStorageChanged,
 } from "../studentWebSocket.model";
-import { HIDDEN_TAB_RECONNECT_DELAY_MS } from "../webSocket.constants";
 
 // The generic reconnect flow is covered in socketConnection.model.test.ts; these tests pin
 // that the student socket is wired into it.
@@ -44,7 +45,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -77,32 +77,58 @@ describe("app/model/studentWebSocket.model", () => {
     expect(scope.getState($isStudentWebSocketConnected)).toBe(true);
   });
 
-  it("reconnects as a resume after the delay, deferring while the tab is hidden", async () => {
+  it("reconnects as a resume after the delay", async () => {
     const scope = fork();
     await allSettled(connectStudentWebSocket, { scope });
-    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
 
     createdSockets[0].onclose?.({ code: 1006 });
     await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS);
-    expect(createdSockets).toHaveLength(1);
-
-    void allSettled(appInitModel.appResumed, { scope });
-    await vi.advanceTimersByTimeAsync(0);
 
     expect(createdSockets).toHaveLength(2);
     expect(urlOf(createdSockets[1]).searchParams.get("resume")).toBe("1");
-    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_RECONNECT_DELAY_MS);
-    expect(createdSockets).toHaveLength(2);
   });
 
-  it("waits for the call in another tab instead of reconnecting", async () => {
+  it("waits on the open socket while a call goes on in another tab", async () => {
     const scope = fork();
     await allSettled(connectStudentWebSocket, { scope });
 
-    createdSockets[0].onclose?.({ code: 4002 });
+    createdSockets[0].onmessage?.({
+      data: JSON.stringify({ type: "connection_waiting", reason: "call" }),
+    });
     await vi.advanceTimersByTimeAsync(STUDENT_WS_RECONNECT_DELAY_MS);
 
     expect(scope.getState($elsewhere)).toBe("call");
     expect(createdSockets).toHaveLength(1);
+  });
+
+  it("logs out together with the holder tab when another tab removed the student token", async () => {
+    const scope = fork();
+    await allSettled(connectStudentWebSocket, { scope });
+    const ended: unknown[] = [];
+    createWatch({
+      unit: studentUserModel.studentSessionEndedElsewhere,
+      fn: () => ended.push(1),
+      scope,
+    });
+    localStorage.removeItem(STUDENT_TOKEN_KEY);
+
+    await allSettled(tokenStorageChanged, { scope });
+
+    expect(ended).toHaveLength(1);
+  });
+
+  it("leaves a tab without a student session alone", async () => {
+    const scope = fork();
+    const ended: unknown[] = [];
+    createWatch({
+      unit: studentUserModel.studentSessionEndedElsewhere,
+      fn: () => ended.push(1),
+      scope,
+    });
+    localStorage.removeItem(STUDENT_TOKEN_KEY);
+
+    await allSettled(tokenStorageChanged, { scope });
+
+    expect(ended).toHaveLength(0);
   });
 });

@@ -452,6 +452,7 @@ describe("processCallSignal", () => {
     expect(canceled[0].id).toBe(studentUserId);
     expect(canceled[0].message).toMatchObject({ reason: "timeout" });
     expect(callRegistry.findActiveCallForParticipant("tutor", tutorId)).toBeUndefined();
+    expect(callWebSocket.released).toEqual([`tutor:${tutorId}`, `student:${studentUserId}`]);
   });
 
   it("should answer call_error without a database lookup when a tutor invites nobody", async () => {
@@ -488,8 +489,11 @@ describe("processCallSignal", () => {
 
   it("should send call_canceled to the callee when the caller drops while ringing", async () => {
     await inviteAndGetCallId();
+    expect(callWebSocket.released).toEqual([]);
 
     await terminateActiveCallForParticipant("tutor", tutorId);
+
+    expect(callWebSocket.released).toEqual([`tutor:${tutorId}`, `student:${studentUserId}`]);
 
     const canceled = messagesOfType("call_canceled");
     expect(canceled).toHaveLength(1);

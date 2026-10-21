@@ -18,7 +18,7 @@ Existing `lesson_*` message types are unaffected; call signaling adds a disjoint
 | `webrtc_offer` | `{ callId, sdp }` | SDP offer | Relay verbatim to the peer (`webrtc_offer`). |
 | `webrtc_answer` | `{ callId, sdp }` | SDP answer | Relay verbatim to the peer (`webrtc_answer`). |
 | `webrtc_ice` | `{ callId, candidate }` | ICE candidate (trickle) | Relay verbatim to the peer (`webrtc_ice`). |
-| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing }` | Local media-state change | Relay to peer so it updates indicators (FR-010/011/012, SC-005). |
+| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing, cameraAvailable }` | Local media-state change | Relay to peer so it updates indicators (FR-010/011/012, SC-005). |
 | `call_connected` | `{ callId }` | Media established locally | Mark `LiveCall.connectedAt` (first receipt) → enables duration calc. |
 
 Replies are matched to the request by `callId`, or, before the call exists, by `inviteId`: a client ignores a reply for an invite it no longer waits for and cancels a late `call_ringing` of such an invite. `call_media_state.cameraAvailable` and the `reason` of `call_canceled` / `call_ended` are always present.
@@ -27,13 +27,15 @@ Validation: an inbound message referencing an existing `callId` the sender is no
 
 Authentication: `/ws` checks the JWT `tokenVersion` like the HTTP API (`/ws/student` already does), and a tutor socket opened before a password change, email change or password reset is revoked at once: it stops being the tutor's connection, its messages are ignored, its active call ends, and it is closed with code `4001` ("Token revoked"), or terminated if the close handshake does not finish within 1 s. Messages from a socket replaced by a newer connection are ignored too. A missing, invalid or revoked token closes the handshake with `1008`; a server-side failure while checking it (e.g. the DB is unavailable) closes with `1011`, which clients must treat as a transient error and simply reconnect. A socket whose token was revoked while its version was being read is closed with `4001` before it is registered.
 
-Several tabs or devices of one user: each pool holds one socket per user. A fresh connection (page load, or an explicit take-over by the user) replaces the live one, which is closed with `4000` ("Replaced by newer connection"). An automatic reconnect sends `resume=1` in the query; if the user already has an open socket, the new one is closed with `4000` ("Connection held by another tab") and the live socket and its call are left untouched. Clients do not reconnect automatically after `4000`. While the user is in a call (ringing, accepted or connected), the live socket is never replaced: any new connection of that user, fresh or `resume=1`, is closed with `4002` ("Call in progress in another tab") and the live socket and its call are left untouched. A client closed with `4002` shows that a call is going on in another tab and retries with `resume=1` every 15 s and whenever the tab becomes visible again; once the call is over the retry is refused with `4000` and the usual take-over rules apply. A client closed with `4000` retries with `resume=1` only when the tab becomes visible again or its stored token changes (the holder may have been logged out). After any other close the client reconnects with `resume=1` after 5 s; a hidden tab waits up to 20 s more (or until it is shown) so the tab in use reconnects first.
+Several tabs or devices of one user: each pool holds one socket per user. A fresh connection (page load, or an explicit take-over by the user) replaces the live one, which is closed with `4000` ("Replaced by newer connection"). An automatic reconnect sends `resume=1` in the query; if the user already has an open socket, the new one is closed with `4000` ("Connection held by another tab") and the live socket and its call are left untouched. While the user is in a call (ringing, accepted or connected), the live socket is never replaced: any new connection of that user from another tab, fresh or `resume=1`, is kept open as a **waiting** socket. It is not registered (it gets no lesson events and no call signals, and its own messages are ignored), its first and only message is `{ "type": "connection_waiting", "reason": "call" }`, and it is pinged like any socket. When the call ends by any path (hangup, reject, cancel, ring timeout, failure, the live socket closing, being replaced or terminated), every waiting socket of both participants is closed with `4003` ("Call ended in another tab"). A token revocation closes the tutor's waiting sockets with `4001`. At most 4 sockets wait per user: a fifth closes the oldest waiting one with `4000`.
 
-Tab identity: each page load generates a random tab id and sends it as `tab=<id>` in the query of every connection it opens (1-64 characters of `[A-Za-z0-9-]`; anything else counts as absent). A new connection with the same non-empty `tab` as the user's live socket is that tab replacing its own socket, which the server may still see as open after the network dropped: it is never refused with `4000`/`4002`, even with `resume=1` or during a call; the old socket is closed with `4000` ("Replaced by newer connection") and its call ends, as on any replacement.
+Client retries: a waiting client does not poll; on `4003` it reconnects at once with `resume=1` and gets the usual rules (registered if no live socket is left, else `4000`). After `4000` it retries with `resume=1` only when the tab becomes visible again or its stored token changes (the holder may have been logged out). After any other close it reconnects with `resume=1` after 5 s. The tab that changed the password or email itself reconnects with a fresh (non-`resume`) connection, so it takes the connection back from any other tab.
 
-Heartbeat: the server pings every registered socket each 30 s and terminates one that has not answered the previous ping with a pong (browsers answer pings automatically). A terminated socket is unregistered and its call ends, like any close.
+Tab identity: each page load generates a random tab id and sends it as `tab=<id>` in the query of every connection it opens (1-64 characters of `[A-Za-z0-9-]`; anything else counts as absent). A new connection with the same non-empty `tab` as the user's live socket is that tab replacing its own socket, which the server may still see as open after the network dropped: it is never refused with `4000` and never waits, even with `resume=1` or during a call; the old socket is closed with `4000` ("Replaced by newer connection") and its call ends, as on any replacement.
 
-Ready message: once a socket is registered (after all checks above), the server sends it `{ "type": "connection_ready" }` as its first message; the tutor pool then also sends the legacy `connection_established`. A refused socket (`1008`, `1011`, `4000`, `4001`, `4002`) is closed without it, so a client treats the socket as connected only after `connection_ready`, not on `open`.
+Heartbeat: the server pings every registered and waiting socket each 30 s and terminates one that has not answered the previous ping with a pong (browsers answer pings automatically). A terminated socket is unregistered and its call ends, like any close; a terminated waiting socket is just forgotten.
+
+Ready message: once a socket is registered (after all checks above), the server sends it `{ "type": "connection_ready" }` as its first message; the tutor pool then also sends the legacy `connection_established`. A refused socket (`1008`, `1011`, `4000`, `4001`) is closed without it, and a waiting socket gets `connection_waiting` instead, so a client treats the socket as connected only after `connection_ready`, not on `open`.
 
 ---
 
@@ -41,7 +43,7 @@ Ready message: once a socket is registered (after all checks above), the server 
 
 | `type` | Payload | Delivered to | Triggers UI |
 |--------|---------|--------------|-------------|
-| `call_incoming` | `{ callId, callerName }` | callee | `IncomingCallModal` (`$incomingCall.callerName`) |
+| `call_incoming` | `{ callId, callerName, iceServers }` (the callee's ICE config) | callee | `IncomingCallModal` (`$incomingCall.callerName`) |
 | `call_ringing` | `{ callId, inviteId }` | caller | `OutgoingCallOverlay` («Вызываем…») |
 | `call_accepted` | `{ callId, iceServers }` | caller | Begin WebRTC negotiation (create offer) |
 | `call_rejected` | `{ callId }` | caller | «Вызов отклонён» → idle |
@@ -53,7 +55,7 @@ Ready message: once a socket is registered (after all checks above), the server 
 | `call_no_answer` | `{ callId }` | caller | «Нет ответа» on 40s timeout (FR-009) |
 | `call_error` | `{ message, callId }` **or** `{ message, inviteId }` (error on an invite) | sender | Russian error (self-call, cross-pair, a call the sender is not part of) |
 | `webrtc_offer` / `webrtc_answer` / `webrtc_ice` | relayed verbatim | peer | Drives `RTCPeerConnection` |
-| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing }` | peer | Update `$peerMediaState` indicators |
+| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing, cameraAvailable }` | peer | Update `$peerMediaState` indicators |
 
 ### `iceServers` payload (R3)
 

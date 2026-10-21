@@ -77,9 +77,11 @@ describe("call lifecycle → call_records persistence", () => {
     const callId = await inviteByTutor();
     await handleCallSignal("student", studentUserId, { type: "call_accept", callId });
     await handleCallSignal("tutor", tutorId, { type: "call_connected", callId });
+    expect(callWebSocket.released).toEqual([]);
     await handleCallSignal("tutor", tutorId, { type: "call_hangup", callId });
 
     const record = await latestRecord();
+    expect(callWebSocket.released).toEqual([`tutor:${tutorId}`, `student:${studentUserId}`]);
     expect(record.status).toBe("COMPLETED");
     expect(record.callerKind).toBe("TUTOR");
     expect(record.endedAt).not.toBeNull();
@@ -91,6 +93,7 @@ describe("call lifecycle → call_records persistence", () => {
     await handleCallSignal("student", studentUserId, { type: "call_reject", callId });
 
     const record = await latestRecord();
+    expect(callWebSocket.released).toEqual([`tutor:${tutorId}`, `student:${studentUserId}`]);
     expect(record.status).toBe("REJECTED");
     expect(record.durationSeconds).toBeNull();
     expect(sent().some((m) => m.type === "call_rejected")).toBe(true);
@@ -101,6 +104,7 @@ describe("call lifecycle → call_records persistence", () => {
     await handleCallSignal("tutor", tutorId, { type: "call_cancel", callId });
 
     const record = await latestRecord();
+    expect(callWebSocket.released).toEqual([`tutor:${tutorId}`, `student:${studentUserId}`]);
     expect(record.status).toBe("CANCELED");
     expect(sent().some((m) => m.type === "call_canceled")).toBe(true);
   });

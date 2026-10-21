@@ -7,6 +7,7 @@ import { hasCallId, isCallAddress } from "./call.helpers";
 import * as callModel from "./call.model";
 import type { AcceptedCall, AddressedSignal, LocalMediaReady, OfferParams } from "./call.types";
 import * as callTransportModel from "./callTransport.model";
+import * as currentCallModel from "./currentCall.model";
 import * as peerConnectionModel from "./peerConnection.model";
 import { toMediaStateMessage } from "./transport.helpers";
 import { getSession } from "./webrtc.helpers";
@@ -101,10 +102,11 @@ sample({
 });
 
 const localMediaResult = sample({
-  clock: peerConnectionModel.addLocalMediaFx.done,
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params.callId,
-  fn: (_, { result }) => result,
+  clock: currentCallModel.forCurrentCall(
+    peerConnectionModel.addLocalMediaFx.done,
+    ({ params }) => params.callId
+  ),
+  fn: ({ result }) => result,
 });
 const localMediaReady = sample({
   clock: localMediaResult,
@@ -121,9 +123,10 @@ sample({
   target: callModel.localMediaAttached,
 });
 sample({
-  clock: peerConnectionModel.addLocalMediaFx.fail,
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params.callId,
+  clock: currentCallModel.forCurrentCall(
+    peerConnectionModel.addLocalMediaFx.fail,
+    ({ params }) => params.callId
+  ),
   fn: () => undefined,
   target: callModel.mediaAcquisitionFailed,
 });

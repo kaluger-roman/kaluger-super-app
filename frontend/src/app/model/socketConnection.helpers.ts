@@ -1,7 +1,7 @@
-import { resolveWsUrl } from "@shared";
+import { isRecord, resolveWsUrl } from "@shared";
 
-import type { SocketClosedPayload } from "./socketConnection.types";
-import { WS_ELSEWHERE_CLOSE_CODES } from "./webSocket.constants";
+import type { SocketClosedPayload, SocketControlMessage } from "./socketConnection.types";
+import { WS_CALL_ENDED_CLOSE_CODE, WS_HELD_ELSEWHERE_CLOSE_CODE } from "./webSocket.constants";
 import type { WebSocketClose } from "./webSocket.types";
 
 // One id per page load: the server lets a tab replace its own socket that still looks alive to it.
@@ -23,19 +23,21 @@ export const buildSocketUrl = (path: string, token: string, resume: boolean): st
   return `${resolveWsUrl(path)}?${params.toString()}`;
 };
 
-// The server sends it once the socket is registered; a refused socket opens but never gets it.
-export const isConnectionReadyMessage = (raw: unknown): boolean => {
-  if (typeof raw !== "string") return false;
+// undefined when the message is not JSON (logged and dropped).
+export const parseSocketMessage = (raw: unknown, logLabel: string): unknown => {
   try {
-    const data: unknown = JSON.parse(raw);
-    return (
-      typeof data === "object" &&
-      data !== null &&
-      (data as { type?: unknown }).type === "connection_ready"
-    );
-  } catch {
-    return false;
+    return typeof raw === "string" ? JSON.parse(raw) : undefined;
+  } catch (error) {
+    console.error(`${logLabel} message parsing error:`, error);
+    return undefined;
   }
+};
+
+export const toControlMessage = (data: unknown): SocketControlMessage | null => {
+  if (!isRecord(data)) return null;
+  if (data.type === "connection_ready") return "ready";
+  if (data.type === "connection_waiting") return "waiting";
+  return null;
 };
 
 export const toSocketClose = (
@@ -43,5 +45,6 @@ export const toSocketClose = (
   revokedCloseCodes: ReadonlySet<number>
 ): WebSocketClose => ({
   revokedToken: revokedCloseCodes.has(code) ? token : null,
-  elsewhere: WS_ELSEWHERE_CLOSE_CODES.get(code) ?? null,
+  elsewhere: code === WS_HELD_ELSEWHERE_CLOSE_CODE ? "tab" : null,
+  callEnded: code === WS_CALL_ENDED_CLOSE_CODE,
 });

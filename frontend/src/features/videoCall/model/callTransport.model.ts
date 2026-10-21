@@ -3,6 +3,7 @@ import { createEffect, createEvent, sample } from "effector";
 import { NO_TRANSPORT_TEXT } from "./call.constants";
 import * as callModel from "./call.model";
 import type { AddressedSignal } from "./call.types";
+import * as currentCallModel from "./currentCall.model";
 import { sendOverTransport } from "./transport.helpers";
 
 export const sendCallSignalFx = createEffect(({ role, message }: AddressedSignal): void => {
@@ -18,9 +19,9 @@ sample({ clock: signalQueued, target: sendCallSignalFx });
 // A signal the current call cannot do without ends it. Signals of another call, or of a call
 // already over here, need no handling: the server ends that call when its socket closes.
 sample({
-  clock: sendCallSignalFx.fail,
-  source: callModel.$callId,
-  filter: (callId, { params: { message } }) => "callId" in message && message.callId === callId,
+  clock: currentCallModel.forCurrentCall(sendCallSignalFx.fail, ({ params: { message } }) =>
+    "callId" in message ? message.callId : null
+  ),
   fn: () => NO_TRANSPORT_TEXT,
   target: callModel.callFailed,
 });

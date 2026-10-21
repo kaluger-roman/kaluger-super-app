@@ -10,6 +10,7 @@ import { routeCallMessage } from "./signaling";
 import { getCachedTokenVersion } from "../tokenVersionCache";
 import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
 import {
+  CALL_ENDED_CLOSE_CODE,
   HEARTBEAT_INTERVAL_MS,
   REPLACED_CLOSE_CODE,
   REVOKED_SOCKET_TERMINATE_MS,
@@ -17,7 +18,8 @@ import {
   TOKEN_REVOKED_CLOSE_CODE,
   TUTOR_WS_PATH,
 } from "./connection.constants";
-import { readTabId, sendConnectionReady, toTakeoverRefusal } from "./connection.helpers";
+import { readTabId, sendConnectionReady, toTakeoverDecision } from "./connection.helpers";
+import { createWaitingSockets } from "./waitingSockets";
 import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
@@ -28,6 +30,7 @@ export class WebSocketManager {
   private studentWss: WebSocketServer;
   private clients: Map<string, AuthenticatedWebSocket> = new Map();
   private studentClients: Map<string, AuthenticatedStudentWebSocket> = new Map();
+  private waiting = createWaitingSockets();
   private awaitingPong = new WeakSet<WebSocket>();
   private heartbeat: ReturnType<typeof setInterval>;
 
@@ -46,23 +49,32 @@ export class WebSocketManager {
   }
 
   private checkHeartbeats() {
-    [...this.clients.values(), ...this.studentClients.values()].forEach((ws) => {
-      if (this.awaitingPong.has(ws)) {
-        // Terminating emits close, which unregisters the socket and ends its call.
-        ws.terminate();
-        return;
+    [...this.clients.values(), ...this.studentClients.values(), ...this.waiting.all()].forEach(
+      (ws) => {
+        if (this.awaitingPong.has(ws)) {
+          // Terminating emits close, which unregisters the socket and ends its call.
+          ws.terminate();
+          return;
+        }
+        this.awaitingPong.add(ws);
+        try {
+          ws.ping();
+        } catch (error) {
+          console.error("Failed to ping WebSocket:", error);
+        }
       }
-      this.awaitingPong.add(ws);
-      try {
-        ws.ping();
-      } catch (error) {
-        console.error("Failed to ping WebSocket:", error);
-      }
-    });
+    );
   }
 
   private watchHeartbeat(ws: WebSocket) {
     ws.on("pong", () => this.awaitingPong.delete(ws));
+  }
+
+  private wait(kind: CallerKindValue, id: string, ws: WebSocket) {
+    // Closed while auth was running: nothing to keep.
+    if (ws.readyState !== WebSocket.OPEN) return;
+    this.watchHeartbeat(ws);
+    this.waiting.add(kind, id, ws);
   }
 
   private handleUpgrade(request: IncomingMessage, socket: Socket, head: Buffer) {
@@ -102,9 +114,13 @@ export class WebSocketManager {
     ws.tabId = readTabId(request);
 
     const previous = this.clients.get(decoded.userId);
-    const refusal = toTakeoverRefusal("tutor", decoded.userId, previous, ws, request);
-    if (refusal) {
-      ws.close(refusal.code, refusal.reason);
+    const decision = toTakeoverDecision("tutor", decoded.userId, previous, ws, request);
+    if (decision.action === "refuse") {
+      ws.close(decision.code, decision.reason);
+      return;
+    }
+    if (decision.action === "wait") {
+      this.wait("tutor", decoded.userId, ws);
       return;
     }
 
@@ -180,9 +196,13 @@ export class WebSocketManager {
     ws.tabId = readTabId(request);
 
     const previous = this.studentClients.get(decoded.studentUserId);
-    const refusal = toTakeoverRefusal("student", decoded.studentUserId, previous, ws, request);
-    if (refusal) {
-      ws.close(refusal.code, refusal.reason);
+    const decision = toTakeoverDecision("student", decoded.studentUserId, previous, ws, request);
+    if (decision.action === "refuse") {
+      ws.close(decision.code, decision.reason);
+      return;
+    }
+    if (decision.action === "wait") {
+      this.wait("student", decoded.studentUserId, ws);
       return;
     }
 
@@ -304,6 +324,8 @@ export class WebSocketManager {
 
   // The socket was opened with a token that is now revoked; calls must not go on over it.
   public disconnectUser(userId: string): void {
+    // Before the call ends below, so they hear "revoked" and not "call ended, come back".
+    this.waiting.release("tutor", userId, TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
     const ws = this.clients.get(userId);
     if (!ws) return;
     // Revoke at once: the close handshake may take long, and until then the socket must not
@@ -318,6 +340,11 @@ export class WebSocketManager {
     setTimeout(() => {
       if (ws.readyState !== WebSocket.CLOSED) ws.terminate();
     }, REVOKED_SOCKET_TERMINATE_MS).unref();
+  }
+
+  // The user's call ended: tabs that waited for it may ask for the connection again.
+  public releaseWaitingSockets(kind: CallerKindValue, id: string): void {
+    this.waiting.release(kind, id, CALL_ENDED_CLOSE_CODE, "Call ended in another tab");
   }
 
   public getConnection(kind: CallerKindValue, id: string): WebSocket | undefined {

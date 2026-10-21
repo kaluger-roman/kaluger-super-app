@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { lessonModel } from "@entities";
 import { changePasswordModel } from "@features";
+import { expireTutorSession } from "@shared";
 
 import type { SocketOpenParams } from "../socketConnection.types";
 import { WS_RECONNECT_DELAY_MS } from "../webSocket.constants";
@@ -15,12 +16,18 @@ import {
   $elsewhere,
 } from "../webSocket.model";
 
+vi.mock("@shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared")>();
+  return { ...actual, expireTutorSession: vi.fn() };
+});
+
 // The generic reconnect flow is covered in socketConnection.model.test.ts; these tests pin
 // what the tutor socket adds on top: token revocation and lesson updates.
 // patronum `delay` keeps the scope busy until its timer fires, so allSettled calls that
 // schedule a reconnect are fire-and-forget and the clock is driven explicitly.
 beforeEach(() => {
   localStorage.setItem("authToken", "test-token");
+  vi.mocked(expireTutorSession).mockClear();
   vi.useFakeTimers();
 });
 
@@ -29,7 +36,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const REVOKED_CLOSE = { revokedToken: "test-token", elsewhere: null };
+const REVOKED_CLOSE = { revokedToken: "test-token", elsewhere: null, callEnded: false };
+const HELD_ELSEWHERE = { revokedToken: null, elsewhere: "tab" as const, callEnded: false };
 
 const createScope = () => {
   const connectHandler = vi.fn((_params: SocketOpenParams) => null);
@@ -46,10 +54,10 @@ describe("app/model/webSocket.model — revoked token", () => {
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
 
     expect(connectHandler).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem("authToken")).toBeNull();
+    expect(expireTutorSession).toHaveBeenCalledTimes(1);
   });
 
-  it("reconnects at once when this tab stores a new token after its own password change", async () => {
+  it("takes the connection with a fresh connect after its own password change", async () => {
     const { scope, connectHandler } = createScope();
     await allSettled(connectWebSocket, { scope });
 
@@ -59,7 +67,7 @@ describe("app/model/webSocket.model — revoked token", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(connectHandler).toHaveBeenCalledTimes(2);
-    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: true }));
+    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: false }));
   });
 
   it("reconnects at once when another tab of this browser stored a new token", async () => {
@@ -68,10 +76,12 @@ describe("app/model/webSocket.model — revoked token", () => {
 
     void allSettled(webSocketClosed, { scope, params: REVOKED_CLOSE });
     await vi.advanceTimersByTimeAsync(0);
+    localStorage.setItem("authToken", "fresh-token");
     void allSettled(tokenStorageChanged, { scope });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: true }));
   });
 
   it("reconnects with the new token when this tab replaced the revoked one", async () => {
@@ -83,21 +93,42 @@ describe("app/model/webSocket.model — revoked token", () => {
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
 
     expect(connectHandler).toHaveBeenCalledTimes(2);
-    expect(localStorage.getItem("authToken")).toBe("fresh-token");
+    expect(expireTutorSession).not.toHaveBeenCalled();
   });
 
-  it("retries a tab held elsewhere after its own password change logged the holder out", async () => {
+  it("retries a tab held elsewhere when another tab stored a new token", async () => {
     const { scope, connectHandler } = createScope();
     await allSettled(connectWebSocket, { scope });
-    void allSettled(webSocketClosed, { scope, params: { revokedToken: null, elsewhere: "tab" } });
+    void allSettled(webSocketClosed, { scope, params: HELD_ELSEWHERE });
     await vi.advanceTimersByTimeAsync(0);
     expect(scope.getState($elsewhere)).toBe("tab");
 
-    void allSettled(changePasswordModel.persistTokenFx, { scope, params: "fresh-token" });
+    localStorage.setItem("authToken", "fresh-token");
+    void allSettled(tokenStorageChanged, { scope });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(connectHandler).toHaveBeenCalledTimes(2);
     expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: true }));
+  });
+
+  it("logs out together with the holder tab when another tab removed the token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+    localStorage.removeItem("authToken");
+
+    await allSettled(tokenStorageChanged, { scope });
+
+    expect(expireTutorSession).toHaveBeenCalledTimes(1);
+    expect(connectHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a tab without a tutor session alone when the tutor logs out elsewhere (regression: student cabinet thrown to /login)", async () => {
+    const { scope } = createScope();
+    localStorage.removeItem("authToken");
+
+    await allSettled(tokenStorageChanged, { scope });
+
+    expect(expireTutorSession).not.toHaveBeenCalled();
   });
 });
 

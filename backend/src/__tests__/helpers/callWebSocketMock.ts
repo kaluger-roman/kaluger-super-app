@@ -9,6 +9,7 @@ export type CapturedCallMessage = {
 const online: Record<CallerKindValue, Set<string>> = { tutor: new Set(), student: new Set() };
 const connections = new Map<string, object>();
 const sent: CapturedCallMessage[] = [];
+const released: string[] = [];
 
 const connectionKey = (kind: CallerKindValue, id: string): string => `${kind}:${id}`;
 
@@ -16,6 +17,8 @@ const connectionKey = (kind: CallerKindValue, id: string): string => `${kind}:${
 // message the call flow sends, delivered or not.
 export const callWebSocket = {
   sent,
+  // `kind:id` of every participant whose waiting tabs were released when a call ended.
+  released,
   connect: (kind: CallerKindValue, id: string): void => {
     online[kind].add(id);
   },
@@ -35,6 +38,7 @@ export const callWebSocket = {
     online.student.clear();
     connections.clear();
     sent.length = 0;
+    released.length = 0;
   },
 };
 
@@ -49,6 +53,9 @@ export const callWebSocketManagerModule = {
     sendToParticipant: (kind: CallerKindValue, id: string, message: CallSignalingOutbound) => {
       sent.push({ kind, id, message });
       return online[kind].has(id);
+    },
+    releaseWaitingSockets: (kind: CallerKindValue, id: string): void => {
+      released.push(connectionKey(kind, id));
     },
   }),
 };

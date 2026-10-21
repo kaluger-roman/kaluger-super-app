@@ -146,10 +146,8 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       await page.getByRole("button", { name: "Завершить звонок" }).click();
       await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeHidden();
 
-      // The waiting tab keeps asking and, once the call is over, may take the connection.
-      await expect(secondTab.getByRole("button", { name: "Использовать здесь" })).toBeEnabled({
-        timeout: 25_000,
-      });
+      // The server releases the waiting tab once the call is over; it may take the connection then.
+      await expect(secondTab.getByRole("button", { name: "Использовать здесь" })).toBeEnabled();
     } finally {
       await studentContext.close();
     }

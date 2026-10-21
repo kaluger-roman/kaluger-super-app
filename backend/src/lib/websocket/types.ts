@@ -14,7 +14,8 @@ export type AuthenticatedStudentWebSocket = TabSocket & {
   email?: string;
 };
 
-export type TakeoverRefusal = {
-  code: number;
-  reason: string;
-};
+export type TakeoverDecision =
+  | { action: "register" }
+  // The user's call goes on in another tab: keep the socket unregistered until it ends.
+  | { action: "wait" }
+  | { action: "refuse"; code: number; reason: string };

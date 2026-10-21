@@ -56,6 +56,7 @@ type ConnectionHandlers = {
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const READY = JSON.stringify({ type: "connection_ready" });
+const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 
 describe("WebSocketManager tabs and heartbeat", () => {
   let server: EventEmitter;
@@ -131,7 +132,8 @@ describe("WebSocketManager tabs and heartbeat", () => {
       await connect(fresh, "/ws?token=t&tab=tab-b");
 
       expect(resumed.close).toHaveBeenCalledWith(4000, "Connection held by another tab");
-      expect(fresh.close).toHaveBeenCalledWith(4002, "Call in progress in another tab");
+      expect(fresh.close).not.toHaveBeenCalled();
+      expect(fresh.send).toHaveBeenCalledWith(WAITING);
       expect(manager.getConnection(kind, id)).toBe(live);
     }
   );

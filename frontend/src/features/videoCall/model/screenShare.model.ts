@@ -10,6 +10,7 @@ import {
 } from "./call.constants";
 import { isPickerDismissed } from "./call.helpers";
 import * as callModel from "./call.model";
+import * as currentCallModel from "./currentCall.model";
 import { findVideoTransceiver, sendVideoTrack } from "./peerConnection.helpers";
 import * as peerConnectionModel from "./peerConnection.model";
 import { getDisplayMediaSafe, getSession } from "./webrtc.helpers";
@@ -92,10 +93,8 @@ sample({
 
 // A share that finished after its call ended belongs to no call: its tracks are already stopped.
 const currentCallShare = sample({
-  clock: startScreenShareFx.done,
-  source: callModel.$callId,
-  filter: (callId, { params }) => callId === params,
-  fn: (_, { result }) => result,
+  clock: currentCallModel.forCurrentCall(startScreenShareFx.done, ({ params }) => params),
+  fn: ({ result }) => result,
 });
 const sharingStarted = sample({
   clock: currentCallShare,

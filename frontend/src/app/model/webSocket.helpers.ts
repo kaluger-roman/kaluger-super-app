@@ -1,33 +1,25 @@
 import { dispatchCallSignal, parseCallSignal } from "@features/videoCall";
-import { expireTutorSession, getTutorToken } from "@shared";
+import { expireTutorSession, getTutorToken, isRecord } from "@shared";
 
 import type { LessonStatusUpdate } from "./webSocket.types";
 
-const isLessonStatusUpdate = (data: unknown): data is LessonStatusUpdate & { type: string } => {
-  if (typeof data !== "object" || data === null) return false;
-  const { type, lessonId, status } = data as Record<string, unknown>;
-  return (
-    type === "lesson_status_updated" && typeof lessonId === "string" && typeof status === "string"
-  );
+const toLessonStatusUpdate = (data: unknown): LessonStatusUpdate | null => {
+  if (!isRecord(data) || data.type !== "lesson_status_updated") return null;
+  const { lessonId, status } = data;
+  return typeof lessonId === "string" && typeof status === "string" ? { lessonId, status } : null;
 };
 
 export const dispatchTutorMessage = (
-  raw: string,
+  data: unknown,
   onLessonStatus: (update: LessonStatusUpdate) => void
 ): void => {
-  try {
-    const data: unknown = JSON.parse(raw);
-    const callSignal = parseCallSignal(data);
-    if (callSignal) {
-      dispatchCallSignal(callSignal, "tutor");
-      return;
-    }
-    if (isLessonStatusUpdate(data)) {
-      onLessonStatus({ lessonId: data.lessonId, status: data.status });
-    }
-  } catch (error) {
-    console.error("WebSocket message parsing error:", error);
+  const callSignal = parseCallSignal(data);
+  if (callSignal) {
+    dispatchCallSignal(callSignal, "tutor");
+    return;
   }
+  const lessonStatus = toLessonStatusUpdate(data);
+  if (lessonStatus) onLessonStatus(lessonStatus);
 };
 
 // Another tab changed the stored token: follow a new one, or log out with the holder tab.
@@ -37,8 +29,8 @@ export const followStoredTutorToken = (): boolean => {
   return false;
 };
 
-// A socket closed for a revoked token reconnects only if this tab got a new token meanwhile
-// (its own password change); otherwise the session is over.
+// A socket closed for a revoked token reconnects only if this tab got a new token meanwhile;
+// otherwise the session is over.
 export const resumeTutorSession = (revokedToken: string | null): boolean => {
   if (revokedToken === null || getTutorToken() !== revokedToken) return true;
   expireTutorSession();

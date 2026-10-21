@@ -1,3 +1,6 @@
+import { createEffect, createEvent, sample } from "effector";
+
+import { studentUserModel } from "@entities";
 import { getStudentToken } from "@shared";
 
 import * as appInitModel from "./appInit.model";
@@ -20,8 +23,6 @@ const connection = socketConnectionModel.createSocketConnection({
 
 export const connectStudentWebSocket = connection.connect;
 export const disconnectStudentWebSocket = connection.disconnect;
-export const studentWebSocketOpened = connection.ready;
-export const studentWebSocketClosed = connection.closed;
 export const connectStudentWebSocketFx = connection.connectFx;
 
 export const $studentWebSocketConnection = connection.$connection;
@@ -29,3 +30,29 @@ export const $isStudentWebSocketEnabled = connection.$isEnabled;
 export const $isStudentWebSocketConnected = connection.$isConnected;
 // Another tab or device of the same student holds the connection; this tab waits to be taken back.
 export const $elsewhere = connection.$elsewhere;
+
+// The student token in localStorage was changed by another tab of this browser.
+export const tokenStorageChanged = createEvent();
+
+const hasStudentTokenFx = createEffect((): boolean => getStudentToken() !== null);
+
+// Only a tab with a student session follows the student token.
+sample({
+  clock: tokenStorageChanged,
+  source: connection.$isEnabled,
+  filter: Boolean,
+  fn: () => undefined,
+  target: hasStudentTokenFx,
+});
+sample({
+  clock: hasStudentTokenFx.doneData,
+  filter: Boolean,
+  fn: () => undefined,
+  target: connection.tokenRenewed,
+});
+sample({
+  clock: hasStudentTokenFx.doneData,
+  filter: (hasToken) => !hasToken,
+  fn: () => undefined,
+  target: studentUserModel.studentSessionEndedElsewhere,
+});
