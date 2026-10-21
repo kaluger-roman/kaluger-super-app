@@ -25,10 +25,6 @@ export const setCachedStudentTokenVersion = (studentUserId: string, tokenVersion
   });
 };
 
-export const invalidateCachedStudentTokenVersion = (studentUserId: string): void => {
-  cache.delete(studentUserId);
-};
-
 export const __clearStudentTokenVersionCacheForTests = (): void => {
   cache.clear();
 };

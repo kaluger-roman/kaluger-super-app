@@ -250,6 +250,29 @@ describe("features/videoCall/model media robustness", () => {
     expect(readStore(callModel.$selfMediaState).cameraOn).toBe(false);
   });
 
+  it("should stay silent when the camera permission is denied after the call ended", async () => {
+    let denyCamera: (error: Error) => void = () => undefined;
+    useAdapter({
+      getUserMedia: audioOnlyGetUserMedia(
+        () =>
+          new Promise<FakeStream>((_, reject) => {
+            denyCamera = reject;
+          })
+      ),
+    });
+    await startCallerSession("cam-denied-late");
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    callModel.toggleCamera();
+    callModel.hangUp();
+    await settleMicrotasks();
+    denyCamera(new DOMException("denied", "NotAllowedError"));
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).not.toContain("Не удалось включить камеру. Проверьте разрешения браузера");
+  });
+
   it("should add a remote track that arrives without a stream to the remote stream", async () => {
     useAdapter();
     await startCallerSession("track-1");

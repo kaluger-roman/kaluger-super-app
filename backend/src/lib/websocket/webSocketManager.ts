@@ -1,61 +1,35 @@
-import { parse } from "url";
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server, IncomingMessage } from "http";
 import type { Socket } from "net";
-import type {
-  AuthenticatedStudentWebSocket,
-  AuthenticatedWebSocket,
-  TakeoverRefusal,
-} from "./types";
+import type { AuthenticatedStudentWebSocket, AuthenticatedWebSocket } from "./types";
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
-import { hasActiveCall, terminateActiveCallForParticipant } from "../../services/callSignaling";
+import { terminateActiveCallForParticipant } from "../../services/callSignaling";
 import { routeCallMessage } from "./signaling";
 import { getCachedTokenVersion } from "../tokenVersionCache";
 import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
+import {
+  HEARTBEAT_INTERVAL_MS,
+  REPLACED_CLOSE_CODE,
+  REVOKED_SOCKET_TERMINATE_MS,
+  STUDENT_WS_PATH,
+  TOKEN_REVOKED_CLOSE_CODE,
+  TUTOR_WS_PATH,
+} from "./connection.constants";
+import { readTabId, sendConnectionReady, toTakeoverRefusal } from "./connection.helpers";
 import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
 // на одном HTTP, привязанные через `path`, конфликтуют — первый при path
 // mismatch вызывает `socket.destroy()` и убивает рукопожатие второго.
-const TUTOR_WS_PATH = "/ws";
-const STUDENT_WS_PATH = "/ws/student";
-const REPLACED_CLOSE_CODE = 4000;
-const TOKEN_REVOKED_CLOSE_CODE = 4001;
-const CALL_IN_PROGRESS_CLOSE_CODE = 4002;
-// A client that never answers the close frame would otherwise hold the socket for ws's 30 s.
-const REVOKED_SOCKET_TERMINATE_MS = 1000;
-
-// An automatic reconnect (`resume=1`) must not take the connection from another live tab of the
-// same user; only a fresh page load or an explicit take-over replaces it.
-const isResumeRequest = (request: IncomingMessage): boolean =>
-  parse(request.url ?? "", true).query.resume === "1";
-
-// A live socket keeps the connection while its user is in a call, so opening another tab never
-// drops the call; otherwise an automatic reconnect leaves it alone and a fresh connect takes over.
-const toTakeoverRefusal = (
-  kind: CallerKindValue,
-  id: string,
-  previous: WebSocket | undefined,
-  ws: WebSocket,
-  request: IncomingMessage
-): TakeoverRefusal | null => {
-  if (!previous || previous === ws || previous.readyState !== WebSocket.OPEN) return null;
-  if (hasActiveCall(kind, id)) {
-    return { code: CALL_IN_PROGRESS_CLOSE_CODE, reason: "Call in progress in another tab" };
-  }
-  if (isResumeRequest(request)) {
-    return { code: REPLACED_CLOSE_CODE, reason: "Connection held by another tab" };
-  }
-  return null;
-};
-
 export class WebSocketManager {
   private wss: WebSocketServer;
   private studentWss: WebSocketServer;
   private clients: Map<string, AuthenticatedWebSocket> = new Map();
   private studentClients: Map<string, AuthenticatedStudentWebSocket> = new Map();
+  private awaitingPong = new WeakSet<WebSocket>();
+  private heartbeat: ReturnType<typeof setInterval>;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
@@ -65,6 +39,30 @@ export class WebSocketManager {
     this.studentWss.on("connection", this.handleStudentConnection.bind(this));
 
     server.on("upgrade", this.handleUpgrade.bind(this));
+
+    this.heartbeat = setInterval(() => this.checkHeartbeats(), HEARTBEAT_INTERVAL_MS);
+    this.heartbeat.unref();
+    server.on("close", () => clearInterval(this.heartbeat));
+  }
+
+  private checkHeartbeats() {
+    [...this.clients.values(), ...this.studentClients.values()].forEach((ws) => {
+      if (this.awaitingPong.has(ws)) {
+        // Terminating emits close, which unregisters the socket and ends its call.
+        ws.terminate();
+        return;
+      }
+      this.awaitingPong.add(ws);
+      try {
+        ws.ping();
+      } catch (error) {
+        console.error("Failed to ping WebSocket:", error);
+      }
+    });
+  }
+
+  private watchHeartbeat(ws: WebSocket) {
+    ws.on("pong", () => this.awaitingPong.delete(ws));
   }
 
   private handleUpgrade(request: IncomingMessage, socket: Socket, head: Buffer) {
@@ -101,6 +99,7 @@ export class WebSocketManager {
     // Attach user info to WebSocket
     ws.userId = decoded.userId;
     ws.email = decoded.email;
+    ws.tabId = readTabId(request);
 
     const previous = this.clients.get(decoded.userId);
     const refusal = toTakeoverRefusal("tutor", decoded.userId, previous, ws, request);
@@ -157,6 +156,8 @@ export class WebSocketManager {
     }
 
     this.clients.set(decoded.userId, ws);
+    this.watchHeartbeat(ws);
+    sendConnectionReady(ws);
 
     console.log(`WebSocket connected: ${decoded.email} (${decoded.userId})`);
 
@@ -176,6 +177,7 @@ export class WebSocketManager {
 
     ws.studentUserId = decoded.studentUserId;
     ws.email = decoded.email;
+    ws.tabId = readTabId(request);
 
     const previous = this.studentClients.get(decoded.studentUserId);
     const refusal = toTakeoverRefusal("student", decoded.studentUserId, previous, ws, request);
@@ -227,6 +229,8 @@ export class WebSocketManager {
     }
 
     this.studentClients.set(decoded.studentUserId, ws);
+    this.watchHeartbeat(ws);
+    sendConnectionReady(ws);
 
     console.log(`Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`);
   }

@@ -35,6 +35,8 @@ const idleAdapter = {
   supportsDisplayMedia: vi.fn(() => true),
 };
 
+const CONNECTION_READY = JSON.stringify({ type: "connection_ready" });
+
 const incoming = (callId: string) =>
   JSON.stringify({ type: "call_incoming", callId, callerName: "Анна", iceServers: [] });
 
@@ -72,6 +74,7 @@ describe.each([
     connect();
     const socket = sockets[sockets.length - 1];
     socket.onopen?.();
+    socket.onmessage?.({ data: CONNECTION_READY });
     return socket;
   };
 
@@ -110,6 +113,17 @@ describe.each([
     expect(socket.send).toHaveBeenCalledWith(
       JSON.stringify({ type: "call_reject", callId: "c-2" })
     );
+  });
+
+  it("should not send call signals over a socket the server has not registered yet", () => {
+    connect();
+    const socket = sockets[sockets.length - 1];
+    socket.onopen?.();
+    socket.onmessage?.({ data: incoming("c-unready") });
+
+    callModel.rejectCall();
+
+    expect(socket.send).not.toHaveBeenCalled();
   });
 
   it("should end the call when the socket closes", () => {

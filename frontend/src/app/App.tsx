@@ -16,6 +16,7 @@ import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shar
 import * as Styled from "./App.styled";
 import {
   AppContent,
+  AppLoadingScreen,
   OfflineIndicator,
   InstallPrompt,
   PullToRefresh,
@@ -116,9 +117,7 @@ const App: FC = () => {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Styled.StyledBackdrop open={true}>
-          <CircularProgress color="inherit" />
-        </Styled.StyledBackdrop>
+        <AppLoadingScreen />
       </ThemeProvider>
     );
   }

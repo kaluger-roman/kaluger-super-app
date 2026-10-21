@@ -12,7 +12,11 @@ export const OfflineIndicator = () => {
   const vertical = callPhase === "idle" ? "bottom" : "top";
 
   return (
-    <Snackbar open={!isOnline} anchorOrigin={{ vertical, horizontal: "center" }}>
+    <Snackbar
+      open={!isOnline}
+      anchorOrigin={{ vertical, horizontal: "center" }}
+      data-placement={vertical}
+    >
       <Alert severity="warning" variant="filled">
         Нет подключения к интернету. Данные могут быть неактуальны
       </Alert>

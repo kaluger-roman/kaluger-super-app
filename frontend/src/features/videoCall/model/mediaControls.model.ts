@@ -95,8 +95,11 @@ sample({
   target: callModel.selfMediaStateChanged,
 });
 
+// A permission prompt answered after the call ended belongs to no call: stay silent.
 sample({
   clock: toggleCameraFx.fail,
+  source: callModel.$callId,
+  filter: (callId, { params }) => callId === params.callId,
   fn: () => CAMERA_FAILED_TEXT,
   target: notificationsModel.showErrorEvent,
 });

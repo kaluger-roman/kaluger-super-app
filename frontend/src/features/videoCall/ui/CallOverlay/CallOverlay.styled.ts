@@ -1,8 +1,6 @@
 import { Box } from "@mui/material";
 
-import { styled } from "@shared";
-
-import { CALL_LAYER_Z_INDEX_OFFSET } from "../../videoCall.constants";
+import { ABOVE_MODAL_Z_OFFSET, styled } from "@shared";
 
 export const FullScreen = styled(Box)(({ theme }) => ({
   position: "fixed",
@@ -10,6 +8,6 @@ export const FullScreen = styled(Box)(({ theme }) => ({
   right: 0,
   bottom: 0,
   left: 0,
-  zIndex: theme.zIndex.modal + CALL_LAYER_Z_INDEX_OFFSET,
+  zIndex: theme.zIndex.modal + ABOVE_MODAL_Z_OFFSET.call,
   background: theme.palette.common.black,
 }));

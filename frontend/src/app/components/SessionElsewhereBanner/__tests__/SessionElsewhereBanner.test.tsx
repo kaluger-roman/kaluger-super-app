@@ -21,7 +21,7 @@ const setupBanner = (
       [studentWebSocketModel.$elsewhere, studentElsewhere],
     ],
     handlers: [
-      [webSocketModel.connectWebSocketFx, () => undefined],
+      [webSocketModel.connectWebSocketFx, () => null],
       [studentWebSocketModel.connectStudentWebSocketFx, () => null],
     ],
   });
@@ -66,7 +66,9 @@ describe("SessionElsewhereBanner", () => {
   it("should not offer a take-over while a call goes on in the other tab", () => {
     setupBanner("call");
 
-    expect(screen.getByText(/В другой вкладке идёт звонок/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/В другой вкладке или на другом устройстве идёт звонок/)
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Использовать здесь" })).toBeDisabled();
   });
 });

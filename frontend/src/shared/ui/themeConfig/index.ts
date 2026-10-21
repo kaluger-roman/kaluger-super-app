@@ -5,6 +5,8 @@ import { moreComponentOverrides } from "./moreComponents.constants";
 import { palette } from "./palette.constants";
 import { typography } from "./typography.constants";
 
+export { ABOVE_MODAL_Z_OFFSET } from "./zIndex.constants";
+
 export const theme = createTheme({
   palette,
   typography,

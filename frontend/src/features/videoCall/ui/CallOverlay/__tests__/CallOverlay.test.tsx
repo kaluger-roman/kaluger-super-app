@@ -4,14 +4,14 @@ import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, expect, it } from "vitest";
 
-import { theme } from "@shared";
+import { ABOVE_MODAL_Z_OFFSET, theme } from "@shared";
 
 import { callModel } from "../../../model";
 import type { CallPhase } from "../../../model/call.types";
 import { CallOverlay } from "../CallOverlay";
 
-// The app's full-screen blocking spinner (App.styled `ModalBackdrop`) sits at modal + 1.
-const BLOCKING_OVERLAY_Z_INDEX = theme.zIndex.modal + 1;
+// The app's full-screen blocking spinner (App.styled `ModalBackdrop`) uses this layer.
+const BLOCKING_OVERLAY_Z_INDEX = theme.zIndex.modal + ABOVE_MODAL_Z_OFFSET.blockingOverlay;
 
 const zIndexOf = (element: Element | null): number =>
   element ? Number(getComputedStyle(element).zIndex) : Number.NaN;

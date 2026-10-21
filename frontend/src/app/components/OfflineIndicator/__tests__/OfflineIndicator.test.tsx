@@ -26,16 +26,17 @@ const renderIndicator = (phase: "idle" | "active") => {
   );
 };
 
-const snackbarOf = (text: RegExp) => screen.getByText(text).closest(".MuiSnackbar-root");
+const placementOf = (text: RegExp) =>
+  screen.getByText(text).closest("[data-placement]")?.getAttribute("data-placement");
 
 describe("OfflineIndicator", () => {
   it("should sit at the bottom outside a call", () => {
     renderIndicator("idle");
-    expect(snackbarOf(/Нет подключения/)).toHaveClass("MuiSnackbar-anchorOriginBottomCenter");
+    expect(placementOf(/Нет подключения/)).toBe("bottom");
   });
 
   it("should move to the top during a call so it does not cover the call controls", () => {
     renderIndicator("active");
-    expect(snackbarOf(/Нет подключения/)).toHaveClass("MuiSnackbar-anchorOriginTopCenter");
+    expect(placementOf(/Нет подключения/)).toBe("top");
   });
 });

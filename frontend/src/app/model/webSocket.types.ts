@@ -7,10 +7,6 @@ export type WebSocketClose = {
   elsewhere: ElsewhereReason | null;
 };
 
-export type StudentWebSocketClose = {
-  elsewhere: ElsewhereReason | null;
-};
-
 export type LessonStatusUpdate = {
   lessonId: string;
   status: string;

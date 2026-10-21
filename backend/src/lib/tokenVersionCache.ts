@@ -38,10 +38,6 @@ export const setCachedTokenVersion = (userId: string, tokenVersion: number): voi
   });
 };
 
-export const invalidateCachedTokenVersion = (userId: string): void => {
-  cache.delete(userId);
-};
-
 // Test-only helper: clears the entire cache between tests so that mocks of
 // `prisma.user.findUnique` are not skipped due to a prior real lookup.
 export const __clearTokenVersionCacheForTests = (): void => {

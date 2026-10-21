@@ -34,6 +34,6 @@ sample({
 
 sample({
   clock: $sessionElsewhere,
-  fn: (reason) => (reason ? CALLS_ELSEWHERE_TEXT : null),
+  fn: (reason) => (reason ? CALLS_ELSEWHERE_TEXT[reason] : null),
   target: callModel.callsUnavailableChanged,
 });

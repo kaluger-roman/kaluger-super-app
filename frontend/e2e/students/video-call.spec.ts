@@ -127,19 +127,29 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       await page.getByText("Олег Звонкий").click();
       await page.getByRole("dialog").getByRole("button", { name: "Видеозвонок" }).click();
       await studentPage.getByRole("button", { name: "Принять вызов" }).click();
+      await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
+      await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
       await expect(page.getByText("Соединение…")).toBeHidden();
 
       const secondTab = await page.context().newPage();
       await seedAuthInBrowser(secondTab, tutor.token);
       await secondTab.goto("/students");
 
-      await expect(secondTab.getByText("В другой вкладке идёт звонок")).toBeVisible();
+      await expect(
+        secondTab.getByText("В другой вкладке или на другом устройстве идёт звонок")
+      ).toBeVisible();
       await expect(secondTab.getByRole("button", { name: "Использовать здесь" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
+      await expect(page.getByText("Соединение…")).toBeHidden();
       await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
 
       await page.getByRole("button", { name: "Завершить звонок" }).click();
       await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeHidden();
+
+      // The waiting tab keeps asking and, once the call is over, may take the connection.
+      await expect(secondTab.getByRole("button", { name: "Использовать здесь" })).toBeEnabled({
+        timeout: 25_000,
+      });
     } finally {
       await studentContext.close();
     }
