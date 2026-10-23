@@ -57,6 +57,16 @@ export const componentOverrides = {
       },
     },
   },
+  MuiInputBase: {
+    styleOverrides: {
+      input: {
+        // iOS zooms the page in when an input under 16px gets focus and never zooms back out
+        "@media (pointer: coarse)": {
+          fontSize: "1rem",
+        },
+      },
+    },
+  },
   MuiTextField: {
     styleOverrides: {
       root: {
@@ -71,9 +81,6 @@ export const componentOverrides = {
           "&.Mui-focused fieldset": {
             borderColor: "#2E7D47",
             borderWidth: 2,
-          },
-          "@media (max-width: 600px)": {
-            fontSize: "0.875rem",
           },
         },
         "& .MuiInputLabel-root": {
