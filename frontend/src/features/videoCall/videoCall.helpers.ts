@@ -1,6 +1,6 @@
 import type { CallHistoryDirection, CallHistoryStatus } from "@entities";
 
-import { CALL_STATUS_LABELS } from "./videoCall.constants";
+import { CALL_STATUS_LABELS, OUTGOING_UNANSWERED_LABEL } from "./videoCall.constants";
 
 export const getInitials = (name: string): string =>
   name
@@ -23,7 +23,14 @@ export const formatCallDuration = (seconds: number | null): string => {
   return `${hours}:${restMinutes}:${paddedSeconds}`;
 };
 
-export const getCallStatusLabel = (status: CallHistoryStatus): string => CALL_STATUS_LABELS[status];
+// "Пропущен" belongs to the side that did not answer; the caller just got no answer.
+export const getCallStatusLabel = (
+  status: CallHistoryStatus,
+  direction: CallHistoryDirection
+): string =>
+  status === "MISSED" && direction === "outgoing"
+    ? OUTGOING_UNANSWERED_LABEL
+    : CALL_STATUS_LABELS[status];
 
 export const getCallDirectionLabel = (direction: CallHistoryDirection): string =>
   direction === "outgoing" ? "Исходящий" : "Входящий";

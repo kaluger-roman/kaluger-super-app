@@ -4,10 +4,14 @@ import { getStatusChipColor } from "../CallHistoryList.helpers";
 
 describe("CallHistoryList helpers", () => {
   it("should map call statuses to chip colors", () => {
-    expect(getStatusChipColor("COMPLETED")).toBe("success");
-    expect(getStatusChipColor("MISSED")).toBe("warning");
-    expect(getStatusChipColor("REJECTED")).toBe("error");
-    expect(getStatusChipColor("FAILED")).toBe("error");
-    expect(getStatusChipColor("CANCELED")).toBe("default");
+    expect(getStatusChipColor("COMPLETED", "incoming")).toBe("success");
+    expect(getStatusChipColor("MISSED", "incoming")).toBe("warning");
+    expect(getStatusChipColor("REJECTED", "incoming")).toBe("error");
+    expect(getStatusChipColor("FAILED", "incoming")).toBe("error");
+    expect(getStatusChipColor("CANCELED", "incoming")).toBe("default");
+  });
+
+  it("should not flag a call the user made and nobody answered", () => {
+    expect(getStatusChipColor("MISSED", "outgoing")).toBe("default");
   });
 });

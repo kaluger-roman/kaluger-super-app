@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { ABOVE_MODAL_Z_OFFSET, theme } from "@shared";
 
-import { callModel } from "../../../model";
+import { callModel, callScreenModel } from "../../../model";
 import type { CallPhase } from "../../../model/call.types";
 import { CallOverlay } from "../CallOverlay";
 
@@ -24,10 +24,11 @@ const fixedAncestorOf = (element: Element): Element | null => {
   return current;
 };
 
-const renderOverlay = (phase: CallPhase) => {
+const renderOverlay = (phase: CallPhase, revealed = true) => {
   const scope = fork({
     values: [
       [callModel.$callPhase, phase],
+      [callScreenModel.$isOutgoingRevealed, revealed],
       [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
       [callModel.$outgoingCallPeer, { name: "Иван Смирнов", role: "student" }],
     ],
@@ -50,6 +51,12 @@ describe("CallOverlay", () => {
   it("should show the incoming call modal while ringing", () => {
     renderOverlay("incoming");
     expect(screen.getByText("Входящий вызов")).toBeInTheDocument();
+  });
+
+  it("should not flash the dialing screen before the server confirmed the call rings", () => {
+    const { container } = renderOverlay("outgoing", false);
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole("button", { name: "Отменить вызов" })).not.toBeInTheDocument();
   });
 
   it("should show the dialing overlay for an outgoing call", () => {
