@@ -106,6 +106,12 @@ cmd_up() {
     sleep 2
   done
 
+  # Invite and reset links are built from FRONTEND_URL, and the web port is known only now.
+  if ! grep -qx "FRONTEND_URL=http://localhost:$port" "$ef"; then
+    sed -e "s|^FRONTEND_URL=.*|FRONTEND_URL=http://localhost:$port|" "$ef" > "$ef.tmp" && mv "$ef.tmp" "$ef"
+    docker compose -p "$proj" --env-file "$ef" -f "$COMPOSE_FILE" up -d --no-deps --wait backend >&2
+  fi
+
   printf '{"project":"%s","branch":"%s","url":"http://localhost:%s","adminEmail":"%s","adminPassword":"%s","envFile":"%s"}\n' \
     "$proj" "$(current_branch)" "$port" "$QA_ADMIN_EMAIL" "$QA_ADMIN_PASSWORD" "$ef"
 }

@@ -292,6 +292,38 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
     expect(scope.getState(connection.$elsewhere)).toBe("tab");
   });
 
+  it("should not race the holder when its waiting socket drops (regression: waiting tab took the connection after a server restart)", async () => {
+    const scope = fork();
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await closeSocket(sockets[0], 1006);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS * 10);
+
+    expect(sockets).toHaveLength(1);
+    expect(scope.getState(connection.$elsewhere)).toBe("tab");
+
+    await launch(() => allSettled(resumed, { scope }));
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBe("1");
+  });
+
+  it("should keep the call banner until the retry after the call is answered (regression: empty banner between call and tab)", async () => {
+    const scope = fork();
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+    const seen: unknown[] = [];
+    const watcher = createWatch({ unit: connection.$elsewhere, fn: (v) => seen.push(v), scope });
+
+    await closeSocket(sockets[0], 4003);
+    expect(scope.getState(connection.$elsewhere)).toBe("call");
+    await closeSocket(sockets[1], 4000);
+    watcher.unsubscribe();
+
+    expect(scope.getState(connection.$elsewhere)).toBe("tab");
+    expect(seen).not.toContain(null);
+  });
+
   it("should not reopen a waiting socket when the user comes back to the tab", async () => {
     const scope = fork();
     await launch(() => allSettled(connection.connect, { scope }));

@@ -104,7 +104,7 @@ describe("studentInvitation service", () => {
       const result = await issueInvitation(tutorId, studentId);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.inviteUrl).toContain("/student-invite/");
+      expect(result.inviteUrl).toMatch(new RegExp(`^${process.env.FRONTEND_URL}/student-invite/`));
       expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
 
       const stored = await prisma.studentInvitation.findFirst({

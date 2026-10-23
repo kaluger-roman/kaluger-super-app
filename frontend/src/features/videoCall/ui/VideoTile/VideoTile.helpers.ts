@@ -25,3 +25,20 @@ export const getVideoLayout = (
 
 export const getCameraLabel = (media: CallMediaState): string =>
   media.cameraAvailable ? CAMERA_OFF_LABEL : CAMERA_UNAVAILABLE_LABEL;
+
+// A call never pauses on purpose. iOS Safari pauses inline video on its own (the app goes to the
+// background, a tap on the video) and then draws its native play/pause button over it.
+// `onBlocked(true)`: the browser wants a user gesture first; an AbortError only means a newer
+// stream replaced this play, which plays on its own.
+export const resumePlayback = (
+  element: HTMLVideoElement,
+  onBlocked: (blocked: boolean) => void
+): void => {
+  if (!element.srcObject || !element.paused) return;
+  element.play().then(
+    () => onBlocked(false),
+    (error: unknown) => {
+      if (error instanceof DOMException && error.name === "NotAllowedError") onBlocked(true);
+    }
+  );
+};

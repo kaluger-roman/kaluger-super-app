@@ -3,7 +3,7 @@ import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, expect, it } from "vitest";
 
-import { callModel } from "@features/videoCall";
+import { callModel, callScreenModel } from "@features/videoCall";
 
 import { AppLoadingScreen } from "../../AppLoadingScreen";
 import { AppFrame } from "../AppFrame";
@@ -12,6 +12,7 @@ const incomingScope = () =>
   fork({
     values: [
       [callModel.$callPhase, "incoming"],
+      [callScreenModel.$shownCallPhase, "incoming"],
       [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
     ],
   });

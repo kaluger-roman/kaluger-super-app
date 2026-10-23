@@ -64,20 +64,35 @@ describe("app/model/socketConnection.helpers toControlMessage", () => {
 
 describe("app/model/socketConnection.helpers toSocketClose", () => {
   it("should map close codes to what the tab does next", () => {
-    expect(toSocketClose(closeWith(4000), REVOKED)).toEqual({
+    expect(toSocketClose(closeWith(4000), REVOKED, null)).toEqual({
       revokedToken: null,
       elsewhere: "tab",
       callEnded: false,
     });
-    expect(toSocketClose(closeWith(4003), REVOKED)).toEqual({
+    expect(toSocketClose(closeWith(4003), REVOKED, null)).toEqual({
       revokedToken: null,
       elsewhere: null,
       callEnded: true,
     });
-    expect(toSocketClose(closeWith(4001), REVOKED).revokedToken).toBe("t-1");
-    expect(toSocketClose(closeWith(4001), new Set()).revokedToken).toBeNull();
-    expect(toSocketClose(closeWith(1006), REVOKED)).toEqual({
+    expect(toSocketClose(closeWith(4001), REVOKED, null).revokedToken).toBe("t-1");
+    expect(toSocketClose(closeWith(4001), new Set(), null).revokedToken).toBeNull();
+    expect(toSocketClose(closeWith(1006), REVOKED, null)).toEqual({
       revokedToken: null,
+      elsewhere: null,
+      callEnded: false,
+    });
+  });
+
+  it("should keep a tab that waited for a call out of the reconnect race", () => {
+    expect(toSocketClose(closeWith(1006), REVOKED, "call").elsewhere).toBe("tab");
+    expect(toSocketClose(closeWith(4003), REVOKED, "call")).toEqual({
+      revokedToken: null,
+      elsewhere: "call",
+      callEnded: true,
+    });
+    expect(toSocketClose(closeWith(4000), REVOKED, "call").elsewhere).toBe("tab");
+    expect(toSocketClose(closeWith(4001), REVOKED, "call")).toEqual({
+      revokedToken: "t-1",
       elsewhere: null,
       callEnded: false,
     });

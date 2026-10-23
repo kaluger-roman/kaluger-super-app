@@ -30,11 +30,16 @@ describe("features/videoCall helpers", () => {
   });
 
   it("should label every call status in Russian", () => {
-    expect(getCallStatusLabel("COMPLETED")).toBe("Завершён");
-    expect(getCallStatusLabel("MISSED")).toBe("Пропущен");
-    expect(getCallStatusLabel("REJECTED")).toBe("Отклонён");
-    expect(getCallStatusLabel("CANCELED")).toBe("Отменён");
-    expect(getCallStatusLabel("FAILED")).toBe("Не удалось соединиться");
+    expect(getCallStatusLabel("COMPLETED", "incoming")).toBe("Завершён");
+    expect(getCallStatusLabel("MISSED", "incoming")).toBe("Пропущен");
+    expect(getCallStatusLabel("REJECTED", "incoming")).toBe("Отклонён");
+    expect(getCallStatusLabel("CANCELED", "incoming")).toBe("Отменён");
+    expect(getCallStatusLabel("FAILED", "incoming")).toBe("Не удалось соединиться");
+    expect(getCallStatusLabel("COMPLETED", "outgoing")).toBe("Завершён");
+  });
+
+  it("should not call an unanswered outgoing call missed (regression: offline tutor shown as missed to the student)", () => {
+    expect(getCallStatusLabel("MISSED", "outgoing")).toBe("Без ответа");
   });
 
   it("should label the call direction", () => {

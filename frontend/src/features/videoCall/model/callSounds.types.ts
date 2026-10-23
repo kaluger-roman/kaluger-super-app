@@ -1,4 +1,6 @@
 export type CallSoundsAdapter = {
+  // Called inside the click that starts a call: browsers unlock audio only during a user gesture.
+  primeAudio: () => void;
   startRingback: () => void;
   stopRingback: () => void;
   startRingtone: () => void;

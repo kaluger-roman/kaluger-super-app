@@ -67,6 +67,10 @@ const createDefaultAdapter = (): CallSoundsAdapter => {
   let ringback: ToneHandle | null = null;
   let ringtone: ToneHandle | null = null;
   return {
+    primeAudio: () => {
+      const ctx = getAudioContext();
+      if (ctx) resumeIfSuspended(ctx);
+    },
     startRingback: () => {
       if (!ringback) ringback = startTone(RINGBACK_PATTERN);
     },

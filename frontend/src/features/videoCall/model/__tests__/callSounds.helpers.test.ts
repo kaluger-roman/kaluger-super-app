@@ -58,4 +58,11 @@ describe("features/videoCall/model callSounds.helpers", () => {
     await vi.advanceTimersByTimeAsync(RINGTONE_PATTERN.offMs + RINGTONE_PATTERN.onMs);
     expect(ctx.resume).toHaveBeenCalledTimes(2);
   });
+
+  it("should unlock a suspended audio context when primed", () => {
+    getCallSoundsAdapter().primeAudio();
+    const ctx = FakeAudioContext.instances[FakeAudioContext.instances.length - 1];
+
+    expect(ctx.resume).toHaveBeenCalled();
+  });
 });

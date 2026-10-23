@@ -15,6 +15,9 @@ export const DEFAULT_PEER_MEDIA_STATE: CallMediaState = {
 };
 
 export const CALL_DURATION_TICK_MS = 1000;
+// The dialing screen waits this long for the server to confirm the call rings: an offline callee
+// is refused within a round trip, and the screen would only flash.
+export const OUTGOING_REVEAL_DELAY_MS = 500;
 
 export const CONNECTION_FAILED_TEXT =
   "Не удалось установить соединение. Проверьте интернет и попробуйте снова";
