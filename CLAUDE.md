@@ -153,6 +153,14 @@ node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sen
 - Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
 - Skip only for read-only tasks that create no branch.
 
+## Commit and Push Without Asking
+
+Once the work on a task branch is done and verified (tests, lint, tsc green), commit it and push it to the task branch yourself — do not ask and do not wait for a command. Then wait for the PR's CI checks and fix any failure. This applies to the final phase of `/auto-bug-fix`, `/auto-feature`, `/bug-hunt` and `/improve-hunt` too.
+
+- Do not commit between review/QA iterations: `/code-review-local` reviews the uncommitted working tree.
+- Never commit orchestrator state (`.claude/auto-*/`) or screenshots (`docs/**/screenshots/`, `.playwright-mcp/`).
+- Still ask before pushing to `main`, force-pushing, merging, marking the PR ready (`gh pr ready`), running `/news` and deploying.
+
 ## MANDATORY: File an Issue for Every Finding
 
 Any problem noticed along the way — a bug, a needed improvement, an infrastructure error (CI, deploy, dev machine, hooks, scripts, flaky tests) or anything else that looks wrong — gets a GitHub issue right away, without asking. The user triages the issues and hands the ones worth doing to a separate session.
