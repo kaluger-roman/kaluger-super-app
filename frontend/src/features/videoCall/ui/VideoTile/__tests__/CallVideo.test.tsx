@@ -1,10 +1,14 @@
-import { fireEvent, render } from "@testing-library/react";
+import { ThemeProvider } from "@mui/material";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { theme } from "@shared";
 
 import { CallVideo } from "../CallVideo";
 import { resumePlayback } from "../VideoTile.helpers";
 
 const fakeStream = () => ({ id: "stream" }) as unknown as MediaStream;
+const RESUME_LABEL = /Видео на паузе/;
 
 let paused = true;
 let play: ReturnType<typeof vi.fn>;
@@ -14,6 +18,8 @@ const srcObjectDescriptor = Object.getOwnPropertyDescriptor(
   "srcObject"
 );
 const attached = new WeakMap<HTMLMediaElement, MediaProvider | null>();
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
   paused = true;
@@ -41,35 +47,54 @@ afterEach(() => {
 });
 
 const renderVideo = (stream: MediaStream | null) =>
-  render(<CallVideo stream={stream} muted hidden={false} fit="cover" layout="overlay" />);
+  render(
+    <ThemeProvider theme={theme}>
+      <CallVideo stream={stream} muted hidden={false} fit="cover" layout="overlay" />
+    </ThemeProvider>
+  );
+
+const blockNextPlay = () =>
+  play.mockImplementationOnce(async () => {
+    throw new DOMException("gesture", "NotAllowedError");
+  });
 
 describe("resumePlayback", () => {
   it("should play a paused video that has a stream", () => {
     const element = document.createElement("video");
     element.srcObject = fakeStream();
 
-    resumePlayback(element);
+    resumePlayback(element, vi.fn());
 
     expect(play).toHaveBeenCalledTimes(1);
   });
 
   it("should leave a playing video or one without a stream alone", () => {
     const element = document.createElement("video");
-    resumePlayback(element);
+    resumePlayback(element, vi.fn());
     element.srcObject = fakeStream();
     paused = false;
-    resumePlayback(element);
+    resumePlayback(element, vi.fn());
 
     expect(play).not.toHaveBeenCalled();
   });
 
-  it("should swallow a refused play until the next attempt", async () => {
-    play.mockRejectedValueOnce(new DOMException("gesture", "NotAllowedError"));
+  it("should report a play that needs a gesture, but not one a newer stream aborted", async () => {
     const element = document.createElement("video");
     element.srcObject = fakeStream();
+    const onBlocked = vi.fn();
 
-    expect(() => resumePlayback(element)).not.toThrow();
-    await Promise.resolve();
+    blockNextPlay();
+    resumePlayback(element, onBlocked);
+    await flush();
+    expect(onBlocked).toHaveBeenLastCalledWith(true);
+
+    onBlocked.mockClear();
+    play.mockImplementationOnce(async () => {
+      throw new DOMException("replaced", "AbortError");
+    });
+    resumePlayback(element, onBlocked);
+    await flush();
+    expect(onBlocked).not.toHaveBeenCalled();
   });
 });
 
@@ -99,6 +124,19 @@ describe("CallVideo playback (regression: iOS Safari pause button over a frozen 
     document.dispatchEvent(new Event("visibilitychange"));
 
     expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("should ask for a tap when the browser refuses to resume, and resume on it", async () => {
+    blockNextPlay();
+    renderVideo(fakeStream());
+    await flush();
+
+    const overlay = await screen.findByRole("button", { name: RESUME_LABEL });
+    fireEvent.click(overlay);
+    await flush();
+
+    expect(play).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: RESUME_LABEL })).not.toBeInTheDocument();
   });
 
   it("should not offer picture-in-picture", () => {

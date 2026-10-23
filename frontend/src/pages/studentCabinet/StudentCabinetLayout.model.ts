@@ -1,7 +1,7 @@
 import { createEvent, sample } from "effector";
 
 import { studentUserModel } from "@entities";
-import { callModel } from "@features";
+import { callRequestModel } from "@features";
 import type { StartCallParams } from "@features";
 
 export const tutorCallRequested = createEvent();
@@ -17,5 +17,5 @@ sample({
   clock: tutorToCall,
   filter: Boolean,
   fn: (tutor): StartCallParams => ({ peerName: tutor.name }),
-  target: callModel.callStarted,
+  target: callRequestModel.callRequested,
 });

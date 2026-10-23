@@ -122,12 +122,12 @@ sample({ clock: incomingCallReceived, fn: () => null, target: $outgoingCallPeer 
 sample({ clock: incomingCallReceived, fn: ({ callId }) => callId, target: $callId });
 sample({ clock: incomingCallReceived, fn: ({ role }) => role, target: $callRole });
 sample({
-  clock: [callStarted, incomingCallReceived],
+  clock: [callStarted, incomingCallReceived, callTerminated],
   fn: () => DEFAULT_SELF_MEDIA_STATE,
   target: $selfMediaState,
 });
 sample({
-  clock: [callStarted, incomingCallReceived],
+  clock: [callStarted, incomingCallReceived, callTerminated],
   fn: () => DEFAULT_PEER_MEDIA_STATE,
   target: $peerMediaState,
 });
@@ -190,12 +190,10 @@ sample({
 });
 
 sample({ clock: callTerminated, fn: (): CallPhase => "idle", target: $callPhase });
+sample({ clock: callTerminated, fn: () => 0, target: $callDurationSeconds });
 sample({ clock: callTerminated, fn: () => null, target: $incomingCall });
 sample({ clock: callTerminated, fn: () => null, target: $outgoingCallPeer });
 sample({ clock: callTerminated, fn: () => null, target: $inviteId });
-sample({ clock: callTerminated, fn: () => 0, target: $callDurationSeconds });
-sample({ clock: callTerminated, fn: () => DEFAULT_SELF_MEDIA_STATE, target: $selfMediaState });
-sample({ clock: callTerminated, fn: () => DEFAULT_PEER_MEDIA_STATE, target: $peerMediaState });
 sample({
   clock: callTerminated,
   fn: () => null,

@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -69,7 +69,9 @@ export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit,
   zIndex: 0,
   objectFit: $fit,
   visibility: $hidden ? "hidden" : "visible",
-  // iOS Safari draws its own play/pause button over a video without controls.
+  // iOS Safari draws its own play/pause button over a paused video without controls; the call
+  // resumes the video itself and shows ResumeOverlay when that needs a tap. WebKit's controls
+  // pseudo-elements only give way to !important.
   "&::-webkit-media-controls, &::-webkit-media-controls-panel, &::-webkit-media-controls-start-playback-button":
     {
       display: "none !important",
@@ -88,6 +90,20 @@ export const PlaceholderColumn = styled(Box)({
   gap: 8,
   zIndex: 1,
 });
+
+export const ResumeOverlay = styled(ButtonBase)(({ theme }) => ({
+  position: "absolute",
+  inset: 0,
+  zIndex: 2,
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  padding: 16,
+  color: theme.palette.common.white,
+  background: "rgba(0, 0, 0, 0.55)",
+  ...theme.typography.body2,
+  textAlign: "center",
+}));
 
 export const PlaceholderLabel = styled(Typography)({
   color: "rgba(255, 255, 255, 0.7)",

@@ -5,6 +5,7 @@ import { callModel } from "../index";
 import { installTransport, resetCallFlow } from "./callFlow";
 
 const makeSoundsMock = () => ({
+  primeAudio: vi.fn<() => void>(),
   startRingback: vi.fn<() => void>(),
   stopRingback: vi.fn<() => void>(),
   startRingtone: vi.fn<() => void>(),
@@ -58,5 +59,13 @@ describe("features/videoCall/model call sounds", () => {
     callModel.callFailed("Репетитор сейчас не в сети");
 
     expect(sounds.startRingback).not.toHaveBeenCalled();
+  });
+
+  it("should unlock the audio in the click that starts the call (regression: silent ringback in Safari)", () => {
+    sounds.primeAudio.mockClear();
+
+    callModel.callStarted({ peerName: "Анна" });
+
+    expect(sounds.primeAudio).toHaveBeenCalledTimes(1);
   });
 });

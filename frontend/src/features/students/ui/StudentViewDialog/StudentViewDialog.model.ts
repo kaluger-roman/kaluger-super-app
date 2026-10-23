@@ -2,7 +2,7 @@ import { createStore, createEvent, sample } from "effector";
 
 import type { Student } from "@shared";
 
-import { callModel } from "../../../videoCall";
+import { callRequestModel } from "../../../videoCall";
 import { studentsModel } from "../../models";
 
 export const $deleteDialogOpen = createStore(false);
@@ -26,7 +26,7 @@ sample({
 sample({
   clock: callRequested,
   fn: (student) => ({ studentId: student.id, peerName: student.name }),
-  target: callModel.callStarted,
+  target: callRequestModel.callRequested,
 });
 
 sample({

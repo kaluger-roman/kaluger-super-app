@@ -1,5 +1,3 @@
-import type { SyntheticEvent } from "react";
-
 import { CAMERA_OFF_LABEL, CAMERA_UNAVAILABLE_LABEL } from "./VideoTile.constants";
 import type { TileContentKind, TileVariantConfig, VideoFit, VideoLayout } from "./VideoTile.types";
 import type { CallMediaState } from "../../videoCall.types";
@@ -30,11 +28,17 @@ export const getCameraLabel = (media: CallMediaState): string =>
 
 // A call never pauses on purpose. iOS Safari pauses inline video on its own (the app goes to the
 // background, a tap on the video) and then draws its native play/pause button over it.
-export const resumePlayback = (element: HTMLVideoElement): void => {
+// `onBlocked(true)`: the browser wants a user gesture first; an AbortError only means a newer
+// stream replaced this play, which plays on its own.
+export const resumePlayback = (
+  element: HTMLVideoElement,
+  onBlocked: (blocked: boolean) => void
+): void => {
   if (!element.srcObject || !element.paused) return;
-  // Refused without a user gesture: the next pause, return to the tab or tap retries.
-  element.play().catch(() => undefined);
+  element.play().then(
+    () => onBlocked(false),
+    (error: unknown) => {
+      if (error instanceof DOMException && error.name === "NotAllowedError") onBlocked(true);
+    }
+  );
 };
-
-export const resumeEventPlayback = (event: SyntheticEvent<HTMLVideoElement>): void =>
-  resumePlayback(event.currentTarget);

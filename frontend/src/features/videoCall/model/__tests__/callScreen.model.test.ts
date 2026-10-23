@@ -1,9 +1,10 @@
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OUTGOING_REVEAL_DELAY_MS } from "../call.constants";
 import * as callModel from "../call.model";
+import * as callRequestModel from "../callRequest.model";
 import * as callScreenModel from "../callScreen.model";
 
 // patronum `delay` keeps the scope busy until its timer fires, so units are launched
@@ -25,6 +26,21 @@ afterEach(() => {
 });
 
 describe("features/videoCall/model callScreen", () => {
+  it("should start only one call while one is going on (regression: second invite while the screen is hidden)", async () => {
+    const scope = fork();
+    const started: unknown[] = [];
+    createWatch({ unit: callModel.callStarted, fn: (params) => started.push(params), scope });
+
+    await launch(() =>
+      allSettled(callRequestModel.callRequested, { scope, params: { peerName: "Анна" } })
+    );
+    await launch(() =>
+      allSettled(callRequestModel.callRequested, { scope, params: { peerName: "Анна" } })
+    );
+
+    expect(started).toHaveLength(1);
+  });
+
   it("should keep a just-started call unseen until the server confirms it rings", async () => {
     const scope = fork();
     await startCall(scope);
@@ -54,7 +70,6 @@ describe("features/videoCall/model callScreen", () => {
     await vi.advanceTimersByTimeAsync(OUTGOING_REVEAL_DELAY_MS);
 
     expect(scope.getState(callScreenModel.$shownCallPhase)).toBe("idle");
-    expect(scope.getState(callScreenModel.$isOutgoingRevealed)).toBe(false);
   });
 
   it("should not reveal a new call early because of an older call's timer", async () => {

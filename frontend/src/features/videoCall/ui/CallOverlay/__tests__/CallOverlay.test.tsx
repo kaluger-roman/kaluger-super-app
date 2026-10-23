@@ -24,11 +24,11 @@ const fixedAncestorOf = (element: Element): Element | null => {
   return current;
 };
 
-const renderOverlay = (phase: CallPhase, revealed = true) => {
+const renderOverlay = (phase: CallPhase, shown: CallPhase = phase) => {
   const scope = fork({
     values: [
       [callModel.$callPhase, phase],
-      [callScreenModel.$isOutgoingRevealed, revealed],
+      [callScreenModel.$shownCallPhase, shown],
       [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
       [callModel.$outgoingCallPeer, { name: "Иван Смирнов", role: "student" }],
     ],
@@ -54,7 +54,7 @@ describe("CallOverlay", () => {
   });
 
   it("should not flash the dialing screen before the server confirmed the call rings", () => {
-    const { container } = renderOverlay("outgoing", false);
+    const { container } = renderOverlay("outgoing", "idle");
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole("button", { name: "Отменить вызов" })).not.toBeInTheDocument();
   });
