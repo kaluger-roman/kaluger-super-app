@@ -47,6 +47,8 @@ npm run news:sync        # Sync news JSON files to database (runs on deploy)
 
 ```bash
 npm install              # lint-staged + enables the pre-commit hook for the main checkout and all worktrees
+npm run check            # tsc, eslint, prettier and related tests of the touched parts, in parallel
+npm run check -- --full  # the same with the full test suites (once before a commit)
 node --test scripts/__tests__/  # Tests for scripts/ and .githooks/
 ```
 
@@ -117,6 +119,8 @@ Before committing code, you MUST verify:
 2. **ESLint clean** — `npm run lint` in `frontend/` and `backend/`
 3. **TypeScript clean** — `npm run build` in `backend/`
 4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
+
+Run items 1–3 with `npm run check` from the repo root (`scripts/check.mjs`): it starts TypeScript, ESLint, Prettier and tests of every part the branch touches at the same time, each into its own log, and prints a summary — never run them one after another. While iterating it runs only the tests related to the changed files (`vitest related`, `jest --findRelatedTests`); run `npm run check -- --full` once before the commit (CI runs the full suites anyway). ESLint and Prettier keep a cache in `node_modules/.cache`, so a rerun takes seconds. Backend tests go through `scripts/dev-stack.sh test-backend` on a feature branch (`--backend-tests npm` to use `npm test`).
 
 The pre-commit hook (`.githooks/pre-commit`) runs `prettier --write`, `eslint --fix` and `prettier --write` again on staged `frontend/src`, `frontend/e2e`, `frontend/playwright.config.ts` and `backend/src` files and re-stages the result; CI also runs `npm run format:check`. The hook sees only staged files, so the checks above still apply. It runs lint-staged with `--no-stash` because the stash stack is shared by all worktrees, so the "Skipping backup because `--no-stash` was used. This might result in data loss." warning is expected; if any file is partially staged, the hook keeps lint-staged's backup stash instead, since a failed `--no-stash` run would not restore the unstaged hunks. It needs `frontend/node_modules` / `backend/node_modules` — in a fresh worktree, symlink them from the main checkout. It also stops the commit when a staged package's installed Prettier differs from its `package-lock.json` (typically a main checkout pulled without `npm install`); run `npm install` in the directory the hint names. If it fails, fix the cause; do not commit with `--no-verify` unless the user asks.
 

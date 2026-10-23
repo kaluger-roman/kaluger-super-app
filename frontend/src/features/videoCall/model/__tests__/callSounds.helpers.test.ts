@@ -1,3 +1,5 @@
+// @vitest-isolate: the helpers keep one AudioContext per module, created by whichever test
+// plays a tone first; this file checks how that context is created and resumed.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RINGTONE_PATTERN } from "../callSounds.constants";
