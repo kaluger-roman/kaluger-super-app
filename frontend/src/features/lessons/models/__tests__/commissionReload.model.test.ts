@@ -4,7 +4,9 @@ import { describe, it, expect, vi } from "vitest";
 import { lessonModel, studentModel } from "@entities";
 import type { Student } from "@shared";
 
+// Both reload models are wired as in the app: the test checks they do not refetch twice.
 import "../commissionReload.model";
+import "../lessonsReload.model";
 import * as viewModeModel from "../lessonsViewMode.model";
 
 const student = (commissionAmount: number): Student => ({
@@ -93,6 +95,7 @@ describe("commissionReload.model", () => {
 
   // Regression: lessonsReload already refetches the weekly and schedule lists
   // on an update, so this model must not fire a second request for them.
+  // (It used to pass only when lessonsReload happened not to be loaded.)
   it("should not reload the weekly list on a lesson update", async () => {
     const updateLessonFn = vi.fn(() => Promise.resolve(lesson));
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
@@ -116,7 +119,7 @@ describe("commissionReload.model", () => {
       params: { id: "lesson-1", data: { isPaid: true } },
     });
 
-    expect(loadWeeklyFn).not.toHaveBeenCalled();
+    expect(loadWeeklyFn).toHaveBeenCalledTimes(1);
   });
 
   it("should not reload the weekly list without commission students", async () => {
