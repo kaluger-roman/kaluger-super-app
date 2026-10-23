@@ -1,6 +1,9 @@
 import type { TileVariant, TileVariantConfig } from "./VideoTile.types";
 
 // On a short stage (landscape phone) the pills overlay the shared screen instead of framing it.
+// Shown when the browser refused to resume a paused call video without a tap.
+export const VIDEO_PAUSED_LABEL = "Видео на паузе. Нажмите, чтобы продолжить";
+
 export const SHORT_STAGE_QUERY = "(max-height: 500px)";
 export const SHORT_STAGE_MEDIA = `@media ${SHORT_STAGE_QUERY}`;
 

@@ -152,4 +152,47 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       await studentContext.close();
     }
   });
+
+  test("ученик звонит репетитору не в сети: экран вызова не мелькает, в истории «Без ответа»", async ({
+    tutor,
+    browser,
+  }) => {
+    const { student } = await createStudentFor(tutor.userId, { name: "Олег Тихий" });
+    const { token, studentUser } = await registerStudentDirect(student.id, {
+      name: "Олег Тихий",
+      email: `student-offline-${Date.now()}@e2e.local`,
+      isEmailVerified: true,
+    });
+
+    const studentContext = await browser.newContext({ permissions: ["camera", "microphone"] });
+    try {
+      const studentPage = await studentContext.newPage();
+      await seedStudentAuthInBrowser(studentPage, token);
+      await studentPage.goto("/student/cabinet/schedule");
+      await expect.poll(() => isStudentOnline(studentUser.id)).toBe(true);
+      // Catches the dialing screen even if it shows for a single frame.
+      await studentPage.evaluate(() => {
+        const seen = { dialing: false };
+        Object.assign(window, { __dialingSeen: seen });
+        new MutationObserver(() => {
+          if (document.querySelector('[aria-label="Отменить вызов"]')) seen.dialing = true;
+        }).observe(document.body, { childList: true, subtree: true });
+      });
+
+      await studentPage.getByRole("button", { name: "Позвонить" }).click();
+
+      await expect(studentPage.getByText("Репетитор сейчас не в сети")).toBeVisible();
+      const dialingSeen = await studentPage.evaluate(
+        () => (window as unknown as { __dialingSeen: { dialing: boolean } }).__dialingSeen.dialing
+      );
+      expect(dialingSeen).toBe(false);
+
+      await studentPage.getByRole("button", { name: "Открыть меню" }).click();
+      await studentPage.getByRole("button", { name: "История звонков" }).click();
+      await expect(studentPage.getByText("Без ответа")).toBeVisible();
+      await expect(studentPage.getByText("Пропущен")).toBeHidden();
+    } finally {
+      await studentContext.close();
+    }
+  });
 });

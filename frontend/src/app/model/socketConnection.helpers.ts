@@ -2,7 +2,7 @@ import { isRecord, resolveWsUrl } from "@shared";
 
 import type { SocketClosedPayload, SocketControlMessage } from "./socketConnection.types";
 import { WS_CALL_ENDED_CLOSE_CODE, WS_HELD_ELSEWHERE_CLOSE_CODE } from "./webSocket.constants";
-import type { WebSocketClose } from "./webSocket.types";
+import type { ElsewhereReason, WebSocketClose } from "./webSocket.types";
 
 // One id per page load: the server lets a tab replace its own socket that still looks alive to it.
 let tabId: string | null = null;
@@ -40,11 +40,18 @@ export const toControlMessage = (data: unknown): SocketControlMessage | null => 
   return null;
 };
 
+// A tab that waited for a call elsewhere is not the holder: when its socket drops it does not
+// race the holder for the connection, and after the call ended it keeps waiting until the
+// retry is answered, so the banner does not blink empty.
 export const toSocketClose = (
   { code, token }: SocketClosedPayload,
-  revokedCloseCodes: ReadonlySet<number>
-): WebSocketClose => ({
-  revokedToken: revokedCloseCodes.has(code) ? token : null,
-  elsewhere: code === WS_HELD_ELSEWHERE_CLOSE_CODE ? "tab" : null,
-  callEnded: code === WS_CALL_ENDED_CLOSE_CODE,
-});
+  revokedCloseCodes: ReadonlySet<number>,
+  previous: ElsewhereReason | null
+): WebSocketClose => {
+  const isRevoked = revokedCloseCodes.has(code);
+  const callEnded = code === WS_CALL_ENDED_CLOSE_CODE;
+  let elsewhere: ElsewhereReason | null = null;
+  if (code === WS_HELD_ELSEWHERE_CLOSE_CODE) elsewhere = "tab";
+  else if (previous === "call" && !isRevoked) elsewhere = callEnded ? "call" : "tab";
+  return { revokedToken: isRevoked ? token : null, elsewhere, callEnded };
+};

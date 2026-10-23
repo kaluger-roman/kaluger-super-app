@@ -124,9 +124,9 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   });
   sample({
     clock: socketClosed,
-    source: $connection,
-    filter: (current, { ws }) => current === ws,
-    fn: (_, payload) => toSocketClose(payload, revokedCloseCodes),
+    source: { current: $connection, elsewhere: $elsewhere },
+    filter: ({ current }, { ws }) => current === ws,
+    fn: ({ elsewhere }, payload) => toSocketClose(payload, revokedCloseCodes, elsewhere),
     target: closed,
   });
 

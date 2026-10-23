@@ -36,8 +36,8 @@ export const CallHistoryRow: FC<CallHistoryRowProps> = ({ record }) => {
           <Styled.PeerName variant="subtitle1">{record.peerName}</Styled.PeerName>
           <Chip
             size="small"
-            color={getStatusChipColor(record.status)}
-            label={getCallStatusLabel(record.status)}
+            color={getStatusChipColor(record.status, record.direction)}
+            label={getCallStatusLabel(record.status, record.direction)}
           />
         </Styled.RowTopLine>
 
