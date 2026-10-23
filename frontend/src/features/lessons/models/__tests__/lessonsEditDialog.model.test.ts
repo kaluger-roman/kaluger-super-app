@@ -2,6 +2,7 @@ import { allSettled, fork } from "effector";
 import { describe, it, expect } from "vitest";
 
 import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Lesson } from "@shared";
 
 import { $isDialogOpen, dialogOpened } from "../lessonsEditDialog.model";
@@ -21,7 +22,9 @@ const createLesson = (id: string): Lesson => ({
 });
 
 const createScope = (updated: Lesson) =>
-  fork({ handlers: [[lessonModel.updateLessonFx, async () => updated]] });
+  fork({
+    handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, async () => updated]],
+  });
 
 describe("lessonsEditDialog.model", () => {
   it("should close the form after its lesson is updated (regression: form stayed open)", async () => {
@@ -54,6 +57,7 @@ describe("lessonsEditDialog.model", () => {
     const lesson = createLesson("lesson-1");
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [
           lessonModel.updateLessonFx,
           async () => {

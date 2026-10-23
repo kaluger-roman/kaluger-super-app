@@ -19,6 +19,10 @@ vi.mock("@shared", async () => {
     authApi: {
       updateProfile: vi.fn(),
     },
+    // The finances tab loads the tax rate periods when the page opens.
+    taxPeriodsApi: {
+      list: vi.fn(() => Promise.resolve([])),
+    },
   };
 });
 

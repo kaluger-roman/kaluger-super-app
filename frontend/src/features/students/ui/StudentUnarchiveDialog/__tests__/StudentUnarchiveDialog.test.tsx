@@ -4,6 +4,7 @@ import { fork, allSettled } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
+import { studentModel } from "@entities";
 import type { Student } from "@shared";
 import { theme } from "@shared";
 
@@ -141,6 +142,12 @@ describe("StudentUnarchiveDialog", () => {
     it("should call studentModel.unarchiveStudent when unarchive is confirmed", async () => {
       const scope = fork({
         values: [[studentsArchiveModel.$unarchiveDialogStudent, mockStudent]],
+        handlers: [
+          [
+            studentModel.unarchiveStudentFx,
+            () => Promise.resolve({ ...mockStudent, archived: false }),
+          ],
+        ],
       });
 
       await allSettled(studentsArchiveModel.unarchiveConfirmed, { scope });

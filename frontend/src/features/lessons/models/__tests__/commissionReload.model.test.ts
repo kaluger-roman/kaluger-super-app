@@ -2,6 +2,7 @@ import { allSettled, fork } from "effector";
 import { describe, it, expect, vi } from "vitest";
 
 import { lessonModel, studentModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Student } from "@shared";
 
 // Both reload models are wired as in the app: the test checks they do not refetch twice.
@@ -37,6 +38,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],
@@ -56,6 +58,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],
@@ -75,6 +78,7 @@ describe("commissionReload.model", () => {
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.removeLessonFx, removeLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
         [
@@ -101,6 +105,7 @@ describe("commissionReload.model", () => {
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
         [
@@ -127,6 +132,7 @@ describe("commissionReload.model", () => {
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.removeLessonFx, removeLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
       ],
@@ -146,6 +152,7 @@ describe("commissionReload.model", () => {
     const loadScheduleFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.addLessonFx, addLessonFn],
         [lessonModel.loadScheduleLessonsFx, loadScheduleFn],
         [
@@ -178,6 +185,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],

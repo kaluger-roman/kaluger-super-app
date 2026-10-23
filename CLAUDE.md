@@ -153,6 +153,15 @@ node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sen
 - Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
 - Skip only for read-only tasks that create no branch.
 
+## MANDATORY: File an Issue for Every Finding
+
+Any problem noticed along the way — a bug, a needed improvement, an infrastructure error (CI, deploy, dev machine, hooks, scripts, flaky tests) or anything else that looks wrong — gets a GitHub issue right away, without asking. The user triages the issues and hands the ones worth doing to a separate session.
+
+- Do not fix the finding in the current task and do not widen its scope; skip the issue only when the current task fixes it anyway.
+- Search first (`gh issue list --search "<keywords>" --state all`); if a matching issue exists, add a comment instead of a duplicate.
+- Body in Russian: what was seen, where (`file:line`, command, log excerpt), how to reproduce, suspected cause, possible fix, and the task/branch it was found in. Pass it with `--body-file`; label `bug`, `enhancement` or `documentation`.
+- List the filed issues with links in the final reply.
+
 ## Changelog
 
 Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`, `/commit-commands:commit-push-pr`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database. A PreToolUse hook (`.claude/hooks/check-changelog-before-pr.sh`) denies `gh pr create` / `gh pr ready` until CHANGELOG.md is in the branch diff; the start-of-task draft PR from `scripts/start-task-pr.mjs` is not gated.

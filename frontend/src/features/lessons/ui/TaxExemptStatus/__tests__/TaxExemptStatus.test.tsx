@@ -7,6 +7,7 @@ import { Provider } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
 import { lessonModel, userModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import { theme } from "@shared";
 import type { Lesson, User } from "@shared";
 
@@ -74,7 +75,7 @@ describe("TaxExemptStatus", () => {
     const updateLesson = vi.fn(async () => createLesson({ isTaxExempt: nextValue }));
     const scope = fork({
       values: [[userModel.$user, user(true)]],
-      handlers: [[lessonModel.updateLessonFx, updateLesson]],
+      handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLesson]],
     });
     const changed = vi.fn();
     const unwatch = createWatch({ unit: lessonTaxExemptChanged, fn: changed, scope });
@@ -95,6 +96,7 @@ describe("TaxExemptStatus", () => {
     const scope = fork({
       values: [[userModel.$user, user(true)]],
       handlers: [
+        ...lessonListLoadHandlers(),
         [
           lessonModel.updateLessonFx,
           () =>

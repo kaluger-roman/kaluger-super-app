@@ -5,6 +5,8 @@ import { allSettled, createWatch, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Lesson } from "@shared";
 import { theme } from "@shared";
 
@@ -40,6 +42,15 @@ const mockLesson: Lesson = {
     archived: false,
   },
 };
+
+// Confirming the dialog updates the lesson, and the lessons page then reloads its list.
+const createLessonUpdateScope = () =>
+  fork({
+    handlers: [
+      ...lessonListLoadHandlers(),
+      [lessonModel.updateLessonFx, () => Promise.resolve(mockLesson)],
+    ],
+  });
 
 describe("PaymentStatus Component", () => {
   beforeEach(() => {
@@ -262,7 +273,7 @@ describe("PaymentStatus Component", () => {
     });
 
     it("should send the edited received amount on confirm", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const payloads = capturePayments(scope);
       renderWithTheme(<PaymentStatus lesson={mockLesson} />, scope);
 
@@ -294,7 +305,7 @@ describe("PaymentStatus Component", () => {
     });
 
     it("should not show the amount field when removing the payment", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const payloads = capturePayments(scope);
       renderWithTheme(
         <PaymentStatus lesson={{ ...mockLesson, isPaid: true, receivedAmount: 1800 }} />,
