@@ -42,33 +42,6 @@ describe("validateRequiredEnv", () => {
     process.env.STUDENT_JWT_SECRET = "   ";
     expect(() => validateRequiredEnv()).toThrow(/STUDENT_JWT_SECRET/);
   });
-
-  const setAll = () => {
-    for (const key of REQUIRED) {
-      process.env[key] = "x";
-    }
-  };
-
-  it("refuses to start in production when FRONTEND_URL points to localhost (regression: student invite links to localhost)", () => {
-    setAll();
-    process.env.NODE_ENV = "production";
-    process.env.FRONTEND_URL = "http://localhost:3000";
-    expect(() => validateRequiredEnv()).toThrow(/FRONTEND_URL must use https in production/);
-  });
-
-  it("starts in production with a public https FRONTEND_URL", () => {
-    setAll();
-    process.env.NODE_ENV = "production";
-    process.env.FRONTEND_URL = "https://tutor.kaluger.ru";
-    expect(() => validateRequiredEnv()).not.toThrow();
-  });
-
-  it("allows a localhost FRONTEND_URL outside production", () => {
-    setAll();
-    process.env.NODE_ENV = "development";
-    process.env.FRONTEND_URL = "http://localhost:3000";
-    expect(() => validateRequiredEnv()).not.toThrow();
-  });
 });
 
 describe("validateDeployEnv", () => {
@@ -76,6 +49,47 @@ describe("validateDeployEnv", () => {
 
   afterEach(() => {
     process.env = { ...snapshot };
+  });
+
+  const setAll = () => {
+    for (const key of [
+      "DATABASE_URL",
+      "JWT_SECRET",
+      "ADMIN_JWT_SECRET",
+      "STUDENT_JWT_SECRET",
+      "RESEND_API_KEY",
+      "EMAIL_FROM",
+      "VAPID_PUBLIC_KEY",
+      "VAPID_PRIVATE_KEY",
+      "VAPID_SUBJECT",
+    ]) {
+      process.env[key] = "x";
+    }
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "https://tutor.kaluger.ru";
+  };
+
+  it("passes a production config with a public https FRONTEND_URL", () => {
+    setAll();
+    expect(() => validateDeployEnv()).not.toThrow();
+  });
+
+  it("fails the deploy when FRONTEND_URL points to localhost (regression: student invite links to localhost)", () => {
+    setAll();
+    process.env.FRONTEND_URL = "http://localhost:3000";
+    expect(() => validateDeployEnv()).toThrow(/FRONTEND_URL must use https on the server/);
+  });
+
+  it("fails the deploy when a required variable is missing", () => {
+    setAll();
+    delete process.env.JWT_SECRET;
+    expect(() => validateDeployEnv()).toThrow(/Missing.*JWT_SECRET/);
+  });
+
+  it("starts the app itself with a localhost FRONTEND_URL in production (the QA stack does)", () => {
+    setAll();
+    process.env.FRONTEND_URL = "http://localhost";
+    expect(() => validateRequiredEnv()).not.toThrow();
   });
 
   it("fails the deploy when the server does not run in production", () => {

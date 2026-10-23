@@ -28,21 +28,11 @@ export const validateRequiredEnv = (): void => {
       "See backend/.env.example. Refusing to start.";
     throw new Error(message);
   }
-  // A dev value left in the production .env sends students and reset emails to localhost.
-  if (process.env.NODE_ENV === "production") {
-    const url = process.env.FRONTEND_URL ?? "";
-    const problem = findPublicUrlProblem(url);
-    if (problem) {
-      throw new Error(
-        `FRONTEND_URL ${problem} in production (got "${url}"). ` +
-          "Links in emails and student invitations would not open. Refusing to start."
-      );
-    }
-  }
 };
 
-// The deploy checks the server's .env before it restarts the app, so a broken config fails the
-// deploy instead of taking the live app down.
+// The deploy checks the server's .env before it migrates and restarts the app, so a broken config
+// fails the deploy instead of the live app. A dev value left there would send students and reset
+// emails to localhost. Not checked on start: the QA stack runs production builds on localhost.
 export const validateDeployEnv = (): void => {
   if (process.env.NODE_ENV !== "production") {
     throw new Error(
@@ -50,4 +40,12 @@ export const validateDeployEnv = (): void => {
     );
   }
   validateRequiredEnv();
+  const url = process.env.FRONTEND_URL ?? "";
+  const problem = findPublicUrlProblem(url);
+  if (problem) {
+    throw new Error(
+      `FRONTEND_URL ${problem} on the server (got "${url}"). ` +
+        "Links in emails and student invitations would not open."
+    );
+  }
 };

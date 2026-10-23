@@ -1,6 +1,4 @@
-// Importing the Prisma client loads backend/.env into process.env, as it does for the app.
-import "@prisma/client";
-
+// Run by the deploy as `node --env-file=.env dist/scripts/checkEnv.js`.
 import { validateDeployEnv } from "../utils/validateEnv";
 
 try {
