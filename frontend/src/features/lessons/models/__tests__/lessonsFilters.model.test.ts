@@ -1,6 +1,8 @@
 import { allSettled, fork } from "effector";
 import { describe, it, expect } from "vitest";
 
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
+
 import {
   $onlyUnpaid,
   $onlyWithoutHomework,
@@ -18,7 +20,7 @@ import {
 describe("lessonsFilters.model", () => {
   describe("basic stores", () => {
     it("should have correct initial values", () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       expect(scope.getState($onlyUnpaid)).toBe(false);
       expect(scope.getState($onlyWithoutHomework)).toBe(false);
@@ -28,7 +30,7 @@ describe("lessonsFilters.model", () => {
     });
 
     it("should update $paymentDateFrom on setPaymentDateFrom", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       const date = new Date("2026-03-01");
 
       await allSettled(setPaymentDateFrom, { scope, params: date });
@@ -37,7 +39,7 @@ describe("lessonsFilters.model", () => {
     });
 
     it("should update $paymentDateTo on setPaymentDateTo", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       const date = new Date("2026-03-31");
 
       await allSettled(setPaymentDateTo, { scope, params: date });
@@ -49,6 +51,7 @@ describe("lessonsFilters.model", () => {
   describe("resetPaymentDateFilter", () => {
     it("should reset all payment date stores to null", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$paymentDateFrom, new Date("2026-03-01")],
           [$paymentDateTo, new Date("2026-03-31")],
@@ -67,6 +70,7 @@ describe("lessonsFilters.model", () => {
   describe("mutual exclusion with onlyUnpaid", () => {
     it("should reset payment date filter when onlyUnpaid is set to true", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$paymentDateFrom, new Date("2026-03-01")],
           [$paymentDateTo, new Date("2026-03-31")],
@@ -87,6 +91,7 @@ describe("lessonsFilters.model", () => {
       const to = new Date("2026-03-31");
 
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$paymentDateFrom, from],
           [$paymentDateTo, to],
@@ -104,7 +109,7 @@ describe("lessonsFilters.model", () => {
 
   describe("presets", () => {
     it("should set correct dates for currentMonth preset", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setPaymentDatePreset, { scope, params: "currentMonth" });
 
@@ -122,7 +127,7 @@ describe("lessonsFilters.model", () => {
     });
 
     it("should set correct dates for lastMonth preset", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setPaymentDatePreset, { scope, params: "lastMonth" });
 
@@ -139,7 +144,7 @@ describe("lessonsFilters.model", () => {
     });
 
     it("should set correct dates for currentWeek preset", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setPaymentDatePreset, { scope, params: "currentWeek" });
 
@@ -157,6 +162,7 @@ describe("lessonsFilters.model", () => {
 
     it("should reset preset on manual date change", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$paymentDatePreset, "currentMonth" as const],
           [$paymentDateFrom, new Date("2026-03-01")],
@@ -172,6 +178,7 @@ describe("lessonsFilters.model", () => {
 
     it("should reset preset when onlyUnpaid is enabled", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$paymentDatePreset, "currentWeek" as const],
           [$paymentDateFrom, new Date("2026-03-17")],
@@ -189,7 +196,7 @@ describe("lessonsFilters.model", () => {
 
   describe("onlyWithoutHomework", () => {
     it("should update on setOnlyWithoutHomework", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setOnlyWithoutHomework, { scope, params: true });
 

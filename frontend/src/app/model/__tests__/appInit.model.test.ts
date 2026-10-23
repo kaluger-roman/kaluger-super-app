@@ -5,6 +5,8 @@ import { studentUserModel, userModel } from "@entities";
 import { loginFormModel } from "@features/auth";
 import { studentsApi, lessonsApi, authApi, studentAuthApi } from "@shared";
 
+import { signedInBackgroundHandlers } from "../../../__tests__/mocks/handlers";
+import { server } from "../../../__tests__/mocks/server";
 import {
   $appInitialized,
   appBootedUnauthenticated,
@@ -37,6 +39,7 @@ describe("app/model/appInit.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    server.use(...signedInBackgroundHandlers);
   });
 
   describe("initializeAppFx re-fire after login", () => {

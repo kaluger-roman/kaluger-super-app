@@ -2,6 +2,7 @@ import { allSettled, createWatch, fork } from "effector";
 import { describe, it, expect, vi } from "vitest";
 
 import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import { notificationsModel } from "@shared/model";
 
 import "../lessonsNotifications.model";
@@ -13,7 +14,7 @@ describe("lessonsNotifications.model", () => {
     it("should show 'Урок создан' on addLessonFx.done", async () => {
       const fn = vi.fn();
       const scope = fork({
-        handlers: [[lessonModel.addLessonFx, () => mockLesson]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.addLessonFx, () => mockLesson]],
       });
 
       createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
@@ -25,7 +26,7 @@ describe("lessonsNotifications.model", () => {
     it("should show 'Урок обновлен' on updateLessonFx.done", async () => {
       const fn = vi.fn();
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, () => mockLesson]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, () => mockLesson]],
       });
 
       createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
@@ -40,7 +41,7 @@ describe("lessonsNotifications.model", () => {
     it("should show 'Урок удален' on removeLessonFx.done", async () => {
       const fn = vi.fn();
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, () => "1"]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, () => "1"]],
       });
 
       createWatch({ unit: notificationsModel.showSuccessEvent, fn, scope });
@@ -58,6 +59,7 @@ describe("lessonsNotifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
+          ...lessonListLoadHandlers(),
           [
             lessonModel.addLessonFx,
             () => {
@@ -77,6 +79,7 @@ describe("lessonsNotifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
+          ...lessonListLoadHandlers(),
           [
             lessonModel.updateLessonFx,
             () => {
@@ -99,6 +102,7 @@ describe("lessonsNotifications.model", () => {
       const fn = vi.fn();
       const scope = fork({
         handlers: [
+          ...lessonListLoadHandlers(),
           [
             lessonModel.removeLessonFx,
             () => {
