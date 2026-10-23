@@ -5,6 +5,8 @@ import { allSettled, createWatch, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Lesson } from "@shared";
 
 import { theme } from "../../../../../shared/ui/themeConfig";
@@ -46,6 +48,15 @@ const createMockLesson = (overrides?: Partial<Lesson>): Lesson => ({
   },
   ...overrides,
 });
+
+// Confirming the dialog updates the lesson, and the lessons page then reloads its list.
+const createLessonUpdateScope = () =>
+  fork({
+    handlers: [
+      ...lessonListLoadHandlers(),
+      [lessonModel.updateLessonFx, () => Promise.resolve(createMockLesson())],
+    ],
+  });
 
 describe("LessonStatusIcons", () => {
   beforeEach(() => {
@@ -276,7 +287,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should call lessonPaymentChanged with correct params when marking as paid", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const lesson = createMockLesson({ price: 2000, isPaid: false });
 
       let capturedPayload = null;
@@ -311,7 +322,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should call lessonPaymentChanged with correct params when marking as unpaid", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const lesson = createMockLesson({ price: 2000, isPaid: true });
 
       let capturedPayload = null;
@@ -437,7 +448,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should call lessonHomeworkSentChanged with correct params when marking as sent", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const lesson = createMockLesson({
         homework: "Some homework",
         isHomeworkSentByTeacher: false,
@@ -466,7 +477,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should call lessonHomeworkSentChanged with correct params when marking as unsent", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const lesson = createMockLesson({ homework: "Some homework", isHomeworkSentByTeacher: true });
 
       let capturedPayload = null;
@@ -711,7 +722,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should send the edited received amount on confirm", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const payloads = capturePayments(scope);
       await openPaymentDialog(createMockLesson({ price: 2000, isPaid: false }), scope);
 
@@ -740,7 +751,7 @@ describe("LessonStatusIcons", () => {
     });
 
     it("should not show the amount field when removing the payment", async () => {
-      const scope = fork();
+      const scope = createLessonUpdateScope();
       const payloads = capturePayments(scope);
       await openPaymentDialog(createMockLesson({ price: 2000, isPaid: true }), scope);
 

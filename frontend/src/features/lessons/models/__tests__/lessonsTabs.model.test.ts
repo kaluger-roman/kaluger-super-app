@@ -1,6 +1,8 @@
 import { allSettled, fork } from "effector";
 import { describe, it, expect } from "vitest";
 
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
+
 import {
   setPaymentDateFrom,
   setPaymentDateTo,
@@ -14,7 +16,7 @@ import { $currentTab, tabChanged } from "../lessonsTabs.model";
 describe("lessonsTabs.model", () => {
   describe("tabChanged", () => {
     it("should update $currentTab", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(tabChanged, { scope, params: 2 });
 
@@ -24,7 +26,7 @@ describe("lessonsTabs.model", () => {
 
   describe("auto-select Все tab on payment filter activation", () => {
     it("should switch to Все tab when paymentDateFrom is set", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setPaymentDateFrom, {
         scope,
@@ -35,7 +37,7 @@ describe("lessonsTabs.model", () => {
     });
 
     it("should switch to Все tab when paymentDateTo is set", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
 
       await allSettled(setPaymentDateTo, {
         scope,
@@ -47,6 +49,7 @@ describe("lessonsTabs.model", () => {
 
     it("should reset to tab 0 when filter is cleared while on Все tab", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$currentTab, ALL_TAB_INDEX],
           [$paymentDateFrom, new Date("2026-03-01")],
@@ -61,6 +64,7 @@ describe("lessonsTabs.model", () => {
 
     it("should keep current tab when filter is cleared while on another tab", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [
           [$currentTab, 1],
           [$paymentDateFrom, new Date("2026-03-01")],

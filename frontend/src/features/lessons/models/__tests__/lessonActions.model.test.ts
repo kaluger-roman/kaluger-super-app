@@ -2,6 +2,7 @@ import { allSettled, fork } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Lesson } from "@shared";
 import { lessonDeleteDialogModel, rescheduleDialogModel } from "@shared/ui";
 
@@ -44,21 +45,21 @@ describe("lessonActions.model", () => {
 
   describe("$isLoading store", () => {
     it("should have initial value false", () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       expect(scope.getState($isLoading)).toBe(false);
     });
   });
 
   describe("$isRescheduling store", () => {
     it("should have initial value false", () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       expect(scope.getState($isRescheduling)).toBe(false);
     });
 
     it("should set to true when lessonRescheduleRequested is called", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
       const lesson = createMockLesson();
 
@@ -76,7 +77,10 @@ describe("lessonActions.model", () => {
 
     it("should reset to false on updateLessonFx.finally", async () => {
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, vi.fn(() => Promise.resolve(createMockLesson()))]],
+        handlers: [
+          ...lessonListLoadHandlers(),
+          [lessonModel.updateLessonFx, vi.fn(() => Promise.resolve(createMockLesson()))],
+        ],
       });
       const lesson = createMockLesson();
 
@@ -95,7 +99,7 @@ describe("lessonActions.model", () => {
 
   describe("lessonRestoreRequested", () => {
     it("should open confirm dialog with correct parameters", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       const lesson = createMockLesson({ status: "CANCELLED" });
 
       await allSettled(lessonRestoreRequested, { scope, params: lesson });
@@ -109,7 +113,7 @@ describe("lessonActions.model", () => {
     });
 
     it("should create action that calls lessonModel.updateLesson with SCHEDULED status", async () => {
-      const scope = fork();
+      const scope = fork({ handlers: [...lessonListLoadHandlers()] });
       const lesson = createMockLesson({ status: "CANCELLED" });
 
       await allSettled(lessonRestoreRequested, { scope, params: lesson });
@@ -128,7 +132,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.updateLesson with new times and RESCHEDULED status", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
       const lesson = createMockLesson();
       const newStartTime = new Date("2026-01-16T12:00:00.000Z");
@@ -152,7 +156,7 @@ describe("lessonActions.model", () => {
     it("should set $isRescheduling to true", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
       const lesson = createMockLesson();
 
@@ -173,7 +177,7 @@ describe("lessonActions.model", () => {
     it("should take lesson from rescheduleDialogModel.$lesson and call lessonRescheduleRequested", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
         values: [[rescheduleDialogModel.$lesson, createMockLesson()]],
       });
       const newStartTime = new Date("2026-01-16T12:00:00.000Z");
@@ -197,7 +201,7 @@ describe("lessonActions.model", () => {
     it("should not call lessonRescheduleRequested when lesson is undefined", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
         values: [[rescheduleDialogModel.$lesson, undefined]],
       });
 
@@ -217,7 +221,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.removeLesson with lesson id", async () => {
       const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
       });
       const lesson = createMockLesson();
 
@@ -235,7 +239,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.removeLesson with deleteAllFuture flag", async () => {
       const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
       });
       const lesson = createMockLesson();
 
@@ -255,7 +259,7 @@ describe("lessonActions.model", () => {
     it("should take lesson from lessonDeleteDialogModel.$lesson and call lessonDeleteRequested", async () => {
       const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
         values: [[lessonDeleteDialogModel.$lesson, createMockLesson()]],
       });
 
@@ -273,7 +277,7 @@ describe("lessonActions.model", () => {
     it("should pass deleteAllFuture flag to lessonDeleteRequested", async () => {
       const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
         values: [[lessonDeleteDialogModel.$lesson, createMockLesson()]],
       });
 
@@ -291,7 +295,7 @@ describe("lessonActions.model", () => {
     it("should not call lessonDeleteRequested when lesson is undefined", async () => {
       const removeLessonFn = vi.fn(() => Promise.resolve("lesson-1"));
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
         values: [[lessonDeleteDialogModel.$lesson, undefined]],
       });
 
@@ -308,7 +312,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.updateLesson with isPaid true and paymentDate", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -332,7 +336,7 @@ describe("lessonActions.model", () => {
     it("should send the received amount with a payment", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -358,7 +362,7 @@ describe("lessonActions.model", () => {
     it("should send a zero received amount", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -379,7 +383,7 @@ describe("lessonActions.model", () => {
     it("should not send a received amount when the payment is removed", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -396,7 +400,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.updateLesson with isPaid false without paymentDate", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -419,7 +423,7 @@ describe("lessonActions.model", () => {
     it("should handle paymentDate as undefined when not provided", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonPaymentChanged, {
@@ -444,7 +448,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.updateLesson with isHomeworkSentByTeacher true", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonHomeworkSentChanged, {
@@ -466,7 +470,7 @@ describe("lessonActions.model", () => {
     it("should call lessonModel.updateLesson with isHomeworkSentByTeacher false", async () => {
       const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson()));
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
       });
 
       await allSettled(lessonHomeworkSentChanged, {
@@ -492,7 +496,7 @@ describe("lessonActions.model", () => {
       async (isTaxExempt) => {
         const updateLessonFn = vi.fn(() => Promise.resolve(createMockLesson({ isTaxExempt })));
         const scope = fork({
-          handlers: [[lessonModel.updateLessonFx, updateLessonFn]],
+          handlers: [...lessonListLoadHandlers(), [lessonModel.updateLessonFx, updateLessonFn]],
         });
 
         await allSettled(lessonTaxExemptChanged, {
@@ -513,6 +517,7 @@ describe("lessonActions.model", () => {
   describe("restoreFromViewRequested integration", () => {
     it("should trigger lessonRestoreRequested when restoreFromViewRequested is called with viewing lesson", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [[$viewingLesson, createMockLesson({ status: "CANCELLED" })]],
       });
 
@@ -525,6 +530,7 @@ describe("lessonActions.model", () => {
 
     it("should not trigger lessonRestoreRequested when viewing lesson is undefined", async () => {
       const scope = fork({
+        handlers: [...lessonListLoadHandlers()],
         values: [[$viewingLesson, undefined]],
       });
 
@@ -538,7 +544,10 @@ describe("lessonActions.model", () => {
   describe("dialog closing on effects completion", () => {
     it("should call rescheduleDialogClosed on updateLessonFx.doneData", async () => {
       const scope = fork({
-        handlers: [[lessonModel.updateLessonFx, vi.fn(() => Promise.resolve(createMockLesson()))]],
+        handlers: [
+          ...lessonListLoadHandlers(),
+          [lessonModel.updateLessonFx, vi.fn(() => Promise.resolve(createMockLesson()))],
+        ],
         values: [[rescheduleDialogModel.$isOpen, true]],
       });
       const lesson = createMockLesson();
@@ -557,7 +566,10 @@ describe("lessonActions.model", () => {
 
     it("should call deleteDialogClosed on removeLessonFx.doneData", async () => {
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, vi.fn(() => Promise.resolve("lesson-1"))]],
+        handlers: [
+          ...lessonListLoadHandlers(),
+          [lessonModel.removeLessonFx, vi.fn(() => Promise.resolve("lesson-1"))],
+        ],
         values: [[lessonDeleteDialogModel.$isOpen, true]],
       });
       const lesson = createMockLesson();
@@ -580,7 +592,7 @@ describe("lessonActions.model", () => {
       const removeLessonFn = vi.fn(() => pendingPromise);
 
       const scope = fork({
-        handlers: [[lessonModel.removeLessonFx, removeLessonFn]],
+        handlers: [...lessonListLoadHandlers(), [lessonModel.removeLessonFx, removeLessonFn]],
       });
       const lesson = createMockLesson();
 

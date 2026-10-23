@@ -8,6 +8,8 @@ import { describe, it, expect, vi } from "vitest";
 import { userModel } from "@entities";
 import { theme } from "@shared";
 
+import { signedInBackgroundHandlers } from "../../__tests__/mocks/handlers";
+import { server } from "../../__tests__/mocks/server";
 import { appInitModel } from "../model";
 
 vi.mock("@shared", async () => {
@@ -75,6 +77,7 @@ describe("offline indicator", () => {
 
 describe("appResumed", () => {
   it("should trigger initializeAppFx when authenticated user resumes", async () => {
+    server.use(...signedInBackgroundHandlers);
     const initMock = vi.fn().mockResolvedValue([[], []]);
 
     const scope = fork({

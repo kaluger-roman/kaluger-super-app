@@ -3,11 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { allSettled, createWatch, fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { theme } from "@shared";
 import type { Student } from "@shared";
 
+import { server } from "../../../../../__tests__/mocks/server";
 import { studentsModel, studentsArchiveModel } from "../../../models";
 import { StudentViewDialog } from "../StudentViewDialog";
 import * as studentViewDialogModel from "../StudentViewDialog.model";
@@ -62,6 +64,12 @@ const archivedStudent: Student = {
 describe("StudentViewDialog", () => {
   beforeEach(() => {
     mockUseMediaQuery.mockReturnValue(false);
+    // The dialog shows the student's cabinet invitation, which loads on mount.
+    server.use(
+      http.get("*/api/students/:studentId/invitations", () =>
+        HttpResponse.json({ status: "not_issued" })
+      )
+    );
   });
 
   describe("Rendering", () => {
