@@ -1,0 +1,216 @@
+{
+  "name": "super-agents",
+  "displayName": "Агенты Super App",
+  "description": "Живые и недавние сессии Claude Code по super-app: что каждая делает сейчас, кто ждёт тебя, лента действий, переход в терминал сессии",
+  "version": "0.1.0",
+  "publisher": "kalr",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Агенты Super App",
+      "properties": {
+        "superAgents.roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "/root/super-app"
+          ],
+          "description": "Каталоги запуска сессий, которые показывать (и всё под ними)"
+        },
+        "superAgents.claudePath": {
+          "type": "string",
+          "default": "/root/.local/bin/claude",
+          "description": "Путь к claude (для `claude agents --json`)"
+        },
+        "superAgents.recentDays": {
+          "type": "number",
+          "default": 3,
+          "description": "Сколько дней показывать завершённые сессии в «Недавних»"
+        },
+        "superAgents.pollSeconds": {
+          "type": "number",
+          "default": 4,
+          "description": "Период опроса живых сессий"
+        },
+        "superAgents.notifications": {
+          "type": "string",
+          "enum": [
+            "all",
+            "attention",
+            "off"
+          ],
+          "default": "all",
+          "enumDescriptions": [
+            "Закончил ход и нужен ты",
+            "Только когда нужен ты (разрешение, вопрос, блок)",
+            "Без уведомлений"
+          ],
+          "description": "Когда показывать уведомления"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "superAgents",
+          "title": "Агенты Super App",
+          "icon": "media/agents.svg"
+        }
+      ]
+    },
+    "views": {
+      "superAgents": [
+        {
+          "id": "superAgents.live",
+          "name": "Сейчас"
+        },
+        {
+          "id": "superAgents.recent",
+          "name": "Недавние"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "superAgents.refresh",
+        "title": "Обновить",
+        "icon": "$(refresh)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.newSession",
+        "title": "Новая сессия",
+        "icon": "$(add)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.pick",
+        "title": "Перейти к сессии…",
+        "icon": "$(list-selection)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.goto",
+        "title": "Перейти в диалог",
+        "icon": "$(terminal)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.feed",
+        "title": "Лента действий",
+        "icon": "$(list-flat)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.resume",
+        "title": "Продолжить (claude -r)",
+        "icon": "$(play)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.openUrl",
+        "title": "Открыть в браузере",
+        "icon": "$(globe)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.copyResume",
+        "title": "Копировать команду продолжения",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.copy",
+        "title": "Копировать",
+        "category": "Агенты Super App"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "superAgents.newSession",
+          "when": "view == superAgents.live",
+          "group": "navigation@1"
+        },
+        {
+          "command": "superAgents.refresh",
+          "when": "view == superAgents.live || view == superAgents.recent",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "superAgents.feed",
+          "when": "viewItem =~ /^session/",
+          "group": "inline@1"
+        },
+        {
+          "command": "superAgents.goto",
+          "when": "viewItem =~ /^session;live/",
+          "group": "inline@2"
+        },
+        {
+          "command": "superAgents.resume",
+          "when": "viewItem == session;off",
+          "group": "inline@2"
+        },
+        {
+          "command": "superAgents.openUrl",
+          "when": "viewItem =~ /;url/",
+          "group": "inline@1"
+        },
+        {
+          "command": "superAgents.copyResume",
+          "when": "viewItem =~ /^session/",
+          "group": "9_misc@1"
+        },
+        {
+          "command": "superAgents.copy",
+          "when": "view == superAgents.live || view == superAgents.recent",
+          "group": "9_misc@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "superAgents.goto",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.feed",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.resume",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.openUrl",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.copyResume",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.copy",
+          "when": "false"
+        }
+      ]
+    }
+  }
+}

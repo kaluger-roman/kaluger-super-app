@@ -188,6 +188,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 
 Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab. Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
 
+## Agents Panel (VS Code)
+
+`scripts/vscode-agents/` is a VS Code extension («Агенты Super App») that shows the live and recent Claude Code sessions of this project: what each one is doing, which ones wait for the user, a live feed, a jump to the session's terminal. Data comes from `claude agents --json` and the transcripts in `~/.claude/projects/`; logic in `lib.js` (tested in `scripts/__tests__/`), UI in `extension.js`. Build and install: `scripts/vscode-agents/README.md`.
+
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, Material UI styled-components (frontend); Express, Prisma, bcryptjs, express-rate-limit, Resend (backend) — все уже в проекте (028-forgot-password)
