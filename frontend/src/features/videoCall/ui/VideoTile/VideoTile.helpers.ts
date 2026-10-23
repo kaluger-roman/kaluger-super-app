@@ -1,3 +1,5 @@
+import type { SyntheticEvent } from "react";
+
 import { CAMERA_OFF_LABEL, CAMERA_UNAVAILABLE_LABEL } from "./VideoTile.constants";
 import type { TileContentKind, TileVariantConfig, VideoFit, VideoLayout } from "./VideoTile.types";
 import type { CallMediaState } from "../../videoCall.types";
@@ -25,3 +27,14 @@ export const getVideoLayout = (
 
 export const getCameraLabel = (media: CallMediaState): string =>
   media.cameraAvailable ? CAMERA_OFF_LABEL : CAMERA_UNAVAILABLE_LABEL;
+
+// A call never pauses on purpose. iOS Safari pauses inline video on its own (the app goes to the
+// background, a tap on the video) and then draws its native play/pause button over it.
+export const resumePlayback = (element: HTMLVideoElement): void => {
+  if (!element.srcObject || !element.paused) return;
+  // Refused without a user gesture: the next pause, return to the tab or tap retries.
+  element.play().catch(() => undefined);
+};
+
+export const resumeEventPlayback = (event: SyntheticEvent<HTMLVideoElement>): void =>
+  resumePlayback(event.currentTarget);

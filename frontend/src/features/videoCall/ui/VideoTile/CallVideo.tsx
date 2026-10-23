@@ -1,6 +1,8 @@
 import type { FC } from "react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
+import { resumeEventPlayback } from "./VideoTile.helpers";
+import { useCallVideoPlayback } from "./VideoTile.hooks";
 import * as Styled from "./VideoTile.styled";
 import type { VideoFit, VideoLayout } from "./VideoTile.types";
 
@@ -14,13 +16,7 @@ type CallVideoProps = {
 
 export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layout }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const element = videoRef.current;
-    if (element && element.srcObject !== stream) {
-      element.srcObject = stream;
-    }
-  }, [stream]);
+  useCallVideoPlayback(videoRef, stream);
 
   return (
     <Styled.VideoElement
@@ -28,6 +24,9 @@ export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layo
       autoPlay
       playsInline
       muted={muted}
+      disablePictureInPicture
+      onPause={resumeEventPlayback}
+      onClick={resumeEventPlayback}
       data-layout={layout}
       $hidden={hidden}
       $fit={fit}

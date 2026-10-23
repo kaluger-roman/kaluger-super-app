@@ -69,6 +69,12 @@ export const VideoElement = styled("video")<VideoElementProps>(({ $hidden, $fit,
   zIndex: 0,
   objectFit: $fit,
   visibility: $hidden ? "hidden" : "visible",
+  // iOS Safari draws its own play/pause button over a video without controls.
+  "&::-webkit-media-controls, &::-webkit-media-controls-panel, &::-webkit-media-controls-start-playback-button":
+    {
+      display: "none !important",
+      WebkitAppearance: "none",
+    },
 }));
 
 export const PlaceholderColumn = styled(Box)({
