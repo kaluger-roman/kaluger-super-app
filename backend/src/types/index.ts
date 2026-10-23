@@ -52,7 +52,15 @@ export type {
   PushNotificationPayload,
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
-export type { UpdateBackupSettingsDto, BackupSettingsResponse, BackupFileResponse } from "./backup";
+export type {
+  UpdateBackupSettingsDto,
+  BackupSettingsResponse,
+  BackupFileResponse,
+  BackupRestoreCheckCounts,
+  BackupRestoreCheck,
+  BackupOffsiteStatus,
+  BackupSettingsFullResponse,
+} from "./backup";
 export type {
   StudentJwtPayload,
   StudentRequest,
@@ -68,3 +76,16 @@ export type {
   ValidateInvitationResponse,
   StudentLessonWsEvent,
 } from "./studentCabinet";
+export type {
+  CallDirection,
+  CallerKindValue,
+  CallEndReason,
+  CallCancelReason,
+  CallReplyTarget,
+  IceServer,
+  SessionDescriptionPayload,
+  IceCandidatePayload,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  CallHistoryItem,
+} from "./call";

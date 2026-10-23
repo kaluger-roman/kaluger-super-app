@@ -2,7 +2,8 @@
   "name": "kaluger-super-app",
   "private": true,
   "scripts": {
-    "prepare": "node scripts/install-git-hooks.mjs"
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "check": "node scripts/check.mjs"
   },
   "devDependencies": {
     "lint-staged": "^16.4.0"

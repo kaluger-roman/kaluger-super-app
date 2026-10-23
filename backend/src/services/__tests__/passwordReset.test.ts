@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 
 import { prisma } from "../../lib/prisma";
+import { getCachedTokenVersion } from "../../lib/tokenVersionCache";
 import { createResetToken, comparePassword, hashPassword, hashResetToken } from "../../utils";
 import { applyPasswordReset, requestPasswordReset, verifyResetToken } from "../passwordReset";
 
@@ -12,6 +13,11 @@ jest.mock("../email", () => ({
 
 import { sendPasswordResetEmail } from "../email";
 import { uniqueEmail } from "../../__tests__/helpers";
+
+const mockDisconnectUser = jest.fn();
+jest.mock("../../lib/wsManager", () => ({
+  getWebSocketManager: jest.fn(() => ({ disconnectUser: mockDisconnectUser })),
+}));
 
 const ORIGINAL_PASSWORD = "OldPassword1";
 const VALID_NEW_PASSWORD = "NewPassword1";
@@ -245,6 +251,7 @@ describe("passwordReset service", () => {
 
     it("should update password, mark token used, and not invalidate other valid tokens (US1 scope)", async () => {
       const { token, recordId } = await createValidToken();
+      const before = await prisma.user.findUnique({ where: { id: userId } });
 
       await applyPasswordReset(token, VALID_NEW_PASSWORD, VALID_NEW_PASSWORD);
 
@@ -254,6 +261,9 @@ describe("passwordReset service", () => {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       expect(await comparePassword(VALID_NEW_PASSWORD, user!.password)).toBe(true);
       expect(await comparePassword(ORIGINAL_PASSWORD, user!.password)).toBe(false);
+      expect(mockDisconnectUser).toHaveBeenCalledWith(userId);
+      expect(user!.tokenVersion).toBe(before!.tokenVersion + 1);
+      expect(getCachedTokenVersion(userId)).toBe(user!.tokenVersion);
     });
 
     it("should set isEmailVerified to true if it was false", async () => {

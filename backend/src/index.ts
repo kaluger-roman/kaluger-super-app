@@ -10,6 +10,7 @@ import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
 import { processScheduledReminders, reconcileReceivedAmounts, runBackupJob } from "./services";
+import { getFrontendUrl } from "./utils";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
 if (process.env.NODE_ENV !== "test") {
@@ -29,6 +30,7 @@ import { testRouter } from "./routes/testSupport";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";
+import { callRecordsRouter, studentCallRecordsRouter } from "./routes/callRecords";
 
 const app = express();
 
@@ -41,7 +43,7 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: getFrontendUrl(),
     credentials: true,
   })
 );
@@ -62,6 +64,8 @@ app.use("/api/tax-periods", taxPeriodsRouter);
 app.use("/api/student-auth", studentAuthRouter);
 app.use("/api/student-invitations", studentInvitationsRouter);
 app.use("/api/student-cabinet", studentCabinetRouter);
+app.use("/api/calls", callRecordsRouter);
+app.use("/api/student", studentCallRecordsRouter);
 
 if (process.env.NODE_ENV === "test") {
   app.use("/api/__test__", testRouter);

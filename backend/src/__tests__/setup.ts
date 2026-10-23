@@ -1,6 +1,9 @@
 import { prisma } from "../lib/prisma";
 import { __clearStudentTokenVersionCacheForTests } from "../lib/studentTokenVersionCache";
 import { __clearTokenVersionCacheForTests } from "../lib/tokenVersionCache";
+import { __resetLiveCallsForTests } from "../services/callSignaling/callSignaling";
+import { __resetInviteRateLimitForTests } from "../services/callSignaling/inviteRateLimit";
+import { __resetInviteSequenceForTests } from "../services/callSignaling/inviteSequence";
 
 jest.setTimeout(10000);
 
@@ -10,6 +13,10 @@ jest.setTimeout(10000);
 beforeEach(() => {
   __clearTokenVersionCacheForTests();
   __clearStudentTokenVersionCacheForTests();
+  // Live calls and invite counters are module state as well.
+  __resetLiveCallsForTests();
+  __resetInviteRateLimitForTests();
+  __resetInviteSequenceForTests();
 });
 
 afterAll(async () => {

@@ -3,9 +3,11 @@ import type { FC } from "react";
 import { Button, Switch, FormControlLabel, Typography } from "@mui/material";
 import { useUnit } from "effector-react";
 
-import { adminDataModel } from "@features/admin";
+import { adminDataModel, backupStatusModel } from "@features/admin";
+import { formatDateTime } from "@shared";
 
 import * as Styled from "./BackupSection.styled";
+import { OffsiteStorageStatus } from "./components";
 
 export const BackupSection: FC = () => {
   const backupSettings = useUnit(adminDataModel.$backupSettings);
@@ -13,6 +15,8 @@ export const BackupSection: FC = () => {
   const totalSizeMb = useUnit(adminDataModel.$totalSizeMb);
   const intervalHours = useUnit(adminDataModel.$intervalHours);
   const maxStorageMb = useUnit(adminDataModel.$maxStorageMb);
+  const minRetentionDays = useUnit(backupStatusModel.$minRetentionDays);
+  const isStorageLimitExceeded = useUnit(backupStatusModel.$storageLimitExceeded);
 
   const actions = useUnit({
     toggle: adminDataModel.backupToggled,
@@ -61,12 +65,24 @@ export const BackupSection: FC = () => {
           Сохранить
         </Button>
       </Styled.StyledSettingsRow>
+      <Styled.StyledRetentionHint>
+        <Styled.StyledRetentionHintIcon />
+        <Typography variant="body2">
+          Бэкапы младше {minRetentionDays} дней не удаляются независимо от лимита размера
+        </Typography>
+      </Styled.StyledRetentionHint>
+      {isStorageLimitExceeded && (
+        <Styled.StyledLimitAlert severity="warning">
+          Лимит превышен: бэкапы младше {minRetentionDays} дней не удаляются. Увеличьте лимит.
+        </Styled.StyledLimitAlert>
+      )}
 
       {backupSettings.lastBackupAt && (
         <Styled.StyledSummary>
-          Последний бэкап: {new Date(backupSettings.lastBackupAt).toLocaleString("ru-RU")}
+          Последний бэкап: {formatDateTime(backupSettings.lastBackupAt)}
         </Styled.StyledSummary>
       )}
+      <OffsiteStorageStatus />
 
       <Styled.StyledFilesWrapper>
         <Typography variant="h6" gutterBottom>

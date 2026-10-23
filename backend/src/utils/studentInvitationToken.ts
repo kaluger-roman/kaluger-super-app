@@ -1,5 +1,7 @@
 import crypto from "crypto";
 
+import { getFrontendUrl } from "./frontendUrl";
+
 export const INVITATION_TTL_DAYS = 365;
 
 export const createInvitationToken = (): {
@@ -22,7 +24,5 @@ export const getInvitationExpiry = (): Date => {
 
 export const isInvitationExpired = (expiry: Date): boolean => new Date() > expiry;
 
-export const buildInviteUrl = (token: string): string => {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  return `${frontendUrl}/student-invite/${token}`;
-};
+export const buildInviteUrl = (token: string): string =>
+  `${getFrontendUrl()}/student-invite/${token}`;

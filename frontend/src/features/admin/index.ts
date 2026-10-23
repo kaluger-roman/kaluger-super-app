@@ -1,2 +1,2 @@
 export * from "./ui";
-export { adminAuthModel, adminDataModel } from "./models";
+export { adminAuthModel, adminDataModel, backupStatusModel } from "./models";

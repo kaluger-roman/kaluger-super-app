@@ -2,10 +2,17 @@ import type { Request, Response } from "express";
 import { Router } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
 import { prisma } from "../lib/prisma";
+import { getWebSocketManager } from "../lib/wsManager";
 import { generateAdminToken } from "../utils/auth";
 import { generateStudentToken } from "../utils/studentAuth";
 import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
+import {
+  BACKUP_FILE_EXTENSION,
+  OFFSITE_LAST_PULL_FILE,
+  RESTORE_CHECK_FILE,
+  getBackupDir,
+} from "../services";
 
 export const testRouter = Router();
 
@@ -13,6 +20,7 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.scheduledReminder.deleteMany();
   await prisma.pushSubscription.deleteMany();
   await prisma.reminderSettings.deleteMany();
+  await prisma.callRecord.deleteMany();
   await prisma.lesson.deleteMany();
   await prisma.studentInvitation.deleteMany();
   await prisma.studentUser.deleteMany();
@@ -268,6 +276,29 @@ testRouter.post("/students/:studentId/student-user", async (req: Request, res: R
   });
 });
 
+// Lets e2e wait until a student's socket is registered before the tutor calls them.
+testRouter.get("/ws/students/:studentUserId", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("student", req.params.studentUserId);
+  res.json({ connected: socket !== undefined });
+});
+
+testRouter.post("/call-records", async (req: Request, res: Response) => {
+  const { tutorId, studentId, callerKind, status, startedAt, durationSeconds } = req.body;
+  const started = startedAt ? new Date(startedAt) : new Date();
+  const record = await prisma.callRecord.create({
+    data: {
+      tutorId,
+      studentId,
+      callerKind: callerKind ?? "TUTOR",
+      status: status ?? "COMPLETED",
+      startedAt: started,
+      endedAt: durationSeconds ? new Date(started.getTime() + durationSeconds * 1000) : null,
+      durationSeconds: durationSeconds ?? null,
+    },
+  });
+  res.status(201).json({ record });
+});
+
 testRouter.post("/admin/token", (_req: Request, res: Response) => {
   const email = process.env.ADMIN_EMAIL || "admin@e2e.local";
   const token = generateAdminToken({ email, isAdmin: true });
@@ -277,12 +308,11 @@ testRouter.post("/admin/token", (_req: Request, res: Response) => {
 testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
   const fs = await import("fs");
   const path = await import("path");
-  const dir = path.resolve(process.cwd(), process.env.BACKUP_DIR || "backups");
-  if (fs.existsSync(dir)) {
-    for (const file of fs.readdirSync(dir)) {
-      if (file.endsWith(".sql.gz")) {
-        fs.unlinkSync(path.join(dir, file));
-      }
+  const dir = getBackupDir();
+  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE];
+  for (const file of fs.readdirSync(dir)) {
+    if (file.endsWith(BACKUP_FILE_EXTENSION) || offsiteStatusFiles.includes(file)) {
+      fs.unlinkSync(path.join(dir, file));
     }
   }
   res.status(204).end();

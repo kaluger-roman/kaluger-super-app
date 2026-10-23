@@ -30,7 +30,7 @@ export const changePasswordFx = createEffect(
 // Persist the fresh JWT returned by the backend after tokenVersion bump. Without
 // this the user is silently logged out on the next request, because the old
 // JWT no longer matches `User.tokenVersion`.
-const persistTokenFx = createEffect((token: string) => {
+export const persistTokenFx = createEffect((token: string) => {
   localStorage.setItem("authToken", token);
 });
 

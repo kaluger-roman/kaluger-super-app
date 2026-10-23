@@ -1,8 +1,7 @@
 import type { FC } from "react";
 import { useEffect } from "react";
 
-import { CssBaseline, CircularProgress } from "@mui/material";
-import { ThemeProvider } from "@mui/material/styles";
+import { CircularProgress } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { ru } from "date-fns/locale";
@@ -10,10 +9,18 @@ import { useUnit } from "effector-react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 
 import { studentUserModel, userModel } from "@entities";
-import { getStudentToken, theme, NotificationProvider, setNavigate } from "@shared";
+import { getStudentToken, NotificationProvider, setNavigate } from "@shared";
 
 import * as Styled from "./App.styled";
-import { AppContent, OfflineIndicator, InstallPrompt, PullToRefresh } from "./components";
+import {
+  AppContent,
+  AppFrame,
+  AppLoadingScreen,
+  OfflineIndicator,
+  InstallPrompt,
+  PullToRefresh,
+  SessionElsewhereBanner,
+} from "./components";
 import { appInitModel, blockingModel, studentWebSocketModel, webSocketModel } from "./model";
 import type { BeforeInstallPromptEvent } from "./model/appInit.types";
 
@@ -47,6 +54,10 @@ const App: FC = () => {
       appInitModel.appBootedUnauthenticated();
     }
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "authToken") webSocketModel.tokenStorageChanged();
+      if (event.key === "studentToken") studentWebSocketModel.tokenStorageChanged();
+    };
     const handleOnline = () => appInitModel.onlineStatusChanged(true);
     const handleOffline = () => appInitModel.onlineStatusChanged(false);
 
@@ -61,12 +72,14 @@ const App: FC = () => {
       }
     };
 
+    window.addEventListener("storage", handleStorage);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.removeEventListener("storage", handleStorage);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
@@ -100,34 +113,27 @@ const App: FC = () => {
     };
   }, [isStudentAuthenticated]);
 
-  if (!appInitialized) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Styled.StyledBackdrop open={true}>
-          <CircularProgress color="inherit" />
-        </Styled.StyledBackdrop>
-      </ThemeProvider>
-    );
-  }
-
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-        <Router>
-          <PullToRefresh>
-            <AppRouter />
-            <NotificationProvider />
-            <OfflineIndicator />
-            <InstallPrompt />
-            <Styled.ModalBackdrop open={isBlockingVisible}>
-              <CircularProgress color="inherit" />
-            </Styled.ModalBackdrop>
-          </PullToRefresh>
-        </Router>
-      </LocalizationProvider>
-    </ThemeProvider>
+    <AppFrame>
+      {appInitialized ? (
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+          <Router>
+            <PullToRefresh>
+              <AppRouter />
+              <NotificationProvider />
+              <OfflineIndicator />
+              <SessionElsewhereBanner />
+              <InstallPrompt />
+              <Styled.ModalBackdrop open={isBlockingVisible}>
+                <CircularProgress color="inherit" />
+              </Styled.ModalBackdrop>
+            </PullToRefresh>
+          </Router>
+        </LocalizationProvider>
+      ) : (
+        <AppLoadingScreen />
+      )}
+    </AppFrame>
   );
 };
 

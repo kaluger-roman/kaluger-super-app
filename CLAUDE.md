@@ -47,6 +47,8 @@ npm run news:sync        # Sync news JSON files to database (runs on deploy)
 
 ```bash
 npm install              # lint-staged + enables the pre-commit hook for the main checkout and all worktrees
+npm run check            # tsc, eslint, prettier and related tests of the touched parts, in parallel
+npm run check -- --full  # the same with the full test suites (once before a commit)
 node --test scripts/__tests__/  # Tests for scripts/ and .githooks/
 ```
 
@@ -118,6 +120,8 @@ Before committing code, you MUST verify:
 3. **TypeScript clean** — `npm run build` in `backend/`
 4. **Conventions compliance** — re-read the relevant convention file (`docs/conventions/frontend.md` or `docs/conventions/backend.md`) and manually verify that ALL new/modified code follows every rule.
 
+Run items 1–3 with `npm run check` from the repo root (`scripts/check.mjs`): it starts TypeScript, ESLint, Prettier and tests of every part the branch touches at the same time, each into its own log, and prints a summary — never run them one after another. While iterating it runs only the tests related to the changed files (`vitest related`, `jest --findRelatedTests`); run `npm run check -- --full` once before the commit (CI runs the full suites anyway). ESLint and Prettier keep a cache in `node_modules/.cache`, so a rerun takes seconds. Backend tests go through `scripts/dev-stack.sh test-backend` on a feature branch (`--backend-tests npm` to use `npm test`).
+
 The pre-commit hook (`.githooks/pre-commit`) runs `prettier --write`, `eslint --fix` and `prettier --write` again on staged `frontend/src`, `frontend/e2e`, `frontend/playwright.config.ts` and `backend/src` files and re-stages the result; CI also runs `npm run format:check`. The hook sees only staged files, so the checks above still apply. It runs lint-staged with `--no-stash` because the stash stack is shared by all worktrees, so the "Skipping backup because `--no-stash` was used. This might result in data loss." warning is expected; if any file is partially staged, the hook keeps lint-staged's backup stash instead, since a failed `--no-stash` run would not restore the unstaged hunks. It needs `frontend/node_modules` / `backend/node_modules` — in a fresh worktree, symlink them from the main checkout. It also stops the commit when a staged package's installed Prettier differs from its `package-lock.json` (typically a main checkout pulled without `npm install`); run `npm install` in the directory the hint names. If it fails, fix the cause; do not commit with `--no-verify` unless the user asks.
 
 ## Testing Requirements
@@ -163,6 +167,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - `/e2e-check [base-ref]` — analyze diff vs base, flag user-facing changes without e2e and possibly broken tests; report in `docs/e2e-coverage/checks/`
 - `/e2e-hunt [area]` — parallel inventory of user journeys vs existing e2e; prioritized coverage gaps in `docs/e2e-coverage/`
 
+## Offsite Backups
+
+Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab. Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
+
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, MUI, Material UI styled-components (frontend); Express, Prisma, bcryptjs, express-rate-limit, Resend (backend) — все уже в проекте (028-forgot-password)
@@ -178,6 +186,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 - PostgreSQL через Prisma. Одна новая колонка `lessons."isTaxExempt" BOOLEAN NOT NULL DEFAULT false` (034-tax-exempt-lessons)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, patronum, effector-react, Material UI (styled API), axios — frontend; Express, Prisma — backend. Новых зависимостей нет (035-income-history)
 - PostgreSQL через Prisma. Одна новая колонка `lessons."receivedAmount" DECIMAL(10,2) NULL` + бэкфилл в миграции; новых таблиц и индексов нет (035-income-history)
+- TypeScript 5.x (strict), Node.js 20 + Frontend — React, Effector, Material UI, styled-components, browser WebRTC APIs (`RTCPeerConnection`, `navigator.mediaDevices.getUserMedia`/`getDisplayMedia`), patronum (timers). Backend — Express, Prisma, `ws` (existing WebSocketManager). **No new runtime npm dependencies** (WebRTC is a browser primitive; STUN/TURN are infra, configured via env). coturn is an **operational/infra** dependency, not an npm package. (030-webrtc-video-calls)
+- PostgreSQL via Prisma ORM. One new table `call_records` (+ migration). Signaling messages are ephemeral (never persisted). (030-webrtc-video-calls)
+- TypeScript 5.x strict (backend Node 20, frontend React); bash (home/prod scripts, cron-safe) + Express, Prisma, Effector, MUI (existing); rsync 3.2.x + `rrsync` (prod), OpenSSH, flock, gzip, Docker Engine + `postgres:16-alpine` (home). No new npm dependencies. (036-offsite-backups)
+- PostgreSQL via Prisma — no schema change; new state in files: `$BACKUP_DIR/.offsite-last-pull`, `$BACKUP_DIR/.offsite-restore-check.json` (prod), `/home/roman-kaluger/prod-backups/` (home) (036-offsite-backups)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

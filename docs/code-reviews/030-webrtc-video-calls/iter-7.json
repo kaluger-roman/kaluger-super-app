@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 7,
+  "timestamp": "2026-10-20T09:55:36Z",
+  "diff_mode": "committed",
+  "diff_cmd": "git diff origin/main...HEAD -- . ':(exclude)specs' ':(exclude)docs/mockups' ':(exclude)CLAUDE.md' ':(exclude)CHANGELOG.md' ':(exclude)docs/code-reviews' ':(exclude)docs/manual-qa-reports' ':(exclude).claude' ':(exclude)frontend/test-results'",
+  "head": "3f8cdd8",
+  "diff_stats": {
+    "files_changed": 189,
+    "insertions": 9672,
+    "deletions": 70
+  },
+  "summary": {
+    "raw_findings": 11,
+    "after_dedup": 9,
+    "after_score_filter": 8,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 7
+    },
+    "by_category": {
+      "convention": 2,
+      "logic": 6
+    },
+    "agents_failed": [],
+    "raw_by_agent": {
+      "claude-md": 5,
+      "shallow-bug": 2,
+      "deep-logic": 2,
+      "security": 0,
+      "type-safety": 0,
+      "removed-behavior": 0,
+      "cross-file": 1,
+      "wrapper-proxy": 1
+    }
+  },
+  "notes": "Committed-режим, HEAD 3f8cdd8 (после фиксов iter-1..6 и пяти прогонов ручного QA, плюс CHANGELOG/news). Reviewer-ы deep-logic, type-safety и removed-behavior зависали (stream watchdog 600 с) и были перезапущены: deep-logic и removed-behavior разделены на две части (backend/frontend и main/delta), результаты объединены. Бэкенд-изменения (reason в call_ended/call_canceled/call_hangup, toDropPeerMessage, notifyHistoryUpdated, recordUnreachableCall) и VideoTile/ActiveCallScreen compact-режим регрессий не дали. Находки касаются callHistory.model (фоновое обновление через loadCallHistoryFx, гонки ответов), вакуумного регрессионного теста позднего отказа медиа, двух конвенций frontend.md и двух фактических неточностей в CHANGELOG/news. Дубликаты shallow-bug по CHANGELOG и news слиты с находками claude-md. Сознательно пропущенные пункты переданы reviewer-ам как исключения.",
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "wrapper-proxy",
+      "title": "Регрессионный тест «media of an ended call is denied late» проходит вхолостую: отказ getUserMedia съедает fallback на audio-only, addLocalMediaFx.fail не срабатывает",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/__tests__/signalRouting.model.test.ts",
+      "line_start": 343,
+      "line_end": 363,
+      "snippet": "      .mockImplementationOnce(\n        () =>\n          new Promise<MediaStream>((_, reject) => {\n            denyOldMedia = reject;\n          })",
+      "rationale": "Отклоняется только первый вызов getUserMedia (video+audio). acquireLocalMedia (negotiation.helpers.ts:6-14) ловит эту ошибку и повторяет запрос с AUDIO_ONLY_CONSTRAINTS, а он через mockImplementation успешно возвращает createFakeStream(). Сессия к этому моменту уже снята, поэтому addLocalMediaFx просто останавливает треки и завершается без ошибки. В итоге addLocalMediaFx.fail не срабатывает, и фильтр `callId === params.callId` (negotiation.model.ts:331-337) тестом не проверяется: если его убрать, тест всё равно пройдёт. Вторая проверка на строке 363 тоже ничего не ловит: после 68be437 hangup при отказе медиа уходит с полем `reason: \"media_unavailable\"`, и объект `{ type: \"call_hangup\", callId: \"new-media\" }` с ним никогда не совпадёт. Получается, что фикс iter-4 (поздний отказ медиа старого звонка завершает новый) не покрыт регрессионным тестом, хотя CLAUDE.md «Bug fixes: always add a regression test covering the specific scenario» этого требует.",
+      "fix_hint": "Для старого звонка нужно отклонять оба вызова getUserMedia, например двумя mockImplementationOnce, которые возвращают один и тот же отложенный reject, или флагом, выставленным до denyOldMedia. Проверку на строке 363 стоит заменить на `expect(sentNow).not.toContainEqual(expect.objectContaining({ type: \"call_hangup\", callId: \"new-media\" }))`. Затем убедиться, что без фильтра по callId тест падает.",
+      "score": 75,
+      "verification_note": "Проверено по коду: при отказе первого getUserMedia acquireLocalMedia (negotiation.helpers.ts) повторяет запрос с AUDIO_ONLY через тот же mockImplementation, который возвращает поток, поэтому addLocalMediaFx не падает и фильтр callId в negotiation.model.ts:159 тестом не проверяется, а вторая проверка на строке 363 вакуумна, так как hangup с reason \"media_unavailable\" не совпадает с ожидаемым объектом.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "CHANGELOG пишет, что компактная своя плитка показывает только аватар и значок микрофона, но плашка с именем «Вы» в ней остаётся",
+      "category": "logic",
+      "file": "CHANGELOG.md",
+      "line_start": 11,
+      "line_end": 11,
+      "snippet": "- Управление во время звонка: ... пока собеседник показывает экран, своя плитка уменьшается (132x80 на десктопе, 72x96 на телефоне) и показывает только маленький аватар и значок микрофона (244f674, 68be437)",
+      "rationale": "VideoTile.tsx:56-60 рендерит NameChipRow/NamePill с именем при любом compact, а NameChipRow/NamePill в VideoTile.styled.ts:71-95 не принимают $compact. compact убирает только подпись «Камера выключена» (TileContent.tsx), а при включённой камере в плитке идёт видео, а не аватар. Утверждение «только аватар и значок микрофона» не совпадает с кодом. (also flagged by: shallow-bug)",
+      "fix_hint": "Исправить формулировку, например: «показывает маленький аватар без подписи о камере». Или, если плашка с именем в компактной плитке действительно не нужна, скрыть её при compact и добавить тест.",
+      "score": 50,
+      "verification_note": "Расхождение реальное: VideoTile.tsx рендерит NamePill безусловно, а compact влияет только на подпись «Камера выключена» (TileContent.tsx) и на размеры бейджей, поэтому фраза CHANGELOG.md (строка 11) «показывает только маленький аватар и значок микрофона» неверна, но это неточность в описании, а не поломка функциональности, и правила CLAUDE.md/конвенций для этого не нарушено.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "claude-md",
+      "title": "Новость утверждает, что своё окошко не закрывает показ экрана, хотя компактный PiP по-прежнему перекрывает часть демонстрации",
+      "category": "logic",
+      "file": "backend/prisma/news/2026-10-20.json",
+      "line_start": 3,
+      "line_end": 3,
+      "snippet": "Демонстрация экрана аккуратно выглядит на телефоне и на низком экране, а своё маленькое окошко не закрывает кнопки и показ экрана.",
+      "rationale": "LocalPip (ActiveCallScreen.styled.ts:57-73) остаётся position:absolute поверх StageBox, а RemoteWrap при демонстрации растягивается на всю сцену. Комментарий в коде прямо говорит «PiP shrinks so it covers less of the shared content». На телефоне PiP 72x96 при bottom:16 заходит на область видео, у которого нижний отступ 44px. CHANGELOG:11/:20 корректно пишет «уменьшается» и «не перекрывает «Завершить звонок»», а новость обещает больше, чем делает код. (also flagged by: shallow-bug)",
+      "fix_hint": "Переформулировать новость, например: «своё маленькое окошко уменьшается и не закрывает кнопки управления».",
+      "score": 50,
+      "verification_note": "Факт подтверждён: LocalPip остаётся position:absolute поверх StageBox (ActiveCallScreen.styled.ts:57-73), а комментарий в коде сам говорит «covers less», то есть перекрытие есть, и новость «не закрывает ... показ экрана» фактически неверна, при этом CHANGELOG формулирует корректно; но это неточность пользовательского текста, а не функциональный баг, поэтому оценка средняя.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "deep-logic",
+      "title": "Ответ loadCallHistoryFx, пришедший после закрытия CallHistoryGate, снова заполняет $callHistory (или ставит $loadFailed и показывает тост) — сброс на close обходится",
+      "category": "logic",
+      "file": "frontend/src/entities/callRecord/model/callHistory.model.ts",
+      "line_start": 31,
+      "line_end": 47,
+      "snippet": "sample({ clock: loadCallHistoryFx.fail, fn: () => true, target: $loadFailed });\nsample({ clock: loadCallHistoryFx.doneData, target: $callHistory });",
+      "rationale": "Сброс на CallHistoryGate.close срабатывает раньше, чем завершается запрос, который ещё в полёте; потом doneData без всякой проверки записывает записи ушедшего принципала (например, репетитор открыл /call/history и сразу вышел), и ученик после входа в той же вкладке на /student/calls видит чужую историю, пока идёт новая загрузка (records.length > 0, поэтому список рендерится, а оверлей появляется только через 300 мс и он полупрозрачный). Это повторяет исправленную в iter-1 утечку «после смены аккаунта видна чужая история». Ошибка, пришедшая после close, ставит $loadFailed=true, который сбрасывают только done и close: пользователь получает тост «не удалось загрузить» уже на другой странице, а при следующем открытии сразу видит CallHistoryError.",
+      "fix_hint": "Применять doneData/fail только при открытом гейте и совпадении principal: sample({ clock: loadCallHistoryFx.done, source: { open: CallHistoryGate.status, principal: CallHistoryGate.state }, filter: ({ open, principal }, { params }) => open && principal === params, ... }), так же для fail и тоста. Либо дополнительно сбрасывать $callHistory/$loadFailed на CallHistoryGate.open. Добавить регрессионный тест: ответ после close не меняет сторы.",
+      "score": 50,
+      "verification_note": "Гонка реальна: loadCallHistoryFx не отменяется при CallHistoryGate.close, а doneData/fail пишут в $callHistory и $loadFailed/тост без проверки открытости гейта и principal (callHistory.model.ts:36-47), но для воспроизведения нужен медленный ответ, закрытие страницы и быстрая смена аккаунта или навигация, поэтому случай редкий и мелкий относительно PR.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "deep-logic",
+      "title": "Параллельные загрузки истории ничем не упорядочены: устаревший ответ перезаписывает более свежий, а упавший старый запрос стирает уже показанный список",
+      "category": "logic",
+      "file": "frontend/src/entities/callRecord/model/callHistory.model.ts",
+      "line_start": 23,
+      "line_end": 42,
+      "snippet": "sample({\n  clock: refreshRequested,\n  source: CallHistoryGate.state,\n  filter: CallHistoryGate.status,\n  target: loadCallHistoryFx,",
+      "rationale": "refreshRequested (от call_history_updated, от «Повторить», после каждого недозвона через recordUnreachableCall) запускает новый loadCallHistoryFx, даже если предыдущий ещё не завершился. Итоговое состояние $callHistory/$loadFailed определяется порядком завершения запросов, а не порядком их отправки: старый ответ без только что записанного звонка может прийти последним и спрятать его до следующего события, а fail старого запроса после успеха нового очищает список и показывает ошибку с тостом.",
+      "fix_hint": "Не запускать повторную загрузку, пока идёт текущая (например, ставить refresh в очередь до loadCallHistoryFx.finally), или применять только ответ последнего запроса (счётчик запросов в сторе, сверка в filter).",
+      "score": 50,
+      "verification_note": "Механизм реален: loadCallHistoryFx не отменяет и не упорядочивает параллельные вызовы, а $callHistory и fail-ветка применяют ответы в порядке завершения, поэтому устаревший ответ или ошибка старого запроса могут перезаписать свежие данные (файл callHistory.model.ts целиком новый в ветке). Но для срабатывания нужны два перекрывающихся refresh за время одного HTTP-запроса, что редко, поэтому это мелкий по частоте, а не прод-критичный дефект.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "agent": "cross-file",
+      "title": "Фоновое обновление истории по call_history_updated идёт через loadCallHistoryFx: глобальный оверлей блокировки и очистка списка при ошибке",
+      "category": "logic",
+      "file": "frontend/src/entities/callRecord/model/callHistory.model.ts",
+      "line_start": 24,
+      "line_end": 29,
+      "snippet": "sample({\n  clock: refreshRequested,\n  source: CallHistoryGate.state,\n  filter: CallHistoryGate.status,\n  target: loadCallHistoryFx,",
+      "rationale": "В этой итерации у refreshRequested появился новый вызывающий: signalRouting.model.ts:36 дёргает его на каждый call_history_updated, а бэкенд шлёт это событие обоим участникам после каждого завершения звонка и после recordUnreachableCall. Но loadCallHistoryFx рассчитан на первую загрузку страницы. Его pending входит в $isBlocking (blocking.model.ts:86), поэтому обновление дольше 300 мс открывает полноэкранный ModalBackdrop с zIndex modal+1, а это выше CallOverlay (1300), и он может перекрыть новый входящий или исходящий вызов. Кроме того, при fail список очищается (строки 38-42), и вместо уже показанных записей пользователь видит CallHistoryError и тост об ошибке, хотя сам ничего не запрашивал. На пустой странице во время обновления CallHistoryList рендерит null, то есть заглушка пропадает.",
+      "fix_hint": "Для фонового обновления заведите отдельный эффект: не включайте его в $isBlocking и при ошибке не сбрасывайте $callHistory и $loadFailed (или делайте это только при пустом списке). Кнопка «Повторить» может по-прежнему вызывать loadCallHistoryFx.",
+      "score": 50,
+      "verification_note": "Механика подтверждена кодом: refreshRequested вызывает loadCallHistoryFx, его pending входит в $isBlocking (blocking.model.ts:86), overlay ModalBackdrop имеет zIndex modal+1 = 1301 против CallOverlay 1300, при fail $callHistory очищается (callHistory.model.ts:38-42), а call_history_updated реально шлётся обоим участникам (backend signaling.ts:70-71); но оверлей показывается только при фоновом обновлении дольше 300 мс и только когда пользователь на странице истории, поэтому срабатывание требует медленной сети и совпадения, это мелочь/редкий случай.",
+      "severity": "medium"
+    },
+    {
+      "id": "f7",
+      "agent": "claude-md",
+      "title": "Состояние загрузки истории и onRetry передаются пропсами через два уровня (Page, List, Error) вместо чтения из callHistoryModel",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/ui/CallHistoryList/CallHistoryList.tsx",
+      "line_start": 10,
+      "line_end": 25,
+      "snippet": "  loadFailed: boolean;\n  loading: boolean;\n  onRetry: () => void;\n...\n    return <CallHistoryError retrying={loading} onRetry={onRetry} />;",
+      "rationale": "docs/conventions/frontend.md:101: «No props drilling — use Effector stores». Новые $loadFailed, $isLoading и refreshRequested читаются в CallHistoryPage, передаются в CallHistoryList, а оттуда ещё дальше в CallHistoryError (retrying/onRetry). При этом CallHistoryList лежит в features и может сам импортировать callHistoryModel из @entities.",
+      "fix_hint": "Пусть CallHistoryList (или CallHistoryError) сам читает callHistoryModel.$loadFailed / $isLoading через useUnit и вызывает refreshRequested через useUnit({ retry: ... }). Странице останется только useGate.",
+      "score": 50,
+      "verification_note": "Факты finding подтверждены: CallHistoryPage.tsx читает $loadFailed, $isLoading и refreshRequested через useUnit и передаёт их в CallHistoryList, который передаёт retrying/onRetry дальше в CallHistoryError, а правило «No props drilling — use Effector stores» прописано в docs/conventions/frontend.md:101; но правило сформулировано общо, передача store-значений из страницы в дочерний компонент одним уровнем часто допустима, поэтому это мелкое нарушение конвенции, а не функциональный баг.",
+      "severity": "medium"
+    },
+    {
+      "id": "f8",
+      "agent": "claude-md",
+      "title": "CallHistoryPage читает сторы через объектный useUnit вместе с событием, а конвенция требует отдельный useUnit на каждый стор",
+      "category": "convention",
+      "file": "frontend/src/pages/callHistory/CallHistoryPage.tsx",
+      "line_start": 19,
+      "line_end": 24,
+      "snippet": "  const { records, loadFailed, loading, refresh } = useUnit({\n    records: callHistoryModel.$callHistory,\n    loadFailed: callHistoryModel.$loadFailed,\n    loading: callHistoryModel.$isLoading,\n    refresh: callHistoryModel.refreshRequested,",
+      "rationale": "docs/conventions/frontend.md:177-189 задаёт шаблон: «Stores: separate lines», а объект только для actions (frontend.md:170: для сторов отдельные вызовы). Во всём frontend/src (и в origin/main) это единственное место, где сторы читаются через объектный useUnit; в iter-4 похожее отклонение от шаблона useUnit в OutgoingCallOverlay уже исправляли.",
+      "fix_hint": "Читать $callHistory, $loadFailed и $isLoading отдельными вызовами useUnit, а refreshRequested оставить в объекте actions: useUnit({ refresh: callHistoryModel.refreshRequested }).",
+      "score": 50,
+      "verification_note": "Нарушение подтверждено: docs/conventions/frontend.md (строки 177-189) прямо задаёт шаблон «Stores: separate lines» и показывает, что сторы читаются отдельными useUnit, а объект нужен для actions, и CallHistoryPage.tsx:19-24 читает три стора через объектный useUnit; grep по frontend/src подтверждает, что это единственный такой случай с $-сторами, но поведение не ломается, поэтому это мелкое стилистическое отклонение, а не функциональный баг.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "claude-md",
+      "title": "signalRouting.model разбирает входящие сигналы через split, хотя CLAUDE.md разрешает только sample",
+      "category": "claude-md",
+      "file": "frontend/src/features/videoCall/model/signalRouting.model.ts",
+      "line_start": 18,
+      "line_end": 34,
+      "snippet": "const signals = split(callModel.signalReceived, {\n  incoming: isSignalOf(\"call_incoming\"),\n  ringing: isSignalOf(\"call_ringing\"),\n  accepted: isSignalOf(\"call_accepted\"),\n  rejected: isSignalOf(\"call_rejected\"),",
+      "rationale": "Корневой CLAUDE.md:72: «State: Effector (...). Only `sample`, `useUnit`». В origin/main split нигде не используется, а в ветке это единственное его применение в frontend/src, так что signalRouting.model вводит новый оператор связывания в обход правила.",
+      "fix_hint": "Заменить split на sample с filter: isSignalOf(\"...\"), то есть по одному sample на тип сигнала (isSignalOf уже работает как type guard). Либо, если split считается допустимым, явно разрешить его в CLAUDE.md и docs/conventions/frontend.md.",
+      "score": 25,
+      "verification_note": "Буквально в CLAUDE.md:72 написано «Only `sample`, `useUnit`», и split в signalRouting.model.ts (строка 18) под это формально не подпадает, но frontend.md перечисляет запрещённые операторы (forward, guard, .on, .watch, getState, useStore) без split, а combine уже используется в 11 файлах frontend/src, поэтому правило «Only» на практике не enforced и это скорее стилистическое расхождение, а не явное нарушение.",
+      "reason": "below threshold"
+    }
+  ]
+}

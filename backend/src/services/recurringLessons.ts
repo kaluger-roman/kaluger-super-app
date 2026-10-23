@@ -5,7 +5,7 @@ import { truncateToMinute } from "../utils/time";
 
 // Module-level guard prevents two ticks (manual trigger overlapping the
 // nightly cron, or restart in the middle of a run) from racing on the
-// same slots. Same pattern as backupRunning in services/backup.ts.
+// same slots. Same pattern as backupRunning in services/backup/backup.ts.
 let recurringRunning = false;
 
 const overlaps = (slots: LessonSlot[], start: Date, end: Date): boolean =>

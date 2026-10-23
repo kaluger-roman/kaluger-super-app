@@ -5,28 +5,76 @@ import type { AuthenticatedStudentWebSocket, AuthenticatedWebSocket } from "./ty
 import { authenticateWebSocket } from "./auth";
 import { authenticateStudentWebSocket } from "./studentAuth";
 import { handleMessage, sendWelcomeMessage } from "./messageHandler";
-import type { StudentLessonWsEvent } from "../../types";
+import { terminateActiveCallForParticipant } from "../../services/callSignaling";
+import { routeCallMessage } from "./signaling";
+import { getCachedTokenVersion } from "../tokenVersionCache";
+import { WS_MAX_PAYLOAD_BYTES } from "./signaling.constants";
+import {
+  CALL_ENDED_CLOSE_CODE,
+  HEARTBEAT_INTERVAL_MS,
+  REPLACED_CLOSE_CODE,
+  REVOKED_SOCKET_TERMINATE_MS,
+  STUDENT_WS_PATH,
+  TOKEN_REVOKED_CLOSE_CODE,
+  TUTOR_WS_PATH,
+} from "./connection.constants";
+import { readTabId, sendConnectionReady, toTakeoverDecision } from "./connection.helpers";
+import { createWaitingSockets } from "./waitingSockets";
+import type { CallerKindValue, StudentLessonWsEvent } from "../../types";
 
 // `noServer: true` + единый upgrade-handler обязателен: два WebSocketServer
 // на одном HTTP, привязанные через `path`, конфликтуют — первый при path
 // mismatch вызывает `socket.destroy()` и убивает рукопожатие второго.
-const TUTOR_WS_PATH = "/ws";
-const STUDENT_WS_PATH = "/ws/student";
-
 export class WebSocketManager {
   private wss: WebSocketServer;
   private studentWss: WebSocketServer;
   private clients: Map<string, AuthenticatedWebSocket> = new Map();
   private studentClients: Map<string, AuthenticatedStudentWebSocket> = new Map();
+  private waiting = createWaitingSockets();
+  private awaitingPong = new WeakSet<WebSocket>();
+  private heartbeat: ReturnType<typeof setInterval>;
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ noServer: true });
+    this.wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
     this.wss.on("connection", this.handleConnection.bind(this));
 
-    this.studentWss = new WebSocketServer({ noServer: true });
+    this.studentWss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
     this.studentWss.on("connection", this.handleStudentConnection.bind(this));
 
     server.on("upgrade", this.handleUpgrade.bind(this));
+
+    this.heartbeat = setInterval(() => this.checkHeartbeats(), HEARTBEAT_INTERVAL_MS);
+    this.heartbeat.unref();
+    server.on("close", () => clearInterval(this.heartbeat));
+  }
+
+  private checkHeartbeats() {
+    [...this.clients.values(), ...this.studentClients.values(), ...this.waiting.all()].forEach(
+      (ws) => {
+        if (this.awaitingPong.has(ws)) {
+          // Terminating emits close, which unregisters the socket and ends its call.
+          ws.terminate();
+          return;
+        }
+        this.awaitingPong.add(ws);
+        try {
+          ws.ping();
+        } catch (error) {
+          console.error("Failed to ping WebSocket:", error);
+        }
+      }
+    );
+  }
+
+  private watchHeartbeat(ws: WebSocket) {
+    ws.on("pong", () => this.awaitingPong.delete(ws));
+  }
+
+  private wait(kind: CallerKindValue, id: string, ws: WebSocket) {
+    // Closed while auth was running: nothing to keep.
+    if (ws.readyState !== WebSocket.OPEN) return;
+    this.watchHeartbeat(ws);
+    this.waiting.add(kind, id, ws);
   }
 
   private handleUpgrade(request: IncomingMessage, socket: Socket, head: Buffer) {
@@ -52,17 +100,38 @@ export class WebSocketManager {
     const decoded = await authenticateWebSocket(ws, request);
     if (!decoded) return;
 
+    // The token may have been revoked while its version was read from the DB; nothing below
+    // awaits, so this check holds until the socket is registered.
+    const currentVersion = getCachedTokenVersion(decoded.userId);
+    if (currentVersion !== undefined && currentVersion !== decoded.tokenVersion) {
+      ws.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+      return;
+    }
+
     // Attach user info to WebSocket
     ws.userId = decoded.userId;
     ws.email = decoded.email;
+    ws.tabId = readTabId(request);
+
+    const previous = this.clients.get(decoded.userId);
+    const decision = toTakeoverDecision("tutor", decoded.userId, previous, ws, request);
+    if (decision.action === "refuse") {
+      ws.close(decision.code, decision.reason);
+      return;
+    }
+    if (decision.action === "wait") {
+      this.wait("tutor", decoded.userId, ws);
+      return;
+    }
 
     // If a previous connection exists for this user, close it before replacing.
     // The old socket's close-handler will fire later but won't affect the new one
     // because of the identity check below.
-    const previous = this.clients.get(decoded.userId);
     if (previous && previous !== ws) {
+      // The replaced socket's close handler no longer owns the user, so end its call here.
+      void terminateActiveCallForParticipant("tutor", decoded.userId);
       try {
-        previous.close(4000, "Replaced by newer connection");
+        previous.close(REPLACED_CLOSE_CODE, "Replaced by newer connection");
       } catch (error) {
         console.error("Error closing previous WebSocket:", error);
       }
@@ -70,24 +139,28 @@ export class WebSocketManager {
 
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в clients.
+    const release = () => {
+      if (this.clients.get(decoded.userId) !== ws) return;
+      this.clients.delete(decoded.userId);
+      void terminateActiveCallForParticipant("tutor", decoded.userId);
+    };
+
     ws.on("close", () => {
       console.log(`WebSocket disconnected: ${decoded.email} (${decoded.userId})`);
-      if (this.clients.get(decoded.userId) === ws) {
-        this.clients.delete(decoded.userId);
-      }
+      release();
     });
 
     ws.on("error", (error) => {
       console.error(`WebSocket error for user ${decoded.userId}:`, error);
-      if (this.clients.get(decoded.userId) === ws) {
-        this.clients.delete(decoded.userId);
-      }
+      release();
     });
 
     ws.on("message", (message) => {
+      // A replaced or revoked socket stays readable until it closes; it no longer speaks for the user.
+      if (this.clients.get(decoded.userId) !== ws) return;
       try {
         const data = JSON.parse(message.toString());
-        handleMessage(ws, data);
+        handleMessage(ws, decoded.userId, data);
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
@@ -99,6 +172,8 @@ export class WebSocketManager {
     }
 
     this.clients.set(decoded.userId, ws);
+    this.watchHeartbeat(ws);
+    sendConnectionReady(ws);
 
     console.log(`WebSocket connected: ${decoded.email} (${decoded.userId})`);
 
@@ -118,11 +193,23 @@ export class WebSocketManager {
 
     ws.studentUserId = decoded.studentUserId;
     ws.email = decoded.email;
+    ws.tabId = readTabId(request);
 
     const previous = this.studentClients.get(decoded.studentUserId);
+    const decision = toTakeoverDecision("student", decoded.studentUserId, previous, ws, request);
+    if (decision.action === "refuse") {
+      ws.close(decision.code, decision.reason);
+      return;
+    }
+    if (decision.action === "wait") {
+      this.wait("student", decoded.studentUserId, ws);
+      return;
+    }
+
     if (previous && previous !== ws) {
+      void terminateActiveCallForParticipant("student", decoded.studentUserId);
       try {
-        previous.close(4000, "Replaced by newer connection");
+        previous.close(REPLACED_CLOSE_CODE, "Replaced by newer connection");
       } catch (error) {
         console.error("Error closing previous student WebSocket:", error);
       }
@@ -130,21 +217,31 @@ export class WebSocketManager {
 
     // Регистрируем close/error handlers ДО `set`, иначе синхронный close
     // между set и регистрацией оставит запись-сироту в studentClients.
+    const release = () => {
+      if (this.studentClients.get(decoded.studentUserId) !== ws) return;
+      this.studentClients.delete(decoded.studentUserId);
+      void terminateActiveCallForParticipant("student", decoded.studentUserId);
+    };
+
     ws.on("close", () => {
       console.log(`Student WebSocket disconnected: ${decoded.email} (${decoded.studentUserId})`);
-      if (this.studentClients.get(decoded.studentUserId) === ws) {
-        this.studentClients.delete(decoded.studentUserId);
-      }
+      release();
     });
 
     ws.on("error", (error) => {
       console.error(`Student WebSocket error for ${decoded.studentUserId}:`, error);
-      if (this.studentClients.get(decoded.studentUserId) === ws) {
-        this.studentClients.delete(decoded.studentUserId);
-      }
+      release();
     });
 
-    ws.on("message", () => {});
+    ws.on("message", (message) => {
+      if (this.studentClients.get(decoded.studentUserId) !== ws) return;
+      try {
+        const data = JSON.parse(message.toString());
+        routeCallMessage("student", decoded.studentUserId, data);
+      } catch (error) {
+        console.error("Error parsing student WebSocket message:", error);
+      }
+    });
 
     // Если socket закрылся, пока шёл async auth, не сохраняем мёртвую запись.
     if (ws.readyState !== WebSocket.OPEN) {
@@ -152,6 +249,8 @@ export class WebSocketManager {
     }
 
     this.studentClients.set(decoded.studentUserId, ws);
+    this.watchHeartbeat(ws);
+    sendConnectionReady(ws);
 
     console.log(`Student WebSocket connected: ${decoded.email} (${decoded.studentUserId})`);
   }
@@ -221,6 +320,39 @@ export class WebSocketManager {
       return true;
     }
     return false;
+  }
+
+  // The socket was opened with a token that is now revoked; calls must not go on over it.
+  public disconnectUser(userId: string): void {
+    // Before the call ends below, so they hear "revoked" and not "call ended, come back".
+    this.waiting.release("tutor", userId, TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+    const ws = this.clients.get(userId);
+    if (!ws) return;
+    // Revoke at once: the close handshake may take long, and until then the socket must not
+    // stay registered or keep its call.
+    this.clients.delete(userId);
+    void terminateActiveCallForParticipant("tutor", userId);
+    try {
+      ws.close(TOKEN_REVOKED_CLOSE_CODE, "Token revoked");
+    } catch (error) {
+      console.error("Error closing revoked WebSocket:", error);
+    }
+    setTimeout(() => {
+      if (ws.readyState !== WebSocket.CLOSED) ws.terminate();
+    }, REVOKED_SOCKET_TERMINATE_MS).unref();
+  }
+
+  // The user's call ended: tabs that waited for it may ask for the connection again.
+  public releaseWaitingSockets(kind: CallerKindValue, id: string): void {
+    this.waiting.release(kind, id, CALL_ENDED_CLOSE_CODE, "Call ended in another tab");
+  }
+
+  public getConnection(kind: CallerKindValue, id: string): WebSocket | undefined {
+    return kind === "tutor" ? this.clients.get(id) : this.studentClients.get(id);
+  }
+
+  public sendToParticipant(kind: CallerKindValue, id: string, message: unknown): boolean {
+    return kind === "tutor" ? this.sendToUser(id, message) : this.sendToStudent(id, message);
   }
 
   // Method to get connected users count

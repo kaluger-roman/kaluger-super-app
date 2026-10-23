@@ -12,3 +12,4 @@ export * from "./tutorStudentInvitation";
 export * from "./studentAuth";
 export * from "./studentSchedule";
 export * from "./studentSettings";
+export * from "./videoCall";

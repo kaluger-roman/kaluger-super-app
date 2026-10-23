@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "branch": "036-offsite-backups",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-16T18:45:10Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 64,
+    "insertions": 5312,
+    "deletions": 99
+  },
+  "summary": {
+    "raw_findings": 12,
+    "after_dedup": 10,
+    "after_score_filter": 8,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 8
+    },
+    "by_category": {
+      "logic": 5,
+      "bug": 1,
+      "security": 2
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "cross-file",
+      "title": "CHANGELOG утверждает «a failed pull deletes nothing», а pull-backups.sh при сбое удаляет файлы",
+      "category": "logic",
+      "file": "CHANGELOG.md",
+      "line_start": 10,
+      "line_end": 10,
+      "snippet": "... keeps 90 days under a 20 GiB cap (the newest copy is never deleted, a failed pull deletes nothing). ...",
+      "rationale": "При неудачном rsync pull-backups.sh всё равно вызывает verify_pulled и verify_copies: удаляются файлы с неожиданным именем и любые копии вне ledger .verified, не прошедшие gzip -t. То же расхождение в docs/ops/offsite-backups.md («it only removes copies from that run that fail gzip -t»). /news генерирует новость из CHANGELOG.",
+      "fix_hint": "Переформулировать: «a failed pull runs no retention and only removes copies that fail gzip -t or have an unexpected name»; так же поправить docs/ops/offsite-backups.md.",
+      "score": 50,
+      "verification_note": "При сбое rsync вызываются verify_pulled и verify_copies, которые удаляют файлы, так что «a failed pull deletes nothing» в CHANGELOG.md неверно; ошибка документации без влияния на функциональность.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "shallow-bug",
+      "title": "Инструкция восстановления выбирает копию через `ls | tail -n 1` и может взять имя из будущего или непроверенный файл",
+      "category": "logic",
+      "file": "docs/ops/offsite-backups.md",
+      "line_start": 219,
+      "line_end": 220,
+      "snippet": "   FILE=$(ls ~/prod-backups/backup-*.sql.gz | tail -n 1)   # names sort by time",
+      "rationale": "Скрипты сознательно не доверяют именам из будущего: такие файлы могут лежать в ~/prod-backups. Ручная процедура берёт лексикографически последний файл, то есть при восстановлении после компрометации прода (ровно тот сценарий, от которого защищаются скрипты) будет выбран подложенный дамп.",
+      "fix_hint": "Выбирать файл через newest_backup из lib.sh или брать имя из последней строки `check passed for …` в logs/restore-check.log.",
+      "score": 50,
+      "verification_note": "docs/ops/offsite-backups.md:219 выбирает копию через `ls | tail -n 1`, что расходится с защитой скриптов от имён из будущего; реальная, но редкая проблема ручной процедуры.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "cross-file",
+      "title": "Новые тесты offsite-backup падают вне Linux, а `node --test scripts/__tests__/` из CLAUDE.md запускает их везде",
+      "category": "bug",
+      "file": "scripts/__tests__/offsite-backup-fixtures.mjs",
+      "line_start": 118,
+      "line_end": 119,
+      "snippet": "export const createFixture = () => {\n  const root = mkdtempSync(join(tmpdir(), \"offsite-backup-\"));",
+      "rationale": "lib.sh, pull-backups.sh и restore-check.sh используют GNU `date -u -d`, `stat -c`, `flock`, `mapfile` и `local -A` (bash 4+). На macOS (bash 3.2, BSD date/stat, нет flock) почти все offsite-backup-*.test.mjs падают, хотя CLAUDE.md даёт `node --test scripts/__tests__/` как общую команду из корня репо. Для /usr/bin/rrsync пропуск уже есть, для остального нет.",
+      "fix_hint": "Экспортировать из fixtures причину пропуска (process.platform !== \"linux\" или отсутствие flock/GNU date) и передавать её как { skip } во все offsite-backup-*.test.mjs, как сделано с HAS_RRSYNC.",
+      "score": 50,
+      "verification_note": "Тесты не имеют skip-гарда вне Linux и используют GNU date/stat, flock; CI на ubuntu-latest их проходит, проблема только при локальном запуске на macOS.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "shallow-bug",
+      "title": "Окно include в pull тянет имена до ~48 ч в будущее, а list_backups видит только +24 ч: такие файлы скачиваются, но не проверяются gzip -t и не учитываются ретеншеном",
+      "category": "logic",
+      "file": "scripts/offsite-backup/pull-backups.sh",
+      "line_start": 38,
+      "line_end": 40,
+      "snippet": "  first=$(((now - OFFSITE_RETENTION_DAYS * 86400) / 86400 + 1))\n  last=$(((now + OFFSITE_FUTURE_SKEW_SECONDS) / 86400))\n  for ((day = first; day <= last; day++)); do",
+      "rationale": "`last` округляется до целого календарного дня, include захватывает весь день now+24h, то есть имена до now+48h, а list_backups (lib.sh:92) отбрасывает всё позже now+OFFSITE_FUTURE_SKEW_SECONDS. Такие файлы логируются как pulled, но verify_copies их не проверяет, ретеншен и cap их не видят, вопреки комментарию «and not in the future».",
+      "fix_hint": "Ограничить `last` днём now (или `(now + skew) / 86400 - 1`) либо в verify_pulled удалять скачанные имена с epoch > now + skew.",
+      "score": 50,
+      "verification_note": "window_filters берёт include до конца дня now+24h, а list_backups отбрасывает имена позже now+24h; такие файлы до ~24 ч не проверяются и не учитываются, но случай требует рассогласования часов или компрометации prod.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "security",
+      "title": "Каталоги с именем backup-<день>T*.sql.gz на prod обходят лимит 20 GiB и удаление неожиданных имён на home",
+      "category": "security",
+      "file": "scripts/offsite-backup/pull-backups.sh",
+      "line_start": 40,
+      "line_end": 43,
+      "snippet": "  for ((day = first; day <= last; day++)); do\n    printf -- '--include=backup-%sT*.sql.gz\\n' \"$(date -u -d \"@$((day * 86400))\" +%F)\"\n  done\n  printf -- '--exclude=*\\n'",
+      "rationale": "Шаблон --include без завершающего / и без якоря / подходит и к каталогам на любой глубине. Поэтому при rsync -r скомпрометированный prod может создать каталог backup-2026-10-16Tx.sql.gz/ с любым числом вложенных файлов backup-2026-10-16T*.sql.gz (sparse-файлы до 1G почти ничего не стоят prod, а на home пишутся полностью). verify_pulled пропускает имена с '/', list_backups смотрит только верхний уровень с -f. Эти файлы не проверяются gzip -t, не удаляются, не попадают под лимит 20 GiB и могут заполнить диск home без ограничений. Неполный фикс итерации 2 («имена под маску, но не под строгий regex, не удаляются»). То же относится к именам с управляющими/не-ASCII символами: rsync экранирует их в --out-format (\\#012), проверка -f в verify_pulled не срабатывает, и файл остаётся навсегда.",
+      "fix_hint": "Сделать include-шаблоны якорными и строгими: '--include=/backup-YYYY-MM-DDT[0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z.sql.gz' и вариант с '-[0-9][0-9][0-9]Z' (без rsync -r либо с явным '--exclude=*/'), либо после pull сканировать $OFFSITE_DEST и удалять всё, что не dotfile/logs и не проходит backup_epoch.",
+      "score": 50,
+      "verification_note": "Механизм подтверждён: include-маска без якоря и завершающего слеша пропускает каталог и вложенные файлы при rsync -r, verify_pulled пропускает имена с '/', поэтому такие файлы не проверяются, не считаются в лимите и не удаляются; срабатывает только при скомпрометированном prod.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "agent": "deep-logic",
+      "title": "Пропуск файла по --max-size молчаливый: exit 0, в логе ничего, prod ставит отметку успешного копирования, админка остаётся зелёной",
+      "category": "logic",
+      "file": "scripts/offsite-backup/pull-backups.sh",
+      "line_start": 68,
+      "line_end": 70,
+      "snippet": "  rsync -rt --ignore-existing --max-size=\"$OFFSITE_MAX_FILE_SIZE\" --out-format=%n \\\n    \"${filters[@]}\" -e \"$ssh_cmd\" \"$OFFSITE_HOST:./\" \"$OFFSITE_DEST/\" \\\n    >\"$transfer_list\" 2>\"$rsync_errors\" || status=$?",
+      "rationale": "Файл больше --max-size rsync пропускает без вывода и с кодом 0; тест 'refuses files over the per-file size limit' прямо проверяет, что в pull.log о нём ничего нет. prod-ssh-wrapper.sh обновляет .offsite-last-pull, restore-check продолжает успешно проверять старую копию. Когда дамп перерастёт 1G, новые бэкапы перестанут приходить домой без какого-либо сигнала, а через 90 дней дома останется одна устаревшая копия (тихий отказ, который должны ловить US3/SC-005). (also flagged by: wrapper-proxy)",
+      "fix_hint": "Добавить `--info=skip1` (rsync выводит `<name> is over max-size`), писать такие строки в лог как ERROR и завершаться с кодом 1; в тесте ожидать ERROR и ненулевой код.",
+      "score": 50,
+      "verification_note": "rsync --max-size без --info=skip1 пропускает файл молча с кодом 0, тест прямо ожидает отсутствия записи в pull.log; тихий отказ проявится только при росте дампа сверх 1G.",
+      "severity": "medium"
+    },
+    {
+      "id": "f7",
+      "agent": "security",
+      "title": "restore-check восстанавливает дамп с prod без таймаута и лимитов ресурсов и всё это время держит общий flock: зависание останавливает почасовой pull",
+      "category": "security",
+      "file": "scripts/offsite-backup/restore-check.sh",
+      "line_start": 151,
+      "line_end": 152,
+      "snippet": "  if ! zcat -- \"$path\" | docker exec -i \"$container\" psql -v ON_ERROR_STOP=1 -q -U postgres \\\n    -d \"$RESTORE_DB\" >/dev/null 2>\"$details\"; then",
+      "rationale": "Новейший дамп от возможно скомпрометированного prod выполняется как произвольный SQL от суперпользователя; SELECT pg_sleep(1e9) или зависший docker run (скачивание образа) / createdb подвешивают restore-check навсегда, а у docker run нет --memory/--pids-limit. Lock (acquire_lock_wait, строка 45) держится всю проверку, pull-backups.sh берёт тот же .lock через flock -n и при занятом lock выходит с INFO 'skip' и кодом 0: новые копии перестают приходить, в pull.log только INFO, в админке видно не раньше чем через сутки. (also flagged by: deep-logic)",
+      "fix_hint": "Обернуть docker run/exec и восстановление в timeout (например, timeout 1800; по истечении сообщать restore_failed/docker_failed) и ограничить контейнер --memory/--pids-limit. Либо держать lock только на выбор копии (hardlink во временное имя), а docker выполнять без lock.",
+      "score": 50,
+      "verification_note": "restore-check.sh держит flock весь прогон, а docker run, createdb и psql без timeout, поэтому зависание блокирует pull-backups.sh, который при занятом lock выходит с кодом 0; сценарий зависания редкий.",
+      "severity": "medium"
+    },
+    {
+      "id": "f8",
+      "agent": "deep-logic",
+      "title": "spec.md не обновлён после решений итераций 1–2: FR-003 и FR-007 противоречат реализации",
+      "category": "logic",
+      "file": "specs/036-offsite-backups/spec.md",
+      "line_start": 309,
+      "line_end": 335,
+      "snippet": "- **FR-007**: Домашняя машина MUST раз в час забирать с прода все файлы\n  `*.sql.gz`, которых у неё нет или которые отличаются, в папку вне",
+      "rationale": "FR-007 и edge case (строка 271) требуют забирать отличающиеся файлы и перезаписывать копию с прода, а реализация с --ignore-existing и 90-дневным окном намеренно этого не делает. FR-003 и Clarification (строка 37) определяют storageLimitExceeded как «суммарный объём больше maxStorageMb», а код, contracts/admin-backup-settings.md и data-model.md после iter-1 считают объём после чистки.",
+      "fix_hint": "Переписать FR-003, FR-007, Clarification (строка 37) и edge case (строка 271) под текущее поведение.",
+      "score": 50,
+      "verification_note": "FR-007 требует перезаписывать отличающиеся файлы, а скрипт использует --ignore-existing; FR-003 и Clarification описывают объём до чистки, а код считает после неё; расхождение документальное.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "claude-md",
+      "title": "В сервисном файле offsiteStatus.ts остался приватный хелпер readStatusFile, хотя в iter-1 такие же хелперы из backup.ts вынесли в backup.helpers.ts",
+      "category": "convention",
+      "file": "backend/src/services/backup/offsiteStatus.ts",
+      "line_start": 10,
+      "line_end": 16,
+      "snippet": "const readStatusFile = (name: string): string | null => {\n  try {\n    return fs.readFileSync(path.join(getBackupDir(), name), \"utf8\");\n  } catch {\n    return null;\n  }",
+      "rationale": "docs/conventions/backend.md:43-46 запрещает смешивать хелперы с файлом сервиса («вынеси в соседние *.constants.ts/*.helpers.ts/*.types.ts»). Исправление iter-1 перенесло removeIfExists/removeStaleTmpFiles в backup.helpers.ts, а readStatusFile в новом модуле того же сервиса осталась приватной функцией.",
+      "fix_hint": "Перенести readStatusFile в backup.helpers.ts, передавая каталог параметром (readStatusFile(dir, name)), и импортировать её в offsiteStatus.ts.",
+      "score": 25,
+      "verification_note": "Правило backend.md:43-46 сформулировано для entry-файла (index.ts), а offsiteStatus.ts им не является, поэтому нарушение спорное.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "shallow-bug",
+      "title": "Фикс дрейфа restore-check неполный: строгое сравнение «< 24 ч» по секундам всё ещё сдвигает проверку на час при джиттере старта cron",
+      "category": "logic",
+      "file": "scripts/offsite-backup/restore-check.sh",
+      "line_start": 37,
+      "line_end": 41,
+      "snippet": "started=$(now_epoch)\n\nif ((!force)) && [[ -f $STAMP_FILE ]]; then\n  if (($(now_epoch) - $(stat -c %Y \"$STAMP_FILE\") < OFFSITE_RESTORE_INTERVAL_HOURS * 3600)); then",
+      "rationale": "Штамп хранит секунду старта, следующий запуск сравнивается с ровно 86400 с без запаса. Если вчера скрипт дошёл до `started` на секунду позже (задержка cron, нагрузка), сегодня разница 86399 < 86400, запуск пропускается и проверка уезжает на час. Сдвиг не возвращается назад и накапливается, хотя итерация 2 должна была это закрыть.",
+      "fix_hint": "Сравнивать с интервалом минус запас, например `< OFFSITE_RESTORE_INTERVAL_HOURS * 3600 - 600`, и добавить тест со штампом на 1 с моложе 24 ч.",
+      "score": 25,
+      "verification_note": "Механизм реален, но сдвиг однократный (на один цикл почасового cron) и самокорректируется, а срабатывает только при редкой секундной задержке старта.",
+      "reason": "below threshold"
+    }
+  ]
+}

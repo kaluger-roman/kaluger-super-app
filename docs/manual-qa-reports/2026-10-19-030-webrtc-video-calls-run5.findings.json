@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32775",
+  "run_at": "2026-10-20T06:24:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5.md",
+  "readiness": "green",
+  "run4_fixes_verified": {
+    "1": "ok",
+    "2": "ok",
+    "3": "ok"
+  },
+  "coverage": {
+    "total": 34,
+    "passed": 31,
+    "failed": 0,
+    "warned": 3,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "Репетитор звонит из карточки ученика: «Вызываем…»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Ученик видит входящий с именем и «Принять»/«Отклонить»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "Принятие → оба видят видео и слышат аудио",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "«Завершить» → звонок закрыт у обоих, устройства освобождены",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "«Отклонить» → «Вызов отклонён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Отмена до ответа → входящий исчезает",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "Нет ответа 40 с → «Нет ответа»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P2.1-2.2",
+        "title": "Микрофон выкл/вкл, индикатор у собеседника",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.3-2.4",
+        "title": "Камера выкл/вкл, заглушка",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.6",
+        "title": "Нет камеры → «только аудио»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Камера появилась → собеседник видит видео",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P3.1",
+        "title": "Демонстрация видна собеседнику, индикатор у обоих",
+        "priority": "P3",
+        "status": "warn",
+        "finding_ids": [2]
+      },
+      {
+        "id": "P3.2",
+        "title": "Остановка демонстрации кнопкой и системно",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.3",
+        "title": "Вторая демонстрация при чужой → сообщение",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P3.4",
+        "title": "Завершение во время демонстрации освобождает захват",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.1",
+        "title": "Завершённый звонок в истории у обоих",
+        "priority": "P3",
+        "status": "warn",
+        "finding_ids": [1]
+      },
+      {
+        "id": "P4.2",
+        "title": "Пропущен/отклонён/отменён/не удалось без длительности",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.3",
+        "title": "Изоляция истории и 401",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.4",
+        "title": "Сортировка от новых к старым",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "P4.5",
+        "title": "Открытая история обновляется после звонка",
+        "priority": "P3",
+        "status": "warn",
+        "finding_ids": [1]
+      },
+      {
+        "id": "P4.6",
+        "title": "Ошибка загрузки истории и «Повторить»",
+        "priority": "P3",
+        "status": "pass"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат не в сети",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E2",
+        "title": "Нет ни камеры, ни микрофона",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E3",
+        "title": "Занятость",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E4",
+        "title": "Повторное «Позвонить» → одна сессия",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E5",
+        "title": "Звонок вне пары / неизвестный callId",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E6",
+        "title": "Закрытие вкладки собеседника в звонке",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E7",
+        "title": "Встречный вызов (glare)",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E8",
+        "title": "Звонок ученик → репетитор",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E9",
+        "title": "Звонящий закрыл вкладку во время вызова",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "S1",
+        "title": "Вход через UI, пункт меню, защита роутов",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S2",
+        "title": "Мобильная вёрстка 375×812 и 812×375",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S3",
+        "title": "Гудки и рингтон останавливаются",
+        "priority": "Smoke",
+        "status": "pass"
+      },
+      {
+        "id": "S4",
+        "title": "Консоль и сеть",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 2
+    },
+    "by_category": {
+      "spec-mismatch": 0,
+      "bug": 0,
+      "ux": 2,
+      "improvement": 0
+    },
+    "unambiguous_fix_count": 0,
+    "autofix_applied": 0,
+    "autofix_failed": 0,
+    "remaining": 2
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "Загрузка истории звонков входит в глобальный блокирующий оверлей: два спиннера при первой загрузке и затемнение экрана при фоновом обновлении",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P4.1",
+      "file": "frontend/src/app/model/blocking.model.ts",
+      "line_hint": 86,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/01-tutor-history-first-load-spinner.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/30-student-phone-history-first-load-spinner.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/33-tutor-history-background-refresh-overlay.png"
+      ],
+      "expected": "Один индикатор загрузки; фоновое обновление показанного списка не блокирует экран",
+      "actual": "Первая загрузка: локальный спиннер (run-4 #2) и глобальный оверлей одновременно; после call_history_updated весь экран затемнён ~1.4 с при медленном ответе",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Локальный спиннер CallHistoryLoading противоречит docs/conventions/frontend.md:285 («Do NOT add per-component spinners»); нужно выбрать: убрать спиннер (null при loading) или исключить loadCallHistory из $isBlocking и дописать исключение в конвенцию",
+      "console_excerpt": null,
+      "network_excerpt": "background refresh 1.5 s: backdrop visible 618–2029 ms",
+      "fix_suggestion": "Либо CallHistoryList рендерит null при loading без записей (индикатор — глобальный оверлей, по конвенции), либо убрать loadCallHistory из $isBlocking и добавить в frontend.md исключение для страниц со своим состоянием загрузки"
+    },
+    {
+      "id": 2,
+      "title": "В компактном PiP на телефоне значок выключенного микрофона закрывает аватар",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P3.1",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.styled.ts",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/15-phone-compact-pip-camera-off-mic-off.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/38-phone-compact-pip-camera-off-mic-off-mobile.png",
+        "docs/manual-qa-reports/2026-10-19-030-webrtc-video-calls-run5/screenshots/37-phone-regular-pip-camera-off-mic-off.png"
+      ],
+      "expected": "Аватар-заглушка и значок выключенного микрофона видны без наложения",
+      "actual": "72×96: значок 28×28 (x 318–346) накрывает аватар 32×32 (x 307–339) на 21×27 px; на десктопе 132×80 наложения нет",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Расположение значка и аватара в компактной плитке — решение по дизайну",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "В компактной плитке сдвинуть аватар или уменьшить/перенести значок микрофона (например, в строку с «Вы»)"
+    }
+  ]
+}
