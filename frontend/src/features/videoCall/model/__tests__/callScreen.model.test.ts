@@ -6,6 +6,10 @@ import { OUTGOING_REVEAL_DELAY_MS } from "../call.constants";
 import * as callModel from "../call.model";
 import * as callRequestModel from "../callRequest.model";
 import * as callScreenModel from "../callScreen.model";
+// The whole call wiring, as in the app: with a transport installed the invite goes out and the
+// call stays outgoing, whatever other test files loaded before.
+import "../index";
+import { installTransport, resetCallFlow } from "./callFlow";
 
 // patronum `delay` keeps the scope busy until its timer fires, so units are launched
 // fire-and-forget and the clock is driven explicitly.
@@ -19,9 +23,11 @@ const startCall = (scope: Scope) =>
 
 beforeEach(() => {
   vi.useFakeTimers();
+  installTransport();
 });
 
 afterEach(() => {
+  resetCallFlow();
   vi.useRealTimers();
 });
 
