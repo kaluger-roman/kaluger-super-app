@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-10-23
+
+### Fixed
+- Ссылка-приглашение в кабинет ученика и ссылка сброса пароля в письме вели на `http://localhost:3000`: на проде в `FRONTEND_URL` осталось dev-значение. Прод-конфиг исправлен (заодно `NODE_ENV=production`); в production бэкенд больше не стартует, если `FRONTEND_URL` не https или указывает на локальную машину, а деплой проверяет `.env` сервера до перезапуска (`dist/scripts/checkEnv.js`). Запасные `http://localhost:3000` в коде убраны, адрес берётся из одного `getFrontendUrl`
+- Вкладка, ждущая конца звонка в другой вкладке, при обрыве или рестарте сервера не переподключается сама и не отбирает соединение у вкладки со звонком; баннер не мигает пустым между «идёт звонок» и «Приложение открыто…» (8615537)
+
 ## 2026-10-20
 
 ### Added

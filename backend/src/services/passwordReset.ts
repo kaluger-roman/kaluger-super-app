@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { revokeTutorSessions } from "../lib/tokenRevocation";
 import {
+  getFrontendUrl,
   RESET_REQUEST_COOLDOWN_SECONDS,
   comparePassword,
   createResetToken,
@@ -12,14 +13,6 @@ import {
   validatePassword,
 } from "../utils";
 import { sendPasswordResetEmail } from "./email";
-
-const getFrontendUrl = (): string => {
-  const url = process.env.FRONTEND_URL;
-  if (!url) {
-    throw new Error("FRONTEND_URL is not set");
-  }
-  return url.replace(/\/$/, "");
-};
 
 const buildResetUrl = (token: string): string =>
   `${getFrontendUrl()}/reset-password?token=${token}`;

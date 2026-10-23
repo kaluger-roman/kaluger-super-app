@@ -1,4 +1,4 @@
-import { validateRequiredEnv } from "../validateEnv";
+import { validateDeployEnv, validateRequiredEnv } from "../validateEnv";
 
 describe("validateRequiredEnv", () => {
   const snapshot = { ...process.env };
@@ -41,5 +41,45 @@ describe("validateRequiredEnv", () => {
     }
     process.env.STUDENT_JWT_SECRET = "   ";
     expect(() => validateRequiredEnv()).toThrow(/STUDENT_JWT_SECRET/);
+  });
+
+  const setAll = () => {
+    for (const key of REQUIRED) {
+      process.env[key] = "x";
+    }
+  };
+
+  it("refuses to start in production when FRONTEND_URL points to localhost (regression: student invite links to localhost)", () => {
+    setAll();
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "http://localhost:3000";
+    expect(() => validateRequiredEnv()).toThrow(/FRONTEND_URL must use https in production/);
+  });
+
+  it("starts in production with a public https FRONTEND_URL", () => {
+    setAll();
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "https://tutor.kaluger.ru";
+    expect(() => validateRequiredEnv()).not.toThrow();
+  });
+
+  it("allows a localhost FRONTEND_URL outside production", () => {
+    setAll();
+    process.env.NODE_ENV = "development";
+    process.env.FRONTEND_URL = "http://localhost:3000";
+    expect(() => validateRequiredEnv()).not.toThrow();
+  });
+});
+
+describe("validateDeployEnv", () => {
+  const snapshot = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...snapshot };
+  });
+
+  it("fails the deploy when the server does not run in production", () => {
+    process.env.NODE_ENV = "development";
+    expect(() => validateDeployEnv()).toThrow(/NODE_ENV must be "production"/);
   });
 });
