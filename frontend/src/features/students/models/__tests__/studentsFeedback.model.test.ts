@@ -2,6 +2,7 @@ import { allSettled, fork } from "effector";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { studentModel, lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import { lessonsModel } from "@features/lessons";
 import type { Student } from "@shared";
 import { notificationsModel } from "@shared/model";
@@ -146,7 +147,10 @@ describe("studentsFeedback.model", () => {
 
     it("should show success notification with correct message", async () => {
       const scope = fork({
-        handlers: [[studentModel.removeStudentFx, vi.fn(() => Promise.resolve())]],
+        handlers: [
+          ...lessonListLoadHandlers(),
+          [studentModel.removeStudentFx, vi.fn(() => Promise.resolve())],
+        ],
       });
 
       await allSettled(studentModel.removeStudentFx, {

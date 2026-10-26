@@ -1,6 +1,7 @@
 import { fork, allSettled } from "effector";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
+import { studentModel } from "@entities";
 import type { Student } from "@shared";
 
 import * as studentsArchiveModel from "../studentsArchive.model";
@@ -116,8 +117,10 @@ describe("studentsArchive.model", () => {
 
   describe("Archive confirmation", () => {
     it("should call archiveStudent when archiveConfirmed is triggered", async () => {
+      const archiveStudent = vi.fn(() => Promise.resolve({ ...mockStudent, archived: true }));
       const scope = fork({
         values: [[studentsArchiveModel.$archiveDialogStudent, mockStudent]],
+        handlers: [[studentModel.archiveStudentFx, archiveStudent]],
       });
 
       await allSettled(studentsArchiveModel.archiveConfirmed, {
@@ -128,9 +131,11 @@ describe("studentsArchive.model", () => {
         },
       });
 
-      // Проверяем что событие archiveStudent было вызвано
-      // В реальности это вызовет эффект, но мы можем проверить что диалог закрылся
-      expect(scope.getState(studentsArchiveModel.$archiveDialogStudent)).toBeNull();
+      expect(archiveStudent).toHaveBeenCalledWith({
+        id: "1",
+        archiveReason: "COMPLETED_STUDIES",
+        archiveComment: "Test comment",
+      });
     });
 
     it("should close archive dialog after confirmation", async () => {
@@ -138,6 +143,12 @@ describe("studentsArchive.model", () => {
         values: [
           [studentsArchiveModel.$archiveDialogStudent, mockStudent],
           [studentsArchiveModel.$archiveReason, "COMPLETED_STUDIES"],
+        ],
+        handlers: [
+          [
+            studentModel.archiveStudentFx,
+            () => Promise.resolve({ ...mockStudent, archived: true }),
+          ],
         ],
       });
 
@@ -171,19 +182,21 @@ describe("studentsArchive.model", () => {
 
   describe("Unarchive confirmation", () => {
     it("should call unarchiveStudent when unarchiveConfirmed is triggered", async () => {
+      const unarchiveStudent = vi.fn(() => Promise.resolve(mockStudent));
       const scope = fork({
         values: [[studentsArchiveModel.$unarchiveDialogStudent, mockStudent]],
+        handlers: [[studentModel.unarchiveStudentFx, unarchiveStudent]],
       });
 
       await allSettled(studentsArchiveModel.unarchiveConfirmed, { scope });
 
-      // Проверяем что диалог закрылся
-      expect(scope.getState(studentsArchiveModel.$unarchiveDialogStudent)).toBeNull();
+      expect(unarchiveStudent).toHaveBeenCalledWith("1");
     });
 
     it("should close unarchive dialog after confirmation", async () => {
       const scope = fork({
         values: [[studentsArchiveModel.$unarchiveDialogStudent, mockStudent]],
+        handlers: [[studentModel.unarchiveStudentFx, () => Promise.resolve(mockStudent)]],
       });
 
       await allSettled(studentsArchiveModel.unarchiveConfirmed, { scope });

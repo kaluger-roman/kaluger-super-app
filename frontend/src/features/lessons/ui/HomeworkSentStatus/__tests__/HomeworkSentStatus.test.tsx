@@ -2,8 +2,11 @@ import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fork, allSettled } from "effector";
+import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import { theme } from "@shared";
 import type { Lesson } from "@shared";
 
@@ -46,6 +49,15 @@ const mockLesson: Lesson = {
     archived: false,
   },
 };
+
+// Confirming the dialog updates the lesson, and the lessons page then reloads its list.
+const createLessonUpdateScope = () =>
+  fork({
+    handlers: [
+      ...lessonListLoadHandlers(),
+      [lessonModel.updateLessonFx, () => Promise.resolve(mockLesson)],
+    ],
+  });
 
 describe("HomeworkSentStatus", () => {
   beforeEach(() => {
@@ -239,9 +251,11 @@ describe("HomeworkSentStatus", () => {
     it("should stop propagation when clicking switch", async () => {
       const onClick = vi.fn();
       renderWithTheme(
-        <div onClick={onClick}>
-          <HomeworkSentStatus lesson={mockLesson} />
-        </div>
+        <Provider value={createLessonUpdateScope()}>
+          <div onClick={onClick}>
+            <HomeworkSentStatus lesson={mockLesson} />
+          </div>
+        </Provider>
       );
 
       const switchElement = screen.getByRole("checkbox");

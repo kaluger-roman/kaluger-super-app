@@ -44,3 +44,25 @@ export const getCallStatusLabel = (
 
 export const getCallDirectionLabel = (direction: CallHistoryDirection): string =>
   direction === "outgoing" ? "Исходящий" : "Входящий";
+
+// A button focused by a mouse click must not hold the controls; an engine that does not know
+// :focus-visible gets the old behaviour, where any focus holds them.
+export const isKeyboardFocus = (target: EventTarget | null): boolean => {
+  if (!(target instanceof Element)) return false;
+  try {
+    return target.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+};
+
+// A focused button that gets disabled or removed sends no blur, so the page itself is asked.
+export const hasKeyboardFocusWithin = (selector: string): boolean => {
+  const active = document.activeElement;
+  return (
+    active instanceof Element &&
+    active.closest(selector) !== null &&
+    !active.matches(":disabled") &&
+    isKeyboardFocus(active)
+  );
+};

@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "branch": "039-call-fullscreen",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-23T18:26:51Z",
+  "diff_stats": {
+    "files_changed": 62,
+    "insertions": 3642,
+    "deletions": 165
+  },
+  "summary": {
+    "raw_findings": 9,
+    "after_dedup": 9,
+    "after_score_filter": 7,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 6
+    },
+    "by_category": {
+      "convention": 1,
+      "logic": 3,
+      "hack": 3
+    }
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Новые хелперы readGesture и getVideoLayoutRect не покрыты изолированными тестами: ветки null у readGesture не выполняет ни один тест, а сложение clientLeft/offsetLeft проверено только на нулях",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.helpers.ts",
+      "line_start": 106,
+      "line_end": 126,
+      "snippet": "export const getVideoLayoutRect = (video: HTMLVideoElement): ViewportRect | null => {\n...\nexport const readGesture = (event: Event): GestureInput | null => {\n  if (!(\"scale\" in event) || !(\"clientX\" in event) || !(\"clientY\" in event)) return null;\n  const { scale, clientX, clientY } = event;",
+      "rationale": "Нарушены docs/conventions/frontend-testing.md:8 «Pure functions — test in isolation» и требование CLAUDE.md (раздел Testing Requirements) «All new code must have full test coverage… unit tests for… utility functions». Grep по frontend/src и frontend/e2e находит readGesture и getVideoLayoutRect только в VideoTile.hooks.ts, в VideoTile.helpers.test.ts их нет, хотя остальные новые хелперы файла (toCenterOffset, getWheelZoomFactor, getStageGeometry, getTileBackground) там проверены. Косвенно через CallVideo.test проходит только счастливый путь readGesture (событие со всеми числовыми полями), а оба `return null` не выполняет ни один тест. getVideoLayoutRect — это фикс iter-2 f9, но его регрессионный тест идёт с рамкой в (0,0), где clientLeft/clientTop/offsetLeft/offsetTop в happy-dom равны 0. Поэтому перепутанный знак или пропущенное слагаемое тесты не поймают.",
+      "fix_hint": "Добавить в VideoTile.helpers.test.ts кейсы для readGesture: событие без scale, со scale-строкой и валидное. Для getVideoLayoutRect нужны три кейса: offsetParent = null, ненулевые clientLeft/clientTop у рамки и offsetLeft/offsetTop у video (через Object.defineProperties), а также рамка не в (0,0) с проверкой, что трансформированный getBoundingClientRect самого video не учитывается.",
+      "score": 75,
+      "verification_note": "Подтверждено по коду: readGesture и getVideoLayoutRect (VideoTile.helpers.ts:106-126) не импортируются ни в одном файле тестов, в VideoTile.helpers.test.ts их нет, а в CallVideo.test.tsx readGesture проверяется только счастливым путём, оба return null не выполняются; getVideoLayoutRect тестируется с рамкой без clientLeft/offsetLeft, то есть сложение не проверено. Это прямое нарушение явного правила CLAUDE.md («full test coverage», unit-тесты для утилит) и docs/conventions/frontend-testing.md:8, поэтому 75, хотя на прод-поведение влияет слабо.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "shallow-bug",
+      "title": "CHANGELOG обещает «Esc (если поверх нет диалога)», а код выходит из режима по Esc всегда и диалоги не проверяет",
+      "category": "logic",
+      "file": "CHANGELOG.md",
+      "line_start": 10,
+      "line_end": 10,
+      "snippet": "Выход — «Свернуть», Esc (если поверх нет диалога) или снова двойной щелчок / касание",
+      "rationale": "useFullscreenEscape (ActiveCallScreen.hooks.ts) ловит Esc на document в фазе capture, гасит его stopPropagation и вызывает escapePressed. Никакой проверки диалога там нет: isInsideDialogWithin удалён, а тест «should take Escape from a dialog left open under the call screen» проверяет как раз, что режим закрывается при фокусе внутри [role=\"dialog\"]. Оговорка в CHANGELOG описывает поведение из iter-1, и в /news она уйдёт пользователям неверной.",
+      "fix_hint": "Убрать оговорку «(если поверх нет диалога)», оставив «Выход — «Свернуть», Esc или снова двойной щелчок / касание».",
+      "score": 50,
+      "verification_note": "CHANGELOG.md:10 действительно пишет «Esc (если поверх нет диалога)», но useFullscreenEscape в ActiveCallScreen.hooks.ts гасит Esc на document (capture) безусловно, без проверки диалога, и регрессионный тест «should take Escape from a dialog left open under the call screen» это подтверждает; ошибка фактическая, но касается только текста changelog и попадёт в /news, а на работу функции не влияет, поэтому оценка 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "hacks",
+      "title": "Тест-тавтология к исправлению iter-2 f3: проверяет, что CONTROLS_REVEAL_GUARD_MS не меньше суммы, через которую он сам определён",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/callFullscreen.model.test.ts",
+      "line_start": 167,
+      "line_end": 171,
+      "snippet": "  it(\"should keep the reveal guard as long as the slowest double tap\", () => {\n    expect(CONTROLS_REVEAL_GUARD_MS).toBeGreaterThanOrEqual(\n      TAP_MAX_DURATION_MS + DOUBLE_TAP_INTERVAL_MS\n    );\n  });",
+      "rationale": "В callFullscreen.constants.ts:6 CONTROLS_REVEAL_GUARD_MS = TAP_MAX_DURATION_MS + DOUBLE_TAP_INTERVAL_MS, так что тест повторяет определение константы и упасть не может. Поведение он не проверяет: если защиту начнут отсчитывать не от первого касания или debounce уберут, тест останется зелёным. Соседний тест (строки 150-165) ждёт CONTROLS_REVEAL_GUARD_MS - 1, то есть тоже меряет защиту ею самой.",
+      "fix_hint": "Удалить тест-тавтологию. В тесте на hiddenControlsTapped ждать TAP_MAX_DURATION_MS + DOUBLE_TAP_INTERVAL_MS - 1 (константы распознавателя двойного тапа, а не саму защиту) и проверять, что $controlsInteractive ещё false: тогда инвариант из iter-2 f3 проверяется через поведение.",
+      "score": 50,
+      "verification_note": "Тест действительно тавтологичен: в callFullscreen.constants.ts:6 CONTROLS_REVEAL_GUARD_MS = TAP_MAX_DURATION_MS + DOUBLE_TAP_INTERVAL_MS, а тест (callFullscreen.model.test.ts:167-171) проверяет то же равенство, поэтому упасть не может и поведение не покрывает; оба уравнения добавлены в diff, не pre-existing, и не входят в список отклонённых повторов, но вред ограничен ложной уверенностью в покрытии, поэтому категория hack с оценкой 50, а не выше.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "hacks",
+      "title": "Исправление iter-2 f2: защита от касания-призрака включается при любом выходе из режима, хотя призрак бывает только после двойного тапа",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/callFullscreen.model.ts",
+      "line_start": 105,
+      "line_end": 113,
+      "snippet": "const revealGuardStarted = merge([hiddenControlsTapped, fullscreenExited]);\nsample({ clock: revealGuardStarted, fn: () => true, target: $isRevealGuarded });\nsample({\n  clock: debounce({ source: revealGuardStarted, timeout: CONTROLS_REVEAL_GUARD_MS }),\n  fn: () => false,",
+      "rationale": "Причина призрака в том, что useDoubleTapToggle переключает режим на pointerup второго касания, а click того же касания браузер проверяет уже по новой разметке. При выходе кнопкой «Свернуть» (переключение в onClick), по Esc или двойным щелчком мыши (dblclick приходит после обоих click) призрака нет. Но fullscreenExited всё равно на 550 мс ставит pointer-events: none на обёртку ControlsGuard, и щелчок мышью по «Завершить звонок» или микрофону сразу после Esc или «Свернуть» молча пропадает. Это окно по времени, которое прикрывает следствие сразу на всех путях выхода, а причину не устраняет.",
+      "fix_hint": "Включать защиту только при выходе двойным тапом: отдельное событие из useDoubleTapToggle (например doubleTapToggled → fullscreenToggled плюс старт защиты) вместо fullscreenExited. Либо гасить призрак в источнике: на touchend второго касания, которое переключило режим, вызвать preventDefault, это отменяет синтетический click. Тогда для выхода ControlsGuard не нужен.",
+      "score": 50,
+      "verification_note": "Код подтверждает: fullscreenExited (срабатывает и по Esc, и по «Свернуть») запускает $isRevealGuarded на CONTROLS_REVEAL_GUARD_MS = 250+300 = 550 мс, а ControlsGuard в ActiveCallScreen.styled.ts:104 ставит pointer-events: none всей обычной CallControlBar, поэтому клик по «Завершить звонок» или микрофону в это окно молча теряется, то есть опасение finding'а реально и является новой регрессией этого фикса; но окно короткое, нужен совпадающий по времени клик сразу после Esc или «Свернуть», и это не обычный путь, поэтому проблема мелкая и редкая, а категория hack даёт нижний порог 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "hacks",
+      "title": "Остаток от удалённого $isControlsFocused (iter-2 f5): фокус мышью шлёт controlsBlurred, и на этом держится только тест",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/ui/FullscreenControls/FullscreenControls.hooks.ts",
+      "line_start": 32,
+      "line_end": 35,
+      "snippet": "    onFocus: (event) => {\n      if (isKeyboardFocus(event.target)) actions.focused();\n      else actions.blurred();\n    },",
+      "rationale": "Ветка else нужна была, чтобы сбрасывать флаг $isControlsFocused, а его удалили: удержание теперь читает readControlsFocusFx из DOM в момент срабатывания таймера. Теперь событие «потерял фокус» шлётся на получение фокуса и только перезапускает отсчёт. В приложении это лишнее: мышь или палец, которые поставили фокус, уже вызвали activityDetected или hiddenControlsTapped на Root, а те тоже перезапускают таймер. Без этой ветки падает только FullscreenControls.test.tsx:144-158 «should not hold the controls with a focus a mouse click put inside». Там scope собран через fork с $isFullscreen = true без входа в режим, таймер не запущен, и его запускает именно этот ложный controlsBlurred. Выходит, прод-ветка служит тестовой подпоркой.",
+      "fix_hint": "Убрать else-ветку и вызывать actions.focused() только для фокуса с клавиатуры. В тесте запускать отсчёт так же, как в приложении: войти в режим через fullscreenToggled или прислать pointerDown мышью на кнопку перед focus(), и проверить, что фокус мышью не удерживает панель.",
+      "score": 50,
+      "verification_note": "Подтверждено по коду: ветка else в useControlsFocus шлёт controlsBlurred на фокус мышью, и без неё падает только тест «should not hold the controls with a focus a mouse click put inside» (scope без входа в режим, таймер не запущен), а в проде этот путь и так перекрыт onPointerDown на Root, поэтому ветка служит тестовой подпоркой без поломки поведения, но к категории hack ниже 50 не опускается.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "agent": "removed-behavior",
+      "title": "В полноэкранном режиме имя собеседника обрезается многоточием без подсказки: Tooltip с плашки имени не перенесён",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/FullscreenControls/FullscreenTopBar.tsx",
+      "line_start": 31,
+      "line_end": 33,
+      "snippet": "          <Styled.PeerName variant=\"subtitle1\" noWrap>\n            {peerName}\n          </Styled.PeerName>",
+      "rationale": "Вариант fullscreen (bare) убирает NameRow вместе с `<Tooltip title={name}>` вокруг NamePill, а шапка с переносимым PeerName в режиме скрыта. Единственное место с именем теперь `noWrap` без Tooltip, так что длинное имя на узком экране обрезается и полностью его не посмотреть. В обычном режиме полное имя видно и в шапке, и в подсказке над плашкой.",
+      "fix_hint": "Обернуть PeerName в верхней панели в `<Tooltip title={peerName}>`, как было у NamePill, и добавить тест, что при наведении показывается полное имя.",
+      "score": 50,
+      "verification_note": "Факт подтверждён кодом: в fullscreen-варианте VideoTile bare=true и NameRow с Tooltip не рендерится, а PeerName в FullscreenTopBar стоит с noWrap без Tooltip, при этом шапка ActiveCallScreen в fullscreen скрыта, так что обрезанное имя нигде не показывается полностью; но спека (FR-004, сценарий 7) требует лишь видимости имени, а не полного текста, и проблема касается только длинных имён, поэтому это минорная регрессия, а не блокер.",
+      "severity": "medium"
+    },
+    {
+      "id": "f7",
+      "agent": "shallow-bug",
+      "title": "Ctrl + колесо обычной мыши масштабирует рывками примерно в 2,7 раза за щелчок: чувствительность для щипка тачпада применяется к любому колесу с ctrlKey",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.helpers.ts",
+      "line_start": 89,
+      "line_end": 93,
+      "snippet": "  let deltaPx = deltaY;\n  if (deltaMode === WHEEL_DELTA_LINE) deltaPx = deltaY * WHEEL_LINE_HEIGHT_PX;\n  if (deltaMode === WHEEL_DELTA_PAGE) deltaPx = deltaY * pageHeight;\n  const sensitivity = ctrlKey ? PINCH_WHEEL_ZOOM_SENSITIVITY : WHEEL_ZOOM_SENSITIVITY;\n  return Math.exp(-deltaPx * sensitivity);",
+      "rationale": "PINCH_WHEEL_ZOOM_SENSITIVITY = 0.01 рассчитана на щипок тачпада, у которого маленькие deltaY. Но ctrlKey стоит и у привычного Ctrl + колесо обычной мышью. В Chrome под Windows один щелчок даёт deltaY около 100, factor = exp(±1): 1× → 2,72× → 4×, а обратно 4× → 1,47× → 1×. Без Ctrl тот же щелчок даёт exp(0,2) ≈ 1,22×, то есть один и тот же жест зумит в 5 раз сильнее в зависимости от того, зажат ли Ctrl. В Firefox (deltaMode = 1, 3 строки) выходит около 1,6× за щелчок.",
+      "fix_hint": "Повышенную чувствительность давать только щипку: например, при ctrlKey ограничивать |deltaPx| (Math.sign(d) * Math.min(|d|, ~10)) или брать PINCH-чувствительность только при deltaMode === 0 и малом |deltaY|, а дискретные щелчки колеса считать с WHEEL_ZOOM_SENSITIVITY. Добавить в VideoTile.helpers.test кейс ctrlKey + deltaY 100: factor не больше шага обычного колеса.",
+      "score": 50,
+      "verification_note": "Дефект подтверждён кодом: getWheelZoomFactor (VideoTile.helpers.ts:92) выбирает PINCH_WHEEL_ZOOM_SENSITIVITY=0.01 по одному ctrlKey, и обычный Ctrl+колесо мышью с deltaY≈100 даёт ×2,72 за щелчок против ×1,22 без Ctrl, при этом clampScale ограничивает 4 (callZoom.helpers.ts). Спека (строки 122, 206) чувствительность колеса не фиксирует, тест на ctrl покрывает только deltaY=-10, поэтому это реальная, но редкая и не критичную для функционала неконсистентность, а не блокер: 50.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "cross-file",
+      "title": "Исправление iter-2 f2 неполное: кнопка «Во весь экран» на плитке собеседника не попадает под защиту ControlsGuard, и второе касание двойного тапа на выход сразу возвращает режим",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.tsx",
+      "line_start": 51,
+      "line_end": 54,
+      "snippet": "          <Styled.TopEnd>\n            {!config.badgeInNameRow && micBadge}\n            {config.fullscreenToggle && <FullscreenToggleButton placement=\"tile\" />}\n          </Styled.TopEnd>",
+      "rationale": "Защиту после выхода ($controlsInteractive / $isRevealGuarded после fullscreenExited) читает только ControlsGuard вокруг обычной CallControlBar (ActiveCallScreen.tsx:96). Но после выхода в обычном виде появляется ещё одна кнопка — FullscreenToggleButton в правом верхнем углу плитки (RemoteWrap), и она лежит там, где только что было полноэкранное видео. Сценарий: двойной тап на выход приходится на это место. На pointerup второго касания useDoubleTapToggle вызывает toggle, React синхронно рисует обычный вид, и синтетический click от касания (iOS Safari и Chrome Android проверяют попадание заново) достаётся «Во весь экран». В итоге режим тут же включается снова, то есть двойной тап в этой точке не выходит из режима. Это тот же класс «кнопка появилась под пальцем», что и в iter-2 f2, только для другого места вызова.",
+      "fix_hint": "Подчинить переключатель на плитке той же защите: например, в FullscreenToggleButton при placement=\"tile\" читать callFullscreenModel.$controlsInteractive и ставить pointer-events: none, пока он false. Или обернуть TopEnd или TopRow плитки тем же ControlsGuard. И добавить тест: Escape или выход двойным тапом, потом сразу клик по «Во весь экран» режим не включает.",
+      "score": 45,
+      "verification_note": "Код подтверждает факт: ControlsGuard (ActiveCallScreen.tsx) оборачивает только CallControlBar, а FullscreenToggleButton placement=\"tile\" в VideoTile.tsx (TopEnd, variant remote, fullscreenToggle: true) после выхода появляется без защиты; механизм «click по новой кнопке после синхронного рендера на touch» тот же, что принят для iter-2 f2, но на устройствах не проверен, а попадание двойного тапа именно в 32px-кнопку в углу плитки редкое, и последствие ограничено повторным входом в режим, поэтому оценка ниже 50.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "deep-logic",
+      "title": "Исправление iter-2 f2 неполное: защиту от «касания-призрака» запускает только выход из режима и получает только CallControlBar, а вход двойным тапом и кнопка «Во весь экран» на плитке остаются без защиты",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/callFullscreen.model.ts",
+      "line_start": 105,
+      "line_end": 113,
+      "snippet": "// The tap that reveals hidden controls, and the second tap of a double tap that leaves the mode,\n// land where buttons appear: for a moment those buttons let the touch through.\nconst revealGuardStarted = merge([hiddenControlsTapped, fullscreenExited]);\nsample({ clock: revealGuardStarted, fn: () => true, target: $isRevealGuarded });",
+      "rationale": "Механизм тот же, что в iter-2 f2: toggle срабатывает на pointerup второго касания, React синхронно перерисовывает экран, и синтетический click того же касания попадает в элемент, который оказался под пальцем. (1) Вход: fullscreenEntered не запускает защиту, и в ту же отрисовку $controlsInteractive уже true. На телефоне в портрете (STACKED_BAR_MEDIA) при демонстрации ряд ZoomControls встаёт над кнопками звонка и перекрывает нижние ~50 px обычной плитки (полосу NameRow), так что двойной тап там сразу нажимает «Увеличить» и даёт 150%. (2) Выход: ControlsGuard обёрнут только вокруг CallControlBar, а FullscreenToggleButton placement=\"tile\" в правом верхнем углу обычной плитки ничем не защищён. Двойной тап в этом месте (y ≈ 97–129 px на телефоне, при видимой панели — ниже TopBar) выходит из режима, и click сразу возвращает режим, так что выйти не получается. Зоны узкие, вред небольшой (лишний масштаб или повторный вход), но это та же дыра, которую закрывал f2.",
+      "fix_hint": "Запускать защиту на любом переключении: `merge([hiddenControlsTapped, $isFullscreen.updates])`, тогда полосы FullscreenControls тоже получат её при входе. На время защиты гасить click целиком на Root в capture-фазе (или давать $controlsInteractive и FullscreenToggleButton на плитке), а не только обёртке CallControlBar. Добавить тест: вход двойным тапом, полосы сразу после него data-interactive=\"false\".",
+      "score": 40,
+      "verification_note": "Разрыв в защите реален по коду: revealGuardStarted запускается только на hiddenControlsTapped и fullscreenExited, поэтому вход двойным тапом защиты не получает, а FullscreenToggleButton на плитке (VideoTile.tsx:53) вне ControlsGuard, но вред ограничен лишним масштабом (зум доступен только при демонстрации экрана, ZoomControls.tsx и callZoom.model.ts:22) или повторным входом, и совпадение точки касания с кнопкой зависит от геометрии, которую я не проверял в рендере, поэтому оценка ниже 50.",
+      "reason": "below threshold"
+    }
+  ]
+}

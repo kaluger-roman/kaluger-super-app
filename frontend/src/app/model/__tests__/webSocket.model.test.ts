@@ -2,6 +2,7 @@ import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import { changePasswordModel } from "@features";
 import { expireTutorSession } from "@shared";
 
@@ -138,6 +139,7 @@ describe("app/model/webSocket.model — lesson_status_updated", () => {
     const syncLessonHandler = vi.fn(async () => ({}) as never);
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonHandler],
         [lessonModel.syncLessonFx, syncLessonHandler],
       ],

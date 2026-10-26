@@ -153,6 +153,23 @@ node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sen
 - Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
 - Skip only for read-only tasks that create no branch.
 
+## Commit and Push Without Asking
+
+Once the work on a task branch is done and verified (tests, lint, tsc green), commit it and push it to the task branch yourself — do not ask and do not wait for a command. Then wait for the PR's CI checks and fix any failure. This applies to the final phase of `/auto-bug-fix`, `/auto-feature`, `/bug-hunt` and `/improve-hunt` too.
+
+- Do not commit between review/QA iterations: `/code-review-local` reviews the uncommitted working tree.
+- Never commit orchestrator state (`.claude/auto-*/`) or screenshots (`docs/**/screenshots/`, `.playwright-mcp/`).
+- Still ask before pushing to `main`, force-pushing, merging, marking the PR ready (`gh pr ready`), running `/news` and deploying.
+
+## MANDATORY: File an Issue for Every Finding
+
+Any problem noticed along the way — a bug, a needed improvement, an infrastructure error (CI, deploy, dev machine, hooks, scripts, flaky tests) or anything else that looks wrong — gets a GitHub issue right away, without asking. The user triages the issues and hands the ones worth doing to a separate session.
+
+- Do not fix the finding in the current task and do not widen its scope; skip the issue only when the current task fixes it anyway.
+- Search first (`gh issue list --search "<keywords>" --state all`); if a matching issue exists, add a comment instead of a duplicate.
+- Body in Russian: what was seen, where (`file:line`, command, log excerpt), how to reproduce, suspected cause, possible fix, and the task/branch it was found in. Pass it with `--body-file`; label `bug`, `enhancement` or `documentation`.
+- List the filed issues with links in the final reply.
+
 ## Changelog
 
 Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`, `/commit-commands:commit-push-pr`), always run `/changelog` to update CHANGELOG.md with the changes from the current branch. This ensures the changelog stays in sync with releases. After `/changelog`, run `/news` to generate a user-friendly news entry from the changelog and insert it into the database. A PreToolUse hook (`.claude/hooks/check-changelog-before-pr.sh`) denies `gh pr create` / `gh pr ready` until CHANGELOG.md is in the branch diff; the start-of-task draft PR from `scripts/start-task-pr.mjs` is not gated.
@@ -192,6 +209,8 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 - PostgreSQL via Prisma — no schema change; new state in files: `$BACKUP_DIR/.offsite-last-pull`, `$BACKUP_DIR/.offsite-restore-check.json` (prod), `/home/roman-kaluger/prod-backups/` (home) (036-offsite-backups)
 - TypeScript 5.x (strict), Node.js 20 + React, Effector, effector-react, patronum, Material UI (styled API), axios — frontend; Express, Prisma, ws — backend. Новых зависимостей нет (038-lesson-call-button)
 - PostgreSQL через Prisma. Одна новая nullable-колонка `call_records."lessonId"` (FK на `lessons`, `ON DELETE SET NULL`) + индекс `(lessonId, startedAt)`; без бэкфилла (038-lesson-call-button)
+- TypeScript 5.x (strict), React 19 + React, Effector 23, effector-react, patronum 2.3 (`debounce`), Material UI (styled API из `@shared`), Pointer Events, ResizeObserver. Новых зависимостей нет (039-call-fullscreen)
+- N/A — состояние в памяти вкладки на время звонка; без изменений БД и API (039-call-fullscreen)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

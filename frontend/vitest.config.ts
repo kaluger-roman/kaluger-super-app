@@ -24,6 +24,8 @@ export default defineConfig({
           name: "shared",
           include: testFiles.shared,
           isolate: false,
+          // Added to the root setupFiles (`extends: true` concatenates them).
+          setupFiles: [path.resolve(__dirname, "./src/__tests__/sharedModels.setup.ts")],
           sequence: { shuffle: { files: true, tests: false }, seed: shuffleSeed },
         },
       },
