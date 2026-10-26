@@ -3,10 +3,10 @@ import type { FC } from "react";
 import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
 import { useMediaQuery } from "@mui/material";
 
+import { SHORT_STAGE_QUERY } from "../../videoCall.constants";
 import type { CallMediaState } from "../../videoCall.types";
 import { CallAvatar } from "../CallAvatar";
 import { CallVideo } from "./CallVideo";
-import { SHORT_STAGE_QUERY } from "./VideoTile.constants";
 import {
   getCameraLabel,
   getTileContentKind,
