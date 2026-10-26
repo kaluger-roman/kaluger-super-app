@@ -4,17 +4,18 @@ import { fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, expect, it } from "vitest";
 
-import { callModel } from "@features/videoCall";
+import { callFullscreenModel, callModel } from "@features/videoCall";
 import { theme } from "@shared";
 
 import { appInitModel } from "../../../model";
 import { OfflineIndicator } from "../OfflineIndicator";
 
-const renderIndicator = (phase: "idle" | "active") => {
+const renderIndicator = (phase: "idle" | "active", fullscreen = false) => {
   const scope = fork({
     values: [
       [appInitModel.$isOnline, false],
       [callModel.$callPhase, phase],
+      [callFullscreenModel.$isFullscreen, fullscreen],
     ],
   });
   render(
@@ -48,5 +49,17 @@ describe("OfflineIndicator", () => {
     const style = getComputedStyle(fixedBoxOf(/Нет подключения/));
     expect(style.top).not.toBe("");
     expect(style.bottom).toBe("");
+  });
+
+  it("should let taps through to the fullscreen call's top bar under it", () => {
+    renderIndicator("active", true);
+
+    expect(fixedBoxOf(/Нет подключения/)).toHaveAttribute("data-pass-through", "true");
+  });
+
+  it("should stay a regular indicator outside the fullscreen call", () => {
+    renderIndicator("active");
+
+    expect(fixedBoxOf(/Нет подключения/)).toHaveAttribute("data-pass-through", "false");
   });
 });
