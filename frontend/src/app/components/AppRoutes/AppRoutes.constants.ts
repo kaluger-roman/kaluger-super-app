@@ -54,6 +54,10 @@ export const StudentVerifyEmailPage = lazy(() =>
     default: m.StudentVerifyEmailPage,
   }))
 );
+// TODO(auto-feature): remove mockup preview route
+export const CallBackgroundMockupPage = lazy(() =>
+  import("@pages/mockups").then((m) => ({ default: m.CallBackgroundMockupPage }))
+);
 export const CallHistoryPage = lazy(() =>
   import("@pages/callHistory").then((m) => ({ default: m.CallHistoryPage }))
 );

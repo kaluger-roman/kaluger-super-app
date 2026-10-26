@@ -4,9 +4,16 @@ import { useUnit } from "effector-react";
 
 import { callModel } from "../../model";
 import { CONNECTING_TEXT } from "../../videoCall.constants";
-import { formatCallDuration } from "../../videoCall.helpers";
+import {
+  formatCallDuration,
+  getPeerAudioNotice,
+  getPeerInterruption,
+} from "../../videoCall.helpers";
+import { BackgroundAudioHint } from "../BackgroundAudioHint";
+import { getCallBackgroundMock } from "../callBackgroundMock.helpers";
 import { CallControlBar } from "../CallControlBar";
 import { CallStatusBanner } from "../CallStatusBanner";
+import { RemoteAudio } from "../RemoteAudio";
 import { VideoTile } from "../VideoTile";
 import * as Styled from "./ActiveCallScreen.styled";
 
@@ -18,9 +25,14 @@ export const ActiveCallScreen: FC = () => {
   const isConnecting = useUnit(callModel.$isConnecting);
   const localStream = useUnit(callModel.$localTileStream);
   const remoteStream = useUnit(callModel.$remoteStream);
+  const callRole = useUnit(callModel.$callRole);
+  // TODO(auto-feature): replace mock with callPresenceModel.$peerPresence
+  const peerPresence = getCallBackgroundMock().peerPresence;
+  const interruption = getPeerInterruption(callRole, peerPresence);
+  const audioNotice = getPeerAudioNotice(callRole, peerPresence);
 
   // The peer's shared screen needs the room, so the own tile shrinks while it is shown.
-  const compactPip = peerMedia.screenSharing;
+  const compactPip = peerMedia.screenSharing && !interruption;
 
   return (
     <Styled.Root>
@@ -31,6 +43,8 @@ export const ActiveCallScreen: FC = () => {
         </Styled.HeaderInfo>
       </Styled.Header>
 
+      <BackgroundAudioHint />
+
       <Styled.StageBox>
         {isConnecting && (
           <Styled.BannerSlot>
@@ -38,8 +52,19 @@ export const ActiveCallScreen: FC = () => {
           </Styled.BannerSlot>
         )}
 
-        <Styled.RemoteWrap $screen={peerMedia.screenSharing}>
-          <VideoTile name={peerName} media={peerMedia} variant="remote" stream={remoteStream} />
+        <Styled.RemoteWrap
+          $screen={peerMedia.screenSharing && !interruption}
+          $interrupted={Boolean(interruption)}
+        >
+          <VideoTile
+            name={peerName}
+            media={peerMedia}
+            variant="remote"
+            stream={remoteStream}
+            interruption={interruption}
+            audioNotice={audioNotice}
+          />
+          <RemoteAudio />
         </Styled.RemoteWrap>
 
         <Styled.LocalPip $compact={compactPip} data-testid="local-pip" data-compact={compactPip}>

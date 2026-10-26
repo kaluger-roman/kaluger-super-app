@@ -48,13 +48,22 @@ export const StageBox = styled(Box)({
 });
 
 // A shared screen gets the full stage height: a portrait window in a 16:9 box is tiny on a phone.
-export const RemoteWrap = styled(Box)<{ $screen: boolean }>(({ $screen }) => ({
-  width: "100%",
-  maxWidth: 1040,
-  aspectRatio: $screen ? "auto" : "16 / 9",
-  alignSelf: $screen ? "stretch" : "auto",
-  maxHeight: "100%",
-}));
+// An interrupted peer gets a taller tile on a phone: a 16:9 strip has no room for the status and
+// notice. `isolation` keeps the tile overlays (RemoteAudio) under the own PiP.
+export const RemoteWrap = styled(Box)<{ $screen: boolean; $interrupted: boolean }>(
+  ({ $screen, $interrupted }) => ({
+    position: "relative",
+    isolation: "isolate",
+    width: "100%",
+    maxWidth: 1040,
+    aspectRatio: $screen ? "auto" : "16 / 9",
+    alignSelf: $screen ? "stretch" : "auto",
+    maxHeight: "100%",
+    "@media (max-width: 600px) and (orientation: portrait)": $interrupted
+      ? { aspectRatio: "5 / 4" }
+      : {},
+  })
+);
 
 // While the peer shares a screen the PiP shrinks so it covers less of the shared content.
 export const LocalPip = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({

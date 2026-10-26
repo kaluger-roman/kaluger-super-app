@@ -1,1 +1,1 @@
-export { ReminderSettings } from "./ui";
+export { CallNotificationSettings, ReminderSettings } from "./ui";

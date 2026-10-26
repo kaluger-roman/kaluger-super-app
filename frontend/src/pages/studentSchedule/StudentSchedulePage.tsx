@@ -7,7 +7,12 @@ import {
 import { Alert, Button, Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
-import { StudentWeeklyView, formatRangeLabel, studentScheduleModel } from "@features";
+import {
+  CallNotificationsCard,
+  StudentWeeklyView,
+  formatRangeLabel,
+  studentScheduleModel,
+} from "@features";
 
 import * as Styled from "./StudentSchedulePage.styled";
 
@@ -19,6 +24,8 @@ export const StudentSchedulePage: FC = () => {
 
   return (
     <Styled.RootBox>
+      <CallNotificationsCard />
+
       <Styled.Toolbar>
         <Typography variant="h5" component="h1" fontWeight={600}>
           Расписание

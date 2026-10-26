@@ -42,5 +42,13 @@ export const RENEGOTIATION_FAILED_TEXT =
 export const PICKER_DISMISSED_ERRORS = new Set(["NotAllowedError", "AbortError"]);
 
 export const TRANSPORT_LOST_TEXT = "Связь с сервером потеряна, звонок завершён";
+// TODO(auto-feature): show via toasts.model on callModel.callEnded("peer_not_returned")
+export const PEER_NOT_RETURNED_TEXT = "Собеседник не вернулся в звонок";
+// The participant came back after the call ended without them (wait expired or the peer hung up).
+// TODO(auto-feature): show via toasts.model on callPresenceModel.returnedToEndedCall
+export const CALL_ENDED_TEXT = "Звонок завершён";
+// The app was opened from a call notification of a call that is already over (FR-017).
+// TODO(auto-feature): show via toasts.model on callModel.staleCallNotificationOpened
+export const CALL_ALREADY_ENDED_TEXT = "Звонок уже завершён";
 export const NO_TRANSPORT_TEXT = "Нет связи с сервером. Проверьте интернет и попробуйте снова";
 export const CAMERA_FAILED_TEXT = "Не удалось включить камеру. Проверьте разрешения браузера";

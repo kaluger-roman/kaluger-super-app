@@ -7,6 +7,7 @@ export * from "./logoutConfirmation";
 export * from "./resetPassword";
 export * from "./students";
 export * from "./notificationSettings";
+export * from "./callNotifications";
 export * from "./taxRatePeriods";
 export * from "./tutorStudentInvitation";
 export * from "./studentAuth";

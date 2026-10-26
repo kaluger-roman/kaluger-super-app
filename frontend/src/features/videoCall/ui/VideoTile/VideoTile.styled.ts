@@ -1,4 +1,5 @@
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { Box, ButtonBase, CircularProgress, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 import { styled } from "@shared";
 
@@ -103,6 +104,44 @@ export const ResumeOverlay = styled(ButtonBase)(({ theme }) => ({
   background: "rgba(0, 0, 0, 0.55)",
   ...theme.typography.body2,
   textAlign: "center",
+}));
+
+export const InterruptionLabel = styled(Typography)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  maxWidth: "100%",
+  padding: "6px 14px",
+  borderRadius: 999,
+  color: theme.palette.common.white,
+  background: "rgba(0, 0, 0, 0.45)",
+  fontWeight: 500,
+  textAlign: "center",
+  "& .MuiSvgIcon-root": {
+    flexShrink: 0,
+  },
+}));
+
+export const InterruptionSpinner = styled(CircularProgress)({
+  flexShrink: 0,
+});
+
+// Amber and worded, unlike the red round "mic off" badge: nobody turned this mic off on purpose.
+export const AudioNoticePill = styled(Box)(({ theme }) => ({
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "5px 12px 5px 8px",
+  borderRadius: 12,
+  background: alpha(theme.palette.warning.main, 0.92),
+  color: theme.palette.common.white,
+  fontSize: 13,
+  fontWeight: 500,
+  lineHeight: 1.35,
+  "& .MuiSvgIcon-root": {
+    flexShrink: 0,
+  },
 }));
 
 export const PlaceholderLabel = styled(Typography)({

@@ -11,6 +11,12 @@ export const HeaderBox = styled(Box)({
   marginBottom: "24px",
 });
 
+export const SettingsStack = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+});
+
 export const StyledTitle = styled(Typography)({
   fontWeight: 700,
 });

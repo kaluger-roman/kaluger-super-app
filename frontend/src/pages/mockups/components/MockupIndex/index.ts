@@ -1,0 +1,1 @@
+export { MockupIndex } from "./MockupIndex";

@@ -2,7 +2,7 @@ import type { FC } from "react";
 
 import { Typography } from "@mui/material";
 
-import { StudentInfoSection, TutorInfoSection } from "@features";
+import { CallNotificationsSection, StudentInfoSection, TutorInfoSection } from "@features";
 
 import * as Styled from "./StudentSettingsPage.styled";
 
@@ -14,6 +14,7 @@ export const StudentSettingsPage: FC = () => {
       </Typography>
       <StudentInfoSection />
       <TutorInfoSection />
+      <CallNotificationsSection />
     </Styled.RootBox>
   );
 };
