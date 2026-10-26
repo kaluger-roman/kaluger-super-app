@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "branch": "fix-video-call-mobile-zoom",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-10-23T12:43:12Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 3,
+    "insertions": 56,
+    "deletions": 3
+  },
+  "summary": {
+    "raw_findings": 6,
+    "after_dedup": 5,
+    "after_score_filter": 1,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1
+    },
+    "by_category": {
+      "logic": 1
+    },
+    "agents_failed": [],
+    "agents_empty": [
+      "claude-md",
+      "security",
+      "type-safety",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Регрессионный тест проверяет только MuiTextField, хотя именно варианты инпута могут перебить фикс",
+      "category": "logic",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 51,
+      "line_end": 56,
+      "snippet": "  it(\"should not shrink the TextField input below 16px anywhere except the label\", () => {\n    const shrunkRules = collectFontSizeRules(theme.components?.MuiTextField?.styleOverrides)\n      .filter(({ path }) => !path.includes(\".MuiInputLabel-root\"))\n      .filter(({ value }) => !(toPx(value) >= IOS_MIN_INPUT_FONT_PX));",
+      "rationale": "OutlinedInputInput/FilledInputInput/InputInput собраны как styled(InputBaseInput): emotion берёт стили InputBase, включая coarse-правило, и дописывает после них стили варианта в тот же класс. Поэтому fontSize в MuiOutlinedInput/MuiFilledInput/MuiInput/MuiAutocomplete.styleOverrides.input (даже без media) перебьёт 1rem на телефоне, а оба теста останутся зелёными. Шрифт на root у MuiTextField, который и проверяет тест 2, после фикса уже не может уменьшить инпут: у инпута в coarse-медиа есть собственный font-size. (also flagged by: hacks)",
+      "fix_hint": "Собирать fontSize-правила по всем input-компонентам темы (MuiInputBase, MuiOutlinedInput, MuiFilledInput, MuiInput, MuiAutocomplete, MuiSelect, MuiTextField), исключая только лейблы, и требовать ≥16px, либо хотя бы запретить fontSize в слотах input у вариантов. Название теста привести в соответствие с тем, что он проверяет.",
+      "score": 50,
+      "verification_note": "Факт подтверждён: тест 2 проверяет только MuiTextField, название «anywhere» завышено, варианты MuiOutlinedInput/MuiFilledInput/MuiInput (styled(InputBaseInput)) и MuiAutocomplete не охвачены; в теме сейчас нет fontSize-оверрайдов на этих компонентах, поэтому это пробел в регрессионном тесте, а не текущий баг.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Рекурсивный обходчик и парсер rem/px сторожат правило, которое не было причиной 14px, и смотрят не туда",
+      "category": "hack",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 51,
+      "line_end": 57,
+      "snippet": "  it(\"should not shrink the TextField input below 16px anywhere except the label\", () => {\n    const shrunkRules = collectFontSizeRules(theme.components?.MuiTextField?.styleOverrides)\n      .filter(({ path }) => !path.includes(\".MuiInputLabel-root\"))\n      .filter(({ value }) => !(toPx(value) >= IOS_MIN_INPUT_FONT_PX));",
+      "rationale": "Удалённое `@media (max-width: 600px) { fontSize: 0.875rem }` на `.MuiOutlinedInput-root` ничего не меняло: InputBaseRoot берёт `theme.typography.body1` = `clamp(0.875rem, 1.2vw, 1rem)`, это уже 14px на ширине меньше ~1333px. Тест сторожит не причину, настоящий источник (body1) и другие слоты оверрайдов не обходит; ради одной проверки написаны обобщённый walker, regex-парсер с NaN-семантикой (валидный `clamp(1rem, …)` или `inherit` ложно считаются уменьшением), `ROOT_FONT_PX = 16` в обход `theme.typography.htmlFontSize` и захардкоженное исключение для лейбла.",
+      "fix_hint": "Убрать `collectFontSizeRules`/`toPx`/`ROOT_FONT_PX` и этот тест, заменить поведенческой проверкой computed font-size в e2e; если нужен юнит-сторож, проверять фактический источник fontSize для InputBase, а не одну ветку MuiTextField.",
+      "score": 25,
+      "verification_note": "InputBase root берёт body1 (clamp), input имеет font: inherit, удалённое правило было дублем body1, а coarse-правило на input фиксирует 1rem независимо от root; walker с NaN-семантикой ложно пометит clamp(), но это латентный недостаток без текущего вреда. Пересекается с находкой deep-logic по тому же тесту (dedup).",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Тест на 1rem под (pointer: coarse) повторяет литерал конфига, а не проверяет итоговый размер шрифта поля",
+      "category": "hack",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 42,
+      "line_end": 49,
+      "snippet": "    const inputOverride: unknown = theme.components?.MuiInputBase?.styleOverrides?.input;\n    const coarsePointerRule = isRecord(inputOverride)\n      ? inputOverride[\"@media (pointer: coarse)\"]\n      : undefined;\n\n    expect(coarsePointerRule).toEqual(expect.objectContaining({ fontSize: \"1rem\" }));",
+      "rationale": "Тест слово в слово сверяет ключ медиазапроса и значение из реализации. Он пройдёт, даже если правило перебьёт более поздний оверрайд того же класса (MuiOutlinedInput/MuiAutocomplete `styleOverrides.input`) или `sx`, и упадёт на эквивалентной корректной реализации. Поведение «на тач-устройстве у input font-size >= 16px» он не проверяет.",
+      "fix_hint": "jsdom не применяет @media в getComputedStyle, поэтому проверять в Playwright с мобильным устройством (`devices[\"iPhone 13\"]`, isMobile+hasTouch дают pointer: coarse) на странице входа ученика: `parseFloat(getComputedStyle(input).fontSize) >= 16` для всех полей. Сейчас в playwright.config.ts только Desktop Chrome.",
+      "score": 25,
+      "verification_note": "Тест действительно сверяет литерал конфига, но конфликтующих оверрайдов fontSize для input в теме нет, сценарий «тест зелёный, а в проде 14px» требует будущего изменения, а сам тест — рабочий страж той же формы, что соседние проверки конфига, и не проходит вхолостую.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Поле лечится на листовом input, а причина (body1 clamp на root и лейбле) остаётся; для «мобилки» в одном поле два разных медиа-критерия",
+      "category": "hack",
+      "file": "frontend/src/shared/ui/themeConfig/components.constants.ts",
+      "line_start": 62,
+      "line_end": 89,
+      "snippet": "      input: {\n        // iOS zooms the page in when an input under 16px gets focus and never zooms back out\n        \"@media (pointer: coarse)\": {\n          fontSize: \"1rem\",\n        },",
+      "rationale": "Шрифт 14px полю даёт `typography.body1` (clamp), который MUI раскладывает на InputBaseRoot и FormLabel. Фикс перебивает только внутренний `<input>`, поэтому на телефоне в одном поле два размера: текст 16px, а root/адорнменты/лейбл по-прежнему 14px; рядом остаётся `& .MuiInputLabel-root` с `@media (max-width: 600px)` 0.875rem, так что у компонента два критерия «мобильности».",
+      "fix_hint": "Задать 1rem под одним общим медиазапросом на уровне поля целиком (`MuiInputBase.styleOverrides.root` и `MuiInputLabel` `root`), удалить избыточное правило лейбла с `max-width: 600px` и исключение `.MuiInputLabel-root` в тесте.",
+      "score": 25,
+      "verification_note": "Правило лейбла с max-width 600px pre-existing, удалённое правило на OutlinedInput-root было no-op (body1 clamp и так 14px), notch/лейбл/адорнменты не рассинхронизируются, меняется только текст input (14 -> 16px на coarse) — вопрос дизайна, а не поломка.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "shallow-bug",
+      "title": "На экранах <600px размер шрифта корня OutlinedInput теперь расходится с уменьшенной подписью: вырез в рамке шире подписи",
+      "category": "bug",
+      "file": "frontend/src/shared/ui/themeConfig/components.constants.ts",
+      "line_start": 84,
+      "line_end": 87,
+      "snippet": "          },\n        },\n        \"& .MuiInputLabel-root\": {\n          \"@media (max-width: 600px)\": {",
+      "rationale": "Вырез в рамке (legend NotchedOutline, 0.75em) считается от font-size корня `.MuiOutlinedInput-root`, а сжатая подпись — от собственного font-size. Раньше при max-width 600px оба были 0.875rem; теперь правило для корня удалено, а у `& .MuiInputLabel-root` осталось, значит вырез будет шире подписи примерно на 14%.",
+      "fix_hint": "Вернуть удалённое правило для корня (MuiInputBase.input с 1rem и так перебивает унаследованный размер у `<input>`), либо синхронно убрать уменьшение fontSize у `& .MuiInputLabel-root` при max-width 600px.",
+      "score": 0,
+      "verification_note": "InputBase наследует body1 = clamp(0.875rem, 1.2vw, 1rem), на ширине ≤600px это 0.875rem и до, и после правки, поэтому вырез остаётся равным уменьшенной подписи и рассогласования нет.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "shallow-bug",
+      "title": "CHANGELOG утверждает «на десктопе без изменений», но удаление правила max-width 600px меняет шрифт полей в узком окне десктопа",
+      "category": "logic",
+      "file": "CHANGELOG.md",
+      "line_start": 10,
+      "line_end": 10,
+      "snippet": "- iPhone (Safari и PWA): ... теперь на сенсорных устройствах (`@media (pointer: coarse)`) текст во всех полях MUI 16px (`MuiInputBase` в теме), на десктопе без изменений",
+      "rationale": "Удалено правило `@media (max-width: 600px) { fontSize: 0.875rem }` у `& .MuiOutlinedInput-root`, оно зависело от ширины окна, а не от типа указателя, поэтому на десктопе в окне уже 600px поля TextField больше не уменьшаются до 14px.",
+      "fix_hint": "Уточнить запись: в узком окне десктопа поля тоже больше не уменьшаются. Либо оставить исходное правило.",
+      "score": 0,
+      "verification_note": "Без удалённого правила шрифт поля берётся из body1 (clamp(0.875rem, 1.2vw, 1rem)), который на ширине ≤600px равен тем же 14px, поэтому на десктопе видимого изменения нет и запись в CHANGELOG верна.",
+      "reason": "below threshold"
+    }
+  ]
+}
