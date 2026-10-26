@@ -190,6 +190,8 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 - PostgreSQL via Prisma ORM. One new table `call_records` (+ migration). Signaling messages are ephemeral (never persisted). (030-webrtc-video-calls)
 - TypeScript 5.x strict (backend Node 20, frontend React); bash (home/prod scripts, cron-safe) + Express, Prisma, Effector, MUI (existing); rsync 3.2.x + `rrsync` (prod), OpenSSH, flock, gzip, Docker Engine + `postgres:16-alpine` (home). No new npm dependencies. (036-offsite-backups)
 - PostgreSQL via Prisma — no schema change; new state in files: `$BACKUP_DIR/.offsite-last-pull`, `$BACKUP_DIR/.offsite-restore-check.json` (prod), `/home/roman-kaluger/prod-backups/` (home) (036-offsite-backups)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, effector-react, patronum, Material UI (styled API), axios — frontend; Express, Prisma, ws — backend. Новых зависимостей нет (038-lesson-call-button)
+- PostgreSQL через Prisma. Одна новая nullable-колонка `call_records."lessonId"` (FK на `lessons`, `ON DELETE SET NULL`) + индекс `(lessonId, startedAt)`; без бэкфилла (038-lesson-call-button)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

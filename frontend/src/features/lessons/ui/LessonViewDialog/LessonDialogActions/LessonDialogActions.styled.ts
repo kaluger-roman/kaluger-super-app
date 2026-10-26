@@ -2,6 +2,13 @@ import { Box } from "@mui/material";
 
 import { styled } from "@shared";
 
+export const Root = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+  width: "100%",
+}));
+
 export const Container = styled(Box)<{ $isMobile: boolean }>(({ theme, $isMobile }) => ({
   display: "flex",
   flexDirection: $isMobile ? "column" : "row",

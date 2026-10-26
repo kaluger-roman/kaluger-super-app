@@ -3,7 +3,7 @@ import type { FC } from "react";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 
-import { CallOverlay } from "@features/videoCall";
+import { CallConfirmDialog, CallOverlay } from "@features/videoCall";
 import { theme } from "@shared";
 
 import type { AppFrameProps } from "./AppFrame.types";
@@ -14,6 +14,7 @@ export const AppFrame: FC<AppFrameProps> = ({ children }) => (
   <ThemeProvider theme={theme}>
     <CssBaseline />
     {children}
+    <CallConfirmDialog />
     <CallOverlay />
   </ThemeProvider>
 );

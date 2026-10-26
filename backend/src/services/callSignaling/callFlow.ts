@@ -13,17 +13,19 @@ import {
   CallPeerOfflineError,
   CallRateLimitError,
 } from "../../utils";
-import { createCallRecord } from "../callRecord";
-import type { CreateCallRecordArgs } from "../callRecord";
+import { createCallRecord, toCallLessonSummary } from "../callRecord";
+import type { CallLesson, CreateCallRecordArgs } from "../callRecord";
 import * as callRegistry from "./callSignaling";
 import {
   ALREADY_IN_CALL_MESSAGE,
   CALL_FAILED_MESSAGE,
   CALL_NOT_FOUND_MESSAGE,
+  STUDENT_INVITE_WITHOUT_LESSON_MESSAGE,
   TUTOR_INVITE_WITHOUT_TARGET_MESSAGE,
 } from "./callSignaling.constants";
 import {
   isSamePair,
+  resolveCallLesson,
   resolveDropOutcome,
   resolveHangupStatus,
   resolvePairForStudent,
@@ -84,6 +86,7 @@ const finishCall = (call: LiveCall, status: CallStatus): Promise<void> =>
       status,
       startedAt: call.startedAt,
       connectedAt: call.connectedAt,
+      lessonId: call.lesson?.id ?? null,
     },
     call
   );
@@ -101,10 +104,18 @@ const expireRinging = async (call: LiveCall): Promise<void> => {
   await finishCall(call, "MISSED");
 };
 
-const resolvePair = (sender: CallParticipant, targetStudentId?: string): Promise<ResolvedPair> => {
-  if (sender.kind === "student") return resolvePairForStudent(sender.id);
-  if (!targetStudentId) throw new CallAuthorizationError(TUTOR_INVITE_WITHOUT_TARGET_MESSAGE);
-  return resolvePairForTutor(sender.id, targetStudentId);
+const resolvePair = (
+  sender: CallParticipant,
+  data: Extract<CallSignalingInbound, { type: "call_invite" }>
+): Promise<ResolvedPair> => {
+  if (sender.kind === "student") {
+    if (!data.lessonId) throw new CallAuthorizationError(STUDENT_INVITE_WITHOUT_LESSON_MESSAGE);
+    return resolvePairForStudent(sender.id);
+  }
+  if (!data.targetStudentId) {
+    throw new CallAuthorizationError(TUTOR_INVITE_WITHOUT_TARGET_MESSAGE);
+  }
+  return resolvePairForTutor(sender.id, data.targetStudentId);
 };
 
 const cancelRinging = (call: LiveCall): Promise<void> => {
@@ -120,6 +131,7 @@ const cancelRinging = (call: LiveCall): Promise<void> => {
 const ringCallee = async (
   sender: CallParticipant,
   pair: ResolvedPair,
+  lesson: CallLesson | null,
   inviteId: string
 ): Promise<void> => {
   const callee: CallParticipant =
@@ -135,6 +147,7 @@ const ringCallee = async (
         callerKind: sender.kind,
         status: "MISSED",
         startedAt: new Date(),
+        lessonId: lesson?.id ?? null,
       },
       pair
     );
@@ -144,7 +157,7 @@ const ringCallee = async (
     throw new CallPeerBusyError();
   }
 
-  const call = callRegistry.startCall(pair, sender.kind, (timedOut) => {
+  const call = callRegistry.startCall(pair, sender.kind, lesson, (timedOut) => {
     void expireRinging(timedOut);
   });
 
@@ -152,6 +165,7 @@ const ringCallee = async (
     type: "call_incoming",
     callId: call.callId,
     callerName: sender.kind === "tutor" ? pair.tutorName : pair.studentName,
+    lesson: toCallLessonSummary(lesson),
     iceServers: buildIceServers(callee),
   });
   sendRinging(call, inviteId);
@@ -165,7 +179,8 @@ const handleInvite = async (
 
   const ticket = issueInviteTicket(sender);
   const senderConnection = connectionOf(sender);
-  const pair = await resolvePair(sender, data.targetStudentId);
+  const pair = await resolvePair(sender, data);
+  const lesson = data.lessonId ? await resolveCallLesson(pair, data.lessonId) : null;
   // The caller's socket may have closed, or been replaced by a new one, while the pair was resolved.
   if (!senderConnection || connectionOf(sender) !== senderConnection) return;
   // The caller sent a newer invite meanwhile and waits for that one; this one is stale.
@@ -173,14 +188,14 @@ const handleInvite = async (
 
   const senderCall = callRegistry.findActiveCallForParticipant(sender.kind, sender.id);
   if (!senderCall) {
-    await ringCallee(sender, pair, data.inviteId);
+    await ringCallee(sender, pair, lesson, data.inviteId);
     return;
   }
   if (senderCall.callerKind === sender.kind && senderCall.status === "ringing") {
     // The caller gave up on its previous invite before call_ringing came back and called again,
     // the same peer or another one: the new invite replaces that call, so a late call_cancel
     // for it changes nothing.
-    await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, data.inviteId)]);
+    await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, lesson, data.inviteId)]);
     return;
   }
   if (isSamePair(senderCall, pair)) throw new CallPeerBusyError();

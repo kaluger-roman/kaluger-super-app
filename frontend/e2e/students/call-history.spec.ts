@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures";
-import { createStudentFor, createVerifiedUser, seedCallRecord } from "../helpers/db";
+import { createLesson, createStudentFor, createVerifiedUser, seedCallRecord } from "../helpers/db";
 import { registerStudentDirect, seedStudentAuthInBrowser } from "../helpers/student";
 
 test.describe("История звонков", { tag: ["@regression", "@students"] }, () => {
@@ -53,5 +53,48 @@ test.describe("История звонков", { tag: ["@regression", "@students
     await expect(page).toHaveURL(/\/student\/cabinet\/calls$/);
     await expect(page.getByText("Анна Петрова")).toBeVisible();
     await expect(page.getByText("Пропущен")).toBeVisible();
+  });
+
+  test("учитель и ученик открывают историю звонков и видят урок у звонка по уроку", async ({
+    page,
+    tutor,
+    browser,
+  }) => {
+    const { student } = await createStudentFor(tutor.userId, { name: "Ольга Урокова" });
+    const { lesson } = await createLesson({
+      tutorId: tutor.userId,
+      studentId: student.id,
+      startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      endTime: new Date(Date.now() - 60 * 60 * 1000),
+      subject: "PHYSICS",
+      status: "COMPLETED",
+    });
+    await seedCallRecord({
+      tutorId: tutor.userId,
+      studentId: student.id,
+      lessonId: lesson.id,
+      status: "COMPLETED",
+      durationSeconds: 1800,
+    });
+    const { token } = await registerStudentDirect(student.id, {
+      name: "Ольга Урокова",
+      email: `student-lesson-call-${Date.now()}@e2e.local`,
+      isEmailVerified: true,
+    });
+
+    await page.goto("/call/history");
+    await expect(page.getByRole("listitem").filter({ hasText: "Ольга Урокова" })).toContainText(
+      "Урок: Физика"
+    );
+
+    const studentContext = await browser.newContext();
+    try {
+      const studentPage = await studentContext.newPage();
+      await seedStudentAuthInBrowser(studentPage, token);
+      await studentPage.goto("/student/cabinet/calls");
+      await expect(studentPage.getByRole("listitem")).toContainText("Урок: Физика");
+    } finally {
+      await studentContext.close();
+    }
   });
 });

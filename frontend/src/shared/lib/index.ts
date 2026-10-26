@@ -42,5 +42,5 @@ export { useDisableNumberScroll } from "./disableNumberScroll.hooks";
 export { useTooltipTrigger } from "./tooltipTrigger.hooks";
 export { styled } from "./styled.helpers";
 export { isIos, isInStandaloneMode } from "./platform.helpers";
-export { isRecord } from "./typeGuards.helpers";
+export { isRecord, isSubject } from "./typeGuards.helpers";
 export { handleActivationKey } from "./keyboard.helpers";

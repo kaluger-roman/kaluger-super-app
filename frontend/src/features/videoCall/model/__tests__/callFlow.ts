@@ -37,7 +37,7 @@ export const startCallerSession = async (
   callId: string,
   iceServers: IceServerPayload[] = []
 ): Promise<void> => {
-  callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+  callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
   ringCurrentInvite(callId);
   receive({ type: "call_accepted", callId, iceServers });
   await settleMicrotasks();
@@ -47,7 +47,7 @@ export const startCalleeSession = async (
   callId: string,
   iceServers: IceServerPayload[] = []
 ): Promise<void> => {
-  receive({ type: "call_incoming", callId, callerName: "Анна", iceServers });
+  receive({ type: "call_incoming", callId, callerName: "Анна", lesson: null, iceServers });
   callModel.acceptCall();
   receive({ type: "webrtc_offer", callId, sdp: { type: "offer", sdp: "initial" } });
   await settleMicrotasks();

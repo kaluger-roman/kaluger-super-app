@@ -35,7 +35,7 @@ describe("features/videoCall full caller lifecycle", () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
-      params: { studentId: "stu-1", peerName: "Иван" },
+      params: { studentId: "stu-1", peerName: "Иван", lesson: null },
     });
     expect(sent[0]).toEqual({
       type: "call_invite",
@@ -47,7 +47,7 @@ describe("features/videoCall full caller lifecycle", () => {
   });
 
   it("should acquire media and emit a webrtc_offer after call_accepted, then go active on connect", async () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     ringCurrentInvite("call-1");
     sent.length = 0;
 
@@ -70,7 +70,7 @@ describe("features/videoCall full caller lifecycle", () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-7", callerName: "Анна", role: "tutor" },
+      params: { callId: "call-7", callerName: "Анна", role: "tutor", lesson: null },
     });
     sent.length = 0;
     void allSettled(callModel.hangUp, { scope });
@@ -84,7 +84,7 @@ describe("features/videoCall full caller lifecycle", () => {
     const scope: Scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-1", callerName: "Анна", role: "tutor" },
+      params: { callId: "call-1", callerName: "Анна", role: "tutor", lesson: null },
     });
     void allSettled(callModel.callConnected, { scope });
     await Promise.resolve();
@@ -100,20 +100,32 @@ describe("features/videoCall full caller lifecycle", () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
     await allSettled(callModel.rejectedReceived, { scope });
 
     expect(scope.getState(callModel.$callPhase)).toBe("idle");
   });
 
-  it("should send call_invite without targetStudentId when the student starts a call", async () => {
+  it("should send call_invite with the lesson and without targetStudentId when the student starts a call", async () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
-      params: { peerName: "Анна" },
+      params: {
+        peerName: "Анна",
+        lesson: {
+          id: "lesson-1",
+          subject: "MATHEMATICS",
+          startTime: "2026-10-23T15:00:00.000Z",
+          endTime: "2026-10-23T16:00:00.000Z",
+        },
+      },
     });
-    expect(sent[0]).toEqual({ type: "call_invite", inviteId: expect.any(String) });
+    expect(sent[0]).toEqual({
+      type: "call_invite",
+      inviteId: expect.any(String),
+      lessonId: "lesson-1",
+    });
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
   });
 });

@@ -14,6 +14,7 @@ const buildCall = (status: LiveCallStatus): LiveCall => ({
   tutorUserId: "tutor-1",
   studentUserId: "student-user-1",
   studentId: "student-1",
+  lesson: null,
   status,
   startedAt: new Date(),
 });

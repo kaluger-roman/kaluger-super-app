@@ -1,4 +1,5 @@
 import type { CallStatus } from "@prisma/client";
+import type { CallLesson } from "../callRecord";
 import type { CallerKindValue } from "../../types";
 
 export type ResolvedPair = {
@@ -17,6 +18,7 @@ export type LiveCall = {
   tutorUserId: string;
   studentUserId: string;
   studentId: string;
+  lesson: CallLesson | null;
   status: LiveCallStatus;
   startedAt: Date;
   connectedAt?: Date;

@@ -27,7 +27,7 @@ describe("features/videoCall/model call sounds", () => {
   });
 
   it("should play the ringback while dialing and stop it once the callee answers", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     expect(sounds.startRingback).not.toHaveBeenCalled();
     callModel.callRinging("c-0");
     expect(sounds.startRingback).toHaveBeenCalledTimes(1);
@@ -38,7 +38,12 @@ describe("features/videoCall/model call sounds", () => {
   });
 
   it("should play the ringtone on an incoming call and stop it when accepted", () => {
-    callModel.incomingCallReceived({ callId: "c-1", callerName: "Анна", role: "tutor" });
+    callModel.incomingCallReceived({
+      callId: "c-1",
+      callerName: "Анна",
+      role: "tutor",
+      lesson: null,
+    });
     expect(sounds.startRingtone).toHaveBeenCalledTimes(1);
     expect(sounds.startRingback).not.toHaveBeenCalled();
 
@@ -47,7 +52,12 @@ describe("features/videoCall/model call sounds", () => {
   });
 
   it("should stop the ringtone when an incoming call is rejected", () => {
-    callModel.incomingCallReceived({ callId: "c-2", callerName: "Анна", role: "tutor" });
+    callModel.incomingCallReceived({
+      callId: "c-2",
+      callerName: "Анна",
+      role: "tutor",
+      lesson: null,
+    });
     sounds.stopRingtone.mockClear();
 
     callModel.rejectCall();
@@ -55,7 +65,15 @@ describe("features/videoCall/model call sounds", () => {
   });
 
   it("should not beep when the callee is refused before the call rings (regression: offline tutor)", () => {
-    callModel.callStarted({ peerName: "Анна" });
+    callModel.callStarted({
+      peerName: "Анна",
+      lesson: {
+        id: "lesson-1",
+        subject: "MATHEMATICS",
+        startTime: "2026-10-23T15:00:00.000Z",
+        endTime: "2026-10-23T16:00:00.000Z",
+      },
+    });
     callModel.callFailed("Репетитор сейчас не в сети");
 
     expect(sounds.startRingback).not.toHaveBeenCalled();
@@ -64,7 +82,15 @@ describe("features/videoCall/model call sounds", () => {
   it("should unlock the audio in the click that starts the call (regression: silent ringback in Safari)", () => {
     sounds.primeAudio.mockClear();
 
-    callModel.callStarted({ peerName: "Анна" });
+    callModel.callStarted({
+      peerName: "Анна",
+      lesson: {
+        id: "lesson-1",
+        subject: "MATHEMATICS",
+        startTime: "2026-10-23T15:00:00.000Z",
+        endTime: "2026-10-23T16:00:00.000Z",
+      },
+    });
 
     expect(sounds.primeAudio).toHaveBeenCalledTimes(1);
   });

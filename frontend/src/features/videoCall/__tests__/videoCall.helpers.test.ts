@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatCallDuration,
+  formatCallLesson,
+  formatCallLessonSubject,
+  formatCallLessonTime,
   getCallDirectionLabel,
   getCallStatusLabel,
   getInitials,
@@ -45,5 +48,27 @@ describe("features/videoCall helpers", () => {
   it("should label the call direction", () => {
     expect(getCallDirectionLabel("outgoing")).toBe("Исходящий");
     expect(getCallDirectionLabel("incoming")).toBe("Входящий");
+  });
+
+  describe("lesson of a call", () => {
+    const lesson = {
+      id: "l-1",
+      subject: "PHYSICS" as const,
+      startTime: "2026-10-22T15:00:00",
+      endTime: "2026-10-22T16:00:00",
+    };
+
+    it("should name the subject of the lesson", () => {
+      expect(formatCallLessonSubject(lesson)).toBe("Физика");
+      expect(formatCallLessonSubject({ ...lesson, subject: "MATHEMATICS" })).toBe("Математика");
+    });
+
+    it("should show the day and the time range of the lesson", () => {
+      expect(formatCallLessonTime(lesson)).toBe("четверг, 22 октября · 15:00—16:00");
+    });
+
+    it("should join the subject, the day and the time", () => {
+      expect(formatCallLesson(lesson)).toBe("Физика · четверг, 22 октября · 15:00—16:00");
+    });
   });
 });

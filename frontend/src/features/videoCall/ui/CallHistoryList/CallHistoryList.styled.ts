@@ -57,6 +57,17 @@ export const RowMeta = styled(Box)({
   flexWrap: "wrap",
 });
 
+export const LessonLine = styled(Typography)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: theme.palette.text.primary,
+  "& .MuiSvgIcon-root": {
+    color: theme.palette.primary.main,
+    flexShrink: 0,
+  },
+}));
+
 export const Duration = styled(Typography)({
   display: "flex",
   alignItems: "center",

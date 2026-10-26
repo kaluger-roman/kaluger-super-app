@@ -1,7 +1,9 @@
 import { test, expect } from "../fixtures";
 import { seedAuthInBrowser } from "../helpers/auth";
-import { createStudentFor } from "../helpers/db";
+import { callTutorFromLesson, confirmCall } from "../helpers/call";
+import { createLesson, createStudentFor } from "../helpers/db";
 import {
+  currentWeekSlot,
   isStudentOnline,
   registerStudentDirect,
   seedStudentAuthInBrowser,
@@ -32,16 +34,26 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       const studentPage = await studentContext.newPage();
       await seedStudentAuthInBrowser(studentPage, token);
       await studentPage.goto("/student/cabinet/schedule");
-      await expect(studentPage.getByRole("button", { name: "Позвонить" })).toBeVisible();
+      await expect(studentPage.getByText("Кабинет ученика")).toBeVisible();
+      await expect(
+        studentPage.getByRole("banner").getByRole("button", { name: "Позвонить" })
+      ).toHaveCount(0);
       // The student can take the call only once its socket is registered on the server.
       await expect.poll(() => isStudentOnline(studentUser.id)).toBe(true);
 
       await page.goto("/students");
       await page.getByText("Иван Звонков").click();
-      await page.getByRole("dialog").getByRole("button", { name: "Видеозвонок" }).click();
+      const studentCard = page.getByRole("dialog");
+      await studentCard.getByRole("button", { name: "Видеозвонок" }).click();
+      const confirm = page.getByRole("dialog", { name: "Начать видеозвонок?" });
+      await expect(confirm).toContainText("Иван Звонков");
+      await expect(confirm).not.toContainText("Звонок по уроку");
+      await expect(page.getByText("Вызываем…")).toBeHidden();
+      await confirmCall(page);
       await expect(page.getByText("Вызываем…")).toBeVisible();
 
       await expect(studentPage.getByText("Входящий вызов")).toBeVisible();
+      await expect(studentPage.getByText("Звонок по уроку")).toBeHidden();
       await studentPage.getByRole("button", { name: "Принять вызов" }).click();
 
       await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
@@ -67,6 +79,14 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
     browser,
   }) => {
     const { student } = await createStudentFor(tutor.userId, { name: "Пётр Вкладкин" });
+    const slot = currentWeekSlot(12);
+    await createLesson({
+      tutorId: tutor.userId,
+      studentId: student.id,
+      startTime: slot.start,
+      endTime: slot.end,
+      subject: "MATHEMATICS",
+    });
     const { token, studentUser } = await registerStudentDirect(student.id, {
       name: "Пётр Вкладкин",
       email: `student-tabs-${Date.now()}@e2e.local`,
@@ -93,7 +113,7 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       await expect(page.getByText(banner)).toBeHidden();
       await expect(secondTab.getByText(banner)).toBeVisible();
 
-      await studentPage.getByRole("button", { name: "Позвонить" }).click();
+      await callTutorFromLesson(studentPage, "Математика");
       await expect(page.getByText("Входящий вызов")).toBeVisible();
       await expect(secondTab.getByText("Входящий вызов")).toBeHidden();
 
@@ -126,6 +146,7 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
       await page.goto("/students");
       await page.getByText("Олег Звонкий").click();
       await page.getByRole("dialog").getByRole("button", { name: "Видеозвонок" }).click();
+      await confirmCall(page);
       await studentPage.getByRole("button", { name: "Принять вызов" }).click();
       await expect(page.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
       await expect(studentPage.getByRole("button", { name: "Завершить звонок" })).toBeVisible();
@@ -158,6 +179,14 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
     browser,
   }) => {
     const { student } = await createStudentFor(tutor.userId, { name: "Олег Тихий" });
+    const slot = currentWeekSlot(12);
+    await createLesson({
+      tutorId: tutor.userId,
+      studentId: student.id,
+      startTime: slot.start,
+      endTime: slot.end,
+      subject: "PHYSICS",
+    });
     const { token, studentUser } = await registerStudentDirect(student.id, {
       name: "Олег Тихий",
       email: `student-offline-${Date.now()}@e2e.local`,
@@ -179,7 +208,7 @@ test.describe("Видеозвонок ученику", { tag: ["@regression", "@
         }).observe(document.body, { childList: true, subtree: true });
       });
 
-      await studentPage.getByRole("button", { name: "Позвонить" }).click();
+      await callTutorFromLesson(studentPage, "Физика");
 
       await expect(studentPage.getByText("Репетитор сейчас не в сети")).toBeVisible();
       const dialingSeen = await studentPage.evaluate(

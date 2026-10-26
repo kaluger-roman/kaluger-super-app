@@ -1,7 +1,9 @@
+import type { CallLessonSummary } from "@entities";
+
 import type { IceServerPayload } from "./call.types";
 
 export type CallSignalingInbound =
-  | { type: "call_invite"; inviteId: string; targetStudentId?: string }
+  | { type: "call_invite"; inviteId: string; targetStudentId?: string; lessonId?: string }
   | { type: "call_accept"; callId: string }
   | { type: "call_reject"; callId: string }
   | { type: "call_cancel"; callId: string }
@@ -27,6 +29,7 @@ export type CallSignalingOutbound =
       type: "call_incoming";
       callId: string;
       callerName: string;
+      lesson: CallLessonSummary | null;
       iceServers: IceServerPayload[];
     }
   | { type: "call_ringing"; callId: string; inviteId: string }

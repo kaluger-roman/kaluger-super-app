@@ -1,7 +1,13 @@
 import { createEffect, sample } from "effector";
 
 import { NO_TRANSPORT_TEXT } from "./call.constants";
-import { isAddressedSignal, isCallAddress, toCallerRole, toTerminalSignal } from "./call.helpers";
+import {
+  isAddressedSignal,
+  isCallAddress,
+  toCallerRole,
+  toInviteMessage,
+  toTerminalSignal,
+} from "./call.helpers";
 import * as callModel from "./call.model";
 import type { AddressedSignal, InviteParams } from "./call.types";
 import * as callTransportModel from "./callTransport.model";
@@ -10,12 +16,7 @@ import { isScreenShareSupported, stopSession } from "./webrtc.helpers";
 
 const sendInviteFx = createEffect(({ call, role }: InviteParams): string => {
   const inviteId = crypto.randomUUID();
-  sendOverTransport(
-    role,
-    "studentId" in call
-      ? { type: "call_invite", inviteId, targetStudentId: call.studentId }
-      : { type: "call_invite", inviteId }
-  );
+  sendOverTransport(role, toInviteMessage(call, inviteId));
   return inviteId;
 });
 

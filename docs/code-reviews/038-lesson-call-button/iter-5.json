@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "branch": "038-lesson-call-button",
+  "base_ref": "2352a4da634ea748fd7c6e1361bf972c516f6160 (merge-base of main and HEAD)",
+  "threshold": 50,
+  "iteration": 5,
+  "timestamp": "2026-10-23T19:17:20Z",
+  "diff_mode": "working-tree",
+  "diff_stats": { "files_changed": 142, "insertions": 4688, "deletions": 361 },
+  "summary": {
+    "raw_findings": 6,
+    "after_dedup": 5,
+    "after_score_filter": 2,
+    "by_severity": { "critical": 0, "high": 0, "medium": 2 },
+    "by_category": { "claude-md": 1, "hack": 1 },
+    "agents_failed": [],
+    "agents_findings": {
+      "claude-md": 2,
+      "shallow-bug": 0,
+      "deep-logic": 0,
+      "security": 0,
+      "type-safety": 0,
+      "removed-behavior": 0,
+      "cross-file": 0,
+      "wrapper-proxy": 0,
+      "hacks": 4
+    },
+    "scoring_notes": "claude-md and hacks both flagged that waitForLockWait in createCallRecord.test.ts polls pg_stat_activity without tying the wait to the test's own transaction. The two were merged into one finding with the max score (25), so it is filtered out. The isStudentCardCall finding repeats an iter-1 item (scored 25 then) and scored 25 again, because there is no current harm. Excluded from scope: specs/**, docs/mockups/**, docs/code-reviews/**, CHANGELOG.md, CLAUDE.md (Active Technologies lines only), package-lock.json, .claude/auto-feature/**. No null scores.",
+    "iter4_fixes_verified": "f1 (fixed sleep in the race test): fixed. The test now polls pg_stat_activity with a 5 s deadline; the remaining weakness of that filter scored 25. f2 (lesson deleted during write not covered): fixed by a new test. f3 (deadlock with student deletion): fixed, createCallRecord locks the student FOR KEY SHARE before the lesson FOR SHARE. deep-logic found no remaining deadlock or lost unlink across deleteStudent, lesson deletion and lessonUpdate, and a lock-order test was added. f4 (unlink tied to a snapshot outside the transaction): the unlink now always runs after the lesson update inside the transaction, but no regression test catches a revert to the conditional version (f1 of this iteration). The gate guard in lessonCalls.model.ts and the FR-010 change were not re-reported."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Безусловная отвязка звонков в lessonUpdate не закреплена регрессионным тестом",
+      "category": "claude-md",
+      "file": "backend/src/services/lessonUpdate/lessonUpdate.ts",
+      "line_start": 91,
+      "line_end": 95,
+      "snippet": "    // Calls of another student stay in that student's history, but no longer belong to the lesson.\n    await tx.callRecord.updateMany({\n      where: { lessonId: id, ...(lesson.studentId && { studentId: { not: lesson.studentId } }) },\n      data: { lessonId: null },",
+      "rationale": "CLAUDE.md, «Testing Requirements»: «Bug fixes: always add a regression test covering the specific scenario being fixed». В iter-5 отвязку перестали обусловливать снимком урока, прочитанным вне транзакции. Оба теста в lessonStudentUser.test.ts:172-190 (смена ученика; тот же ученик со звонком того же ученика) проходят и на прежнем условном коде. Сценарий, где отвязка нужна без studentId в запросе (к уроку привязан звонок другого ученика), не проверяется, и откат к условной версии тесты не заметят.",
+      "fix_hint": "В describe «calls of a reassigned lesson» (backend/src/controllers/lessons/__tests__/lessonStudentUser.test.ts) добавить тест: урок ученика A, callRecord ученика B с lessonId этого урока, PUT только с { description }. Ожидать у записи lessonId null и studentId B.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Факты подтверждены: оба существующих теста проходят и на условной версии, а сценарий «звонок ученика B на уроке ученика A, PUT только с description» нигде не проверяется. Путь редкий (нужна гонка или устаревший снимок), поэтому выбрана нижняя оценка."
+    },
+    {
+      "id": "f2",
+      "agent": "hacks",
+      "title": "e2e-проверки toBeHidden без предварительного toBeVisible проходят и тогда, когда отклонение или завершение до ученика не дошло",
+      "category": "hack",
+      "file": "frontend/e2e/lessons/lesson-call.spec.ts",
+      "line_start": 133,
+      "line_end": 134,
+      "snippet": "      await page.getByRole(\"button\", { name: \"Отклонить вызов\" }).click();\n      await expect(studentPage.getByRole(\"button\", { name: \"Отменить вызов\" })).toBeHidden();",
+      "rationale": "Экран исходящего звонка у ученика показывается с задержкой: callScreen.model раскрывает его по call_ringing или через OUTGOING_REVEAL_DELAY_MS. toBeHidden проходит сразу, если кнопка ещё не отрисована, поэтому тест не отличает «reject дошёл до ученика» от «ученик завис в исходящем звонке». То же на стр. 79: у ученика проверяется скрытие «Завершить звонок», хотя видимой её ни разу не проверяли.",
+      "fix_hint": "Перед кликом «Отклонить вызов» добавить `await expect(studentPage.getByRole(\"button\", { name: \"Отменить вызов\" })).toBeVisible()`. На стр. 79 перед завершением звонка проверить, что у ученика видна «Завершить звонок». Только после этого проверять toBeHidden.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Подтверждено: в lesson-call.spec.ts видимость «Отменить вызов» (до стр. 133-134) и «Завершить звонок» (до стр. 79) у studentPage нигде не проверялась, а toBeHidden проходит и на отсутствующем элементе, то есть тест проходит вхолостую."
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "waitForLockWait дублирует общий хелпер waitFor, а фильтр не связан с транзакцией теста",
+      "category": "hack",
+      "file": "backend/src/services/callRecord/__tests__/createCallRecord.test.ts",
+      "line_start": 203,
+      "line_end": 216,
+      "snippet": "  const waitForLockWait = async (queryPattern: string): Promise<void> => {\n    const deadline = Date.now() + 5000;\n    for (;;) {\n      const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`\n        SELECT count(*)::int AS waiting FROM pg_stat_activity",
+      "rationale": "В backend/src/__tests__/helpers/waitFor.ts уже есть поллер с дедлайном, а здесь написан второй цикл for(;;)+setTimeout со своими константами 5000/20. Фильтр считает любую сессию общей тестовой БД, которая ждёт Lock и чей текст запроса подходит под LIKE. Он не проверяет, что ждут именно блокировку транзакции этого теста (docs/conventions/backend-testing.md:20: «a test may only see and change its own rows»). Дедлайн 5000 мс совпадает с таймаутом интерактивной транзакции Prisma по умолчанию. (also flagged by: claude-md)",
+      "fix_hint": "Расширить waitFor до асинхронного условия и использовать его. Внутри транзакции взять pg_backend_pid() через tx и поллить по `pg_blocking_pids(pid) @> ARRAY[txPid]`. Внешнему $transaction задать timeout больше дедлайна.",
+      "score": 25,
+      "verification_note": "Паттерн совпадает с реальным SQL createCallRecord, так что тест не ждёт вхолостую. Ложное совпадение возможно только при редком параллельном ожидании блокировки того же текста в другом воркере, а строки тестов уникальны. Дублирование поллера — стилистика.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "При падении гоночного теста промис recording остаётся без await и пишет запись уже после afterEach",
+      "category": "hack",
+      "file": "backend/src/services/callRecord/__tests__/createCallRecord.test.ts",
+      "line_start": 221,
+      "line_end": 235,
+      "snippet": "    let recording: Promise<void> = Promise.resolve();\n\n    await prisma.$transaction(async (tx) => {\n      await tx.lesson.update({ where: { id: lesson.id }, data: { studentId: otherStudent.id } });\n      recording = createCallRecord({",
+      "rationale": "recording ожидается только после успешного выхода из $transaction. При исключении внутри транзакции createCallRecord продолжит работу в фоне и может вставить запись после afterEach. В тестах на стр. 221 и 245 у промиса нет .catch. Уборка урока и otherStudent стоит после expect, а не в finally.",
+      "fix_hint": "Обернуть тело в try/finally с `await Promise.allSettled([recording])`. Удаление lesson/otherStudent перенести в finally или afterEach.",
+      "score": 25,
+      "verification_note": "Проявляется только на пути уже упавшего теста: успешный прогон и результат теста не затрагиваются. Это гигиена тестов, а не сквозной баг.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Карточка ученика угадывает «свой» звонок по форме payload, без явного источника",
+      "category": "hack",
+      "file": "frontend/src/features/students/ui/StudentViewDialog/StudentViewDialog.helpers.ts",
+      "line_start": 11,
+      "line_end": 13,
+      "snippet": "// Only the student card starts a tutor call without a lesson.\nexport const isStudentCardCall = (call: StartCallParams): boolean =>\n  \"studentId\" in call && call.lesson === null;",
+      "rationale": "callConfirmModel.confirmed рассылается всем подписчикам, и каждый сам решает по форме payload, его ли это подтверждение. Вывод «звонок без урока = из карточки ученика» держится на том, что других таких источников сейчас нет. Не проверяется и то, что звонок адресован ученику из $viewingStudent.",
+      "fix_hint": "Передавать источник явно: callConfirmModel.callRequested({ call, source }), confirmed отдаёт { call, source }, и каждый диалог фильтрует по своему source.",
+      "score": 25,
+      "verification_note": "Сейчас единственный источник звонка без урока (toStudentCall) вызывается только из карточки ученика и всегда адресует $viewingStudent, так что текущего вреда нет. Риск гипотетический; то же замечание получило 25 в iter-1.",
+      "reason": "below threshold"
+    }
+  ]
+}

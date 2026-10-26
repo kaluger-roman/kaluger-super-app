@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { CallHistoryItem } from "../../types";
-import { CALL_RECORD_WITH_PEER } from "./callRecord.constants";
+import { CALL_RECORD_WITH_PEER, MAX_HISTORY_LIMIT } from "./callRecord.constants";
 import { clampLimit, toCallHistoryItem } from "./callRecord.helpers";
 import type { CallHistoryQuery, CallRecordWithPeer } from "./callRecord.types";
 
@@ -38,4 +38,15 @@ export const getCallHistoryForStudent = async (
 
   const records = await queryRecords({ studentId: studentUser.studentId }, query);
   return records.map((record) => toCallHistoryItem(record, "student"));
+};
+
+export const getLessonCallsForTutor = async (
+  tutorUserId: string,
+  lessonId: string
+): Promise<CallHistoryItem[]> => {
+  const records = await queryRecords(
+    { tutorId: tutorUserId, lessonId },
+    { limit: MAX_HISTORY_LIMIT }
+  );
+  return records.map((record) => toCallHistoryItem(record, "tutor"));
 };

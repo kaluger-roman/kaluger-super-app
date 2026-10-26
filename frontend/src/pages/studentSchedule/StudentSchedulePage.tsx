@@ -7,7 +7,12 @@ import {
 import { Alert, Button, Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
-import { StudentWeeklyView, formatRangeLabel, studentScheduleModel } from "@features";
+import {
+  StudentLessonDialog,
+  StudentWeeklyView,
+  formatRangeLabel,
+  studentScheduleModel,
+} from "@features";
 
 import * as Styled from "./StudentSchedulePage.styled";
 
@@ -53,6 +58,7 @@ export const StudentSchedulePage: FC = () => {
       {loadError && <Alert severity="error">{loadError}</Alert>}
 
       <StudentWeeklyView lessons={lessons} />
+      <StudentLessonDialog />
     </Styled.RootBox>
   );
 };
