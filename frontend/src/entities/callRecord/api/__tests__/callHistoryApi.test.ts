@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, studentApi } from "@shared";
 
-import { getCallHistory } from "../callHistoryApi";
+import { getCallHistory, getLessonCalls } from "../callHistoryApi";
 
 vi.mock("@shared", () => ({
   api: { get: vi.fn() },
@@ -49,5 +49,28 @@ describe("entities/callRecord/api/getCallHistory", () => {
     mockedApiGet.mockResolvedValue({ data: { items: records } });
 
     await expect(getCallHistory("tutor")).resolves.toEqual(records);
+  });
+});
+
+describe("entities/callRecord/api/getLessonCalls", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should load the calls of the lesson from the tutor endpoint", async () => {
+    mockedApiGet.mockResolvedValue({ data: { items: [] } });
+
+    await expect(getLessonCalls("lesson-1")).resolves.toEqual([]);
+
+    expect(mockedApiGet).toHaveBeenCalledWith("/calls/lessons/lesson-1");
+    expect(mockedStudentApiGet).not.toHaveBeenCalled();
+  });
+
+  it("should encode the lesson id in the path", async () => {
+    mockedApiGet.mockResolvedValue({ data: { items: [] } });
+
+    await getLessonCalls("a/b");
+
+    expect(mockedApiGet).toHaveBeenCalledWith("/calls/lessons/a%2Fb");
   });
 });

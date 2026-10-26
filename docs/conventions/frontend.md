@@ -296,7 +296,10 @@ export const $isBlocking = combine(
 );
 ```
 
-**Single exception: incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect stays out of `$isBlocking` and shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+Two exceptions stay out of `$isBlocking`:
+
+- **Incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+- **Background refresh on a WS event.** Re-fetching a list that is already on screen because the server pushed a change (e.g. `call_history_updated` → `refreshCallHistoryFx`, `refreshLessonCallsFx`) must not interrupt the user with a full-screen spinner. Keep it a separate effect from the initial load: the initial load is blocking and a failure clears or reports, the refresh is silent and a failure keeps what is shown. Guard both with request versions so an older response never overwrites a newer one.
 
 `$isBlocking` is the raw "anything loading" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has stayed continuously on for `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `debounce` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
 

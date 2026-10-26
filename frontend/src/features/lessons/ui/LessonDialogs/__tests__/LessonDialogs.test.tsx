@@ -13,6 +13,11 @@ import type { Lesson } from "@shared";
 import { lessonsModel } from "../../../models";
 import { LessonDialogs } from "../LessonDialogs";
 
+vi.mock("@entities/callRecord/api", () => ({
+  getCallHistory: vi.fn(),
+  getLessonCalls: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@mui/material", async () => {
   const actual = await vi.importActual<typeof import("@mui/material")>("@mui/material");
   return { ...actual, useMediaQuery: () => false };

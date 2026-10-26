@@ -188,6 +188,7 @@ model Lesson {
   prospectContactMethod ContactMethod?
 
   scheduledReminders ScheduledReminder[]
+  callRecords        CallRecord[]
 
   @@index([tutorId, startTime])
   @@index([tutorId, status])
@@ -350,9 +351,13 @@ model CallRecord {
   studentId String
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@index([tutorId, startedAt])
   @@index([studentId, startedAt])
+  @@index([lessonId, startedAt])
   @@map("call_records")
 }

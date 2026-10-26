@@ -58,7 +58,9 @@ type ConnectionHandlers = {
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 const lessonEvent = { type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" };
-const inviteMessage = Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" }));
+const inviteMessage = Buffer.from(
+  JSON.stringify({ type: "call_invite", inviteId: "invite-1", lessonId: "lesson-1" })
+);
 
 describe("WebSocketManager sockets waiting for a call in another tab", () => {
   let server: EventEmitter;

@@ -6,9 +6,44 @@ import {
   toCallerRole,
   toOutgoingPeer,
   toCanceledText,
+  toInviteMessage,
   toPeerEndedText,
   toUnavailableText,
 } from "../call.helpers";
+
+const LESSON = {
+  id: "lesson-1",
+  subject: "PHYSICS" as const,
+  startTime: "2026-10-23T15:00:00.000Z",
+  endTime: "2026-10-23T16:00:00.000Z",
+};
+
+describe("features/videoCall/model/call.helpers toInviteMessage", () => {
+  it("should address a tutor call from the student card to the student only", () => {
+    expect(toInviteMessage({ studentId: "s-1", peerName: "Иван", lesson: null }, "i-1")).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+      targetStudentId: "s-1",
+    });
+  });
+
+  it("should add the lesson to a tutor call from the lesson", () => {
+    expect(toInviteMessage({ studentId: "s-1", peerName: "Иван", lesson: LESSON }, "i-1")).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+      targetStudentId: "s-1",
+      lessonId: "lesson-1",
+    });
+  });
+
+  it("should send only the lesson for a student call", () => {
+    expect(toInviteMessage({ peerName: "Анна", lesson: LESSON }, "i-1")).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+      lessonId: "lesson-1",
+    });
+  });
+});
 
 describe("features/videoCall/model/call.helpers isPickerDismissed", () => {
   it("should treat a cancelled screen picker as dismissed", () => {
@@ -50,13 +85,33 @@ describe("features/videoCall/model/call.helpers toast texts", () => {
 
 describe("features/videoCall/model/call.helpers call roles", () => {
   it("should let a tutor call a student and a student call the tutor", () => {
-    expect(toCallerRole({ studentId: "s-1", peerName: "Иван" })).toBe("tutor");
-    expect(toOutgoingPeer({ studentId: "s-1", peerName: "Иван" })).toEqual({
+    expect(toCallerRole({ studentId: "s-1", peerName: "Иван", lesson: null })).toBe("tutor");
+    expect(toOutgoingPeer({ studentId: "s-1", peerName: "Иван", lesson: null })).toEqual({
       name: "Иван",
       role: "student",
     });
-    expect(toCallerRole({ peerName: "Анна" })).toBe("student");
-    expect(toOutgoingPeer({ peerName: "Анна" })).toEqual({ name: "Анна", role: "tutor" });
+    expect(
+      toCallerRole({
+        peerName: "Анна",
+        lesson: {
+          id: "lesson-1",
+          subject: "MATHEMATICS",
+          startTime: "2026-10-23T15:00:00.000Z",
+          endTime: "2026-10-23T16:00:00.000Z",
+        },
+      })
+    ).toBe("student");
+    expect(
+      toOutgoingPeer({
+        peerName: "Анна",
+        lesson: {
+          id: "lesson-1",
+          subject: "MATHEMATICS",
+          startTime: "2026-10-23T15:00:00.000Z",
+          endTime: "2026-10-23T16:00:00.000Z",
+        },
+      })
+    ).toEqual({ name: "Анна", role: "tutor" });
   });
 
   it("should recognise a complete call address", () => {

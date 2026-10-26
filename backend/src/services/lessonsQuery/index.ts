@@ -1,4 +1,5 @@
 export { fetchLessonsPage } from "./lessonsQuery";
+export { LESSON_STUDENT_INCLUDE } from "./lessonsQuery.constants";
 export {
   buildLessonsWhere,
   parseLessonsPagination,

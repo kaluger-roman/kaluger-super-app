@@ -30,7 +30,9 @@ export const lessonsModel = {
 };
 
 export * as lessonFormModel from "./lessonForm.model";
+export * as lessonCallModel from "./lessonCall.model";
 export { lessonCancellationModel };
+export { hasCallableStudent } from "./lessonCall.helpers";
 export {
   parseReceivedAmount,
   toReceivedAmountInput,

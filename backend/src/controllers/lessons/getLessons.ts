@@ -2,6 +2,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import {
+  LESSON_STUDENT_INCLUDE,
   tryAttachCommissionToLessons,
   buildLessonsWhere,
   fetchLessonsPage,
@@ -67,9 +68,7 @@ export const getLesson = async (req: AuthRequest, res: Response) => {
         id,
         tutorId: userId,
       },
-      include: {
-        student: true,
-      },
+      include: LESSON_STUDENT_INCLUDE,
     });
 
     if (!lesson) {

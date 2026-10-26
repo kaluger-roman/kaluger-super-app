@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "branch": "fix-video-call-mobile-zoom",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-10-23T12:58:19Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 3,
+    "insertions": 67,
+    "deletions": 3
+  },
+  "summary": {
+    "raw_findings": 4,
+    "after_dedup": 3,
+    "after_score_filter": 1,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1
+    },
+    "by_category": {
+      "hack": 1
+    },
+    "agents_failed": [],
+    "agents_empty": [
+      "claude-md",
+      "security",
+      "type-safety",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "В тесте темы заново объявлен isRecord, хотя он уже экспортируется из shared/lib",
+      "category": "hack",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 19,
+      "line_end": 20,
+      "snippet": "const isRecord = (value: unknown): value is Record<string, unknown> =>\n  typeof value === \"object\" && value !== null && !Array.isArray(value);",
+      "rationale": "Это побайтовая копия isRecord из frontend/src/shared/lib/typeGuards.helpers.ts. Он экспортируется через shared/lib/index.ts и уже используется в webSocket.helpers.ts, socketConnection.helpers.ts и signaling.helpers.ts, у него есть свой тест. Две копии одного type guard: если общий поменяют, локальная копия молча разойдётся с ним.",
+      "fix_hint": "Удалить локальное объявление и импортировать isRecord из общего модуля внутри слоя shared, например `import { isRecord } from \"../../../lib\";`.",
+      "score": 50,
+      "verification_note": "Локальный isRecord в theme.test.ts побайтово совпадает с экспортируемым из shared/lib/typeGuards.helpers.ts (реэкспорт в shared/lib/index.ts подтверждён), то есть это подтверждённое дублирование логики по категории hack, но вред минимален и ограничен тестом, поэтому 50, а не выше.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "deep-logic",
+      "title": "Обходчик теста молча пропускает массивы (variants) и функции в styleOverrides, поэтому уменьшенный шрифт для size=\"small\" пройдёт незамеченным",
+      "category": "logic",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 19,
+      "line_end": 28,
+      "snippet": "const isRecord = (value: unknown): value is Record<string, unknown> =>\n  typeof value === \"object\" && value !== null && !Array.isArray(value);\n\nconst collectFontSizeRules = (node: unknown, path: string[] = []): FontSizeRule[] => {\n  if (!isRecord(node)) return [];",
+      "rationale": "`isRecord` отбрасывает массивы и функции, поэтому `input: { variants: [{ props: { size: \"small\" }, style: { fontSize: \"0.875rem\" } }] }` (синтаксис MUI v7 для стилей по пропсам) или `root: ({ theme }) => ({ fontSize: ... })` в MuiOutlinedInput/MuiTextField не попадут в `shrunkRules`, и регрессионный тест останется зелёным. Как раз size=\"small\" LoginForm включает на мобильном (`size={isMobile ? \"small\" : \"medium\"}`), так что вероятный путь регрессии тест не ловит. (also flagged by: shallow-bug)",
+      "fix_hint": "Обходить и массивы (рекурсия по элементам с индексом в пути), а на функции в styleOverrides падать явно (или вызывать их с `{ theme, ownerState: {} }`), чтобы новый формат override не проскакивал проверку молча.",
+      "score": 25,
+      "verification_note": "Утверждение про LoginForm верно (`size={isMobile ? \"small\" : \"medium\"}`), и `isRecord` действительно пропускает массивы и функции, но в themeConfig сейчас нет ни `variants`, ни функций в `styleOverrides`, так что это гипотетический пробел регрессионного теста, а не текущий пропуск. Дубль находки shallow-bug (строки 22-29, тоже score 25).",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "deep-logic",
+      "title": "Проверка шрифта охватывает все слоты компонентов, кроме лейбла, и упадёт на законных мелких шрифтах не в полях ввода",
+      "category": "logic",
+      "file": "frontend/src/shared/ui/themeConfig/__tests__/theme.test.ts",
+      "line_start": 61,
+      "line_end": 65,
+      "snippet": "    const shrunkRules = INPUT_COMPONENTS.flatMap((name) =>\n      collectFontSizeRules(theme.components?.[name]?.styleOverrides, [name])\n    )\n      .filter(({ path }) => !path.includes(\".MuiInputLabel-root\"))\n      .filter(({ value }) => !(toPx(value) >= IOS_MIN_INPUT_FONT_PX));",
+      "rationale": "Обходятся все слоты MuiAutocomplete (`option`, `listbox`, `groupLabel`, `noOptions`, `tag`) и селекторы внутри `MuiTextField.root` (например `& .MuiFormHelperText-root`, у которого дефолт 0.75rem). Это не редактируемые поля, и iOS на них не зумит, но любой fontSize меньше 16px там уронит тест. Сейчас таких правил в теме нет, так что это ложное срабатывание в будущем, а не текущее падение.",
+      "fix_hint": "Ограничить проверку слотами самих полей ввода (`input`, `inputSizeSmall`, `inputMultiline`, `select` и т.п.) и селекторами `.MuiInputBase-input` / `.MuiOutlinedInput-root`, вместо чёрного списка из одного `.MuiInputLabel-root`.",
+      "score": 25,
+      "verification_note": "Проверка действительно охватывает все слоты MuiAutocomplete, MuiSelect и вложенные селекторы MuiTextField, но сейчас в themeConfig нет fontSize ниже 16px внутри этих компонентов, поэтому тест проходит, а падение было бы громким и будущим, а не прод-багом.",
+      "reason": "below threshold"
+    }
+  ]
+}

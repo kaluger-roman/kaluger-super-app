@@ -1,4 +1,4 @@
-import type { CallStatus } from "@prisma/client";
+import type { CallStatus, Subject } from "@prisma/client";
 
 export type CallDirection = "outgoing" | "incoming";
 
@@ -10,6 +10,13 @@ export type CallCancelReason = "canceled" | "timeout";
 
 // A reply names the call it is about, or, before the call exists, the invite that asked for it.
 export type CallReplyTarget = { callId: string } | { inviteId: string };
+
+export type CallLessonSummary = {
+  id: string;
+  subject: Subject;
+  startTime: string;
+  endTime: string;
+};
 
 export type IceServer = {
   urls: string;
@@ -30,7 +37,7 @@ export type IceCandidatePayload = {
 };
 
 export type CallSignalingInbound =
-  | { type: "call_invite"; inviteId: string; targetStudentId?: string }
+  | { type: "call_invite"; inviteId: string; targetStudentId?: string; lessonId?: string }
   | { type: "call_accept"; callId: string }
   | { type: "call_reject"; callId: string }
   | { type: "call_cancel"; callId: string }
@@ -53,6 +60,7 @@ export type CallSignalingOutbound =
       type: "call_incoming";
       callId: string;
       callerName: string;
+      lesson: CallLessonSummary | null;
       iceServers: IceServer[];
     }
   | { type: "call_ringing"; callId: string; inviteId: string }
@@ -84,4 +92,5 @@ export type CallHistoryItem = {
   startedAt: string;
   durationSeconds: number | null;
   status: CallStatus;
+  lesson: CallLessonSummary | null;
 };

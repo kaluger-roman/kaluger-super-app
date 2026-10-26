@@ -1,4 +1,5 @@
-import { isRecord } from "@shared";
+import type { CallLessonSummary } from "@entities";
+import { isRecord, isSubject } from "@shared";
 
 import * as callModel from "./call.model";
 import type { IceServerPayload } from "./call.types";
@@ -24,6 +25,16 @@ const isEndReason = (value: unknown): value is CallEndReason =>
 
 const isCancelReason = (value: unknown): value is CallCancelReason =>
   CALL_CANCEL_REASONS.some((reason) => reason === value);
+
+// A malformed lesson only hides the lesson block: the call itself must still ring.
+const toCallLesson = (value: unknown): CallLessonSummary | null => {
+  if (!isRecord(value)) return null;
+  const { id, subject, startTime, endTime } = value;
+  if (!isString(id) || !isString(startTime) || !isString(endTime) || !isSubject(subject)) {
+    return null;
+  }
+  return { id, subject, startTime, endTime };
+};
 
 const toIceServers = (value: unknown): IceServerPayload[] | null => {
   if (!Array.isArray(value)) return null;
@@ -115,7 +126,13 @@ export const parseCallSignal = (data: unknown): CallSignalingOutbound | null => 
     case "call_incoming": {
       const iceServers = toIceServers(data.iceServers);
       return iceServers && isString(data.callerName)
-        ? { type: "call_incoming", callId, callerName: data.callerName, iceServers }
+        ? {
+            type: "call_incoming",
+            callId,
+            callerName: data.callerName,
+            lesson: toCallLesson(data.lesson),
+            iceServers,
+          }
         : null;
     }
     case "call_ringing":

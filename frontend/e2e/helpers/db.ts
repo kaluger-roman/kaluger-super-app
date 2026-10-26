@@ -228,6 +228,7 @@ export const extractInviteToken = (inviteUrl: string): string => {
 export const seedCallRecord = async (input: {
   tutorId: string;
   studentId: string;
+  lessonId?: string;
   callerKind?: "TUTOR" | "STUDENT";
   status?: "COMPLETED" | "MISSED" | "REJECTED" | "CANCELED" | "FAILED";
   durationSeconds?: number;

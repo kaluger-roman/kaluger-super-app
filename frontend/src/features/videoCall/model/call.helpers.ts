@@ -14,14 +14,26 @@ import type {
   CallAddress,
   CallPeer,
   CanceledNotice,
+  PendingConfirm,
   StartCallParams,
   TerminatedCall,
 } from "./call.types";
-import type { CallEndReason, CallRole } from "./signaling.types";
+import type { CallEndReason, CallRole, CallSignalingInbound } from "./signaling.types";
 
 // The caller's own role: a tutor calls a student, a student calls their tutor.
 export const toCallerRole = (params: StartCallParams): CallRole =>
   "studentId" in params ? "tutor" : "student";
+
+export const isPendingConfirm = (
+  confirm: PendingConfirm
+): confirm is { isOpen: true; call: StartCallParams } => confirm.isOpen && confirm.call !== null;
+
+export const toInviteMessage = (call: StartCallParams, inviteId: string): CallSignalingInbound => ({
+  type: "call_invite",
+  inviteId,
+  ...("studentId" in call ? { targetStudentId: call.studentId } : {}),
+  ...(call.lesson ? { lessonId: call.lesson.id } : {}),
+});
 
 export const toOutgoingPeer = (params: StartCallParams): CallPeer => ({
   name: params.peerName,

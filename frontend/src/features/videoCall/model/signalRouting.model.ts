@@ -1,6 +1,6 @@
 import { sample, split } from "effector";
 
-import { callHistoryModel } from "@entities";
+import { callHistoryModel, lessonCallsModel } from "@entities";
 
 import * as callModel from "./call.model";
 import {
@@ -37,7 +37,10 @@ const signals = split(callModel.signalReceived, {
   historyUpdated: isSignalOf("call_history_updated"),
 });
 
-sample({ clock: signals.historyUpdated, target: callHistoryModel.refreshRequested });
+sample({
+  clock: signals.historyUpdated,
+  target: [callHistoryModel.refreshRequested, lessonCallsModel.refreshRequested],
+});
 
 // Decide once: taking the call flips the phase, so later samples would see "incoming".
 const incomingDecided = sample({
@@ -59,6 +62,7 @@ sample({
     callId: message.callId,
     callerName: message.callerName,
     role,
+    lesson: message.lesson,
   }),
   target: callModel.incomingCallReceived,
 });

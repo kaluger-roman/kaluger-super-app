@@ -282,13 +282,19 @@ testRouter.get("/ws/students/:studentUserId", (req: Request, res: Response) => {
   res.json({ connected: socket !== undefined });
 });
 
+testRouter.get("/ws/tutors/:userId", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("tutor", req.params.userId);
+  res.json({ connected: socket !== undefined });
+});
+
 testRouter.post("/call-records", async (req: Request, res: Response) => {
-  const { tutorId, studentId, callerKind, status, startedAt, durationSeconds } = req.body;
+  const { tutorId, studentId, lessonId, callerKind, status, startedAt, durationSeconds } = req.body;
   const started = startedAt ? new Date(startedAt) : new Date();
   const record = await prisma.callRecord.create({
     data: {
       tutorId,
       studentId,
+      lessonId: lessonId ?? null,
       callerKind: callerKind ?? "TUTOR",
       status: status ?? "COMPLETED",
       startedAt: started,

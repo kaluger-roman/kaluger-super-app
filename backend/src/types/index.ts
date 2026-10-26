@@ -82,6 +82,7 @@ export type {
   CallEndReason,
   CallCancelReason,
   CallReplyTarget,
+  CallLessonSummary,
   IceServer,
   SessionDescriptionPayload,
   IceCandidatePayload,

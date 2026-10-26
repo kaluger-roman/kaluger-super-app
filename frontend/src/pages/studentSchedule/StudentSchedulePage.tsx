@@ -9,6 +9,7 @@ import { useGate, useUnit } from "effector-react";
 
 import {
   CallNotificationsCard,
+  StudentLessonDialog,
   StudentWeeklyView,
   formatRangeLabel,
   studentScheduleModel,
@@ -60,6 +61,7 @@ export const StudentSchedulePage: FC = () => {
       {loadError && <Alert severity="error">{loadError}</Alert>}
 
       <StudentWeeklyView lessons={lessons} />
+      <StudentLessonDialog />
     </Styled.RootBox>
   );
 };

@@ -10,6 +10,7 @@ import { theme } from "@shared";
 import type { Student } from "@shared";
 
 import { server } from "../../../../../__tests__/mocks/server";
+import { CallConfirmDialog, callConfirmModel } from "../../../../videoCall";
 import { studentsModel, studentsArchiveModel } from "../../../models";
 import { StudentViewDialog } from "../StudentViewDialog";
 import * as studentViewDialogModel from "../StudentViewDialog.model";
@@ -420,14 +421,42 @@ describe("StudentViewDialog", () => {
       expect(screen.queryByRole("button", { name: "Видеозвонок" })).not.toBeInTheDocument();
     });
 
-    it("should hide the call button for an archived student", () => {
+    it("should show the call button for an archived student with a cabinet", () => {
       renderWithProviders(
         <StudentViewDialog
           open={true}
           student={{ ...archivedStudent, studentUser: linkedStudent.studentUser } as Student}
         />
       );
-      expect(screen.queryByRole("button", { name: "Видеозвонок" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Видеозвонок" })).toBeInTheDocument();
+    });
+
+    it("should ask for confirmation without a lesson block and keep the card open", async () => {
+      const scope = fork({
+        values: [
+          [studentsModel.$isViewDialogOpen, true],
+          [studentsModel.$viewingStudent, linkedStudent],
+        ],
+      });
+      renderWithProviders(
+        <>
+          <StudentViewDialog open={true} student={linkedStudent} />
+          <CallConfirmDialog />
+        </>,
+        scope
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Видеозвонок" }));
+
+      const confirm = await screen.findByRole("dialog", { name: "Начать видеозвонок?" });
+      expect(confirm).toHaveTextContent("Иван Иванов");
+      expect(confirm).not.toHaveTextContent("Звонок по уроку");
+      expect(scope.getState(callConfirmModel.$call)).toEqual({
+        studentId: "1",
+        peerName: "Иван Иванов",
+        lesson: null,
+      });
+      expect(scope.getState(studentsModel.$isViewDialogOpen)).toBe(true);
     });
   });
 });

@@ -3,7 +3,6 @@ import type { FC } from "react";
 import {
   MicOff as MicOffIcon,
   MicOffOutlined as MicSuspendedIcon,
-  ScreenShare as ScreenShareIcon,
 } from "@mui/icons-material";
 import { Tooltip } from "@mui/material";
 
@@ -12,6 +11,8 @@ import { TILE_VARIANTS } from "./VideoTile.constants";
 import * as Styled from "./VideoTile.styled";
 import type { TileVariant } from "./VideoTile.types";
 import type { CallMediaState, TileInterruption } from "../../videoCall.types";
+import { FullscreenToggleButton } from "../FullscreenToggleButton";
+import { ScreenShareLabel } from "../ScreenShareLabel";
 
 type VideoTileProps = {
   name: string;
@@ -40,10 +41,13 @@ export const VideoTile: FC<VideoTileProps> = ({
     </Styled.StatusBadge>
   );
 
+  const hasTopEnd = config.fullscreenToggle || (!config.badgeInNameRow && Boolean(micBadge));
+
   return (
     <Styled.TileBox
       $hasVideo={media.cameraOn && !interruption}
       $isScreen={media.screenSharing && !interruption}
+      $bare={config.bare}
       $minHeight={config.minHeight}
       $inset={config.inset}
       $gap={config.gap}
@@ -58,30 +62,32 @@ export const VideoTile: FC<VideoTileProps> = ({
         interruption={interruption}
       />
 
-      <Styled.TopRow>
-        {media.screenSharing && !interruption && (
-          <Tooltip title="Демонстрация экрана">
-            <Styled.ScreenLabelPill>
-              <ScreenShareIcon fontSize="small" />
-              <Styled.ScreenLabelText>Демонстрация экрана</Styled.ScreenLabelText>
-            </Styled.ScreenLabelPill>
-          </Tooltip>
-        )}
-        {audioNotice && (
-          <Styled.AudioNoticePill role="status">
-            <MicSuspendedIcon fontSize="small" />
-            {audioNotice}
-          </Styled.AudioNoticePill>
-        )}
-        {!config.badgeInNameRow && micBadge}
-      </Styled.TopRow>
+      {!config.bare && (
+        <Styled.TopRow>
+          {media.screenSharing && !interruption && <ScreenShareLabel />}
+          {audioNotice && (
+            <Styled.AudioNoticePill role="status">
+              <MicSuspendedIcon fontSize="small" />
+              {audioNotice}
+            </Styled.AudioNoticePill>
+          )}
+          {hasTopEnd && (
+            <Styled.TopEnd>
+              {!config.badgeInNameRow && micBadge}
+              {config.fullscreenToggle && <FullscreenToggleButton placement="tile" />}
+            </Styled.TopEnd>
+          )}
+        </Styled.TopRow>
+      )}
 
-      <Styled.NameRow>
-        <Tooltip title={name}>
-          <Styled.NamePill $paddingX={config.pillPaddingX}>{name}</Styled.NamePill>
-        </Tooltip>
-        {config.badgeInNameRow && micBadge}
-      </Styled.NameRow>
+      {!config.bare && (
+        <Styled.NameRow>
+          <Tooltip title={name}>
+            <Styled.NamePill $paddingX={config.pillPaddingX}>{name}</Styled.NamePill>
+          </Tooltip>
+          {config.badgeInNameRow && micBadge}
+        </Styled.NameRow>
+      )}
     </Styled.TileBox>
   );
 };

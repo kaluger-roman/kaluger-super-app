@@ -7,6 +7,8 @@ import * as callRegistry from "../callSignaling";
 import { INVITE_RATE_LIMIT, RING_TIMEOUT_MS } from "../callSignaling.constants";
 import * as callSignalingHelpers from "../callSignaling.helpers";
 
+const HOUR_MS = 60 * 60 * 1000;
+
 const OFFER = { type: "offer" as const, sdp: "v=0 offer" };
 const ANSWER = { type: "answer" as const, sdp: "v=0 answer" };
 const CANDIDATE = {
@@ -78,10 +80,13 @@ describe("processCallSignal", () => {
 
   afterAll(async () => {
     await prisma.callRecord.deleteMany({ where: { tutorId } });
+    await prisma.lesson.deleteMany({ where: { tutorId: { in: [tutorId, otherTutorId] } } });
     await prisma.studentUser.deleteMany({
       where: { id: { in: [studentUserId, ...extraStudentUserIds] } },
     });
-    await prisma.student.deleteMany({ where: { id: { in: [studentId, ...extraStudentIds] } } });
+    await prisma.student.deleteMany({
+      where: { OR: [{ id: { in: [studentId, ...extraStudentIds] } }, { tutorId: otherTutorId }] },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [tutorId, otherTutorId] } },
     });
@@ -106,6 +111,18 @@ describe("processCallSignal", () => {
     return callId;
   };
 
+  const createLesson = (data: { tutorId: string; studentId: string }) => {
+    const start = new Date(Date.now() + HOUR_MS);
+    return prisma.lesson.create({
+      data: {
+        ...data,
+        subject: "MATHEMATICS",
+        startTime: start,
+        endTime: new Date(start.getTime() + HOUR_MS),
+      },
+    });
+  };
+
   const createLinkedStudent = async () => {
     const student = await prisma.student.create({ data: { name: "Пётр", tutorId } });
     const studentUser = await prisma.studentUser.create({
@@ -128,7 +145,7 @@ describe("processCallSignal", () => {
     const ringing = messagesOfType("call_ringing");
     expect(incoming).toHaveLength(1);
     expect(incoming[0].id).toBe(studentUserId);
-    expect(incoming[0].message).toMatchObject({ callerName: "Анна" });
+    expect(incoming[0].message).toMatchObject({ callerName: "Анна", lesson: null });
     expect(incoming[0].message).toHaveProperty("iceServers");
     expect(ringing).toHaveLength(1);
     expect(ringing[0].id).toBe(tutorId);
@@ -157,7 +174,7 @@ describe("processCallSignal", () => {
 
   it("should answer call_busy when the callee already has an active call", async () => {
     const pair = await callSignalingHelpers.resolvePairForTutor(tutorId, studentId);
-    callRegistry.startCall(pair, "student", () => undefined);
+    callRegistry.startCall(pair, "student", null, () => undefined);
 
     await invite();
 
@@ -418,18 +435,25 @@ describe("processCallSignal", () => {
     expect(messagesOfType("call_ringing")).toHaveLength(0);
   });
 
-  it("should answer call_error when the tutor calls an archived student", async () => {
+  it("should ring an archived student, with and without a lesson", async () => {
+    const lesson = await createLesson({ tutorId, studentId });
     await prisma.student.update({ where: { id: studentId }, data: { archived: true } });
     try {
-      await invite();
+      await invite("invite-1");
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-2",
+        targetStudentId: studentId,
+        lessonId: lesson.id,
+      });
     } finally {
       await prisma.student.update({ where: { id: studentId }, data: { archived: false } });
     }
 
-    expect(messagesOfType("call_error")[0].message).toMatchObject({
-      message: "Звонки недоступны: ученик в архиве",
-    });
-    expect(messagesOfType("call_incoming")).toHaveLength(0);
+    expect(messagesOfType("call_error")).toHaveLength(0);
+    const incoming = messagesOfType("call_incoming");
+    expect(incoming.map((c) => c.id)).toEqual([studentUserId, studentUserId]);
+    expect(incoming[1].message).toMatchObject({ lesson: { id: lesson.id } });
   });
 
   it("should send call_no_answer to the caller and call_canceled to the callee when ringing times out", async () => {
@@ -477,7 +501,7 @@ describe("processCallSignal", () => {
 
   it("should not tell anyone to refresh history when the call record cannot be written", async () => {
     const callId = await inviteAndAccept();
-    jest.spyOn(prisma.callRecord, "create").mockRejectedValueOnce(new Error("db down"));
+    jest.spyOn(prisma, "$transaction").mockRejectedValueOnce(new Error("db down"));
     jest.spyOn(console, "error").mockImplementation(() => undefined);
 
     await signal("tutor", tutorId, { type: "call_hangup", callId });
@@ -608,5 +632,176 @@ describe("processCallSignal", () => {
     const toStudent = sent.filter((c) => c.id === studentUserId).map((c) => c.message.type);
     expect(toStudent[0]).toBe("call_ended");
     expect(messagesOfType("call_error")).toHaveLength(0);
+  });
+
+  describe("lesson calls", () => {
+    const recordCountOfPair = () => prisma.callRecord.count({ where: { tutorId, studentId } });
+
+    const expectRejected = async (message: string, recordsBefore: number) => {
+      expect(messagesOfType("call_error")).toHaveLength(1);
+      expect(messagesOfType("call_error")[0].message).toMatchObject({
+        message,
+        inviteId: "invite-1",
+      });
+      expect(messagesOfType("call_incoming")).toHaveLength(0);
+      expect(messagesOfType("call_ringing")).toHaveLength(0);
+      expect(await recordCountOfPair()).toBe(recordsBefore);
+    };
+
+    it("should ring the student with the lesson when the tutor calls from the lesson", async () => {
+      const lesson = await createLesson({ tutorId, studentId });
+
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        targetStudentId: studentId,
+        lessonId: lesson.id,
+      });
+
+      expect(messagesOfType("call_ringing")[0]).toMatchObject({ id: tutorId });
+      expect(messagesOfType("call_incoming")[0]).toMatchObject({
+        id: studentUserId,
+        message: {
+          callerName: "Анна",
+          lesson: {
+            id: lesson.id,
+            subject: "MATHEMATICS",
+            startTime: lesson.startTime.toISOString(),
+            endTime: lesson.endTime.toISOString(),
+          },
+        },
+      });
+      expect(callRegistry.findActiveCallForParticipant("tutor", tutorId)?.lesson?.id).toBe(
+        lesson.id
+      );
+    });
+
+    it("should ring the tutor with the lesson when the student calls from the lesson", async () => {
+      const lesson = await createLesson({ tutorId, studentId });
+
+      await signal("student", studentUserId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        lessonId: lesson.id,
+      });
+
+      expect(messagesOfType("call_ringing")[0]).toMatchObject({ id: studentUserId });
+      expect(messagesOfType("call_incoming")[0]).toMatchObject({
+        id: tutorId,
+        message: { callerName: "Иван", lesson: { id: lesson.id } },
+      });
+    });
+
+    it("should reject a student invite without a lesson before any database lookup", async () => {
+      const before = await recordCountOfPair();
+      const findStudentUser = jest.spyOn(prisma.studentUser, "findUnique");
+
+      await signal("student", studentUserId, { type: "call_invite", inviteId: "invite-1" });
+
+      expect(findStudentUser).not.toHaveBeenCalled();
+      await expectRejected("Звонок возможен только по уроку", before);
+    });
+
+    it("should reject a tutor call with a lesson of another student", async () => {
+      const other = await createLinkedStudent();
+      const lesson = await createLesson({ tutorId, studentId: other.studentId });
+      const before = await recordCountOfPair();
+
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        targetStudentId: studentId,
+        lessonId: lesson.id,
+      });
+
+      await expectRejected("Урок не найден", before);
+    });
+
+    it("should reject a tutor call with a deleted lesson", async () => {
+      const lesson = await createLesson({ tutorId, studentId });
+      await prisma.lesson.delete({ where: { id: lesson.id } });
+      const before = await recordCountOfPair();
+
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        targetStudentId: studentId,
+        lessonId: lesson.id,
+      });
+
+      await expectRejected("Урок не найден", before);
+    });
+
+    it("should reject a student call with a lesson of another student", async () => {
+      const other = await createLinkedStudent();
+      const lesson = await createLesson({ tutorId, studentId: other.studentId });
+      const before = await recordCountOfPair();
+
+      await signal("student", studentUserId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        lessonId: lesson.id,
+      });
+
+      await expectRejected("Урок не найден", before);
+    });
+
+    it("should reject a student call with a lesson of another tutor", async () => {
+      const foreignStudent = await prisma.student.create({
+        data: { name: "Чужой ученик", tutorId: otherTutorId },
+      });
+      const lesson = await createLesson({ tutorId: otherTutorId, studentId: foreignStudent.id });
+      const before = await recordCountOfPair();
+
+      await signal("student", studentUserId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        lessonId: lesson.id,
+      });
+
+      await expectRejected("Урок не найден", before);
+    });
+
+    it("should reject a student call with a deleted lesson", async () => {
+      const lesson = await createLesson({ tutorId, studentId });
+      await prisma.lesson.delete({ where: { id: lesson.id } });
+      const before = await recordCountOfPair();
+
+      await signal("student", studentUserId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        lessonId: lesson.id,
+      });
+
+      await expectRejected("Урок не найден", before);
+    });
+
+    it("should carry the new lesson when a repeated invite replaces the ringing call", async () => {
+      const first = await createLesson({ tutorId, studentId });
+      const second = await createLesson({ tutorId, studentId });
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-1",
+        targetStudentId: studentId,
+        lessonId: first.id,
+      });
+      callWebSocket.clearSent();
+
+      await signal("tutor", tutorId, {
+        type: "call_invite",
+        inviteId: "invite-2",
+        targetStudentId: studentId,
+        lessonId: second.id,
+      });
+
+      expect(messagesOfType("call_incoming")[0].message).toMatchObject({
+        lesson: { id: second.id },
+      });
+      await waitFor(() => messagesOfType("call_history_updated").length === 2);
+      const canceled = await prisma.callRecord.findFirstOrThrow({
+        where: { tutorId, status: "CANCELED", lessonId: first.id },
+      });
+      expect(canceled.lessonId).toBe(first.id);
+    });
   });
 });

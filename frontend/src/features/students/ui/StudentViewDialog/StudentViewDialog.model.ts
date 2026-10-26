@@ -2,7 +2,8 @@ import { createStore, createEvent, sample } from "effector";
 
 import type { Student } from "@shared";
 
-import { callRequestModel } from "../../../videoCall";
+import { isStudentCardCall, toStudentCall } from "./StudentViewDialog.helpers";
+import { callConfirmModel } from "../../../videoCall";
 import { studentsModel } from "../../models";
 
 export const $deleteDialogOpen = createStore(false);
@@ -25,11 +26,13 @@ sample({
 
 sample({
   clock: callRequested,
-  fn: (student) => ({ studentId: student.id, peerName: student.name }),
-  target: callRequestModel.callRequested,
+  fn: toStudentCall,
+  target: callConfirmModel.callRequested,
 });
 
 sample({
-  clock: callRequested,
+  clock: callConfirmModel.confirmed,
+  filter: isStudentCardCall,
+  fn: () => undefined,
   target: studentsModel.viewDialogClosed,
 });

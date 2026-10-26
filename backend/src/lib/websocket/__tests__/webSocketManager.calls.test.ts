@@ -49,7 +49,9 @@ const makeSocket = (): SocketStub => {
   return emitter;
 };
 
-const inviteMessage = Buffer.from(JSON.stringify({ type: "call_invite", inviteId: "invite-1" }));
+const inviteMessage = Buffer.from(
+  JSON.stringify({ type: "call_invite", inviteId: "invite-1", lessonId: "lesson-1" })
+);
 const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 
 type ConnectionHandlers = {
@@ -122,7 +124,7 @@ describe("WebSocketManager call lifecycle", () => {
 
     expect(processCallSignal).toHaveBeenCalledWith(
       { kind: "student", id: "student-1" },
-      { type: "call_invite", inviteId: "invite-1" }
+      { type: "call_invite", inviteId: "invite-1", lessonId: "lesson-1" }
     );
   });
 

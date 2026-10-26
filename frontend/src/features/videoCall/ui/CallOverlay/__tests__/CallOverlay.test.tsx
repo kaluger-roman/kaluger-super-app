@@ -29,7 +29,10 @@ const renderOverlay = (phase: CallPhase, shown: CallPhase = phase) => {
     values: [
       [callModel.$callPhase, phase],
       [callScreenModel.$shownCallPhase, shown],
-      [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
+      [
+        callModel.$incomingCall,
+        { callId: "call-1", callerName: "Анна Петрова", role: "tutor", lesson: null },
+      ],
       [callModel.$outgoingCallPeer, { name: "Иван Смирнов", role: "student" }],
     ],
   });

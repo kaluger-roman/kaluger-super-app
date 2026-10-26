@@ -8,6 +8,7 @@ import {
   ICE_CANDIDATE_MAX_LENGTH,
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
+  LESSON_ID_MAX_LENGTH,
   SDP_MAX_LENGTH,
 } from "./signaling.constants";
 import type { CallSignalType } from "./signaling.types";
@@ -62,17 +63,28 @@ export const toIceCandidate = (value: unknown): IceCandidatePayload | null => {
   };
 };
 
+const toCallInvite = (data: Record<string, unknown>): CallSignalingInbound | null => {
+  const { inviteId, targetStudentId, lessonId } = data;
+  if (!isNonEmptyString(inviteId) || inviteId.length > INVITE_ID_MAX_LENGTH) return null;
+  if (targetStudentId !== undefined && !isNonEmptyString(targetStudentId)) return null;
+  if (
+    lessonId !== undefined &&
+    !(isNonEmptyString(lessonId) && lessonId.length <= LESSON_ID_MAX_LENGTH)
+  ) {
+    return null;
+  }
+  return {
+    type: "call_invite",
+    inviteId,
+    ...(targetStudentId === undefined ? {} : { targetStudentId }),
+    ...(lessonId === undefined ? {} : { lessonId }),
+  };
+};
+
 export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
   if (!isCallSignalMessage(data)) return null;
 
-  if (data.type === "call_invite") {
-    const { inviteId, targetStudentId } = data;
-    if (!isNonEmptyString(inviteId) || inviteId.length > INVITE_ID_MAX_LENGTH) return null;
-    if (targetStudentId === undefined) return { type: "call_invite", inviteId };
-    return isNonEmptyString(targetStudentId)
-      ? { type: "call_invite", inviteId, targetStudentId }
-      : null;
-  }
+  if (data.type === "call_invite") return toCallInvite(data);
 
   if (!isNonEmptyString(data.callId)) return null;
   const { callId } = data;

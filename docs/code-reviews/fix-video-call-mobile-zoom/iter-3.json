@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "branch": "fix-video-call-mobile-zoom",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-23T13:15:29Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 3,
+    "insertions": 65,
+    "deletions": 3
+  },
+  "summary": {
+    "raw_findings": 0,
+    "after_dedup": 0,
+    "after_score_filter": 0,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0
+    },
+    "by_category": {},
+    "agents_failed": [],
+    "agents_empty": [
+      "claude-md",
+      "shallow-bug",
+      "deep-logic",
+      "security",
+      "type-safety",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy",
+      "hacks"
+    ]
+  },
+  "findings": [],
+  "filtered_out": []
+}

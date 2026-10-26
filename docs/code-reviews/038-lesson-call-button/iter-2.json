@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "branch": "038-lesson-call-button",
+  "base_ref": "2352a4da634ea748fd7c6e1361bf972c516f6160 (merge-base main HEAD, working-tree mode)",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-10-23T16:08:58Z",
+  "diff_stats": {
+    "files_changed": 142,
+    "insertions": 4633,
+    "deletions": 352
+  },
+  "summary": {
+    "raw_findings": 10,
+    "after_dedup": 4,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3
+    },
+    "by_category": {
+      "logic": 1,
+      "convention": 1,
+      "hack": 1
+    },
+    "agents_failed": [],
+    "agents_findings": {
+      "claude-md": 1,
+      "shallow-bug": 1,
+      "deep-logic": 1,
+      "security": 1,
+      "type-safety": 1,
+      "removed-behavior": 0,
+      "cross-file": 1,
+      "wrapper-proxy": 1,
+      "hacks": 3
+    },
+    "scoring_notes": "6 of 9 reviewers flagged the same live-call/student-reassignment issue; merged into one finding. type-safety's gate-type finding merged into the hacks gate finding (its fix_hint defaultState: null would not work: effector-react uses defaultState || {}). Reviewers 1,3,5,6,7,9 were interrupted by a rate limit and resumed with context intact; no null scores.",
+    "iter1_fixes_verified": "No reviewer reported a regression in the iter-1 fixes except the incomplete call-record unlink on student reassignment (f1). isLessonForeignKeyError meta.constraint is covered by a real-DB test (createCallRecord.test.ts: lesson deleted before write)."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "cross-file",
+      "title": "Звонок, начатый до смены ученика урока, после завершения снова привязывается к уроку уже другого ученика",
+      "category": "logic",
+      "file": "backend/src/services/callRecord/createCallRecord.ts",
+      "line_start": 26,
+      "line_end": 33,
+      "snippet": "export const createCallRecord = async (args: CreateCallRecordArgs): Promise<void> => {\n  try {\n    await insertCallRecord(args, args.lessonId);\n  } catch (error) {\n    if (args.lessonId === null || !isLessonForeignKeyError(error)) throw error;",
+      "rationale": "Исправление из iter-1 в lessonUpdate.ts (стр. 91-97) отвязывает call_records прежнего ученика только для уже сохранённых записей. callFlow берёт урок один раз при invite (LiveCall.lesson, стр. 183) и пишет lessonId только в finishCall/ringCallee, а createCallRecord его не перепроверяет. Если урок переназначили, пока звонок шёл или звонил, запись прежнего ученика с lessonId этого урока появится уже после отвязки, и в карточке урока нового ученика снова окажется чужой звонок. То есть инвариант из iter-1 по-прежнему нарушается на пути живого звонка. (also flagged by: deep-logic, security, shallow-bug, wrapper-proxy, hacks)",
+      "fix_hint": "В createCallRecord привязывать урок условно: перед insert проверять, что lesson с этим id всё ещё имеет tutorId/studentId записи (findFirst), и иначе писать lessonId: null, по аналогии с откатом на FK-ошибке. Другой вариант: в getLessonCallsForTutor дополнительно фильтровать по текущему studentId урока. Нужен регрессионный тест: смена ученика урока при живом звонке, затем hangup.",
+      "score": 50,
+      "verification_note": "Дефект реален и введён диффом: callFlow берёт урок при invite (LiveCall.lesson) и пишет call.lesson.id в finishCall/ringCallee без повторной проверки, а updateMany в lessonUpdate отвязывает записи только в момент смены ученика, поэтому звонок, завершённый после смены, снова привязывается к уроку нового ученика через getLessonCallsForTutor (фильтр только по tutorId и lessonId); но сценарий узкий (смена ученика именно во время ringing или активного звонка), поэтому оценка 50, а не выше.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Названия новых e2e-тестов не в форме «учитель делает X и видит Y»",
+      "category": "convention",
+      "file": "frontend/e2e/lessons/lesson-call.spec.ts",
+      "line_start": 140,
+      "line_end": 140,
+      "snippet": "  test(\"у урока ученика без кабинета кнопки звонка нет\", async ({ page, tutor }) => {",
+      "rationale": "docs/conventions/e2e-testing.md:75 требует: «test('...') — на русском, в форме «учитель делает X и видит Y»». Этот тест и новый тест в frontend/e2e/students/call-history.spec.ts:58 («у звонка по уроку в истории учителя и ученика указан урок») описывают состояние, а не действие и результат. Соседние тесты тех же файлов (call-history.spec.ts:6, :28) правилу следуют. В других местах репозитория правило соблюдается не везде, поэтому нарушение мелкое.",
+      "fix_hint": "Переименовать, например: «учитель открывает урок ученика без кабинета и не видит кнопку «Позвонить»» и «учитель и ученик открывают историю звонков и видят урок у звонка по уроку».",
+      "score": 50,
+      "verification_note": "Правило «учитель делает X и видит Y» явно записано в docs/conventions/e2e-testing.md:75, и оба новых теста (lesson-call.spec.ts:140 и call-history.spec.ts:58) описывают состояние, а не действие и результат, так что нарушение подтверждено, но оно чисто косметическое и не влияет на работу тестов, поэтому 50, а не выше.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "hacks",
+      "title": "lessonCalls.model берёт id урока из LessonCallsGate.state.updates и отсеивает `{}` после close через typeof, хотя тип стора string",
+      "category": "hack",
+      "file": "frontend/src/entities/callRecord/model/lessonCalls.model.ts",
+      "line_start": 30,
+      "line_end": 38,
+      "snippet": "sample({\n  clock: LessonCallsGate.state.updates,\n  source: $requestedLessonId,\n  filter: (requested, lessonId) => typeof lessonId === \"string\" && lessonId !== requested,",
+      "rationale": "Фикс iter-1 опирается на внутреннюю деталь effector-react: при close гейт сбрасывает state в `defaultState || {}`. Поэтому в Store<string> на деле лежит `{}`, а для типа, который компилятор считает всегда строкой, нужна рантайм-проверка typeof. Вдобавок $requestedLessonId дублирует статус гейта. Передать null через defaultState тоже не выйдет: `null || {}` снова даёт `{}`. Тип гейта Store<string> не совпадает с рантаймом ({} до open и после close). (also flagged by: type-safety)",
+      "fix_hint": "Брать id из payload событий `LessonCallsGate.open` и `LessonCallsGate.set` (useGate вызывает set при смене пропса), а не из `state.updates`, и проверять открытость через `LessonCallsGate.status`, как в callHistory.model. Тогда `{}` после close в модель не попадёт, проверка typeof станет не нужна, и `$requestedLessonId` можно будет убрать.",
+      "score": 50,
+      "verification_note": "Утверждение верно: в effector-react 23.3.0 createGate задаёт state = createStore(defaultState || {}) с .reset(close), поэтому после close в state.updates приходит {}, и typeof-проверка в lessonCalls.model.ts:35 действительно отсекает не-строку при строго типизированном Store<string>, то есть это код-подтверждённый workaround несоответствия типа, а не ложное срабатывание; вред сейчас нулевой (поведение корректно), поэтому оценка 50 по правилу для hack, а не выше.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Механизм версий запросов скопирован из callHistory.model в lessonCalls.model почти построчно",
+      "category": "hack",
+      "file": "frontend/src/entities/callRecord/model/lessonCalls.model.ts",
+      "line_start": 47,
+      "line_end": 68,
+      "snippet": "const versionedLoad = sample({\n  clock: loadStarted,\n  source: $requestedVersion,\n  fn: (version, lessonId): LessonCallsRequest => ({ lessonId, version: version + 1 }),\n});",
+      "rationale": "$requestedVersion/$appliedVersion, versionedLoad/versionedRefresh, фильтры done/fail по `params.version > applied` и сброс floor на close дословно повторяют callHistory.model; LessonCallsRequest повторяет CallHistoryRequest. Новый абзац в docs/conventions/frontend.md требует «Guard both with request versions» для каждого фонового refresh, так что схему будут копировать и дальше, а исправление гонки придётся вносить во все копии.",
+      "fix_hint": "Вынести схему в фабрику, например `createVersionedListLoader<P, T>({ fetch })` в shared/lib или в entities/callRecord/model. Она возвращает load/refresh-эффекты, `$items` и события start/close; callHistory.model и lessonCalls.model собрать из неё, а в конвенции сослаться на фабрику.",
+      "score": 25,
+      "verification_note": "Дублирование подтверждено: lessonCalls.model.ts (строки 10–14, 47–91) почти дословно повторяет схему версий callHistory.model.ts (строки 18–22, 57–101), но код корректен и не держит обходное решение, а конвенция в docs/conventions/frontend.md:302 требует только «guard both with request versions», не фабрику, поэтому это чистая поддерживаемость без подтверждённого вреда для прод-поведения.",
+      "reason": "below threshold"
+    }
+  ]
+}

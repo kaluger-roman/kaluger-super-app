@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callHistoryModel } from "@entities";
+import { callHistoryModel, lessonCallsModel } from "@entities";
 import { notificationsModel } from "@shared";
 
 import { callModel } from "../index";
@@ -39,7 +39,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should cancel a call whose call_ringing arrives after the user already cancelled", async () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     const inviteId = readStore(callModel.$inviteId) ?? "";
     callModel.cancelCall();
     sent.length = 0;
@@ -53,10 +53,10 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should cancel a late ringing of a cancelled invite while the next invite waits", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     const oldInviteId = readStore(callModel.$inviteId) ?? "";
     callModel.cancelCall();
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     sent.length = 0;
 
     receive({ type: "call_ringing", callId: "old-call", inviteId: oldInviteId });
@@ -75,7 +75,13 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should not answer an offer while the incoming call is still ringing", async () => {
-    receive({ type: "call_incoming", callId: "in-1", callerName: "Анна", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "in-1",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
     receive({ type: "webrtc_offer", callId: "in-1", sdp: { type: "offer", sdp: "x" } });
     await settleMicrotasks();
 
@@ -88,18 +94,30 @@ describe("features/videoCall/model inbound signal routing", () => {
     await startCallerSession("own-1");
     sent.length = 0;
 
-    receive({ type: "call_incoming", callId: "in-2", callerName: "Анна", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "in-2",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
 
     expect(sent).toEqual([{ type: "call_reject", callId: "in-2" }]);
     expect(readStore(callModel.$callId)).toBe("own-1");
   });
 
   it("should take the peer's call when both sides dial at once", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     const inviteId = readStore(callModel.$inviteId) ?? "";
     sent.length = 0;
 
-    receive({ type: "call_incoming", callId: "glare-1", callerName: "Иван", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "glare-1",
+      callerName: "Иван",
+      lesson: null,
+      iceServers: [],
+    });
     receive({ type: "call_busy", inviteId });
 
     expect(sent).toEqual([]);
@@ -108,7 +126,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should end the outgoing call on call_busy for its own invite", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
 
     receive({ type: "call_busy", inviteId: readStore(callModel.$inviteId) ?? "" });
 
@@ -116,7 +134,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should ignore call_busy for an invite the caller no longer waits for", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
 
     receive({ type: "call_busy", inviteId: "another-invite" });
 
@@ -132,7 +150,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should end an outgoing call on call_error for its invite", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
 
     receive({
       type: "call_error",
@@ -163,7 +181,13 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should name the caller in the missed-call toast when ringing times out", () => {
-    receive({ type: "call_incoming", callId: "miss-1", callerName: "Анна", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "miss-1",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
     const infos = collectEvents(notificationsModel.showInfoEvent);
 
     receive({ type: "call_canceled", callId: "miss-1", reason: "timeout" });
@@ -174,7 +198,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should say the student is offline when calling a student who is not online", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
     receive({
@@ -188,7 +212,7 @@ describe("features/videoCall/model inbound signal routing", () => {
   });
 
   it("should end a ringing call when the callee drops off", () => {
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     ringCurrentInvite("ring-drop");
 
     receive({ type: "call_unavailable", reason: "offline", callId: "ring-drop" });
@@ -260,7 +284,7 @@ describe("features/videoCall/model call transport", () => {
     resetCallTransportsForTests();
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     errors.unwatch();
 
     expect(readStore(callModel.$callPhase)).toBe("idle");
@@ -274,9 +298,21 @@ describe("features/videoCall/model call transport", () => {
     setCallTransport("student", studentSend, "student-socket");
 
     expect(clearCallTransport({})).toBeNull();
-    callModel.callStarted({ peerName: "Анна" });
+    callModel.callStarted({
+      peerName: "Анна",
+      lesson: {
+        id: "lesson-1",
+        subject: "MATHEMATICS",
+        startTime: "2026-10-23T15:00:00.000Z",
+        endTime: "2026-10-23T16:00:00.000Z",
+      },
+    });
 
-    expect(studentSend).toHaveBeenCalledWith({ type: "call_invite", inviteId: expect.any(String) });
+    expect(studentSend).toHaveBeenCalledWith({
+      type: "call_invite",
+      inviteId: expect.any(String),
+      lessonId: "lesson-1",
+    });
     expect(tutorSend).not.toHaveBeenCalled();
   });
 
@@ -316,7 +352,7 @@ describe("features/videoCall/model call transport", () => {
     setCallTransport("student", studentSend, {});
 
     receive(
-      { type: "call_incoming", callId: "in-s", callerName: "Анна", iceServers: [] },
+      { type: "call_incoming", callId: "in-s", callerName: "Анна", lesson: null, iceServers: [] },
       "student"
     );
     callModel.acceptCall();
@@ -331,7 +367,7 @@ describe("features/videoCall/model call transport", () => {
     setCallTransport("tutor", tutorSend, {});
     setCallTransport("student", studentSend, {});
     receive(
-      { type: "call_incoming", callId: "in-h", callerName: "Анна", iceServers: [] },
+      { type: "call_incoming", callId: "in-h", callerName: "Анна", lesson: null, iceServers: [] },
       "student"
     );
     callModel.acceptCall();
@@ -348,7 +384,7 @@ describe("features/videoCall/model call transport", () => {
     setCallTransport("student", studentSend, {});
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     errors.unwatch();
 
     expect(studentSend).not.toHaveBeenCalled();
@@ -400,7 +436,7 @@ describe("features/videoCall/model call transport", () => {
         },
       })
     );
-    callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+    callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     ringCurrentInvite("old-media");
     receive({ type: "call_accepted", callId: "old-media", iceServers: [] });
     callModel.hangUp();
@@ -423,5 +459,32 @@ describe("features/videoCall/model call transport", () => {
     refreshes.unwatch();
 
     expect(refreshes.calls).toHaveLength(1);
+  });
+
+  it("should ask the calls of an open lesson to refresh when the history changed", () => {
+    const refreshes = collectEvents(lessonCallsModel.refreshRequested);
+
+    receive({ type: "call_history_updated" });
+    refreshes.unwatch();
+
+    expect(refreshes.calls).toHaveLength(1);
+  });
+
+  it("should keep the lesson of an incoming call for the incoming screen", () => {
+    const lesson = {
+      id: "l-1",
+      subject: "PHYSICS" as const,
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    };
+
+    receive({ type: "call_incoming", callId: "in-l", callerName: "Анна", lesson, iceServers: [] });
+
+    expect(readStore(callModel.$incomingCall)).toEqual({
+      callId: "in-l",
+      callerName: "Анна",
+      role: "tutor",
+      lesson,
+    });
   });
 });

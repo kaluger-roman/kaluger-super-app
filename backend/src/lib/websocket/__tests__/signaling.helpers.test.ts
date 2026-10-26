@@ -2,6 +2,7 @@ import {
   ICE_CANDIDATE_MAX_LENGTH,
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
+  LESSON_ID_MAX_LENGTH,
 } from "../signaling.constants";
 import { parseCallSignal, toIceCandidate, toSessionDescription } from "../signaling.helpers";
 
@@ -99,6 +100,43 @@ describe("parseCallSignal", () => {
     });
     expect(
       parseCallSignal({ type: "call_invite", inviteId: "i-1", targetStudentId: "" })
+    ).toBeNull();
+  });
+
+  it("should keep the lessonId of an invite with and without a target", () => {
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        targetStudentId: "s-1",
+        lessonId: "l-1",
+      })
+    ).toEqual({ type: "call_invite", inviteId: "i-1", targetStudentId: "s-1", lessonId: "l-1" });
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: "l-1" })).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+      lessonId: "l-1",
+    });
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        lessonId: "l".repeat(LESSON_ID_MAX_LENGTH),
+      })
+    ).toEqual({ type: "call_invite", inviteId: "i-1", lessonId: "l".repeat(LESSON_ID_MAX_LENGTH) });
+  });
+
+  it("should drop an invite with an unusable lessonId", () => {
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: "" })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: 42 })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: null })).toBeNull();
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        targetStudentId: "s-1",
+        lessonId: "l".repeat(LESSON_ID_MAX_LENGTH + 1),
+      })
     ).toBeNull();
   });
 
