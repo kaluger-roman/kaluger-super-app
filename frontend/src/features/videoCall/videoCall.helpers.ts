@@ -1,6 +1,16 @@
-import type { CallHistoryDirection, CallHistoryStatus } from "@entities";
+import type { CallHistoryDirection, CallHistoryStatus, CallLessonSummary } from "@entities";
+import { SUBJECT_LABELS, formatDay, formatTimeRange } from "@shared";
 
 import { CALL_STATUS_LABELS, OUTGOING_UNANSWERED_LABEL } from "./videoCall.constants";
+
+export const formatCallLessonSubject = (lesson: CallLessonSummary): string =>
+  SUBJECT_LABELS[lesson.subject];
+
+export const formatCallLessonTime = (lesson: CallLessonSummary): string =>
+  `${formatDay(lesson.startTime)} · ${formatTimeRange(lesson.startTime, lesson.endTime)}`;
+
+export const formatCallLesson = (lesson: CallLessonSummary): string =>
+  `${formatCallLessonSubject(lesson)} · ${formatCallLessonTime(lesson)}`;
 
 export const getInitials = (name: string): string =>
   name

@@ -29,6 +29,7 @@ const sampleRecords = [
     startedAt: "2026-06-03T14:32:00.000Z",
     durationSeconds: 1845,
     status: "COMPLETED" as const,
+    lesson: null,
   },
 ];
 

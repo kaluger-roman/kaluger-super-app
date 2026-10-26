@@ -55,6 +55,62 @@ describe("features/videoCall/model parseCallSignal", () => {
     expect(parseCallSignal({ type: "call_error", message: "Ошибка" })).toBeNull();
   });
 
+  it("should keep the lesson of an incoming call", () => {
+    const lesson = {
+      id: "l-1",
+      subject: "PHYSICS",
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    };
+
+    expect(
+      parseCallSignal({
+        type: "call_incoming",
+        callId: "c-1",
+        callerName: "Анна",
+        lesson: { ...lesson, extra: 1 },
+        iceServers: [],
+      })
+    ).toEqual({ type: "call_incoming", callId: "c-1", callerName: "Анна", lesson, iceServers: [] });
+  });
+
+  it("should accept an incoming call without a lesson", () => {
+    expect(
+      parseCallSignal({ type: "call_incoming", callId: "c-1", callerName: "Анна", iceServers: [] })
+    ).toMatchObject({ type: "call_incoming", callId: "c-1", lesson: null });
+    expect(
+      parseCallSignal({
+        type: "call_incoming",
+        callId: "c-1",
+        callerName: "Анна",
+        lesson: null,
+        iceServers: [],
+      })
+    ).toMatchObject({ lesson: null });
+  });
+
+  it("should still ring with a malformed lesson, without the lesson", () => {
+    const base = { type: "call_incoming", callId: "c-1", callerName: "Анна", iceServers: [] };
+    const valid = {
+      id: "l-1",
+      subject: "MATHEMATICS",
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    };
+
+    expect(parseCallSignal({ ...base, lesson: { ...valid, subject: "CHEMISTRY" } })).toMatchObject({
+      type: "call_incoming",
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: { ...valid, id: 1 } })).toMatchObject({
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: { ...valid, endTime: undefined } })).toMatchObject({
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: "l-1" })).toMatchObject({ lesson: null });
+  });
+
   it("should not take a lesson event for a call signal", () => {
     expect(parseCallSignal({ type: "lesson_status_updated", lessonId: "l-1" })).toBeNull();
     expect(parseCallSignal("call_busy")).toBeNull();
@@ -131,7 +187,13 @@ describe("features/videoCall/model client signaling", () => {
     setCallTransport("student", (message) => sent.push(message), "student-socket");
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
-    receive({ type: "call_incoming", callId: "c-no-socket", callerName: "Анна", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "c-no-socket",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
     callModel.acceptCall();
     await settleMicrotasks();
     errors.unwatch();

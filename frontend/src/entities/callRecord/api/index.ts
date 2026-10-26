@@ -1,1 +1,1 @@
-export { getCallHistory } from "./callHistoryApi";
+export { getCallHistory, getLessonCalls } from "./callHistoryApi";

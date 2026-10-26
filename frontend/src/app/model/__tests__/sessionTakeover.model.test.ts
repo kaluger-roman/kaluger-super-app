@@ -32,7 +32,10 @@ const placeCallWhileHeld = async (reason: ElsewhereReason | null) => {
     fn: (text) => failures.push(text),
     scope,
   });
-  void allSettled(callModel.callStarted, { scope, params: { studentId: "s-1", peerName: "Анна" } });
+  void allSettled(callModel.callStarted, {
+    scope,
+    params: { studentId: "s-1", peerName: "Анна", lesson: null },
+  });
   await vi.advanceTimersByTimeAsync(0);
   watcher.unsubscribe();
   return failures;

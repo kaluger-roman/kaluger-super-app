@@ -1,3 +1,5 @@
+import type { CallLessonSummary } from "@entities";
+
 import type { CallMediaState } from "../videoCall.types";
 import type { CallCancelReason, CallRole, CallSignalingInbound } from "./signaling.types";
 
@@ -12,6 +14,7 @@ export type IncomingCall = {
   callId: string;
   callerName: string;
   role: CallRole;
+  lesson: CallLessonSummary | null;
 };
 
 export type IceServerPayload = {
@@ -20,7 +23,10 @@ export type IceServerPayload = {
   credential?: string;
 };
 
-export type StartCallParams = { studentId: string; peerName: string } | { peerName: string };
+// A student calls only from a lesson, so a student call without a lesson cannot be expressed.
+export type StartCallParams =
+  | { studentId: string; peerName: string; lesson: CallLessonSummary | null }
+  | { peerName: string; lesson: CallLessonSummary };
 
 export type LocalMediaResult = {
   stream: MediaStream;
@@ -106,4 +112,9 @@ export type AddressedSignal = {
 export type InviteParams = {
   call: StartCallParams;
   role: CallRole;
+};
+
+export type PendingConfirm = {
+  isOpen: boolean;
+  call: StartCallParams | null;
 };

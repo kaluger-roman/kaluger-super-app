@@ -14,14 +14,14 @@ const pair: ResolvedPair = {
 
 describe("hasActiveCall", () => {
   it("should report a ringing call for both participants", () => {
-    callRegistry.startCall(pair, "tutor", () => undefined);
+    callRegistry.startCall(pair, "tutor", null, () => undefined);
 
     expect(hasActiveCall("tutor", "tutor-1")).toBe(true);
     expect(hasActiveCall("student", "student-user-1")).toBe(true);
   });
 
   it("should report an accepted and a connected call", () => {
-    const call = callRegistry.startCall(pair, "student", () => undefined);
+    const call = callRegistry.startCall(pair, "student", null, () => undefined);
 
     callRegistry.markAccepted(call.callId);
     expect(hasActiveCall("tutor", "tutor-1")).toBe(true);
@@ -31,7 +31,7 @@ describe("hasActiveCall", () => {
   });
 
   it("should report no call once it is removed or for someone else", () => {
-    const call = callRegistry.startCall(pair, "tutor", () => undefined);
+    const call = callRegistry.startCall(pair, "tutor", null, () => undefined);
 
     expect(hasActiveCall("tutor", "tutor-2")).toBe(false);
     callRegistry.removeCall(call.callId);

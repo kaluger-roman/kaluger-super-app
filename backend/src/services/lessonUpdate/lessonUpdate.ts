@@ -83,7 +83,15 @@ const runLessonUpdateTransaction = ({
     const lesson = await tx.lesson.update({
       where: { id },
       data: dataToUpdate,
-      include: { student: { select: { id: true, name: true } } },
+      include: {
+        student: { select: { id: true, name: true, studentUser: { select: { id: true } } } },
+      },
+    });
+
+    // Calls of another student stay in that student's history, but no longer belong to the lesson.
+    await tx.callRecord.updateMany({
+      where: { lessonId: id, ...(lesson.studentId && { studentId: { not: lesson.studentId } }) },
+      data: { lessonId: null },
     });
 
     const result: ShiftResult | undefined = plannedShift

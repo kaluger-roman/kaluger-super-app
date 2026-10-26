@@ -1,7 +1,9 @@
 import { createHmac } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { CallAuthorizationError } from "../../utils";
-import { ARCHIVED_STUDENT_CALL_MESSAGE } from "./callSignaling.constants";
+import { CALL_LESSON_SELECT } from "../callRecord";
+import type { CallLesson } from "../callRecord";
+import { CALL_LESSON_NOT_FOUND_MESSAGE } from "./callSignaling.constants";
 import type { CallStatus } from "@prisma/client";
 import type { CallSignalingOutbound } from "../../types";
 import type {
@@ -21,7 +23,6 @@ export const resolvePairForTutor = async (
       id: true,
       name: true,
       tutorId: true,
-      archived: true,
       tutor: { select: { name: true } },
       studentUser: { select: { id: true } },
     },
@@ -29,9 +30,6 @@ export const resolvePairForTutor = async (
 
   if (!student || student.tutorId !== tutorUserId) {
     throw new CallAuthorizationError();
-  }
-  if (student.archived) {
-    throw new CallAuthorizationError(ARCHIVED_STUDENT_CALL_MESSAGE);
   }
   if (!student.studentUser) {
     throw new CallAuthorizationError("У ученика нет кабинета для звонков");
@@ -57,7 +55,6 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
           id: true,
           name: true,
           tutorId: true,
-          archived: true,
           tutor: { select: { name: true } },
         },
       },
@@ -67,9 +64,6 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
   if (!studentUser?.student) {
     throw new CallAuthorizationError();
   }
-  if (studentUser.student.archived) {
-    throw new CallAuthorizationError(ARCHIVED_STUDENT_CALL_MESSAGE);
-  }
 
   return {
     tutorUserId: studentUser.student.tutorId,
@@ -78,6 +72,19 @@ export const resolvePairForStudent = async (studentUserId: string): Promise<Reso
     studentName: studentUser.student.name,
     tutorName: studentUser.student.tutor.name,
   };
+};
+
+// Lesson status and time are not checked: a lesson call is allowed at any time.
+export const resolveCallLesson = async (
+  pair: ResolvedPair,
+  lessonId: string
+): Promise<CallLesson> => {
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, tutorId: pair.tutorUserId, studentId: pair.studentId },
+    select: CALL_LESSON_SELECT,
+  });
+  if (!lesson) throw new CallAuthorizationError(CALL_LESSON_NOT_FOUND_MESSAGE);
+  return lesson;
 };
 
 export const resolveHangupStatus = (call: LiveCall): CallStatus =>

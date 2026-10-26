@@ -1,2 +1,2 @@
-export { StudentLessonCard, StudentWeeklyView } from "./ui";
-export { studentScheduleModel, formatRangeLabel } from "./models";
+export { StudentLessonCard, StudentLessonDialog, StudentWeeklyView } from "./ui";
+export { studentScheduleModel, studentLessonDialogModel, formatRangeLabel } from "./models";

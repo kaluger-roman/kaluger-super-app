@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { CallerKindValue } from "../../types";
 import { RING_TIMEOUT_MS } from "./callSignaling.constants";
+import type { CallLesson } from "../callRecord";
 import type { CallParticipant, LiveCall, ResolvedPair } from "./callSignaling.types";
 
 const liveCalls = new Map<string, LiveCall>();
@@ -23,6 +24,7 @@ export const getCall = (callId: string): LiveCall | undefined => liveCalls.get(c
 export const startCall = (
   pair: ResolvedPair,
   callerKind: CallerKindValue,
+  lesson: CallLesson | null,
   onRingTimeout: (call: LiveCall) => void
 ): LiveCall => {
   const callId = randomUUID();
@@ -32,6 +34,7 @@ export const startCall = (
     tutorUserId: pair.tutorUserId,
     studentUserId: pair.studentUserId,
     studentId: pair.studentId,
+    lesson,
     status: "ringing",
     startedAt: new Date(),
   };

@@ -11,7 +11,7 @@ import { createFakeAdapter } from "./fakeWebrtc";
 const startConnectedCall = async (scope: Scope): Promise<void> => {
   await allSettled(callModel.incomingCallReceived, {
     scope,
-    params: { callId: "call-1", callerName: "Анна", role: "tutor" },
+    params: { callId: "call-1", callerName: "Анна", role: "tutor", lesson: null },
   });
   void allSettled(callModel.callConnected, { scope });
   await settleMicrotasks();
@@ -31,7 +31,7 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     await allSettled(callModel.callStarted, {
       scope,
-      params: { studentId: "stu-1", peerName: "Иван Смирнов" },
+      params: { studentId: "stu-1", peerName: "Иван Смирнов", lesson: null },
     });
 
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
@@ -47,7 +47,15 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     await allSettled(callModel.callStarted, {
       scope,
-      params: { peerName: "Анна Петрова" },
+      params: {
+        peerName: "Анна Петрова",
+        lesson: {
+          id: "lesson-1",
+          subject: "MATHEMATICS",
+          startTime: "2026-10-23T15:00:00.000Z",
+          endTime: "2026-10-23T16:00:00.000Z",
+        },
+      },
     });
 
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
@@ -63,12 +71,13 @@ describe("features/videoCall/model/call.model transitions", () => {
 
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-1", callerName: "Анна Петрова", role: "student" },
+      params: { callId: "call-1", callerName: "Анна Петрова", role: "student", lesson: null },
     });
 
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
     expect(scope.getState(callModel.$incomingCall)).toEqual({
       callId: "call-1",
+      lesson: null,
       callerName: "Анна Петрова",
       role: "student",
     });
@@ -104,7 +113,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const rejectScope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope: rejectScope,
-      params: { callId: "c", callerName: "A", role: "tutor" },
+      params: { callId: "c", callerName: "A", role: "tutor", lesson: null },
     });
     await allSettled(callModel.rejectCall, { scope: rejectScope });
     expect(rejectScope.getState(callModel.$callPhase)).toBe("idle");
@@ -112,7 +121,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const cancelScope = fork();
     await allSettled(callModel.callStarted, {
       scope: cancelScope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
     await allSettled(callModel.cancelCall, { scope: cancelScope });
     expect(cancelScope.getState(callModel.$callPhase)).toBe("idle");
@@ -122,7 +131,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
     await allSettled(callModel.unavailableReceived, { scope, params: "student" });
 
@@ -133,7 +142,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-acc", callerName: "Анна", role: "tutor" },
+      params: { callId: "call-acc", callerName: "Анна", role: "tutor", lesson: null },
     });
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
 
@@ -147,7 +156,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const scope = fork();
     await allSettled(callModel.callStarted, {
       scope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
 
     await allSettled(callModel.callAcceptedReceived, {
@@ -191,7 +200,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const scope = fork();
     await allSettled(callModel.incomingCallReceived, {
       scope,
-      params: { callId: "call-cancel", callerName: "Анна", role: "tutor" },
+      params: { callId: "call-cancel", callerName: "Анна", role: "tutor", lesson: null },
     });
     expect(scope.getState(callModel.$callPhase)).toBe("incoming");
 
@@ -206,7 +215,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const busyScope = fork();
     await allSettled(callModel.callStarted, {
       scope: busyScope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
     expect(busyScope.getState(callModel.$callPhase)).toBe("outgoing");
     await allSettled(callModel.busyReceived, { scope: busyScope });
@@ -215,7 +224,7 @@ describe("features/videoCall/model/call.model transitions", () => {
     const noAnswerScope = fork();
     await allSettled(callModel.callStarted, {
       scope: noAnswerScope,
-      params: { studentId: "s", peerName: "N" },
+      params: { studentId: "s", peerName: "N", lesson: null },
     });
     expect(noAnswerScope.getState(callModel.$callPhase)).toBe("outgoing");
     await allSettled(callModel.noAnswerReceived, { scope: noAnswerScope });

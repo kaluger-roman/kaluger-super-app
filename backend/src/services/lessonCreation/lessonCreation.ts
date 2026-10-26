@@ -5,6 +5,7 @@ import type { CreateLessonDto } from "../../types";
 import { SchedulingConflictError } from "../../utils";
 import { truncateToMinute } from "../../utils/time";
 import { scheduleRemindersForLesson } from "../reminderScheduler";
+import { LESSON_STUDENT_INCLUDE } from "../lessonsQuery";
 import { broadcastStudentLessonCreated } from "../studentLessonBroadcast";
 import {
   buildRecurringSlots,
@@ -47,7 +48,7 @@ export const createSingleLesson = (
         prospectPhone: data.prospectPhone ?? null,
         prospectContactMethod: data.prospectContactMethod ?? null,
       },
-      include: { student: true },
+      include: LESSON_STUDENT_INCLUDE,
     });
   });
 };
@@ -95,7 +96,7 @@ export const createRecurringLessons = (
     });
     const first = await tx.lesson.findFirst({
       where: { id: created[0]?.id },
-      include: { student: true },
+      include: LESSON_STUDENT_INCLUDE,
     });
     return { created, first };
   });

@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "branch": "038-lesson-call-button",
+  "base_ref": "main (merge-base 2352a4d, working-tree mode)",
+  "threshold": 50,
+  "iteration": 4,
+  "timestamp": "2026-10-23T19:05:00Z",
+  "diff_stats": {
+    "files_changed": 142,
+    "insertions": 4617,
+    "deletions": 361
+  },
+  "summary": {
+    "raw_findings": 7,
+    "after_dedup": 5,
+    "after_score_filter": 4,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 3
+    },
+    "by_category": {
+      "convention": 2,
+      "logic": 1,
+      "hack": 1
+    },
+    "agents_failed": [],
+    "agents_findings": {
+      "claude-md": 1,
+      "shallow-bug": 1,
+      "deep-logic": 1,
+      "security": 0,
+      "type-safety": 0,
+      "removed-behavior": 1,
+      "cross-file": 0,
+      "wrapper-proxy": 0,
+      "hacks": 3
+    },
+    "scoring_notes": "shallow-bug and deep-logic both flagged the lock-order deadlock between createCallRecord (FOR SHARE on lessons, then FK key-share on students) and cascade student deletion — merged. claude-md and hacks both flagged the fixed 200 ms setTimeout in the race regression test — merged. Excluded from scope: specs/**, docs/mockups/**, docs/code-reviews/**, CHANGELOG.md, CLAUDE.md (Active Technologies lines only), package-lock.json, .claude/auto-feature/**. No null scores.",
+    "iter3_fixes_verified": "f1 (check-then-insert race): fixed — createCallRecord now locks the lesson row with SELECT ... FOR SHARE inside a transaction; lessonUpdate updates the lesson before unlinking call_records, so under READ COMMITTED a reassignment waits and its updateMany sees the committed record, and lesson deletion waits and ON DELETE SET NULL unlinks it; the raw query is parameterized and all queries use tx. New side effects of the fix: possible deadlock with cascade student deletion (f3), race test relies on a fixed sleep (f1), concurrent lesson deletion no longer covered by a test (f2). f2 (e2e test naming): fixed. Gate guard in lessonCalls.model.ts not re-reported."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Регрессионный тест гонки в createCallRecord ждёт блокировку фиксированным setTimeout(200) вместо опроса с дедлайном",
+      "category": "convention",
+      "file": "backend/src/services/callRecord/__tests__/createCallRecord.test.ts",
+      "line_start": 208,
+      "line_end": 219,
+      "snippet": "      recording = createCallRecord({\n...\n      });\n      await new Promise((resolve) => setTimeout(resolve, 200));\n    });",
+      "rationale": "docs/conventions/backend-testing.md:26 требует «wait for async side effects by polling with a deadline, not a fixed setTimeout». Здесь 200 мс ждут, пока createCallRecord дойдёт до SELECT ... FOR SHARE и встанет на блокировку; если под параллельными jest-воркерами захват соединения из пула займёт дольше, внешняя транзакция закоммитится раньше, тест выродится в уже покрытый случай «урок передан до записи» (стр. 182) и останется зелёным, не проверив блокировку. (also flagged by: hacks)",
+      "fix_hint": "До выхода из внешней транзакции опрашивать через prisma (отдельное соединение) с дедлайном, что запрос ждёт блокировку, например `SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%FOR SHARE%'` > 0, и только потом коммитить смену ученика.",
+      "score": 75,
+      "verification_note": "Правило docs/conventions/backend-testing.md:26 прямо требует опрос с дедлайном вместо фиксированного setTimeout, а новый race-тест ждёт 200 мс внутри транзакции; при медленном захвате соединения тест вырождается в уже покрытый сценарий и проходит вхолостую.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "removed-behavior",
+      "title": "Удалён регрессионный тест на удаление урока во время записи звонка, замены под FOR SHARE нет",
+      "category": "convention",
+      "file": "backend/src/services/callRecord/__tests__/createCallRecord.test.ts",
+      "line_start": 203,
+      "line_end": 226,
+      "snippet": "  it(\"should not link the lesson when it is given to another student while the record is written\", async () => {\n    const lesson = await createLesson();\n    const otherStudent = await prisma.student.create({ data: { name: \"Other\", tutorId } });\n    let recording: Promise<void> = Promise.resolve();",
+      "rationale": "Находка f1 из iter-3 описывала два сценария гонки: урок передают другому ученику или удаляют между проверкой и вставкой. Тест iter-3 «should retry without the lesson when the lesson is deleted right after the check» удалён вместе с FK-ретраем, а новый тест на гонку покрывает только передачу урока. Конкурентное удаление (FOR SHARE ждёт DELETE, затем возвращает 0 строк, либо DELETE ждёт коммита и срабатывает ON DELETE SET NULL; без этого был P2003 и потерянная запись) тестом не покрыто. Тесты «deleted before the write», «deleted later» и callLifecycle «deleted during the call» удаляют урок последовательно, до или после записи, а не во время неё. CLAUDE.md: «Bug fixes: always add a regression test covering the specific scenario being fixed».",
+      "fix_hint": "Добавить парный тест: в prisma.$transaction удалить урок, запустить createCallRecord, подождать и закоммитить; проверить, что запись сохранилась с lessonId null и createCallRecord не упал.",
+      "score": 50,
+      "verification_note": "Новый race-тест покрывает только передачу урока другому ученику; конкурентное удаление урока во время записи (раньше покрытое тестом FK-ретрая) не покрыто ни одним тестом — пробел реален, но сценарий редкий.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "deep-logic",
+      "title": "Новая блокировка FOR SHARE в createCallRecord может дать deadlock с удалением ученика (deleteStudent)",
+      "category": "logic",
+      "file": "backend/src/services/callRecord/createCallRecord.ts",
+      "line_start": 14,
+      "line_end": 28,
+      "snippet": "  const rows = await tx.$queryRaw<{ id: string }[]>`\n    SELECT id FROM lessons\n    WHERE id = ${lessonId} AND \"tutorId\" = ${tutorId} AND \"studentId\" = ${studentId}\n    FOR SHARE`;",
+      "rationale": "Транзакция берёт блокировки в порядке «урок (FOR SHARE) -> ученик (FOR KEY SHARE из FK-проверки INSERT call_records.studentId)», а deleteStudent (prisma.student.deleteMany, каскад Lesson.student onDelete: Cascade) берёт их в обратном порядке: строка students, затем каскадное удаление lessons, которое ждёт FOR SHARE. Если ученика удаляют между SELECT FOR SHARE и INSERT, Postgres фиксирует deadlock и обрывает одну из транзакций: удаление ученика падает с 500 «Внутренняя ошибка сервера», хотя до правки (без блокировки) INSERT просто ждал и падал по FK без влияния на удаление. С lessonUpdate и удалением урока/серии взаимоблокировки нет (там только ожидание, и updateMany/ON DELETE SET NULL в READ COMMITTED видят закоммиченную запись), так что окно узкое и риск невысокий. (also flagged by: shallow-bug)",
+      "fix_hint": "Брать блокировки в том же порядке, что и каскад удаления: до блокировки урока выполнить `SELECT 1 FROM students WHERE id = ${studentId} FOR KEY SHARE` в той же транзакции (или вернуть null, если ученика уже нет), затем FOR SHARE на урок.",
+      "score": 50,
+      "verification_note": "Блокировки действительно берутся в обратном порядке (createCallRecord: FOR SHARE на lessons, затем FOR KEY SHARE на students при FK-проверке INSERT; deleteStudent: блокировка строки students, затем каскад на lessons), так что deadlock возможен, но окно в миллисекунды и последствие — разовый 500 на удалении ученика; подтверждено, но редко.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "hacks",
+      "title": "Отвязка звонков при смене ученика урока завязана на снимок урока, прочитанный вне транзакции",
+      "category": "hack",
+      "file": "backend/src/services/lessonUpdate/lessonUpdate.ts",
+      "line_start": 91,
+      "line_end": 97,
+      "snippet": "    if (lesson.studentId !== existingLesson.studentId) {\n      // Calls stay in the history of the student who made them, but no longer belong to the lesson.\n      await tx.callRecord.updateMany({\n        where: { lessonId: id, ...(lesson.studentId && { studentId: { not: lesson.studentId } }) },\n        data: { lessonId: null },",
+      "rationale": "existingLesson читается в updateLesson.ts через prisma.lesson.findFirst до транзакции и до advisory-lock, так что условие сравнивает с возможно устаревшим снимком. Пример: два PUT подряд A→B и B→A, второй прочитал existingLesson ещё со студентом A. Тогда для второго A === A, и звонок студента B, привязанный между коммитами (createCallRecord с FOR SHARE видел B), останется на уроке студента A. При этом where у updateMany уже сам выражает инвариант («звонки урока не его текущего ученика»), а гейт только экономит один индексный запрос и делает защиту гонки из createCallRecord зависимой от свежести снимка.",
+      "fix_hint": "Убрать условие `lesson.studentId !== existingLesson.studentId` и всегда выполнять этот updateMany после `tx.lesson.update`: запрос идемпотентен и идёт по индексу (lessonId, startedAt). Тест «should keep the calls linked when the student stays the same» продолжит проходить.",
+      "score": 50,
+      "verification_note": "existingLesson читается в updateLesson.ts до транзакции и advisory-lock, поэтому гейт может сравнивать с устаревшим снимком; эффект требует двух одновременных PUT со сменой ученика туда-обратно и звонка между коммитами — реально, но редко.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "id": "x1",
+      "agent": "hacks",
+      "title": "Тест «запись звонка не сохранилась» подменяет глобальный prisma.$transaction вместо createCallRecord",
+      "category": "hack",
+      "file": "backend/src/services/callSignaling/__tests__/callFlow.test.ts",
+      "line_start": 504,
+      "line_end": 504,
+      "snippet": "    jest.spyOn(prisma, \"$transaction\").mockRejectedValueOnce(new Error(\"db down\"));",
+      "rationale": "Ошибка записи моделируется через внутреннюю деталь createCallRecord: то, что он сейчас использует интерактивную транзакцию. Мок срабатывает на первый же $transaction в процессе. Если в путь call_hangup добавят любую другую транзакцию или createCallRecord перестанет её использовать, тест начнёт проверять не то или пройдёт впустую. В кодовой базе для этого принят шпион на экспорт модуля (`jest.spyOn(recurringHelpers, ...)`, `jest.spyOn(backupService, ...)` при @swc-contrib/mut-cjs-exports).",
+      "fix_hint": "Импортировать `* as callRecordService from \"../../callRecord\"` и делать `jest.spyOn(callRecordService, \"createCallRecord\").mockRejectedValueOnce(new Error(\"db down\"))`: тест проверит контракт recordCall, а не устройство createCallRecord.",
+      "score": 25,
+      "verification_note": "На пути call_hangup нет других prisma.$transaction до createCallRecord, тест проверяет нужное и упадёт, а не пройдёт впустую, если реализация сменится; это хрупкость, а правила в backend-testing.md об этом нет.",
+      "reason": "below threshold"
+    }
+  ]
+}

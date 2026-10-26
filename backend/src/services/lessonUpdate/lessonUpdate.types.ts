@@ -5,7 +5,9 @@ import type { ShiftPreview } from "../recurringHelpers";
 export type LessonUpdateData = Prisma.LessonUncheckedUpdateInput;
 
 export type UpdatedLesson = Prisma.LessonGetPayload<{
-  include: { student: { select: { id: true; name: true } } };
+  include: {
+    student: { select: { id: true; name: true; studentUser: { select: { id: true } } } };
+  };
 }>;
 
 export type PreparedLessonUpdate = {
