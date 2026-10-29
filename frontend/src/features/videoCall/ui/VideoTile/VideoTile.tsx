@@ -2,13 +2,16 @@ import type { FC } from "react";
 
 import { MicOff as MicOffIcon } from "@mui/icons-material";
 import { Tooltip } from "@mui/material";
+import { useUnit } from "effector-react";
 
 import { TileContent } from "./TileContent";
 import { TILE_VARIANTS } from "./VideoTile.constants";
 import * as Styled from "./VideoTile.styled";
 import type { TileVariant } from "./VideoTile.types";
+import { peerViewModel } from "../../model";
 import type { CallMediaState } from "../../videoCall.types";
 import { FullscreenToggleButton } from "../FullscreenToggleButton";
+import { PeerAudioNotice } from "../PeerAudioNotice";
 import { ScreenShareLabel } from "../ScreenShareLabel";
 
 type VideoTileProps = {
@@ -16,24 +19,22 @@ type VideoTileProps = {
   media: CallMediaState;
   variant: TileVariant;
   stream?: MediaStream | null;
-  muted?: boolean;
 };
 
-export const VideoTile: FC<VideoTileProps> = ({
-  name,
-  media,
-  variant,
-  stream = null,
-  muted = false,
-}) => {
+// The peer's tile gets the peer's shown media (`peerViewModel.$shownPeerMedia`): no video while
+// the peer is interrupted.
+export const VideoTile: FC<VideoTileProps> = ({ name, media, variant, stream = null }) => {
   const config = TILE_VARIANTS[variant];
-  const micBadge = !media.micOn && (
+  const peerAudioNotice = useUnit(peerViewModel.$peerAudioNotice);
+  const audioNotice = config.isPeer ? peerAudioNotice : null;
+  // A mic the system suspended gets its own amber notice instead of the red "turned off" badge.
+  const micBadge = !media.micOn && !audioNotice && (
     <Styled.StatusBadge $size={config.badgeSize} aria-label="Микрофон выключен">
       <MicOffIcon />
     </Styled.StatusBadge>
   );
 
-  const hasTopEnd = config.fullscreenToggle || (!config.badgeInNameRow && !media.micOn);
+  const hasTopEnd = config.fullscreenToggle || (!config.badgeInNameRow && Boolean(micBadge));
 
   return (
     <Styled.TileBox
@@ -45,11 +46,12 @@ export const VideoTile: FC<VideoTileProps> = ({
       $gap={config.gap}
       data-variant={variant}
     >
-      <TileContent name={name} media={media} stream={stream} muted={muted} config={config} />
+      <TileContent name={name} media={media} stream={stream} config={config} />
 
       {!config.bare && (
         <Styled.TopRow>
           {media.screenSharing && <ScreenShareLabel />}
+          {config.isPeer && <PeerAudioNotice />}
           {hasTopEnd && (
             <Styled.TopEnd>
               {!config.badgeInNameRow && micBadge}

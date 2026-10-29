@@ -8,8 +8,10 @@ import { Alert, Button, Typography } from "@mui/material";
 import { useGate, useUnit } from "effector-react";
 
 import {
+  CallNotificationsCard,
   StudentLessonDialog,
   StudentWeeklyView,
+  callNotificationsModel,
   formatRangeLabel,
   studentScheduleModel,
 } from "@features";
@@ -18,12 +20,15 @@ import * as Styled from "./StudentSchedulePage.styled";
 
 export const StudentSchedulePage: FC = () => {
   useGate(studentScheduleModel.StudentSchedulePageGate);
+  useGate(callNotificationsModel.CabinetGate);
   const weekStart = useUnit(studentScheduleModel.$weekStart);
   const lessons = useUnit(studentScheduleModel.$lessons);
   const loadError = useUnit(studentScheduleModel.$loadError);
 
   return (
     <Styled.RootBox>
+      <CallNotificationsCard />
+
       <Styled.Toolbar>
         <Typography variant="h5" component="h1" fontWeight={600}>
           Расписание

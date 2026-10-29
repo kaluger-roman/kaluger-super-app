@@ -1,4 +1,4 @@
-import type { CallMediaState } from "../videoCall.types";
+import type { CallMediaState, PresenceState } from "../videoCall.types";
 import { NO_TRANSPORT_TEXT } from "./call.constants";
 import type {
   CallRole,
@@ -25,11 +25,28 @@ export const resetCallTransportsForTests = (): void => {
   transports.clear();
 };
 
+export const hasCallTransport = (role: CallRole): boolean => transports.has(role);
+
 export const sendOverTransport = (role: CallRole, message: CallSignalingInbound): void => {
   const installed = transports.get(role);
   if (!installed) throw new Error(NO_TRANSPORT_TEXT);
   installed.send(message);
 };
+
+// Best effort: a role without a socket is skipped. Returns the roles the message went out on.
+export const sendToRoles = (
+  roles: readonly CallRole[],
+  message: CallSignalingInbound
+): CallRole[] =>
+  roles.filter((role) => {
+    if (!hasCallTransport(role)) return false;
+    try {
+      sendOverTransport(role, message);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
 export const toMediaStateMessage = (
   callId: string,
@@ -42,3 +59,18 @@ export const toMediaStateMessage = (
   screenSharing: media.screenSharing,
   cameraAvailable: media.cameraAvailable,
 });
+
+export const toPresenceMessage = (
+  presence: PresenceState,
+  audioSuspended: boolean,
+  videoSuspended: boolean
+): CallSignalingInbound => ({ type: "presence_update", presence, audioSuspended, videoSuspended });
+
+export const toResumeMessage = (callId: string, sessionRestart: boolean): CallSignalingInbound => ({
+  type: "call_resume",
+  callId,
+  sessionRestart,
+});
+
+// Asks for the call as the server sees it: the answer is call_state.
+export const toSyncMessage = (): CallSignalingInbound => ({ type: "call_sync" });

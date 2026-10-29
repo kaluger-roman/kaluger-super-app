@@ -9,20 +9,20 @@ import {
   getPointerMidpoint,
   getStageGeometry,
   getVideoLayoutRect,
+  enablePeerPictureInPicture,
   getWheelZoomFactor,
   readGesture,
   resumePlayback,
   toCenterOffset,
 } from "./VideoTile.helpers";
-import type { GesturePoint } from "./VideoTile.types";
+import type { GesturePoint, MediaPlayback } from "./VideoTile.types";
 import { callZoomModel } from "../../model";
 
 // Keeps a call video attached to its stream and playing: iOS Safari pauses it in the background.
-// `isBlocked` — the browser refused to resume without a tap, so the tile asks for one.
 export const useCallVideoPlayback = (
   videoRef: RefObject<HTMLVideoElement | null>,
   stream: MediaStream | null
-): { isBlocked: boolean; resume: () => void } => {
+): MediaPlayback => {
   const [isBlocked, setBlocked] = useState(false);
 
   const resume = useCallback(() => {
@@ -187,4 +187,15 @@ export const useStageGeometry = (
       geometryChanged(null);
     };
   }, [videoRef, enabled, geometryChanged]);
+};
+
+export const usePeerPictureInPicture = (
+  videoRef: RefObject<HTMLVideoElement | null>,
+  enabled: boolean
+): void => {
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !enabled) return;
+    return enablePeerPictureInPicture(video);
+  }, [videoRef, enabled]);
 };

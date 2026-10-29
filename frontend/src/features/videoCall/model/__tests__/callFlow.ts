@@ -1,7 +1,13 @@
 import * as callModel from "../call.model";
-import type { IceServerPayload } from "../call.types";
+import { CALL_ROLES } from "../callPresence.constants";
+import * as callPresenceModel from "../callPresence.model";
 import { dispatchCallSignal } from "../signaling.helpers";
-import type { CallRole, CallSignalingInbound, CallSignalingOutbound } from "../signaling.types";
+import type {
+  CallRole,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  IceServerPayload,
+} from "../signaling.types";
 import { resetCallTransportsForTests, setCallTransport } from "../transport.helpers";
 import { resetWebRtcAdapter, stopAllSessions } from "../webrtc.helpers";
 import { readStore } from "./storeProbe";
@@ -16,8 +22,17 @@ export const installTransport = (): CallSignalingInbound[] => {
   return sent;
 };
 
+// The call flow is unscoped, so a call_sync a test left unanswered (the page came back on screen)
+// would keep the next test's page from asking the server again: the page is on screen and every
+// role got its call_state, as at the start of a session.
+export const settleCallSync = (): void => {
+  callPresenceModel.visibilityChanged(true);
+  CALL_ROLES.forEach((role) => dispatchCallSignal({ type: "call_state", call: null }, role));
+};
+
 export const resetCallFlow = (): void => {
   callModel.hangUp();
+  settleCallSync();
   stopAllSessions();
   resetCallTransportsForTests();
   resetWebRtcAdapter();

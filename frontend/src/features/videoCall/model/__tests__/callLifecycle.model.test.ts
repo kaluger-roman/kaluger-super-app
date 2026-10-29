@@ -2,10 +2,12 @@ import { allSettled, fork } from "effector";
 import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callModel } from "../index";
+import { callModel, callResumeModel } from "../index";
 import type { CallSignalingInbound } from "../signaling.types";
+import { clearCallTransport } from "../transport.helpers";
 import { setWebRtcAdapter } from "../webrtc.helpers";
 import {
+  connectCallerSession,
   installTransport,
   receive,
   resetCallFlow,
@@ -127,5 +129,19 @@ describe("features/videoCall full caller lifecycle", () => {
       lessonId: "lesson-1",
     });
     expect(scope.getState(callModel.$callPhase)).toBe("outgoing");
+  });
+
+  it("should keep an active call when the socket of its role closes (039)", async () => {
+    await connectCallerSession("call-keep");
+    sent.length = 0;
+
+    const lostRole = clearCallTransport("tutor-socket");
+    if (lostRole) callModel.transportDisconnected(lostRole);
+    await settleMicrotasks();
+
+    expect(readStore(callModel.$callPhase)).toBe("active");
+    expect(readStore(callModel.$callId)).toBe("call-keep");
+    expect(readStore(callResumeModel.$isOwnTransportLost)).toBe(true);
+    expect(sent).toEqual([]);
   });
 });

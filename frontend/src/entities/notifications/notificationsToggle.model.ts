@@ -3,13 +3,29 @@ import { createStore, sample, combine } from "effector";
 import { userModel } from "@entities/user";
 import { showNotification } from "@shared";
 
-import { toggleInterval } from "./notifications.helpers";
+import { DEFAULT_REMINDER_SETTINGS } from "./notifications.constants";
+import {
+  shouldAutoSubscribe,
+  shouldSyncSubscription,
+  toggleInterval,
+} from "./notifications.helpers";
 import * as notificationsModel from "./notifications.model";
-import type { ReminderSettings } from "./notifications.types";
+import type { ReminderSettings, SubscribePushParams } from "./notifications.types";
 
 // Срабатывает один раз за сессию — иначе при каждом PWA-resume
 // `notificationsModel.loadSettingsFx` повторно тригерит `Notification.requestPermission()`.
 export const $autoSubscribeAttempted = createStore(false);
+// The defaults in $reminderSettings are not this tutor's choice: nothing is subscribed by them.
+const $areSettingsLoaded = createStore(false);
+const $isSubscriptionSynced = createStore(false);
+
+const tutorSessionEnded = [userModel.logoutUser, userModel.tutorSessionCleared];
+
+sample({
+  clock: notificationsModel.loadSettingsFx.done,
+  fn: () => true,
+  target: $areSettingsLoaded,
+});
 
 sample({
   clock: [
@@ -18,15 +34,17 @@ sample({
     notificationsModel.checkPushSubscriptionFx.doneData,
   ],
   source: {
+    attempted: $autoSubscribeAttempted,
+    isTutorSession: userModel.$isAuthenticated,
+    settingsLoaded: $areSettingsLoaded,
     settings: notificationsModel.$reminderSettings,
     subscribed: notificationsModel.$isPushSubscribed,
+    permission: notificationsModel.$pushPermission,
     vapidKey: notificationsModel.$vapidKey,
     reg: notificationsModel.$serviceWorkerRegistration,
-    attempted: $autoSubscribeAttempted,
   },
-  filter: ({ settings, subscribed, vapidKey, reg, attempted }) =>
-    !attempted && settings.enabled && !subscribed && vapidKey !== null && reg !== null,
-  fn: ({ vapidKey, reg }) => ({ vapidKey: vapidKey!, registration: reg! }),
+  filter: shouldAutoSubscribe,
+  fn: ({ vapidKey, reg }): SubscribePushParams => ({ vapidKey, registration: reg }),
   target: notificationsModel.subscribePushFx,
 });
 
@@ -37,9 +55,58 @@ sample({
 });
 
 sample({
-  clock: userModel.logoutUser,
+  clock: [
+    notificationsModel.loadSettingsFx.doneData,
+    notificationsModel.checkPushSubscriptionFx.doneData,
+  ],
+  source: {
+    synced: $isSubscriptionSynced,
+    isTutorSession: userModel.$isAuthenticated,
+    settingsLoaded: $areSettingsLoaded,
+    settings: notificationsModel.$reminderSettings,
+    subscribed: notificationsModel.$isPushSubscribed,
+    permission: notificationsModel.$pushPermission,
+    reg: notificationsModel.$serviceWorkerRegistration,
+  },
+  filter: shouldSyncSubscription,
+  fn: ({ reg }) => reg,
+  target: notificationsModel.syncSubscriptionFx,
+});
+
+// A subscribe sends the browser's subscription as well.
+sample({
+  clock: [notificationsModel.syncSubscriptionFx, notificationsModel.subscribePushFx.done],
+  fn: () => true,
+  target: $isSubscriptionSynced,
+});
+sample({
+  clock: notificationsModel.syncSubscriptionFx.doneData,
+  target: notificationsModel.$isPushSubscribed,
+});
+// Not bound to this tutor for sure: the switch offers to subscribe again.
+sample({
+  clock: notificationsModel.syncSubscriptionFx.fail,
   fn: () => false,
-  target: $autoSubscribeAttempted,
+  target: notificationsModel.$isPushSubscribed,
+});
+
+// The next account signed in on this tab (a tutor or a student) must not inherit this tutor's
+// settings: they would subscribe the device through the tutor API without a tutor token.
+sample({
+  clock: tutorSessionEnded,
+  fn: () => false,
+  target: [
+    $autoSubscribeAttempted,
+    $areSettingsLoaded,
+    $isSubscriptionSynced,
+    notificationsModel.$isPushSubscribed,
+  ],
+});
+
+sample({
+  clock: tutorSessionEnded,
+  fn: () => DEFAULT_REMINDER_SETTINGS,
+  target: notificationsModel.$reminderSettings,
 });
 
 // Interval toggle → compute new intervals and update
@@ -73,16 +140,9 @@ sample({
 });
 
 // Reminders toggle logic — subscribe/unsubscribe then update settings
-const $canSubscribe = combine(
-  notificationsModel.$isPushSupported,
-  notificationsModel.$vapidKey,
-  notificationsModel.$serviceWorkerRegistration,
-  (supported, key, reg) => supported && key !== null && reg !== null
-);
-
 const $needsSubscribeOnEnable = combine(
   notificationsModel.$isPushSubscribed,
-  $canSubscribe,
+  notificationsModel.$canSubscribePush,
   (subscribed, canSub) => !subscribed && canSub
 );
 
@@ -115,14 +175,14 @@ sample({
   source: {
     settings: notificationsModel.$reminderSettings,
     subscribed: notificationsModel.$isPushSubscribed,
-    canSub: $canSubscribe,
+    canSub: notificationsModel.$canSubscribePush,
   },
   filter: ({ settings, subscribed, canSub }) => !settings.enabled && subscribed && canSub,
   fn: () => ({ enabled: true }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });
 
-// Disabling + subscribed → unsubscribe first
+// Disabling the last of reminders and calls + subscribed → unsubscribe first (FR-021)
 sample({
   clock: notificationsModel.remindersToggled,
   source: {
@@ -130,17 +190,19 @@ sample({
     subscribed: notificationsModel.$isPushSubscribed,
     reg: notificationsModel.$serviceWorkerRegistration,
   },
-  filter: ({ settings, subscribed, reg }) => settings.enabled && subscribed && reg !== null,
+  filter: ({ settings, subscribed, reg }) =>
+    settings.enabled && !settings.callNotificationsEnabled && subscribed && reg !== null,
   fn: ({ reg }) => reg!,
   target: notificationsModel.unsubscribePushFx,
 });
 
 // Unsubscribe succeeded → disable on server (only when browser actually
 // unsubscribed; otherwise sever and client would desync — server thinks
-// disabled, browser keeps active subscription).
+// disabled, browser keeps active subscription). The device is unsubscribed
+// only when both reminders and calls end up off.
 sample({
   clock: notificationsModel.unsubscribePushFx.done,
-  fn: () => ({ enabled: false }) as Partial<ReminderSettings>,
+  fn: (): Partial<ReminderSettings> => ({ enabled: false, callNotificationsEnabled: false }),
   target: notificationsModel.settingsUpdated,
 });
 
@@ -155,14 +217,15 @@ sample({
   target: showNotification,
 });
 
-// Disabling + not subscribed → disable directly
+// Disabling + not subscribed, or calls still keep the device → disable directly
 sample({
   clock: notificationsModel.remindersToggled,
   source: {
     settings: notificationsModel.$reminderSettings,
     subscribed: notificationsModel.$isPushSubscribed,
   },
-  filter: ({ settings, subscribed }) => settings.enabled && !subscribed,
+  filter: ({ settings, subscribed }) =>
+    settings.enabled && (!subscribed || settings.callNotificationsEnabled),
   fn: () => ({ enabled: false }) as Partial<ReminderSettings>,
   target: notificationsModel.settingsUpdated,
 });

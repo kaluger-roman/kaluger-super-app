@@ -33,6 +33,12 @@ export const findVideoTransceiver = (pc: RTCPeerConnection): RTCRtpTransceiver |
         transceiver.receiver.track?.kind === "video" || transceiver.sender.track?.kind === "video"
     ) ?? null;
 
+// Without a video m-line in the first offer the answering side's camera could never be sent.
+export const ensureVideoTransceiver = (session: CallSession): void => {
+  if (session.videoTransceiver) return;
+  session.videoTransceiver = session.pc.addTransceiver("video", { direction: "recvonly" });
+};
+
 // Reuses the one video m-line for camera and screen so toggling never adds transceivers.
 // Returns true when the transceiver started sending and the session must renegotiate.
 export const sendVideoTrack = async (

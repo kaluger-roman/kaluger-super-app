@@ -6,6 +6,9 @@ export const isIos = (): boolean => {
   );
 };
 
+export const isAndroid = (): boolean =>
+  typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
 export const isInStandaloneMode = (): boolean => {
   if (typeof window === "undefined") return false;
   return (

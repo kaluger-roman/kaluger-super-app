@@ -39,6 +39,10 @@ REGISTRY="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-di
 E2E_ADMIN_EMAIL="admin@e2e.local"
 # bcrypt of the password `E2eAdmin!2026` — single-quoted so the $ segments stay literal.
 E2E_ADMIN_PASSWORD_HASH='$2b$10$bh0KSxPLTBEwZJlmikbYauZdELBjCDPXcpe9vCds2KUZ6RRjCV3su'
+# Test-only VAPID pair: e2e/students/video-call-push sends real web push to the backend's own sink.
+E2E_VAPID_PUBLIC_KEY="BBOJRSMbUiW2bbepyX2gPFZq86JL-Zj31rWCVMmImn-8_Hmi7B-xk9g_agv5rxQt7Aesbd8iZbC-DK7jU2dFrV4"
+E2E_VAPID_PRIVATE_KEY="Kv58ufPVocv7umOlIxbWBGvnLvAVN0SZcxhlek_hq-c"
+E2E_VAPID_SUBJECT="mailto:e2e@e2e.local"
 
 # Backups run the host's pg_dump, which refuses a newer server. Debian/Ubuntu's pg_dump
 # wrapper picks the local cluster's version, not the newest client, so put the client
@@ -148,6 +152,8 @@ cmd_run_backend_e2e() {
     JWT_SECRET=e2e-jwt-secret ADMIN_JWT_SECRET=e2e-admin-jwt-secret \
     STUDENT_JWT_SECRET=e2e-student-jwt-secret \
     ADMIN_EMAIL="$E2E_ADMIN_EMAIL" ADMIN_PASSWORD_HASH="$E2E_ADMIN_PASSWORD_HASH" \
+    VAPID_PUBLIC_KEY="$E2E_VAPID_PUBLIC_KEY" VAPID_PRIVATE_KEY="$E2E_VAPID_PRIVATE_KEY" \
+    VAPID_SUBJECT="$E2E_VAPID_SUBJECT" \
     exec npm run dev
 }
 

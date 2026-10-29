@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callHistoryModel, lessonCallsModel } from "@entities";
 import { notificationsModel } from "@shared";
 
-import { callModel } from "../index";
+import { callModel, callPresenceModel, callResumeModel } from "../index";
 import type { CallSignalingInbound } from "../signaling.types";
 import {
   clearCallTransport,
@@ -16,6 +16,7 @@ import {
   receive,
   resetCallFlow,
   ringCurrentInvite,
+  settleCallSync,
   settleMicrotasks,
   startCallerSession,
 } from "./callFlow";
@@ -29,6 +30,8 @@ describe("features/videoCall/model inbound signal routing", () => {
 
   beforeEach(() => {
     sent = installTransport();
+    settleCallSync();
+    sent.length = 0;
     adapter = createFakeAdapter();
     setWebRtcAdapter(adapter);
   });
@@ -36,6 +39,55 @@ describe("features/videoCall/model inbound signal routing", () => {
   afterEach(() => {
     resetCallFlow();
     vi.restoreAllMocks();
+  });
+
+  it("should neither take nor refuse a repeated call_incoming of the current call", () => {
+    receive({
+      type: "call_incoming",
+      callId: "in-same",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
+    sent.length = 0;
+
+    receive({
+      type: "call_incoming",
+      callId: "in-same",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
+
+    expect(sent).toEqual([]);
+    expect(readStore(callModel.$callPhase)).toBe("incoming");
+    expect(readStore(callModel.$callId)).toBe("in-same");
+  });
+
+  it("should hand a call snapshot to the resume model with the socket's role", () => {
+    const states = collectEvents(callResumeModel.callStateReceived);
+
+    receive({ type: "call_state", call: null }, "student");
+    states.unwatch();
+
+    expect(states.calls).toEqual([{ role: "student", call: null }]);
+  });
+
+  it("should pass on the peer's return only for the current call", () => {
+    receive({
+      type: "call_incoming",
+      callId: "in-r",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
+    const resumed = collectEvents(callResumeModel.peerResumed);
+
+    receive({ type: "call_peer_resumed", callId: "other", sessionRestart: true });
+    receive({ type: "call_peer_resumed", callId: "in-r", sessionRestart: false });
+    resumed.unwatch();
+
+    expect(resumed.calls).toEqual([{ callId: "in-r", sessionRestart: false }]);
   });
 
   it("should cancel a call whose call_ringing arrives after the user already cancelled", async () => {
@@ -66,11 +118,22 @@ describe("features/videoCall/model inbound signal routing", () => {
     expect(readStore(callModel.$callPhase)).toBe("outgoing");
   });
 
-  it("should hang up a stale call_accepted instead of starting media", async () => {
+  // Leaves its call_sync unanswered: the next test must still ask on its own (regression).
+  it("should ask the server on both sockets when the page comes back on screen", () => {
+    callPresenceModel.visibilityChanged(false);
+    callPresenceModel.visibilityChanged(true);
+
+    expect(sent.filter(({ type }) => type === "call_sync")).toEqual([
+      { type: "call_sync" },
+      { type: "call_sync" },
+    ]);
+  });
+
+  it("should ask the server about a stale call_accepted instead of starting media", async () => {
     receive({ type: "call_accepted", callId: "stale-1", iceServers: [] });
     await settleMicrotasks();
 
-    expect(sent).toEqual([{ type: "call_hangup", callId: "stale-1" }]);
+    expect(sent).toEqual([{ type: "call_sync" }]);
     expect(adapter.getUserMedia).not.toHaveBeenCalled();
   });
 
@@ -316,7 +379,7 @@ describe("features/videoCall/model call transport", () => {
     expect(tutorSend).not.toHaveBeenCalled();
   });
 
-  it("should end the active call when its socket disconnects", async () => {
+  it("should keep the active call when its socket disconnects (039: the server holds it)", async () => {
     const socket = {};
     setCallTransport("tutor", vi.fn(), socket);
     setWebRtcAdapter(createFakeAdapter());
@@ -325,10 +388,13 @@ describe("features/videoCall/model call transport", () => {
 
     const lostRole = clearCallTransport(socket);
     if (lostRole) callModel.transportDisconnected(lostRole);
+    await settleMicrotasks();
     errors.unwatch();
 
-    expect(readStore(callModel.$callPhase)).toBe("idle");
-    expect(errors.calls).toContain("Связь с сервером потеряна, звонок завершён");
+    expect(readStore(callModel.$callPhase)).toBe("connecting");
+    expect(readStore(callModel.$callId)).toBe("ws-1");
+    expect(readStore(callResumeModel.$isOwnTransportLost)).toBe(true);
+    expect(errors.calls).toEqual([]);
   });
 
   it("should keep the call when the other role's socket disconnects", async () => {

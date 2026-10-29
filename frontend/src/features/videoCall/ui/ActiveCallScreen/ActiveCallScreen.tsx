@@ -2,12 +2,13 @@ import type { FC } from "react";
 
 import { useUnit } from "effector-react";
 
-import { callFullscreenModel, callModel } from "../../model";
-import { CONNECTING_TEXT } from "../../videoCall.constants";
+import { callBannerModel, callFullscreenModel, callModel, peerViewModel } from "../../model";
 import { formatCallDuration } from "../../videoCall.helpers";
+import { BackgroundAudioHint } from "../BackgroundAudioHint";
 import { CallControlBar } from "../CallControlBar";
 import { CallStatusBanner } from "../CallStatusBanner";
 import { FullscreenControls } from "../FullscreenControls";
+import { PeerAudio } from "../PeerAudio";
 import { VideoTile } from "../VideoTile";
 import {
   useCallActivity,
@@ -21,10 +22,11 @@ export const ActiveCallScreen: FC = () => {
   const peerName = useUnit(callModel.$activePeerName);
   const durationSeconds = useUnit(callModel.$callDurationSeconds);
   const selfMedia = useUnit(callModel.$selfMediaState);
-  const peerMedia = useUnit(callModel.$peerMediaState);
-  const isConnecting = useUnit(callModel.$isConnecting);
+  const peerMedia = useUnit(peerViewModel.$shownPeerMedia);
+  const isPeerInterrupted = useUnit(peerViewModel.$isPeerInterrupted);
   const localStream = useUnit(callModel.$localTileStream);
   const remoteStream = useUnit(callModel.$remoteStream);
+  const bannerText = useUnit(callBannerModel.$callBannerText);
   const isFullscreen = useUnit(callFullscreenModel.$isFullscreen);
   const isCursorHidden = useUnit(callFullscreenModel.$isCursorHidden);
   const activityHandlers = useCallActivity();
@@ -45,6 +47,8 @@ export const ActiveCallScreen: FC = () => {
       data-cursor-hidden={isCursorHidden}
       {...activityHandlers}
     >
+      <PeerAudio />
+
       {!isFullscreen && (
         <Styled.Header>
           <Styled.HeaderInfo>
@@ -56,15 +60,18 @@ export const ActiveCallScreen: FC = () => {
         </Styled.Header>
       )}
 
+      {!isFullscreen && <BackgroundAudioHint />}
+
       <Styled.StageBox $fullscreen={isFullscreen}>
-        {isConnecting && !isFullscreen && (
+        {bannerText && !isFullscreen && (
           <Styled.BannerSlot>
-            <CallStatusBanner text={CONNECTING_TEXT} />
+            <CallStatusBanner text={bannerText} />
           </Styled.BannerSlot>
         )}
 
         <Styled.RemoteWrap
           $screen={peerMedia.screenSharing}
+          $interrupted={isPeerInterrupted}
           $fullscreen={isFullscreen}
           data-testid="remote-stage"
           {...doubleTapHandlers}
@@ -84,7 +91,6 @@ export const ActiveCallScreen: FC = () => {
               media={selfMedia}
               variant={compactPip ? "selfCompact" : "self"}
               stream={localStream}
-              muted
             />
           </Styled.LocalPip>
         )}

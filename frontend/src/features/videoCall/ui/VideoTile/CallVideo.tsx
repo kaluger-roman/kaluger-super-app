@@ -1,31 +1,42 @@
 import type { FC } from "react";
 import { useRef } from "react";
 
-import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
 import { useUnit } from "effector-react";
 
-import { VIDEO_PAUSED_LABEL } from "./VideoTile.constants";
+import { isContinueCallShown } from "./VideoTile.helpers";
 import {
   useCallVideoPlayback,
+  usePeerPictureInPicture,
   useStageGeometry,
   useZoomGestures,
   useZoomTransform,
 } from "./VideoTile.hooks";
 import * as Styled from "./VideoTile.styled";
 import type { VideoFit, VideoLayout } from "./VideoTile.types";
-import { callFullscreenModel, callZoomModel } from "../../model";
+import { callFullscreenModel, callZoomModel, peerAudioModel, peerViewModel } from "../../model";
+import { ContinueCallOverlay } from "../ContinueCallOverlay";
 
 type CallVideoProps = {
   stream: MediaStream | null;
-  muted: boolean;
   hidden: boolean;
   fit: VideoFit;
   layout: VideoLayout;
+  isPeer: boolean;
 };
 
-export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layout }) => {
+export const CallVideo: FC<CallVideoProps> = ({ stream, hidden, fit, layout, isPeer }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isBlocked, resume } = useCallVideoPlayback(videoRef, stream);
+  const isPeerAudioBlocked = useUnit(peerAudioModel.$peerAudioBlocked);
+  const isPeerInterrupted = useUnit(peerViewModel.$isPeerInterrupted);
+  const { continueCallClicked } = useUnit({
+    continueCallClicked: peerAudioModel.continueCallClicked,
+  });
+  const showContinue = isContinueCallShown({
+    videoBlocked: isBlocked,
+    soundBlocked: isPeer && isPeerAudioBlocked,
+    interrupted: isPeer && isPeerInterrupted,
+  });
   const zoomable = useUnit(callZoomModel.$isZoomAvailable);
   const isZoomed = useUnit(callZoomModel.$isZoomed);
   const isCursorHidden = useUnit(callFullscreenModel.$isCursorHidden);
@@ -33,15 +44,18 @@ export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layo
   useZoomTransform(videoRef, zoomable);
   useZoomGestures(videoRef, zoomable);
   useStageGeometry(videoRef, zoomable);
+  const pictureInPicture = isPeer && !hidden;
+  usePeerPictureInPicture(videoRef, pictureInPicture);
 
+  // The video never plays sound: the peer's voice has its own <audio> (PeerAudio).
   return (
     <>
       <Styled.VideoElement
         ref={videoRef}
         autoPlay
         playsInline
-        muted={muted}
-        disablePictureInPicture
+        muted
+        disablePictureInPicture={!pictureInPicture}
         onPause={resume}
         onClick={resume}
         data-layout={layout}
@@ -53,17 +67,13 @@ export const CallVideo: FC<CallVideoProps> = ({ stream, muted, hidden, fit, layo
         $zoomable={zoomable}
         $grabbable={grabbable}
       />
-      {/* The video also carries the peer's voice, so it is offered even with the camera off.
-          A tap on it neither shows the controls nor counts towards a double tap. */}
-      {isBlocked && (
-        <Styled.ResumeOverlay
-          onClick={resume}
-          onPointerDown={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          <PlayArrowIcon />
-          {VIDEO_PAUSED_LABEL}
-        </Styled.ResumeOverlay>
+      {showContinue && (
+        <ContinueCallOverlay
+          onContinue={() => {
+            resume();
+            continueCallClicked();
+          }}
+        />
       )}
     </>
   );

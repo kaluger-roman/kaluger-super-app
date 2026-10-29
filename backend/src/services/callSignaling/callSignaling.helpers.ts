@@ -10,6 +10,7 @@ import type {
   CallDropOutcome,
   CallParticipant,
   LiveCall,
+  ParticipantPresence,
   ResolvedPair,
 } from "./callSignaling.types";
 
@@ -87,6 +88,9 @@ export const resolveCallLesson = async (
   return lesson;
 };
 
+export const isRingingCallee = (call: LiveCall, participant: CallParticipant): boolean =>
+  call.status === "ringing" && participant.kind !== call.callerKind;
+
 export const resolveHangupStatus = (call: LiveCall): CallStatus =>
   call.status === "connected" ? "COMPLETED" : "FAILED";
 
@@ -123,3 +127,8 @@ export const mintTurnCredentials = (
   const credential = createHmac("sha1", secret).update(username).digest("base64");
   return { username, credential };
 };
+
+export const isSamePresence = (a: ParticipantPresence, b: ParticipantPresence): boolean =>
+  a.presence === b.presence &&
+  a.audioSuspended === b.audioSuspended &&
+  a.videoSuspended === b.videoSuspended;

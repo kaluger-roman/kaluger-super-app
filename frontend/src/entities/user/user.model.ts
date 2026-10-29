@@ -17,6 +17,8 @@ export const getProfileFx = createEffect(async () => {
   return await authApi.getProfile();
 });
 
+export const redirectToLoginFx = createEffect(() => navigate("/login", { replace: true }));
+
 // Stores
 export const $user = createStore<User | null>(null);
 
@@ -77,10 +79,7 @@ sample({
   target: $user,
 });
 
-sample({
-  clock: logoutUser,
-  target: createEffect(() => navigate("/login", { replace: true })),
-});
+sample({ clock: logoutUser, target: redirectToLoginFx });
 
 sample({
   clock: logoutUser,

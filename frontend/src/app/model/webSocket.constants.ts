@@ -3,6 +3,9 @@ export const WS_RECONNECT_DELAY_MS = 5000;
 export const WS_HELD_ELSEWHERE_CLOSE_CODE = 4000;
 // The server closes a socket that waited for a call in another tab with it once that call is over.
 export const WS_CALL_ENDED_CLOSE_CODE = 4003;
+// The tab that held this user's call is gone while the server still keeps the call for a while:
+// a waiting tab may take the connection and restore the call.
+export const WS_HOLDER_GONE_CLOSE_CODE = 4004;
 // The server closes with these when the token is invalid or was revoked (password/email change).
 export const WS_REVOKED_CLOSE_CODES: ReadonlySet<number> = new Set([1008, 4001]);
 export const NO_REVOKED_CLOSE_CODES: ReadonlySet<number> = new Set();

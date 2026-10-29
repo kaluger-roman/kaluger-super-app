@@ -14,14 +14,16 @@ import {
   zoomAt,
   zoomTo,
 } from "./callZoom.helpers";
+import * as peerViewModel from "./peerView.model";
 
 // One store, not three: scale and offsets change together and the offsets are bound by the scale.
 export const $zoom = createStore<CallZoom>(ZOOM_RESET);
 export const $stageGeometry = createStore<StageGeometry | null>(null);
 export const $stageOrientation = $stageGeometry.map(getStageOrientation);
+// Only the shown screen: an interrupted peer's tile shows the placeholder instead.
 export const $isZoomAvailable = combine(
   callFullscreenModel.$isFullscreen,
-  callModel.$peerMediaState,
+  peerViewModel.$shownPeerMedia,
   (isFullscreen, peerMedia) => isFullscreen && peerMedia.screenSharing
 );
 export const $isZoomed = $zoom.map(({ scale }) => scale > ZOOM_MIN_SCALE);

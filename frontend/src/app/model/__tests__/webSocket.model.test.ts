@@ -37,8 +37,18 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const REVOKED_CLOSE = { revokedToken: "test-token", elsewhere: null, callEnded: false };
-const HELD_ELSEWHERE = { revokedToken: null, elsewhere: "tab" as const, callEnded: false };
+const REVOKED_CLOSE = {
+  revokedToken: "test-token",
+  elsewhere: null,
+  callEnded: false,
+  holderGone: false,
+};
+const HELD_ELSEWHERE = {
+  revokedToken: null,
+  elsewhere: "tab" as const,
+  callEnded: false,
+  holderGone: false,
+};
 
 const createScope = () => {
   const connectHandler = vi.fn((_params: SocketOpenParams) => null);

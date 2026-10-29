@@ -7,6 +7,7 @@ import * as callModel from "../call.model";
 import { ZOOM_RESET } from "../callFullscreen.constants";
 import * as callFullscreenModel from "../callFullscreen.model";
 import type { StageGeometry } from "../callFullscreen.types";
+import * as callPresenceModel from "../callPresence.model";
 import * as callZoomModel from "../callZoom.model";
 
 const DESKTOP: StageGeometry = {
@@ -138,6 +139,21 @@ describe("features/videoCall/model callZoom", () => {
 
     await allSettled(callModel.peerMediaStateChanged, { scope, params: peerMedia(false) });
 
+    expect(zoomOf(scope)).toEqual(ZOOM_RESET);
+  });
+
+  it("should take the zoom away while the sharing peer is interrupted (regression)", async () => {
+    const scope = await createScope();
+    await zoomTwice(scope);
+
+    await allSettled(callPresenceModel.$peerPresence, {
+      scope,
+      params: { presence: "background", audioSuspended: true, videoSuspended: true },
+    });
+
+    expect(scope.getState(callZoomModel.$isZoomAvailable)).toBe(false);
+    expect(zoomOf(scope)).toEqual(ZOOM_RESET);
+    await zoomIn(scope);
     expect(zoomOf(scope)).toEqual(ZOOM_RESET);
   });
 

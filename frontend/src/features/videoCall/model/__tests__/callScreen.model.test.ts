@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OUTGOING_REVEAL_DELAY_MS } from "../call.constants";
 import * as callModel from "../call.model";
-import * as callRequestModel from "../callRequest.model";
+import * as callEntryModel from "../callEntry.model";
 import * as callScreenModel from "../callScreen.model";
 // The whole call wiring, as in the app: with a transport installed the invite goes out and the
 // call stays outgoing, whatever other test files loaded before.
@@ -47,13 +47,13 @@ describe("features/videoCall/model callScreen", () => {
     createWatch({ unit: callModel.callStarted, fn: (params) => started.push(params), scope });
 
     await launch(() =>
-      allSettled(callRequestModel.callRequested, {
+      allSettled(callEntryModel.startRequested, {
         scope,
         params: { peerName: "Анна", lesson: LESSON },
       })
     );
     await launch(() =>
-      allSettled(callRequestModel.callRequested, {
+      allSettled(callEntryModel.startRequested, {
         scope,
         params: { peerName: "Анна", lesson: LESSON },
       })
@@ -85,7 +85,7 @@ describe("features/videoCall/model callScreen", () => {
     const scope = fork();
     await startCall(scope);
     await launch(() =>
-      allSettled(callModel.callFailed, { scope, params: "Репетитор сейчас не в сети" })
+      allSettled(callModel.callFailed, { scope, params: "Преподаватель сейчас не в сети" })
     );
 
     await vi.advanceTimersByTimeAsync(OUTGOING_REVEAL_DELAY_MS);

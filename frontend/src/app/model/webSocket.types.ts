@@ -7,6 +7,8 @@ export type WebSocketClose = {
   elsewhere: ElsewhereReason | null;
   // The call that held the connection in another tab is over: the connection may be free now.
   callEnded: boolean;
+  // The tab that held the call is gone while the server keeps the call (4004).
+  holderGone: boolean;
 };
 
 export type LessonStatusUpdate = {

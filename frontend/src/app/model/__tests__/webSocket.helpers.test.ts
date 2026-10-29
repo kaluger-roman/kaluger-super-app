@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  dispatchTutorMessage,
-  followStoredTutorToken,
-  resumeTutorSession,
-} from "../webSocket.helpers";
+import { dispatchTutorMessage, resumeTutorSession } from "../webSocket.helpers";
 
 describe("app/model/webSocket.helpers dispatchTutorMessage", () => {
   it("should pass a lesson status update to the handler", () => {
@@ -45,21 +41,5 @@ describe("app/model/webSocket.helpers resumeTutorSession", () => {
 
     expect(resumeTutorSession("old-token")).toBe(false);
     expect(localStorage.getItem("authToken")).toBeNull();
-  });
-});
-
-describe("app/model/webSocket.helpers followStoredTutorToken", () => {
-  afterEach(() => {
-    localStorage.removeItem("authToken");
-  });
-
-  it("should follow a token another tab stored", () => {
-    localStorage.setItem("authToken", "fresh-token");
-
-    expect(followStoredTutorToken()).toBe(true);
-  });
-
-  it("should end the session when another tab logged out", () => {
-    expect(followStoredTutorToken()).toBe(false);
   });
 });

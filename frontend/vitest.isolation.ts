@@ -14,8 +14,13 @@ const listTestFiles = (dir: string): string[] =>
     return TEST_FILE.test(entry.name) ? [full] : [];
   });
 
+// Unit tests of the e2e helpers live next to them (docs/conventions/e2e-testing.md).
+const TEST_ROOTS = ["src", "e2e"];
+
 export const splitTestFiles = (root: string): { isolated: string[]; shared: string[] } => {
-  const files = listTestFiles(path.join(root, "src")).map((file) => path.relative(root, file));
+  const files = TEST_ROOTS.flatMap((dir) => listTestFiles(path.join(root, dir))).map((file) =>
+    path.relative(root, file)
+  );
   const isolated = files.filter((file) =>
     NEEDS_ISOLATION.test(fs.readFileSync(path.join(root, file), "utf8"))
   );

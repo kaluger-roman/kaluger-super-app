@@ -4,6 +4,7 @@ import {
   PEER_DISCONNECTED_TEXT,
   PEER_HUNG_UP_TEXT,
   PEER_MEDIA_UNAVAILABLE_TEXT,
+  PEER_NOT_RETURNED_TEXT,
   PICKER_DISMISSED_ERRORS,
   STUDENT_UNAVAILABLE_TEXT,
   TUTOR_UNAVAILABLE_TEXT,
@@ -71,6 +72,7 @@ export const toCanceledText = ({ reason, callerName }: CanceledNotice): string =
 export const toPeerEndedText = (reason: CallEndReason): string => {
   if (reason === "peer_disconnected") return PEER_DISCONNECTED_TEXT;
   if (reason === "media_unavailable") return PEER_MEDIA_UNAVAILABLE_TEXT;
+  if (reason === "peer_not_returned") return PEER_NOT_RETURNED_TEXT;
   return PEER_HUNG_UP_TEXT;
 };
 

@@ -7,7 +7,12 @@ export const signedInBackgroundHandlers = [
     HttpResponse.json({ vapidPublicKey: null, configured: false })
   ),
   http.get("*/api/reminder-settings", () =>
-    HttpResponse.json({ enabled: false, intervals: [], muteWhenInLesson: false })
+    HttpResponse.json({
+      enabled: false,
+      intervals: [],
+      muteWhenInLesson: false,
+      callNotificationsEnabled: true,
+    })
   ),
   http.get("*/api/news/has-unread", () => HttpResponse.json({ hasUnread: false })),
 ];

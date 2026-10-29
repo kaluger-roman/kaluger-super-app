@@ -16,6 +16,16 @@ export const CALL_SCREEN_BACKGROUND =
 
 export const CONNECTING_TEXT = "Соединение…";
 
+// FR-032: the tutor sees why the student dropped out; the student only ever sees neutral wording.
+export const RECONNECTING_TEXT = "Восстанавливаем связь…";
+export const STUDENT_MINIMIZED_TEXT = "Ученик свернул приложение";
+export const STUDENT_MIC_SUSPENDED_TEXT =
+  "Микрофон ученика приостановлен — ученик свернул приложение";
+export const PEER_AUDIO_UNAVAILABLE_TEXT = "Звук временно недоступен";
+
+export const BACKGROUND_AUDIO_HINT_TEXT =
+  "На iPhone, пока приложение свёрнуто, собеседник вас не слышит. Звонок не прервётся — просто вернитесь";
+
 // On a short stage (landscape phone) the pills overlay the shared screen instead of framing it.
 export const SHORT_STAGE_QUERY = "(max-height: 500px)";
 export const SHORT_STAGE_MEDIA = `@media ${SHORT_STAGE_QUERY}`;

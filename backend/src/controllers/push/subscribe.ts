@@ -1,29 +1,9 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import type { PushSubscriptionDto } from "../../types";
-import { prisma } from "../../lib/prisma";
-
-const validateSubscriptionData = (data: PushSubscriptionDto) => {
-  if (!data.subscription?.endpoint) {
-    return { isValid: false, error: "Некорректные данные подписки" };
-  }
-
-  try {
-    new URL(data.subscription.endpoint);
-  } catch {
-    return { isValid: false, error: "Некорректные данные подписки" };
-  }
-
-  if (!data.subscription?.keys?.p256dh || !data.subscription?.keys?.auth) {
-    return { isValid: false, error: "Некорректные данные подписки" };
-  }
-
-  if (data.deviceName && data.deviceName.length > 100) {
-    return { isValid: false, error: "Название устройства слишком длинное" };
-  }
-
-  return { isValid: true };
-};
+import { bindPushSubscription } from "../../services";
+import { sendBindingResult } from "./subscribe.helpers";
+import { validateSubscriptionData } from "./validators";
 
 export const subscribe = async (req: AuthRequest, res: Response) => {
   try {
@@ -35,36 +15,8 @@ export const subscribe = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validation.error });
     }
 
-    const existing = await prisma.pushSubscription.findUnique({
-      where: { endpoint: data.subscription.endpoint },
-    });
-
-    if (existing && existing.userId !== userId) {
-      return res.status(403).json({ error: "Подписка принадлежит другому пользователю" });
-    }
-
-    const subscriptionData = {
-      endpoint: data.subscription.endpoint,
-      p256dh: data.subscription.keys.p256dh,
-      auth: data.subscription.keys.auth,
-      deviceName: data.deviceName || null,
-      userId: userId!,
-    };
-
-    // Upsert is race-safe: parallel registrations of the same endpoint (which
-    // is `@unique`) used to crash on P2002 with `findUnique + create`.
-    const subscription = await prisma.pushSubscription.upsert({
-      where: { endpoint: data.subscription.endpoint },
-      update: subscriptionData,
-      create: subscriptionData,
-    });
-
-    return res.status(existing ? 200 : 201).json({
-      id: subscription.id,
-      endpoint: subscription.endpoint,
-      deviceName: subscription.deviceName,
-      createdAt: subscription.createdAt.toISOString(),
-    });
+    const result = await bindPushSubscription({ kind: "tutor", id: userId! }, data);
+    return sendBindingResult(res, result);
   } catch (error) {
     console.error("Subscribe error:", error);
     return res.status(500).json({ error: "Внутренняя ошибка сервера" });

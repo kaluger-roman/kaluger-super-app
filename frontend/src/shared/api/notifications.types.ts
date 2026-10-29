@@ -25,10 +25,12 @@ export type ReminderSettingsResponse = {
   enabled: boolean;
   intervals: number[];
   muteWhenInLesson: boolean;
+  callNotificationsEnabled: boolean;
 };
 
 export type UpdateReminderSettingsRequest = {
   enabled?: boolean;
   intervals?: number[];
   muteWhenInLesson?: boolean;
+  callNotificationsEnabled?: boolean;
 };

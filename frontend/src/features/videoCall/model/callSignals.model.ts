@@ -10,7 +10,11 @@ import {
 } from "./call.helpers";
 import * as callModel from "./call.model";
 import type { AddressedSignal, InviteParams } from "./call.types";
+import * as callPresenceModel from "./callPresence.model";
+import { toStaleAcceptSync } from "./callSync.helpers";
+import * as callSyncModel from "./callSync.model";
 import * as callTransportModel from "./callTransport.model";
+import type { CallRole } from "./signaling.types";
 import { sendOverTransport } from "./transport.helpers";
 import { isScreenShareSupported, stopSession } from "./webrtc.helpers";
 
@@ -40,7 +44,7 @@ sample({
 });
 
 sample({
-  clock: [callModel.callStarted, callModel.incomingCallReceived],
+  clock: [callModel.callStarted, callModel.incomingCallReceived, callModel.callRestored],
   fn: () => undefined,
   target: checkScreenShareSupportFx,
 });
@@ -71,17 +75,20 @@ sample({
   fn: ({ callId, role }): AddressedSignal => ({ role, message: { type: "call_cancel", callId } }),
   target: callTransportModel.sendCallSignalFx,
 });
+// The page may be the caller's one that the server just let in (a reload): call_state restores
+// the call there.
 sample({
-  clock: callModel.staleAcceptReceived,
-  fn: ({ callId, role }): AddressedSignal => ({ role, message: { type: "call_hangup", callId } }),
-  target: callTransportModel.sendCallSignalFx,
-});
-
-sample({
-  clock: callModel.transportDisconnected,
-  source: { phase: callModel.$callPhase, role: callModel.$callRole },
-  filter: ({ phase, role }, lostRole) => phase !== "idle" && role === lostRole,
-  target: callModel.callConnectionLost,
+  clock: sample({
+    clock: callModel.staleAcceptReceived,
+    source: {
+      visible: callPresenceModel.$isVisible,
+      role: callModel.$callRole,
+      pending: callSyncModel.$syncPendingRoles,
+    },
+    fn: (source, { role }) => toStaleAcceptSync(source, role),
+  }),
+  filter: (roles): roles is CallRole[] => roles !== null,
+  target: callSyncModel.syncRequested,
 });
 
 sample({

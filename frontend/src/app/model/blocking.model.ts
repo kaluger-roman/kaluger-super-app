@@ -9,10 +9,12 @@ import { studentModel } from "@entities/student";
 import { studentUserModel } from "@entities/studentUser";
 import { taxRatePeriodModel } from "@entities/taxRatePeriod";
 import { adminAuthModel, adminDataModel } from "@features/admin";
+import { callNotificationsModel } from "@features/callNotifications";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
 import { forgotPasswordModel } from "@features/forgotPassword";
 import { lessonCancellationModel } from "@features/lessons";
+import { sessionCleanupModel } from "@features/logoutConfirmation";
 import { resetPasswordModel } from "@features/resetPassword";
 import {
   studentEmailVerificationModel,
@@ -85,6 +87,9 @@ export const $isBlocking = combine(
     tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
     loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
     loadLessonCalls: lessonCallsModel.loadLessonCallsFx.pending,
+    enableCallNotifications: callNotificationsModel.enableFx.pending,
+    disableCallNotifications: callNotificationsModel.disableFx.pending,
+    logoutCleanup: sessionCleanupModel.cleanupFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

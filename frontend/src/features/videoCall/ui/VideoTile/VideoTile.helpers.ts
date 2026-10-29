@@ -1,6 +1,7 @@
 import {
   CAMERA_OFF_LABEL,
   CAMERA_UNAVAILABLE_LABEL,
+  ENTER_PIP_ACTION,
   PINCH_WHEEL_MAX_DELTA_PX,
   PINCH_WHEEL_ZOOM_SENSITIVITY,
   WHEEL_DELTA_LINE,
@@ -9,12 +10,15 @@ import {
   WHEEL_ZOOM_SENSITIVITY,
 } from "./VideoTile.constants";
 import type {
+  AutoPictureInPictureVideo,
+  ContinueCallParams,
   GesturePoint,
   TileBackgroundParams,
   TileContentKind,
   TileVariantConfig,
   VideoFit,
   GestureInput,
+  PipMediaSession,
   VideoLayout,
   ViewportRect,
   WheelZoomInput,
@@ -69,6 +73,14 @@ export const resumePlayback = (
     }
   );
 };
+
+// One tap resumes both the peer's sound and video. An interrupted peer shows a placeholder, not
+// the video, so a blocked video alone asks for nothing there.
+export const isContinueCallShown = ({
+  videoBlocked,
+  soundBlocked,
+  interrupted,
+}: ContinueCallParams): boolean => soundBlocked || (videoBlocked && !interrupted);
 
 export const toCenterOffset = (point: GesturePoint, rect: ViewportRect): GesturePoint => ({
   x: point.x - (rect.left + rect.width / 2),
@@ -125,4 +137,47 @@ export const readGesture = (event: Event): GestureInput | null => {
     return null;
   }
   return { scale, point: { x: clientX, y: clientY } };
+};
+
+// The DOM typings know neither the media session PiP action nor WebKit/Chromium autoPictureInPicture.
+const pipMediaSession = (): PipMediaSession | null =>
+  typeof navigator !== "undefined" && "mediaSession" in navigator
+    ? (navigator.mediaSession as unknown as PipMediaSession)
+    : null;
+
+let pipActionOwner: HTMLVideoElement | null = null;
+
+// Browsers without the action throw on registering it.
+const setPipAction = (handler: (() => void) | null): boolean => {
+  const session = pipMediaSession();
+  if (!session) return false;
+  try {
+    session.setActionHandler(ENTER_PIP_ACTION, handler);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// FR-026 (P3, progressive): lets the browser float the peer video when the app goes to the
+// background. Every part is feature-detected; the returned function undoes what was set.
+export const enablePeerPictureInPicture = (video: HTMLVideoElement): (() => void) => {
+  const autoVideo = video as AutoPictureInPictureVideo;
+  const hasAuto = "autoPictureInPicture" in video;
+  if (hasAuto) autoVideo.autoPictureInPicture = true;
+  const canRequest = typeof video.requestPictureInPicture === "function";
+  const hasAction =
+    canRequest &&
+    setPipAction(() => {
+      video.requestPictureInPicture().catch(() => undefined);
+    });
+  if (hasAction) pipActionOwner = video;
+
+  return () => {
+    if (hasAuto) autoVideo.autoPictureInPicture = false;
+    if (hasAction && pipActionOwner === video) {
+      setPipAction(null);
+      pipActionOwner = null;
+    }
+  };
 };

@@ -10,6 +10,7 @@ const online: Record<CallerKindValue, Set<string>> = { tutor: new Set(), student
 const connections = new Map<string, object>();
 const sent: CapturedCallMessage[] = [];
 const released: string[] = [];
+const releasedHolderGone: string[] = [];
 
 const connectionKey = (kind: CallerKindValue, id: string): string => `${kind}:${id}`;
 
@@ -19,6 +20,8 @@ export const callWebSocket = {
   sent,
   // `kind:id` of every participant whose waiting tabs were released when a call ended.
   released,
+  // `kind:id` of every participant whose waiting tabs were released because the holder was gone.
+  releasedHolderGone,
   connect: (kind: CallerKindValue, id: string): void => {
     online[kind].add(id);
   },
@@ -39,6 +42,7 @@ export const callWebSocket = {
     connections.clear();
     sent.length = 0;
     released.length = 0;
+    releasedHolderGone.length = 0;
   },
 };
 
@@ -54,8 +58,12 @@ export const callWebSocketManagerModule = {
       sent.push({ kind, id, message });
       return online[kind].has(id);
     },
-    releaseWaitingSockets: (kind: CallerKindValue, id: string): void => {
-      released.push(connectionKey(kind, id));
+    releaseWaitingSockets: (
+      kind: CallerKindValue,
+      id: string,
+      reason: "call_ended" | "holder_gone" = "call_ended"
+    ): void => {
+      (reason === "holder_gone" ? releasedHolderGone : released).push(connectionKey(kind, id));
     },
   }),
 };

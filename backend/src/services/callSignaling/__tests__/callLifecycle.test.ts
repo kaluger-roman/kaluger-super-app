@@ -2,7 +2,7 @@ import { callWebSocket, uniqueEmail, waitFor } from "../../../__tests__/helpers"
 
 import { prisma } from "../../../lib/prisma";
 import { handleCallSignal } from "../../../lib/websocket/signaling";
-import { terminateActiveCallForParticipant } from "../callFlow";
+import { terminateActiveCallForParticipant } from "../callMessaging";
 import { RING_TIMEOUT_MS } from "../callSignaling.constants";
 
 const HOUR_MS = 60 * 60 * 1000;

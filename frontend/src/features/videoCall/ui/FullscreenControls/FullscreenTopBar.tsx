@@ -6,7 +6,7 @@ import { useUnit } from "effector-react";
 
 import { useBarState, useControlsHover } from "./FullscreenControls.hooks";
 import * as Styled from "./FullscreenControls.styled";
-import { callModel } from "../../model";
+import { callModel, peerViewModel } from "../../model";
 import { formatCallDuration } from "../../videoCall.helpers";
 import { FullscreenToggleButton } from "../FullscreenToggleButton";
 import { ScreenShareLabel } from "../ScreenShareLabel";
@@ -14,7 +14,8 @@ import { ScreenShareLabel } from "../ScreenShareLabel";
 export const FullscreenTopBar: FC = () => {
   const peerName = useUnit(callModel.$activePeerName);
   const durationSeconds = useUnit(callModel.$callDurationSeconds);
-  const peerMedia = useUnit(callModel.$peerMediaState);
+  const peerMedia = useUnit(peerViewModel.$shownPeerMedia);
+  const audioNotice = useUnit(peerViewModel.$peerAudioNotice);
   const hoverHandlers = useControlsHover();
   const { visible, interactive } = useBarState();
 
@@ -34,7 +35,7 @@ export const FullscreenTopBar: FC = () => {
               {peerName}
             </Styled.PeerName>
           </Tooltip>
-          {!peerMedia.micOn && (
+          {!peerMedia.micOn && !audioNotice && (
             <Styled.MicBadge aria-label="Микрофон выключен">
               <MicOffIcon />
             </Styled.MicBadge>

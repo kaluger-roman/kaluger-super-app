@@ -67,16 +67,23 @@ const App: FC = () => {
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
+      const isVisible = document.visibilityState === "visible";
+      appInitModel.appVisibilityChanged(isVisible);
+      if (isVisible) {
         appInitModel.appResumed();
       }
     };
+    const handlePageHide = () => appInitModel.appVisibilityChanged(false);
+    const handleServiceWorkerMessage = (event: MessageEvent) =>
+      appInitModel.serviceWorkerMessaged(event.data);
 
     window.addEventListener("storage", handleStorage);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
@@ -84,6 +91,8 @@ const App: FC = () => {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+      navigator.serviceWorker?.removeEventListener("message", handleServiceWorkerMessage);
     };
   }, []);
 

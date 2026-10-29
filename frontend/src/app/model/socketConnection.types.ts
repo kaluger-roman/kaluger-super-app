@@ -13,6 +13,11 @@ export type SocketConnectionConfig = {
   reconnectDelayMs: number;
   // The tab became visible again.
   resumed: Event<void>;
+  // The browser is online again.
+  online: Event<void>;
+  // The user opened this page for a call (tapped its notification): an explicit open, like a
+  // take-over, so the call still ringing on another tab or device comes here.
+  openedForCall: Event<unknown>;
   logLabel: string;
   // Close codes meaning the server revoked the token the socket used.
   revokedCloseCodes?: ReadonlySet<number>;
@@ -33,17 +38,26 @@ export type SocketClosedPayload = {
   token: string;
 };
 
+export type CurrentSocketClosed = SocketClosedPayload & {
+  // The server had registered the socket (connection_ready); otherwise it refused it.
+  registered: boolean;
+};
+
 // connection_ready: the socket is registered; connection_waiting: another tab is in a call.
 export type SocketControlMessage = "ready" | "waiting";
 
 export type SocketReconnectUnits = {
   config: SocketConnectionConfig;
   openRequested: EventCallable<boolean>;
+  reconnectRequested: Event<boolean>;
   disconnect: Event<void>;
   closed: Event<WebSocketClose>;
   tokenRenewed: EventCallable<void>;
   tokenRenewedHere: Event<void>;
   $isEnabled: Store<boolean>;
+  $connection: Store<WebSocket | null>;
+  $isConnected: Store<boolean>;
   $elsewhere: Store<ElsewhereReason | null>;
   $revokedToken: Store<string | null>;
+  $isVisible: Store<boolean>;
 };

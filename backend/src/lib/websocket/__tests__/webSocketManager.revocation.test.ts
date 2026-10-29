@@ -1,6 +1,4 @@
 import { createServer } from "http";
-import { EventEmitter } from "events";
-import { WebSocket } from "ws";
 
 import { uniqueEmail } from "../../../__tests__/helpers";
 import { prisma } from "../../prisma";
@@ -8,6 +6,7 @@ import { revokeTutorSessions } from "../../tokenRevocation";
 import { getCachedTokenVersion } from "../../tokenVersionCache";
 import { generateToken } from "../../../utils/auth";
 import { WebSocketManager } from "../webSocketManager";
+import { connectSocket, makeSocket } from "./wsManagerHarness";
 
 jest.mock("../messageHandler", () => ({
   handleMessage: jest.fn(),
@@ -15,23 +14,10 @@ jest.mock("../messageHandler", () => ({
 }));
 
 jest.mock("../../../services/callSignaling", () => ({
+  participantDisconnected: jest.fn(async () => undefined),
+  participantRevoked: jest.fn(async () => undefined),
   processCallSignal: jest.fn(async () => undefined),
-  terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
-
-type SocketStub = EventEmitter & { readyState: number; close: jest.Mock; send: jest.Mock };
-
-const makeSocket = (): SocketStub => {
-  const emitter = new EventEmitter() as SocketStub;
-  emitter.readyState = WebSocket.OPEN;
-  emitter.close = jest.fn();
-  emitter.send = jest.fn();
-  return emitter;
-};
-
-type ConnectionHandlers = {
-  handleConnection: (ws: unknown, request: unknown) => Promise<void>;
-};
 
 describe("WebSocketManager tutor token revocation race", () => {
   let server: ReturnType<typeof createServer>;
@@ -80,12 +66,11 @@ describe("WebSocketManager tutor token revocation race", () => {
     const ws = makeSocket();
     const token = generateToken({ userId, email, tokenVersion });
 
-    const connecting = (manager as unknown as ConnectionHandlers).handleConnection.call(
+    const connecting = connectSocket(
       manager,
+      "tutor",
       ws,
-      {
-        url: `/ws?token=${encodeURIComponent(token)}`,
-      }
+      `/ws?token=${encodeURIComponent(token)}`
     );
     await new Promise((resolve) => setImmediate(resolve));
     revokeTutorSessions(userId, tokenVersion + 1);

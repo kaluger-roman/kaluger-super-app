@@ -70,6 +70,26 @@ describe("createCallRecord", () => {
     expect(record.endedAt?.toISOString()).toBe(endedAt.toISOString());
   });
 
+  it("should count the duration up to the given endedAt, not up to now", async () => {
+    const connectedAt = new Date(Date.now() - 10 * 60 * 1000);
+    const endedAt = new Date(connectedAt.getTime() + 4 * 60 * 1000);
+
+    await createCallRecord({
+      tutorId,
+      studentId,
+      callerKind: "tutor",
+      status: "COMPLETED",
+      startedAt: connectedAt,
+      connectedAt,
+      endedAt,
+      lessonId: null,
+    });
+
+    const record = await prisma.callRecord.findFirstOrThrow({ where: { tutorId } });
+    expect(record.durationSeconds).toBe(240);
+    expect(record.endedAt?.toISOString()).toBe(endedAt.toISOString());
+  });
+
   it("should leave endedAt and durationSeconds null for a MISSED call", async () => {
     await createCallRecord({
       tutorId,

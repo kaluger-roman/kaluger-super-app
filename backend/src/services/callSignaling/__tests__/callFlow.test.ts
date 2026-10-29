@@ -2,7 +2,8 @@ import { callWebSocket, uniqueEmail, waitFor } from "../../../__tests__/helpers"
 
 import { prisma } from "../../../lib/prisma";
 import type { CallSignalingInbound, CallerKindValue } from "../../../types";
-import { processCallSignal, terminateActiveCallForParticipant } from "../callFlow";
+import { processCallSignal } from "../callFlow";
+import { terminateActiveCallForParticipant } from "../callMessaging";
 import * as callRegistry from "../callSignaling";
 import { INVITE_RATE_LIMIT, RING_TIMEOUT_MS } from "../callSignaling.constants";
 import * as callSignalingHelpers from "../callSignaling.helpers";

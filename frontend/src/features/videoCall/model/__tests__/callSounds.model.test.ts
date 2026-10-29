@@ -74,7 +74,7 @@ describe("features/videoCall/model call sounds", () => {
         endTime: "2026-10-23T16:00:00.000Z",
       },
     });
-    callModel.callFailed("Репетитор сейчас не в сети");
+    callModel.callFailed("Преподаватель сейчас не в сети");
 
     expect(sounds.startRingback).not.toHaveBeenCalled();
   });

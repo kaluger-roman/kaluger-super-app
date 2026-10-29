@@ -50,6 +50,10 @@ export type {
   ReminderSettingsResponse,
   PushSubscriptionResponse,
   PushNotificationPayload,
+  WebPushDevice,
+  WebPushOptions,
+  WebPushOutcome,
+  WebPushUrgency,
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
 export type {
@@ -89,4 +93,9 @@ export type {
   CallSignalingInbound,
   CallSignalingOutbound,
   CallHistoryItem,
+  PresenceState,
+  PeerPresence,
+  PeerPresencePayload,
+  CallSnapshot,
+  CallSnapshotStatus,
 } from "./call";

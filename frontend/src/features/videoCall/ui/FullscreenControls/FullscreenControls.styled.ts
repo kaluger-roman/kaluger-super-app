@@ -39,6 +39,12 @@ export const TopBar = styled(Bar)({
   },
 });
 
+export const NoticeSlot = styled(Box)({
+  alignSelf: "flex-start",
+  maxWidth: "calc(100% - 32px)",
+  margin: "0 16px",
+});
+
 export const BannerSlot = styled(Box)({
   alignSelf: "center",
   maxWidth: "90%",

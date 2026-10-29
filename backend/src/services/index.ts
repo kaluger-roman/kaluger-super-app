@@ -8,6 +8,7 @@ export * from "./passwordReset";
 export * from "./recurringHelpers";
 export * from "./recurringLessons";
 export * from "./pushNotification";
+export * from "./pushSubscription";
 export * from "./reminderScheduler";
 export * from "./reminderProcessor";
 export * from "./taxRate";

@@ -9,7 +9,12 @@ export const CALL_SIGNAL_TYPES = [
   "webrtc_ice",
   "call_media_state",
   "call_connected",
+  "presence_update",
+  "call_resume",
+  "call_sync",
 ] as const;
+
+export const PRESENCE_STATES = ["on_screen", "background"] as const;
 
 export const SDP_MAX_LENGTH = 64 * 1024;
 export const ICE_CANDIDATE_MAX_LENGTH = 1024;

@@ -1,27 +1,48 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { combine, createStore, createEvent, createEffect, sample } from "effector";
 
 import { notificationsApi, showNotification } from "@shared";
 
-import { urlBase64ToUint8Array } from "./notifications.helpers";
-import type { ReminderSettings, PushPermissionState } from "./notifications.types";
+import { DEFAULT_REMINDER_SETTINGS, PERMISSION_NOT_GRANTED_ERROR } from "./notifications.constants";
+import {
+  readPushPermission,
+  removeDevice,
+  subscribeDevice,
+  syncDevice,
+  toVapidKey,
+} from "./notifications.helpers";
+import type {
+  ReminderSettings,
+  PushPermissionState,
+  SubscribePushParams,
+} from "./notifications.types";
 
 // Stores
 export const $vapidKey = createStore<string | null>(null);
-export const $pushPermission = createStore<PushPermissionState>(
-  typeof window !== "undefined" && "Notification" in window
-    ? (Notification.permission as PushPermissionState)
-    : "default"
-);
+export const $pushPermission = createStore<PushPermissionState>(readPushPermission());
+export const $isPushPermissionDenied = $pushPermission.map((permission) => permission === "denied");
 export const $isPushSupported = createStore(
   typeof window !== "undefined" && "PushManager" in window && "serviceWorker" in navigator
 );
 export const $isPushSubscribed = createStore(false);
-export const $reminderSettings = createStore<ReminderSettings>({
-  enabled: false,
-  intervals: [],
-  muteWhenInLesson: false,
-});
+export const $reminderSettings = createStore<ReminderSettings>(DEFAULT_REMINDER_SETTINGS);
+export const $callNotificationsEnabled = $reminderSettings.map(
+  ({ callNotificationsEnabled }) => callNotificationsEnabled
+);
 export const $serviceWorkerRegistration = createStore<ServiceWorkerRegistration | null>(null);
+export const $canSubscribePush = combine(
+  $isPushSupported,
+  $vapidKey,
+  $serviceWorkerRegistration,
+  (supported, key, reg) => supported && key !== null && reg !== null
+);
+// Whether calls reach this device (FR-021). A device that cannot hold a subscription shows the
+// account setting, which still decides the delivery to the tutor's other devices.
+export const $isCallNotificationsOn = combine(
+  $callNotificationsEnabled,
+  $isPushSubscribed,
+  $canSubscribePush,
+  (enabled, subscribed, canSubscribe) => enabled && (subscribed || !canSubscribe)
+);
 
 // Events
 export const loadSettings = createEvent();
@@ -30,73 +51,30 @@ export const serviceWorkerRegistered = createEvent<ServiceWorkerRegistration | n
 export const remindersToggled = createEvent();
 export const intervalToggled = createEvent<number>();
 export const muteToggled = createEvent();
+export const callNotificationsToggled = createEvent();
 
 // Effects
-export const loadVapidKeyFx = createEffect(async () => {
-  const result = await notificationsApi.getVapidKey();
-  return result.vapidPublicKey;
-});
-
-export const subscribePushFx = createEffect(
-  async ({
-    vapidKey,
-    registration,
-  }: {
-    vapidKey: string;
-    registration: ServiceWorkerRegistration;
-  }) => {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      throw new Error("Разрешение на уведомления не предоставлено");
-    }
-
-    const existingSub = await registration.pushManager.getSubscription();
-
-    // FR-025: reuse existing subscription if valid, only re-register on backend
-    if (existingSub) {
-      const subJson = existingSub.toJSON();
-
-      const result = await notificationsApi.subscribe({
-        subscription: {
-          endpoint: existingSub.endpoint,
-          keys: {
-            p256dh: subJson.keys?.p256dh ?? "",
-            auth: subJson.keys?.auth ?? "",
-          },
-        },
-      });
-
-      return { subscription: existingSub, serverResponse: result };
-    }
-
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidKey),
-    });
-
-    const subJson = subscription.toJSON();
-
-    const result = await notificationsApi.subscribe({
-      subscription: {
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: subJson.keys?.p256dh ?? "",
-          auth: subJson.keys?.auth ?? "",
-        },
-      },
-    });
-
-    return { subscription, serverResponse: result };
-  }
+export const loadVapidKeyFx = createEffect(async () =>
+  toVapidKey(await notificationsApi.getVapidKey())
 );
 
-export const unsubscribePushFx = createEffect(async (registration: ServiceWorkerRegistration) => {
-  const subscription = await registration.pushManager.getSubscription();
-  if (subscription) {
-    await notificationsApi.unsubscribe(subscription.endpoint);
-    await subscription.unsubscribe();
-  }
+export const subscribePushFx = createEffect(async (params: SubscribePushParams): Promise<void> => {
+  const permission = await subscribeDevice(params, notificationsApi.subscribe);
+  if (permission !== "granted") throw new Error(PERMISSION_NOT_GRANTED_ERROR);
 });
+
+// The permission changes without an event the app listens to (a refusal in the system dialog, the
+// browser or phone settings): it is read again after a failed subscribe and when the app comes back.
+export const readPushPermissionFx = createEffect(readPushPermission);
+
+export const unsubscribePushFx = createEffect((registration: ServiceWorkerRegistration) =>
+  removeDevice(registration, notificationsApi.unsubscribe)
+);
+
+export const syncSubscriptionFx = createEffect(
+  (registration: ServiceWorkerRegistration): Promise<boolean> =>
+    syncDevice(registration, notificationsApi.subscribe)
+);
 
 export const loadSettingsFx = createEffect(async () => {
   return await notificationsApi.getSettings();
@@ -147,6 +125,17 @@ sample({
 sample({
   clock: subscribePushFx.doneData,
   fn: (): PushPermissionState => "granted",
+  target: $pushPermission,
+});
+
+sample({
+  clock: subscribePushFx.fail,
+  fn: () => undefined,
+  target: readPushPermissionFx,
+});
+
+sample({
+  clock: readPushPermissionFx.doneData,
   target: $pushPermission,
 });
 
