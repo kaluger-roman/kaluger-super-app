@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "branch": "fix-commission-same-payment-order",
+  "base_ref": "main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-10-29T08:05:00Z",
+  "diff_stats": { "files_changed": 3, "insertions": 37, "deletions": 11 },
+  "summary": {
+    "raw_findings": 4,
+    "after_dedup": 2,
+    "after_score_filter": 2,
+    "by_severity": { "critical": 0, "high": 0, "medium": 2 },
+    "by_category": { "logic": 1, "convention": 1 }
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "Спека 033 по-прежнему описывает tie-break фактического прохода по id, хотя код теперь сортирует по startTime",
+      "category": "logic",
+      "file": "specs/033-commission-tracking/data-model.md",
+      "line_start": 118,
+      "line_end": 121,
+      "snippet": "3. **Сортировка.** Факт — по `paymentDate ?? startTime` возрастающе,\n   прогноз — по `startTime` возрастающе; при равенстве — по `id`\n   лексикографически.",
+      "rationale": "data-model.md §3, edge case на строке 151 и research.md R4 фиксируют старое правило, спека противоречит коду. (also flagged by: deep-logic, removed-behavior)",
+      "fix_hint": "В data-model.md §3 и research.md R4 записать tie-break факта по startTime, затем id (#136); дополнить таблицу edge cases.",
+      "score": 50,
+      "verification_note": "Расхождение реальное, но только документация без функционального эффекта.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Комментарий над регрессионным тестом во многом повторяет название it(...)",
+      "category": "convention",
+      "file": "backend/src/utils/__tests__/commission.test.ts",
+      "line_start": 348,
+      "line_end": 350,
+      "snippet": "  // A prepayment marks a run of lessons paid on one date. Lessons created as\n  // separate recurring series get unrelated ids, so the id must not decide\n  // which of them repays the commission first.",
+      "rationale": "docs/conventions/backend.md:205: минимум комментариев, в том числе в тестах; неочевидно только то, что id серий не связаны с датами.",
+      "fix_hint": "Оставить одну строку про id серий.",
+      "score": 50,
+      "verification_note": "Формально под правило попадает, но второе предложение объясняет неочевидное, спорная мелочь.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [],
+  "agents_clean": ["shallow-bug", "security", "type-safety", "cross-file", "wrapper-proxy"]
+}
