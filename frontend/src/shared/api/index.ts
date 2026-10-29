@@ -9,6 +9,7 @@ export { notificationsApi } from "./notifications";
 export { taxPeriodsApi } from "./taxPeriods";
 export { studentAuthApi } from "./studentAuth";
 export { studentCabinetApi } from "./studentCabinet";
+export { studentPushApi } from "./studentPush";
 export { studentInvitationsApi } from "./studentInvitations";
 export { api } from "./base";
 export { studentApi, publicApi } from "./studentBase";

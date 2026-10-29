@@ -4,6 +4,11 @@ import { hashPassword } from "../../utils/auth";
 import { initiateEmailChange, verifyEmailChange, resendEmailChangeCode } from "../changeEmail";
 import { uniqueEmail } from "../../__tests__/helpers";
 
+const mockDisconnectUser = jest.fn();
+jest.mock("../../lib/wsManager", () => ({
+  getWebSocketManager: jest.fn(() => ({ disconnectUser: mockDisconnectUser })),
+}));
+
 jest.mock("../email", () => ({
   sendEmailChangeVerification: jest.fn().mockResolvedValue(undefined),
 }));
@@ -224,6 +229,7 @@ describe("changeEmail service", () => {
       expect(userAfter!.email).toBe(newEmail);
       expect(userAfter!.pendingEmail).toBeNull();
       expect(userAfter!.verificationCode).toBeNull();
+      expect(mockDisconnectUser).toHaveBeenCalledWith(userId);
 
       // Update userEmail for subsequent tests
       userEmail = newEmail;

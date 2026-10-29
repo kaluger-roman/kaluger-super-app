@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
-import { invalidateCachedTokenVersion } from "../lib/tokenVersionCache";
+import { revokeTutorSessions } from "../lib/tokenRevocation";
 import {
+  getFrontendUrl,
   RESET_REQUEST_COOLDOWN_SECONDS,
   comparePassword,
   createResetToken,
@@ -12,14 +13,6 @@ import {
   validatePassword,
 } from "../utils";
 import { sendPasswordResetEmail } from "./email";
-
-const getFrontendUrl = (): string => {
-  const url = process.env.FRONTEND_URL;
-  if (!url) {
-    throw new Error("FRONTEND_URL is not set");
-  }
-  return url.replace(/\/$/, "");
-};
 
 const buildResetUrl = (token: string): string =>
   `${getFrontendUrl()}/reset-password?token=${token}`;
@@ -130,7 +123,7 @@ export const applyPasswordReset = async (
   // гарантирует, что параллельный запрос с тем же токеном не сможет
   // дважды применить смену пароля. Если токен уже помечен — count=0 и
   // транзакция откатывается без изменения пользователя.
-  await prisma.$transaction(async (tx) => {
+  const updatedUser = await prisma.$transaction(async (tx) => {
     const result = await tx.passwordResetToken.updateMany({
       where: { id: record.id, usedAt: null },
       data: { usedAt: new Date() },
@@ -138,13 +131,12 @@ export const applyPasswordReset = async (
     if (result.count === 0) {
       throwHttp("Эта ссылка уже была использована. Запросите новую", 400);
     }
-    await tx.user.update({
+    return tx.user.update({
       where: { id: user!.id },
       data: userUpdate,
+      select: { id: true, tokenVersion: true },
     });
   });
 
-  // Invalidate the token-version cache: the user must re-login via the
-  // password-reset flow, so any cached old version is now stale.
-  invalidateCachedTokenVersion(user!.id);
+  revokeTutorSessions(updatedUser.id, updatedUser.tokenVersion);
 };

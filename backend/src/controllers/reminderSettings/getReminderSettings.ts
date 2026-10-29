@@ -37,6 +37,7 @@ export const getReminderSettings = async (req: AuthRequest, res: Response) => {
       enabled: settings.enabled,
       intervals: settings.intervals,
       muteWhenInLesson: settings.muteWhenInLesson,
+      callNotificationsEnabled: settings.callNotificationsEnabled,
     });
   } catch (error) {
     console.error("Get reminder settings error:", error);

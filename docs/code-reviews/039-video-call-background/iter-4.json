@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "branch": "039-video-call-background",
+  "base_ref": "origin/main (merge-base 00774e8)",
+  "threshold": 50,
+  "iteration": 4,
+  "timestamp": "2026-10-29T18:00:00Z",
+  "diff_stats": {
+    "files_changed": 329,
+    "insertions": 17899,
+    "deletions": 1171
+  },
+  "summary": {
+    "raw_findings": 11,
+    "after_dedup": 10,
+    "after_score_filter": 9,
+    "by_severity": {
+      "medium": 9
+    },
+    "by_category": {
+      "hack": 2,
+      "logic": 2,
+      "convention": 2,
+      "bug": 3
+    },
+    "notes": "working-tree mode; specs/, docs/mockups/, docs/code-reviews/, .claude/ excluded; Haiku scoring in 2 batches"
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "Тестовая обвязка WebSocketManager (SocketStub, makeSocket, messagesOf, ConnectionHandlers с приведением к приватным методам, connectTutor/connectStudent) скопирована ещё в пять новых файлов",
+      "category": "hack",
+      "file": "backend/src/lib/websocket/__tests__/webSocketManager.callReturn.test.ts",
+      "line_start": 23,
+      "line_end": 79,
+      "snippet": "type ConnectionHandlers = {\n  handleConnection: (ws: unknown, request: unknown) => Promise<void>;\n  handleStudentConnection: (ws: unknown, request: unknown) => Promise<void>;\n};",
+      "rationale": "Одни и те же ~50 строк (SocketStub, makeSocket, messagesOf, ConnectionHandlers, connectTutor/connectStudent через `manager as unknown as ConnectionHandlers`, засев tutor/student/studentUser в beforeAll) повторены в callReturn, callTakeover, revokedCall, tabs и waiting. Было две копии, стало семь. Обход приватности через приведение типов размножен: переименование или смена сигнатуры handleConnection сломает семь файлов по отдельности, и TypeScript этого не заметит. Рядом при этом уже есть общий backend/src/__tests__/helpers (callWebSocketMock, waitFor).",
+      "fix_hint": "Вынести обвязку в общий helper, например __tests__/helpers/wsManagerHarness.ts: makeSocket, messagesOf, connect(kind, query), drop. Каст к приватным методам держать в одном месте и импортировать во все файлы webSocketManager.*.test.ts.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Обвязка SocketStub/makeSocket/messagesOf/ConnectionHandlers действительно копируется; но в описании ошибка: новых файлов в диффе три (callReturn, callTakeover, revokedCall), tabs и waiting уже существовали и только изменены, и остальные выросли из pre-existing копий."
+    },
+    {
+      "id": "f2",
+      "agent": "deep-logic",
+      "title": "Несколько вкладок, отпущенных по 4004, вытесняют друг друга: последней остаётся скрытая, и видимая вкладка звонок не восстанавливает",
+      "category": "logic",
+      "file": "backend/src/lib/websocket/connection.helpers.ts",
+      "line_start": 42,
+      "line_end": 43,
+      "snippet": "  if (hasCallHeldByConnection(kind, id)) return { action: \"wait\" };\n  if (isResumeRequest(request) && !isCallAwaitingReturn(kind, id)) {",
+      "rationale": "Фикс iter3 «любое новое подключение забирает соединение, пока звонок ждёт возврата» срабатывает и между самими отпущенными вкладками. Сценарий: преподаватель в звонке на телефоне, на компьютере две вкладки ждут (connection_waiting), одна видима (W1), другая скрыта (W2). Телефон гаснет, держатель пропал, `releaseWaitingSockets(holder_gone)` закрывает обе с 4004, обе сразу переподключаются с `resume=1` (socketReconnect.model.ts:68). W1 регистрируется первой, затем W2: `isCallAwaitingReturn` = true, и W2 вытесняет W1 кодом 4000. W1 (registered=true) получает `$elsewhere=\"tab\"` и сама больше не переподключается, пока видима, а если уже восстанавливала звонок (getUserMedia, `call_resume`), гасит его молча (`callEndedLocally`, сервер отбрасывает её resume по `resumedOver`). Скрытая W2 `call_sync` не шлёт (`toReadySync`). В итоге звонок не восстановлен там, куда смотрят (research.md:84 обещает восстановление по `call_state`), и исход решает гонка рукопожатий.",
+      "fix_hint": "Пока звонок ждёт возврата, пускать `resume=1` поверх живого сокета только для tabId сокета, который держал звонок (запомнить его в `participantDisconnected`), а остальным отказывать. Или на клиенте не переподключать по 4004 скрытую вкладку, пока она не станет видимой.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Код connection.helpers.ts:42-43 действительно позволяет resume=1 новому сокету вытеснить уже зарегистрированную вкладку, когда звонок ждёт возврата, и поведение намеренное; вред проявляется только при двух отпущенных вкладках одного пользователя, то есть редкий сценарий."
+    },
+    {
+      "id": "f3",
+      "agent": "deep-logic",
+      "title": "Закрывающий push (missed_call/call_closed) отправляется, не дождавшись push о входящем, и может прийти раньше него: на устройстве остаётся «звонящее» уведомление о завершённом вызове",
+      "category": "logic",
+      "file": "backend/src/services/callSignaling/callPush.ts",
+      "line_start": 37,
+      "line_end": 43,
+      "snippet": "export const pushCallClosed = (\n  call: LiveCall,\n  kind: Exclude<CallNotificationKind, \"incoming_call\">\n): void => {\n  if (!callRegistry.takePushNotified(call)) return;",
+      "rationale": "`notifyCalleeOnce` выставляет `pushNotified=true` сразу при старте `deliver()`, а `pushCallClosed` (через `removeCall`→`pushRingingEnded` или `call_accept`) запускает `notifyCallClosed` параллельно с ещё летящим `incomingPush`; запрос к push-сервису может идти до 10 с (lib/webPush.ts:9). Сценарий: вкладка адресата скрыта, и `ringCallee` начинает push о входящем. Звонящий почти сразу отменяет вызов (`cancelRinging`, missed_call), либо адресат отклоняет его во вкладке (call_closed). Оба запроса с одним Topic идут к push-сервису, и если закрывающий доходит первым (а при офлайн-устройстве ещё и вытесняется более поздним по Topic), то SW показывает и закрывает его, а следом показывает incoming_call с requireInteraction и вибрацией. Уведомление «звонит» до ручного закрытия, нарушая FR-016.",
+      "fix_hint": "Отправлять закрывающий push после того, как отправка входящего завершилась: `void (call.incomingPush ?? Promise.resolve(0)).then(() => notifyCallClosed(...))`; ссылку на промис нужно взять до `removeCall`.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Гонка подтверждена кодом: pushNotified ставится синхронно в notifyCalleeOnce, pushCallClosed не ждёт incomingPush, оба push с одним tag/topic; но для видимого эффекта нужен медленный push-сервис и отмена в окне его латентности, поэтому редко."
+    },
+    {
+      "id": "f4",
+      "agent": "claude-md",
+      "title": "Тест shared-проекта запускает настоящий expireTutorSession: окно уходит на /login, и это переживает тест",
+      "category": "convention",
+      "file": "frontend/src/app/model/__tests__/sessionLogout.model.test.ts",
+      "line_start": 69,
+      "line_end": 93,
+      "snippet": "    [\"another tab logged the tutor out\", \"tutor\", webSocketModel.tutorSessionEndedElsewhere],\n...\n      await allSettled(sessionEnded, { scope });",
+      "rationale": "В файле нет vi.mock, поэтому он идёт в shared-проект. tutorSessionEndedElsewhere через sample (webSocket.model.ts:69) запускает expireSessionFx = createEffect(expireTutorSession) без хендлера в fork. Тот чистит токен и делает window.location.href = \"/login\": проверено на happy-dom, окно реально переходит на /login без сетевого запроса. setup.ts location не восстанавливает, так что этот путь остаётся у следующих файлов воркера. Это нарушает frontend-testing.md:258-259 («Effector state through fork», «Stubs are undone after each test») и :260 (побочные эффекты моделей закрывает тест). Сплошное vi.spyOn(console, \"error\") в каждом кейсе прячет такие эффекты.",
+      "fix_hint": "Дать тесту перехватить побочный эффект. Экспортировать expireSessionFx (или вынести его в testSeams) и передать в fork({ handlers: [[expireSessionFx, () => undefined]] }). Либо пометить файл `// @vitest-isolate` и замокать expireTutorSession, как в webSocket.model.test.ts.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Файл без vi.mock и без isolate попадает в shared-проект, expireSessionFx реально выполняет expireTutorSession (window.location.href = \"/login\"), а setup.ts location не восстанавливает, так что побочный эффект утекает; правило «Stubs are undone after each test» в frontend-testing.md:37-38 есть, но номера строк в описании (258-259) не совпадают с файлом, и ущерб в основном для изоляции тестов."
+    },
+    {
+      "id": "f5",
+      "agent": "claude-md",
+      "title": "Связка transportStale → reconnectRequested скопирована в две app-модели вместо фабрики createSocketConnection",
+      "category": "convention",
+      "file": "frontend/src/app/model/webSocket.model.ts",
+      "line_start": 83,
+      "line_end": 91,
+      "snippet": "sample({\n  clock: callResumeModel.transportStale,\n  source: callNotificationOpenModel.$pendingNotificationCallId,\n  filter: (_, role) => role === \"tutor\",\n  fn: (pending) => pending === null,",
+      "rationale": "Тот же sample вместе с комментарием дословно повторён в studentWebSocket.model.ts:63-71, отличается только литерал роли. При этом все остальные связи с callResumeModel/callPresenceModel (transportWaiting, transportTakenElsewhere, transportReady) уже подключены внутри createSocketConnection через config.role (socketConnection.model.ts:130,142,160). Это нарушает frontend.md:331 («Extract functions only if reused 2+ times»), и третья роль или смена правила потребует правок в двух местах. (also flagged by: hacks)",
+      "fix_hint": "Перенести sample в createSocketConnection: filter `(_, role) => role === config.role`, target `reconnectRequested`. Удалить обе копии из webSocket.model.ts и studentWebSocket.model.ts.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Дубль sample с тем же комментарием подтверждён в webSocket.model.ts:83-91 и studentWebSocket.model.ts:63-71; правило frontend.md:331 про выделение при повторном использовании 2+ раз формально относится к функциям, но дублирование реальное и не функциональное."
+    },
+    {
+      "id": "f6",
+      "agent": "hacks",
+      "title": "Замена звонка из снимка держится на очерёдности эффектов Effector: восстановление нового звонка идёт после сброса старого только потому, что toRestoredCallFx — эффект",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/callResume.helpers.ts",
+      "line_start": 62,
+      "line_end": 66,
+      "snippet": "// A replaced call is restored only after the page's own call ended: the restore runs in an effect,\n// after the reset of the ended call.\nexport const toRestoreRequest = ({ decision, received }: DecidedSnapshot): ResumeRequest | null =>\n  (decision === \"restore\" || decision === \"replace\") && received.call",
+      "rationale": "При decision \"replace\" один и тот же тик `decided` запускает и callEndedLocally → callTerminated (сброс $callPhase, $callId, $callRole …), и resumeRequested → toRestoredCallFx → callRestored (callRestore.model.ts:21-22). Правильный порядок держится только на том, что Effector выполняет чистые узлы раньше раннеров эффектов. Если восстановление станет синхронным (например, elapsedSeconds начнёт считаться через переданное now) или сброс уйдёт за эффект, callTerminated сотрёт только что восстановленный звонок. Явной последовательности нет. Комментарий фиксирует обход вместо решения (фикс iter3 #76).",
+      "fix_hint": "Упорядочить явно: для \"replace\" запоминать снимок и вызывать resumeRequested по callTerminated заменяемого звонка (sample clock: callModel.callTerminated, source: $pendingReplacement, filter по не-null). Либо подавать restore из обработчика конца звонка, а не параллельной веткой того же `decided`.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Для decision \"replace\" один tick запускает и callEndedLocally→callTerminated, и resumeRequested→toRestoredCallFx; порядок держится на том, что эффект выполняется после чистых сэмплов, и комментарий сам это признаёт. Сейчас работает, но это неявный порядок без проверки."
+    },
+    {
+      "id": "f7",
+      "agent": "type-safety",
+      "title": "Вернувшаяся страница с тем же звонком игнорирует peerPresence из снимка call_state: устаревшая плашка «Восстанавливаем связь…» / «свернул приложение» и заглушка вместо живого видео собеседника",
+      "category": "bug",
+      "file": "frontend/src/features/videoCall/model/callResume.model.ts",
+      "line_start": 91,
+      "line_end": 95,
+      "snippet": "sample({\n  clock: decided.map(toMatchedSnapshot),\n  filter: (snapshot): snapshot is CallSnapshot => snapshot !== null,\n  target: snapshotMatched,\n});",
+      "rationale": "Сервер кладёт присутствие собеседника в CallSnapshot.peerPresence (contracts/signaling-ws.md, «Общие типы»), но фронт применяет его только при восстановлении (callRestore.model.ts:24-28); при решении resume snapshotMatched идёт лишь в updateIceConfigFx (mediaRecovery.model.ts:168-172), а handleResume (callReconnect.ts announceReturn) шлёт call_peer_presence только собеседнику, не вернувшемуся. Сценарий: ученик ушёл в фон или потерял связь, у преподавателя плашка и заглушка (getPeerInterruption → toShownPeerMedia скрывает видео); затем телефон преподавателя засыпает (сокет-зомби или 4000/закрытие), ученик возвращается, его call_peer_resumed и call_peer_presence(on_screen) пропадают в мёртвом сокете; преподаватель возвращается, call_state несёт on_screen, решение resume, $peerPresence не меняется, и плашка с заглушкой висят поверх идущего медиа до следующей смены присутствия ученика.",
+      "fix_hint": "При решении resume применять снимок: sample({ clock: snapshotMatched, fn: (s) => s.peerPresence, target: callPresenceModel.peerPresenceReceived }) (порядок на одном сокете сохраняет более поздние call_peer_presence), либо в handleResume отправлять вернувшемуся call_peer_presence собеседника; добавить регрессионный тест: устаревший background/disconnected, затем call_state с on_screen для того же звонка → $peerInterruption === null.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Подтверждено: toCallSnapshot отдаёт peerPresence, а snapshotMatched при решении resume идёт только в updateIceConfigFx, а $peerPresence обновляется лишь в callRestore; баг требует двух последовательных обрывов сокетов с потерей call_peer_presence, поэтому узкий сценарий."
+    },
+    {
+      "id": "f8",
+      "agent": "cross-file",
+      "title": "Скрытая вкладка, впущенная по 4004, получает call_accepted звонящего, считает его устаревшим и шлёт call_hangup: звонок рвётся в момент ответа",
+      "category": "bug",
+      "file": "frontend/src/features/videoCall/model/callSignals.model.ts",
+      "line_start": 75,
+      "line_end": 85,
+      "snippet": "// A reloaded caller hears the accept before its call is restored: call_state decides that call.\nsample({\n  clock: callModel.staleAcceptReceived,\n  source: callSyncModel.$syncPendingRoles,\n  filter: (pending, { role }) => !pending.includes(role),",
+      "rationale": "Сценарий: преподаватель звонит с телефона (A), во время гудков вкладка B на компьютере попросила соединение и ждёт (connection_waiting), затем ушла в фон; сокет A пропал, participantDisconnected (callReconnect.ts:184) отпускает B кодом 4004, B переподключается с resume=1 и регистрируется, но скрытая: toReadySync (callSync.helpers.ts:53) не шлёт call_sync, $syncPendingRoles пуст. Ученик принимает вызов, handleRingingAnswer (callFlow.ts:182) отправляет call_accepted «звонящему», то есть в сокет B; у B звонка нет, signalRouting.model.ts:106 даёт staleAcceptReceived, фильтр пропускает и B отправляет call_hangup, сервер завершает звонок для обоих. Без B вернувшийся A восстановил бы звонок через toMissedAcceptance. Воспроизводится e2e: два контекста одного преподавателя, B в фоне, /ws/tutors/:id/drop для A, ученик принимает.",
+      "fix_hint": "Не класть трубку по устаревшему call_accepted, пока страница не спросила сервер: на staleAcceptReceived слать call_sync и решать по call_state (endedHere/restore), либо на сервере не слать call_accepted звонящему с disconnectedAt (снимок после call_resume и так доставит принятие).",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Цепочка кода подтверждена (signalRouting.model.ts:106 отправляет staleAcceptReceived, callSignals.model.ts:75-85 шлёт call_hangup при пустом $syncPendingRoles, toReadySync возвращает null для скрытой вкладки без роли), но сценарий требует редкого сочетания событий (перезагрузка звонящего, скрытая вкладка, принятие), а воспроизведение e2e в описании не проверено."
+    },
+    {
+      "id": "f9",
+      "agent": "deep-logic",
+      "title": "При сбое медиа в активном звонке звонящий дважды перезапускает ICE и шлёт два offer: iceconnectionstatechange и connectionstatechange оба дают mediaDown",
+      "category": "bug",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.model.ts",
+      "line_start": 80,
+      "line_end": 84,
+      "snippet": "sample({\n  clock: mediaDown,\n  fn: ({ callId }): IceRestartParams => ({ callId, force: true }),\n  target: restartIceFx,\n});",
+      "rationale": "`stateOfCurrentCall` (строки 31-36) объединяет `connectionStateChanged` и `iceStateChanged`. При обрыве ICE браузер выставляет \"failed\" обоим, поэтому `mediaDown` срабатывает дважды и вызывает два `restartIceFx(force)`. Сценарий: звонящий в фазе active, сеть пропала, `oniceconnectionstatechange` → failed, следом `onconnectionstatechange` → failed. Первый `restartIce` вызывает `pc.restartIce()` и возвращает true. Второй видит signalingState всё ещё \"stable\" (неявный setLocalDescription первого `sendOfferFx` ещё не завершён) или \"have-local-offer\" (тогда откатывает уже отправленный offer) и тоже возвращает true. Итого два `sendOfferFx`, у которых нет проверки `makingOffer`, и два webrtc_offer. Собеседник отвечает дважды, второй answer приходит в состоянии \"stable\", `applyAnswerFx` падает, и при active срабатывают `recoverNegotiationFx` и тост RENEGOTIATION_FAILED_TEXT. У вежливой стороны второй offer пересекается с ответом на первый (`createAnswer` в stable), и у неё тоже ошибка с тостом. Тест mediaRecovery.model.test.ts:89 дёргает только connectionState, поэтому этого не видит.",
+      "fix_hint": "Определять «down» только по connectionState (как в `connected`) или дедуплицировать перезапуск поколением, как сделано с iceCheck. Дополнительно `sendOfferFx` может откладывать offer (offerPending), если `session.makingOffer` уже true.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "В toMediaHealth обе смены состояния \"failed\" (connectionState и iceConnectionState) дают mediaDown без дедупликации, и каждое срабатывание запускает restartIceFx(force), поэтому двойной offer возможен; защита sendOfferFx (проверка signalingState) частично спасает, итог зависит от тайминга событий браузера, что не проверено."
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "RINGING_GRACE_TIMEOUT_MS = 40 с сервера + запас: фронт угадывает серверный таймаут звонка и отсчитывает его от потери сокета, а не от начала вызова",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/callResume.helpers.ts",
+      "line_start": 133,
+      "line_end": 140,
+      "snippet": "export const toGraceStart = ({ generation, phase }: GraceSource): GraceStart => ({\n  generation: generation + 1,\n  timeoutMs:\n    phase === \"outgoing\" || phase === \"incoming\"\n      ? RINGING_GRACE_TIMEOUT_MS",
+      "rationale": "Сервер снимает вызов через RING_TIMEOUT_MS (40 с) от startCall, а фронт запускает 45 с от момента, когда $isOwnTransportLost стал true. Пример: вызов начался в t=0, сокет пропал в t=35 с, сеть не вернулась. Экран «Вызываем…» с гудками (или входящий с рингтоном) живёт до t=80 с, хотя на сервере звонок снят уже в t=40 с. Константа дублирует знание о серверном таймауте магическим запасом. Это новый случай из фикса iter3 (#71), а не серверная grace из #39.",
+      "fix_hint": "Передавать дедлайн звонка с сервера (например, ringExpiresAt в call_ringing/call_incoming/CallSnapshot) или хотя бы запоминать момент callRinging/incomingCallReceived. Таймер ожидания тогда считается до этого дедлайна, а не фиксированные 45 с от потери сокета.",
+      "score": 25,
+      "verification_note": "Фронт действительно отсчитывает 45 с от потери сокета, а не от начала вызова, и комментарий в toGraceStart («waits no longer than the server rings it») этого не обеспечивает; но вред ограничен задержкой снятия экрана при обрыве сокета во время звонка, а гасится переподключением.",
+      "reason": "below threshold"
+    }
+  ]
+}

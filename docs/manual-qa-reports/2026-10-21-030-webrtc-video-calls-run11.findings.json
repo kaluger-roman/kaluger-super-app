@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "feature_id": "030-webrtc-video-calls",
+  "spec_path": "specs/030-webrtc-video-calls/spec.md",
+  "base_url": "http://localhost:32781",
+  "run_at": "2026-10-21T19:35:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11.md",
+  "readiness": "green",
+  "coverage": {
+    "total": 20,
+    "passed": 19,
+    "failed": 0,
+    "warned": 1,
+    "scenarios": [
+      {
+        "id": "WT1",
+        "title": "Ждущая вкладка и устройство при входящем; ученик отменил",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "WT2",
+        "title": "Ждущие вкладки; репетитор отклонил",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "WT3",
+        "title": "Ждущие вкладки; таймаут вызова",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "WT4",
+        "title": "Ждущие вкладки при «Вызываем…» и в живом звонке 70 с, «Завершить»",
+        "priority": "P1",
+        "status": "pass",
+        "finding_ids": [
+          2
+        ],
+        "status_before_autofix": "warn"
+      },
+      {
+        "id": "WT5",
+        "title": "Закрытие вкладки-держателя в звонке, ждущая забирает соединение",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "WT6",
+        "title": "Вызовы доходят до держателя, пока другая вкладка ждёт и после",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "WT7",
+        "title": "Рестарт сервера во время звонка при ждущих вкладках",
+        "priority": "Edge",
+        "status": "pass",
+        "finding_ids": [
+          1
+        ],
+        "status_before_autofix": "fail"
+      },
+      {
+        "id": "RS1",
+        "title": "Рестарт сервера: скрытый держатель переподключается через 5 с, вытесненные молчат",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "PW1",
+        "title": "Своя смена пароля, вытесненная вкладка видима",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "PW2",
+        "title": "Своя смена пароля, вытесненная вкладка скрыта",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "EM1",
+        "title": "Своя смена email, вытесненная вкладка скрыта и видима",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "XS1",
+        "title": "Выход репетитора не трогает кабинет ученика",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "XS2",
+        "title": "Выход репетитора не трогает /student-invite, открытую до входа",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "XS3",
+        "title": "/student-invite, открытая при сессии репетитора, после выхода в другой вкладке",
+        "priority": "Edge",
+        "status": "warn",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "LO1",
+        "title": "Выход ученика в держателе разлогинивает вытесненную вкладку ученика",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "LO2",
+        "title": "Выход репетитора в держателе разлогинивает вытесненную вкладку",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "BL2a",
+        "title": "Входящий во время первой загрузки, принят во время загрузки, без перемонтирования",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "BL2b",
+        "title": "Входящий во время загрузки, принят после её окончания",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "SM1",
+        "title": "Базовый звонок: микрофон, камера, демонстрация, завершение",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "CAM",
+        "title": "Поздний отказ камеры после конца звонка без тоста",
+        "priority": "Edge",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 2
+    },
+    "by_category": {
+      "spec-mismatch": 0,
+      "bug": 1,
+      "ux": 2,
+      "improvement": 0
+    },
+    "unambiguous_fix_count": 2
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "После рестарта сервера во время звонка ждущие вкладки переподключаются сами и забирают соединение",
+      "category": "bug",
+      "severity": "medium",
+      "scenario_id": "WT7",
+      "file": "frontend/src/app/model/socketConnection.helpers.ts",
+      "line_hint": 43,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/20-waiting-tab-no-banner-before-reconnect.png",
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/21-call-tab-lost-connection-after-restart.png",
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/22-other-device-took-connection.png",
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/24-fixed-call-tab-after-restart.png"
+      ],
+      "expected": "Переподключаются только держатели; ждущие вкладки показывают «Приложение открыто…» с активной кнопкой",
+      "actual": "Ждущие вкладки через те же 5 с открывают resume=1 и в 2 из 2 прогонов забирают соединение у вкладки звонка (репетитор и ученик); 5 с без баннера",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/app/model/socketConnection.helpers.ts",
+        "frontend/src/app/model/socketConnection.model.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/app/model/__tests__/socketConnection.helpers.test.ts",
+        "frontend/src/app/model/__tests__/socketConnection.model.test.ts"
+      ],
+      "autofix_note": "toSocketClose учитывает текущее $elsewhere: обрыв сокета вкладки в состоянии call (не 4003/4000/отзыв токена) даёт elsewhere tab, без автопереподключения; перепроверено на пересобранном стеке",
+      "console_excerpt": null,
+      "network_excerpt": "tA (держатель): resume -> 4000, баннер TAB; tA2 (ждала): resume -> open",
+      "fix_suggestion": "Ждущая вкладка после обрыва переходит в состояние tab и пробует снова при возврате во вкладку"
+    },
+    {
+      "id": 2,
+      "title": "Баннер «идёт звонок» → «Приложение открыто» проходит через пустой баннер",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "WT4",
+      "file": "frontend/src/app/model/socketConnection.helpers.ts",
+      "line_hint": 43,
+      "screenshots": [],
+      "expected": "Текст баннера меняется сразу",
+      "actual": "На 4003 $elsewhere становится null, Snackbar 40–50 мс пустой с активной кнопкой, потом снова открывается с текстом tab",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/app/model/socketConnection.helpers.ts",
+        "frontend/src/app/model/socketConnection.model.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/app/model/__tests__/socketConnection.helpers.test.ts",
+        "frontend/src/app/model/__tests__/socketConnection.model.test.ts"
+      ],
+      "autofix_note": "После 4003 вкладка в состоянии call остаётся call до ответа на повторный запрос; перепроверено: CALL:dis -> TAB:en напрямую",
+      "console_excerpt": null,
+      "network_excerpt": "tA2: CALL:dis | 82 ?:en | 129 TAB:en (4003 @74, 4000 @91)",
+      "fix_suggestion": "Держать call до connection_ready или 4000"
+    },
+    {
+      "id": 3,
+      "title": "Страница приглашения, открытая при сессии репетитора, уходит на /login при выходе в другой вкладке",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "XS3",
+      "file": "frontend/src/shared/auth/session.helpers.ts",
+      "line_hint": 5,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/13-invite-page-with-tutor-session.png",
+        "docs/manual-qa-reports/2026-10-21-030-webrtc-video-calls-run11/screenshots/14-invite-page-with-tutor-session-after-logout.png"
+      ],
+      "expected": "Страница приглашения остаётся и показывает форму регистрации ученика",
+      "actual": "expireTutorSession уводит вкладку на /login, ссылка-приглашение потеряна",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Выбор политики для публичных страниц с сессией репетитора",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "На /student-invite/* при удалении authToken в другой вкладке сбрасывать сессию на месте без перехода на /login"
+    }
+  ],
+  "notes": "Точечный прогон по d475117 (HEAD e6f4573). Покрытие и readiness после автофикса; до автофикса 17/20 (WT7 fail, WT4 и XS3 warn), readiness yellow. Автофикс перепроверен на стеке http://localhost:32782. Известная Low run 10 #4 не перепроверялась."
+}

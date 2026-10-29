@@ -119,7 +119,20 @@ describe("PullToRefresh", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
 
     const contentWrapper = screen.getByText("Контент").closest("[class]")!;
-    expect(contentWrapper).toHaveStyle("transform: translateY(0px)");
+    expect(contentWrapper).toHaveStyle("transform: none");
+  });
+
+  it("should not transform the content at rest so fixed overlays inside stay above the call screen", () => {
+    mockIsInStandaloneMode.mockReturnValue(true);
+
+    renderWithTheme(
+      <PullToRefresh>
+        <span>Контент</span>
+      </PullToRefresh>
+    );
+
+    const contentWrapper = screen.getByText("Контент").closest("[class]")!;
+    expect(contentWrapper).toHaveStyle({ transform: "none", willChange: "auto" });
   });
 
   it("should trigger reload when pull exceeds threshold", () => {

@@ -2,16 +2,19 @@ import { combine, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 import { debounce } from "patronum";
 
+import { callHistoryModel, lessonCallsModel } from "@entities/callRecord";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
 import { studentUserModel } from "@entities/studentUser";
 import { taxRatePeriodModel } from "@entities/taxRatePeriod";
 import { adminAuthModel, adminDataModel } from "@features/admin";
+import { callNotificationsModel } from "@features/callNotifications";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
 import { forgotPasswordModel } from "@features/forgotPassword";
 import { lessonCancellationModel } from "@features/lessons";
+import { sessionCleanupModel } from "@features/logoutConfirmation";
 import { resetPasswordModel } from "@features/resetPassword";
 import {
   studentEmailVerificationModel,
@@ -82,6 +85,11 @@ export const $isBlocking = combine(
     tutorInvitationLoadStatus: tutorStudentInvitationModel.loadStatusFx.pending,
     tutorInvitationIssue: tutorStudentInvitationModel.issueInvitationFx.pending,
     tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
+    loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
+    loadLessonCalls: lessonCallsModel.loadLessonCallsFx.pending,
+    enableCallNotifications: callNotificationsModel.enableFx.pending,
+    disableCallNotifications: callNotificationsModel.disableFx.pending,
+    logoutCleanup: sessionCleanupModel.cleanupFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

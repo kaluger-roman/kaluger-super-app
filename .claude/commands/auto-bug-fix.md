@@ -28,13 +28,13 @@ description: Сквозной оркестратор починки бага. С
   ↓
 Фаза 4: верификация — повтор шагов воспроизведения (Playwright для UI, тесты для бэка)
   ↓
-Фаза 5: финальный отчёт
-        ✋ stop: пользователь решает что дальше (коммитить, PR)
+Фаза 5: commit + push в ветку задачи, ожидание CI, финальный отчёт
+        ✋ stop: пользователь решает что дальше (/news, PR ready)
 ```
 
 Отличия от `/auto-feature` (осознанно выкинуто): нет speckit-pipeline (specify/clarify/plan/tasks/implement), нет фазы mockups, один checkpoint вместо двух, cap review-loop 3 вместо 5. Баг — это не фича: вместо спеки — диагноз, вместо макетов — воспроизведение.
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 3 — **в основном потоке**, не в sub-agent. Все git/PR операции — **только по команде пользователя в Фазе 5**, никаких commit/push автоматически. Единственное исключение — стартовый draft PR в Фазе 0 (`scripts/start-task-pr.mjs`).
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 3 — **в основном потоке**, не в sub-agent. Git: стартовый draft PR в Фазе 0 (`scripts/start-task-pr.mjs`), между фазами коммитов нет, в Фазе 5 — commit + push готовой работы в ветку задачи без вопроса (CLAUDE.md «Commit and Push Without Asking»). `/news`, `gh pr ready`, merge и деплой — только по команде пользователя.
 
 ---
 
@@ -127,7 +127,7 @@ description: Сквозной оркестратор починки бага. С
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, релевантный кусок state.json, ожидаемый формат ответа (JSON).
 4. **Возврат от sub-agent — структурированный JSON.** Текстовые отчёты — короткие.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
-6. **Никаких автоматических git-операций** (commit / push). Worktree создаётся через `EnterWorktree`. Исключение — стартовый draft PR в Фазе 0 (`node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт.
+6. **Git только в начале и в конце.** Worktree создаётся через `EnterWorktree`. Фаза 0 — стартовый draft PR (`node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт. Фазы 1–4 не коммитят. Фаза 5 — commit + push в ветку задачи без вопроса и ожидание CI.
 7. **При ошибке любой фазы** — записать `phases[i].status = "blocked"`, в `notes` причину, прервать pipeline, сообщить пользователю и ждать решений.
 8. **Регрессионный тест обязателен** (правило проекта): фикс без теста, покрывающего именно сценарий бага, не считается завершённым. Исключение — чисто визуальный баг без логики; тогда обязателен скриншот «после» в Фазе 4 и явная пометка в отчёте.
 
@@ -391,12 +391,15 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 
 ---
 
-### Фаза 5. Финальный отчёт
+### Фаза 5. Commit + push, CI, финальный отчёт
 
-**Цель:** сводка пользователю. Никаких git/PR действий.
+**Цель:** закоммитить и запушить проверенный фикс в ветку задачи (не спрашивая), дождаться CI, дать сводку.
 
 1. Прочитать актуальный state.json.
-2. Сформировать компактный отчёт:
+2. **Commit + push** (внутри worktree): `git add` только файлы фикса, тесты, CHANGELOG.md и `docs/code-reviews/<slug>/`; НЕ добавлять `.claude/auto-bug-fix/` и скриншоты. Один коммит в стиле `fix(<область>): <суть>` (тело — причина и что изменено). Pre-commit хук упал — исправить причину и закоммитить снова, `--no-verify` не использовать. Затем `git push origin <branch>`.
+3. **CI:** дождаться завершения чеков PR (`gh pr checks <pr>` в цикле до исчезновения `pending`). Упало — `gh run view <run-id> --log-failed`, починить, новый коммит + push, ждать снова (до 3 попыток; дальше — blocked с хвостом лога).
+4. Записать в state.json `commit` (hash) и `ci` (итог чеков).
+5. Сформировать компактный отчёт:
 
 ```markdown
 # 🏁 Auto-bug-fix complete — <slug>
@@ -413,6 +416,7 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 | 2 | Fix + тест | ✅ | N файлов, регрессионный тест red→green |
 | 3 | Code-review loop | ✅ / ⚠️ convergence | N итераций, M findings зафикшено |
 | 4 | Верификация | ✅ | repro не воспроизводится, K смежных проверок ok |
+| 5 | Commit + CI | ✅ | <hash>, чеки PR зелёные |
 
 <warnings, если есть: тест не был red, convergence, cap, visual-only без теста и т.п.>
 
@@ -420,16 +424,14 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Скриншоты before/after: docs/bug-fixes/<slug>/screenshots/
-- Коммит: `/commit-commands:commit` (внутри worktree)
-- PR: draft уже открыт (<pr_url>). Довести: push, `/changelog` + `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
+- PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
 - State: .claude/auto-bug-fix/<slug>/state.json
 
 ✋ Жду твоего следующего хода.
 ```
 
-3. Отметить все 5 TaskCreate-задач `completed`.
-4. **НЕ удалять** state.json.
-5. **НЕ делать** git операций.
+6. Отметить все 5 TaskCreate-задач `completed`.
+7. **НЕ удалять** state.json.
 
 ---
 
@@ -456,7 +458,7 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 
 ## Ограничения
 
-- **Не запускать `git commit`, `git push`, `gh pr create`.** Только по явной команде пользователя в Фазе 5 или после. Исключение — `node scripts/start-task-pr.mjs` (стартовый draft PR, Фаза 0 и Resume).
+- **Commit/push — только в Фазе 5** (сам, без вопроса) и стартовый `node scripts/start-task-pr.mjs` (Фаза 0 и Resume). Не коммитить между фазами, не push в `main`, без force-push, без `gh pr create` / `gh pr ready` / merge.
 - **Не запускать `/news`.** Его делает пользователь перед PR.
 - **Не запускать deploy.**
 - **Не удалять worktree.**

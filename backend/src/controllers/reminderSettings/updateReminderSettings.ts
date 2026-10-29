@@ -3,32 +3,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import type { ReminderSettingsDto } from "../../types";
 import { prisma } from "../../lib/prisma";
 import { recalculateRemindersForUser, cancelAllPendingReminders } from "../../services";
-
-const VALID_INTERVALS = [5, 10, 15, 30, 60];
-
-const validateSettingsData = (data: ReminderSettingsDto) => {
-  if (data.intervals !== undefined) {
-    if (!Array.isArray(data.intervals)) {
-      return { isValid: false, error: "Интервалы должны быть массивом" };
-    }
-
-    for (const interval of data.intervals) {
-      if (!VALID_INTERVALS.includes(interval)) {
-        return {
-          isValid: false,
-          error: "Недопустимый интервал напоминания. Допустимые значения: 5, 10, 15, 30, 60 минут",
-        };
-      }
-    }
-
-    const uniqueIntervals = new Set(data.intervals);
-    if (uniqueIntervals.size !== data.intervals.length) {
-      return { isValid: false, error: "Такой интервал уже добавлен" };
-    }
-  }
-
-  return { isValid: true };
-};
+import { validateSettingsData } from "./validators";
 
 export const updateReminderSettings = async (req: AuthRequest, res: Response) => {
   try {
@@ -57,6 +32,7 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
       enabled?: boolean;
       intervals?: number[];
       muteWhenInLesson?: boolean;
+      callNotificationsEnabled?: boolean;
     } = {};
 
     if (data.enabled !== undefined) {
@@ -69,6 +45,10 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
 
     if (data.muteWhenInLesson !== undefined) {
       updateData.muteWhenInLesson = data.muteWhenInLesson;
+    }
+
+    if (data.callNotificationsEnabled !== undefined) {
+      updateData.callNotificationsEnabled = data.callNotificationsEnabled;
     }
 
     // Auto-set intervals to [30] if enabling with empty intervals
@@ -104,6 +84,7 @@ export const updateReminderSettings = async (req: AuthRequest, res: Response) =>
       enabled: settings.enabled,
       intervals: settings.intervals,
       muteWhenInLesson: settings.muteWhenInLesson,
+      callNotificationsEnabled: settings.callNotificationsEnabled,
     });
   } catch (error) {
     console.error("Update reminder settings error:", error);

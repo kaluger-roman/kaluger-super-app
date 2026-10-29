@@ -2,18 +2,31 @@ import { ThemeProvider } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import { fork } from "effector";
 import { Provider } from "effector-react";
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 
-import { userModel } from "@entities";
+import { lessonCallsModel, userModel } from "@entities";
+import { getLessonCalls } from "@entities/callRecord/api";
 import { theme } from "@shared";
 import type { Lesson, User } from "@shared";
 
 import { LessonDetails } from "./LessonDetails";
 
+vi.mock("@entities/callRecord/api", () => ({
+  getCallHistory: vi.fn(),
+  getLessonCalls: vi.fn(),
+}));
+
+const mockedGetLessonCalls = vi.mocked(getLessonCalls);
+
 const renderWithTheme = (ui: React.ReactElement) =>
   render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
 describe("LessonDetails", () => {
+  beforeEach(() => {
+    mockedGetLessonCalls.mockReset();
+    mockedGetLessonCalls.mockResolvedValue([]);
+  });
+
   const mockLesson: Lesson = {
     id: "1",
     subject: "PHYSICS",
@@ -239,5 +252,46 @@ describe("LessonDetails", () => {
 
       expect(screen.queryByRole("switch", { name: "Не облагается налогом" })).toBeNull();
     });
+  });
+
+  it("should show the calls of the lesson when there are any", async () => {
+    mockedGetLessonCalls.mockResolvedValue([
+      {
+        id: "call-1",
+        peerName: "Иван Иванов",
+        direction: "outgoing",
+        startedAt: "2026-01-15T10:01:00.000Z",
+        durationSeconds: 1800,
+        status: "COMPLETED",
+        lesson: null,
+      },
+    ]);
+    render(
+      <Provider value={fork()}>
+        <ThemeProvider theme={theme}>
+          <LessonDetails lesson={mockLesson} />
+        </ThemeProvider>
+      </Provider>
+    );
+
+    expect(await screen.findByRole("list", { name: "Звонки по уроку" })).toBeInTheDocument();
+    expect(mockedGetLessonCalls).toHaveBeenCalledWith("1");
+  });
+
+  it("should not show a calls block for a lesson without calls", async () => {
+    const scope = fork();
+    render(
+      <Provider value={scope}>
+        <ThemeProvider theme={theme}>
+          <LessonDetails lesson={mockLesson} />
+        </ThemeProvider>
+      </Provider>
+    );
+
+    await vi.waitFor(() => {
+      expect(mockedGetLessonCalls).toHaveBeenCalledWith("1");
+      expect(scope.getState(lessonCallsModel.loadLessonCallsFx.inFlight)).toBe(0);
+    });
+    expect(screen.queryByText("📞 Звонки по уроку")).not.toBeInTheDocument();
   });
 });

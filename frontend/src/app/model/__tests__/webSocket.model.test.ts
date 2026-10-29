@@ -2,144 +2,144 @@ import { fork, allSettled } from "effector";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { lessonModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
+import { changePasswordModel } from "@features";
+import { expireTutorSession } from "@shared";
 
+import type { SocketOpenParams } from "../socketConnection.types";
 import { WS_RECONNECT_DELAY_MS } from "../webSocket.constants";
 import {
   connectWebSocket,
   connectWebSocketFx,
-  disconnectWebSocket,
   handleLessonStatusUpdate,
+  tokenStorageChanged,
   webSocketClosed,
-  $isWebSocketEnabled,
+  $elsewhere,
 } from "../webSocket.model";
 
-// The reconnect delay lives in patronum's `delay`, whose internal effect stays
-// pending until the real timer fires — so every `allSettled` that schedules a
-// reconnect is fire-and-forget, and the test drives the clock explicitly.
+vi.mock("@shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared")>();
+  return { ...actual, expireTutorSession: vi.fn() };
+});
+
+// The generic reconnect flow is covered in socketConnection.model.test.ts; these tests pin
+// what the tutor socket adds on top: token revocation and lesson updates.
+// patronum `delay` keeps the scope busy until its timer fires, so allSettled calls that
+// schedule a reconnect are fire-and-forget and the clock is driven explicitly.
 beforeEach(() => {
   localStorage.setItem("authToken", "test-token");
+  vi.mocked(expireTutorSession).mockClear();
   vi.useFakeTimers();
 });
 
 afterEach(() => {
+  localStorage.removeItem("authToken");
   vi.useRealTimers();
 });
 
+const REVOKED_CLOSE = {
+  revokedToken: "test-token",
+  elsewhere: null,
+  callEnded: false,
+  holderGone: false,
+};
+const HELD_ELSEWHERE = {
+  revokedToken: null,
+  elsewhere: "tab" as const,
+  callEnded: false,
+  holderGone: false,
+};
+
 const createScope = () => {
-  const connectHandler = vi.fn(() => undefined);
+  const connectHandler = vi.fn((_params: SocketOpenParams) => null);
   const scope = fork({ handlers: [[connectWebSocketFx, connectHandler]] });
   return { scope, connectHandler };
 };
 
-describe("app/model/webSocket.model — reconnect", () => {
-  it("does NOT reconnect when user logged out before the timer fires (regression: stale reconnect after logout)", async () => {
+describe("app/model/webSocket.model — revoked token", () => {
+  it("ends the session instead of reconnecting when the server revoked the current token", async () => {
     const { scope, connectHandler } = createScope();
-
     await allSettled(connectWebSocket, { scope });
-    expect(connectHandler).toHaveBeenCalledTimes(1);
 
-    const closeRun = allSettled(webSocketClosed, { scope });
-    const disconnectRun = allSettled(disconnectWebSocket, { scope });
+    void allSettled(webSocketClosed, { scope, params: REVOKED_CLOSE });
     await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await Promise.all([closeRun, disconnectRun]);
 
-    expect(scope.getState($isWebSocketEnabled)).toBe(false);
+    expect(connectHandler).toHaveBeenCalledTimes(1);
+    expect(expireTutorSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes the connection with a fresh connect after its own password change", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    void allSettled(webSocketClosed, { scope, params: REVOKED_CLOSE });
+    await vi.advanceTimersByTimeAsync(0);
+    void allSettled(changePasswordModel.persistTokenFx, { scope, params: "fresh-token" });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: false }));
+  });
+
+  it("reconnects at once when another tab of this browser stored a new token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    void allSettled(webSocketClosed, { scope, params: REVOKED_CLOSE });
+    await vi.advanceTimersByTimeAsync(0);
+    localStorage.setItem("authToken", "fresh-token");
+    void allSettled(tokenStorageChanged, { scope });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: true }));
+  });
+
+  it("reconnects with the new token when this tab replaced the revoked one", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+
+    void allSettled(webSocketClosed, { scope, params: REVOKED_CLOSE });
+    localStorage.setItem("authToken", "fresh-token");
+    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(expireTutorSession).not.toHaveBeenCalled();
+  });
+
+  it("retries a tab held elsewhere when another tab stored a new token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+    void allSettled(webSocketClosed, { scope, params: HELD_ELSEWHERE });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scope.getState($elsewhere)).toBe("tab");
+
+    localStorage.setItem("authToken", "fresh-token");
+    void allSettled(tokenStorageChanged, { scope });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connectHandler).toHaveBeenCalledTimes(2);
+    expect(connectHandler).toHaveBeenLastCalledWith(expect.objectContaining({ resume: true }));
+  });
+
+  it("logs out together with the holder tab when another tab removed the token", async () => {
+    const { scope, connectHandler } = createScope();
+    await allSettled(connectWebSocket, { scope });
+    localStorage.removeItem("authToken");
+
+    await allSettled(tokenStorageChanged, { scope });
+
+    expect(expireTutorSession).toHaveBeenCalledTimes(1);
     expect(connectHandler).toHaveBeenCalledTimes(1);
   });
 
-  it("does NOT spawn parallel reconnect timers when webSocketClosed fires repeatedly (regression: parallel reconnects)", async () => {
-    const { scope, connectHandler } = createScope();
+  it("leaves a tab without a tutor session alone when the tutor logs out elsewhere (regression: student cabinet thrown to /login)", async () => {
+    const { scope } = createScope();
+    localStorage.removeItem("authToken");
 
-    await allSettled(connectWebSocket, { scope });
-    expect(connectHandler).toHaveBeenCalledTimes(1);
+    await allSettled(tokenStorageChanged, { scope });
 
-    const closeRuns = [
-      allSettled(webSocketClosed, { scope }),
-      allSettled(webSocketClosed, { scope }),
-      allSettled(webSocketClosed, { scope }),
-    ];
-
-    expect(vi.getTimerCount()).toBe(1);
-
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await Promise.all(closeRuns);
-
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-  });
-
-  it("does reconnect when still enabled after timeout", async () => {
-    const { scope, connectHandler } = createScope();
-
-    await allSettled(connectWebSocket, { scope });
-    expect(connectHandler).toHaveBeenCalledTimes(1);
-
-    const closeRun = allSettled(webSocketClosed, { scope });
-
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS - 1);
-    expect(connectHandler).toHaveBeenCalledTimes(1);
-
-    await vi.advanceTimersByTimeAsync(1);
-    await closeRun;
-
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-    expect(scope.getState($isWebSocketEnabled)).toBe(true);
-  });
-
-  it("schedules a fresh reconnect after the previous one has fired", async () => {
-    const { scope, connectHandler } = createScope();
-
-    await allSettled(connectWebSocket, { scope });
-
-    const firstClose = allSettled(webSocketClosed, { scope });
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await firstClose;
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-
-    const secondClose = allSettled(webSocketClosed, { scope });
-    expect(vi.getTimerCount()).toBe(1);
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await secondClose;
-
-    expect(connectHandler).toHaveBeenCalledTimes(3);
-  });
-
-  it("does NOT open a second socket when logout + login happen inside the reconnect delay (regression: stale delay after re-login)", async () => {
-    const { scope, connectHandler } = createScope();
-
-    await allSettled(connectWebSocket, { scope });
-
-    const runs = [
-      allSettled(webSocketClosed, { scope }),
-      allSettled(disconnectWebSocket, { scope }),
-      allSettled(connectWebSocket, { scope }),
-    ];
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await Promise.all(runs);
-
-    expect(scope.getState($isWebSocketEnabled)).toBe(true);
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-  });
-
-  it("still reconnects after a close that follows re-login while a stale delay is pending (regression: stale delay swallowing the next reconnect)", async () => {
-    const { scope, connectHandler } = createScope();
-
-    await allSettled(connectWebSocket, { scope });
-
-    const runs = [
-      allSettled(webSocketClosed, { scope }),
-      allSettled(disconnectWebSocket, { scope }),
-      allSettled(connectWebSocket, { scope }),
-      allSettled(webSocketClosed, { scope }),
-    ];
-    expect(connectHandler).toHaveBeenCalledTimes(2);
-    expect(vi.getTimerCount()).toBe(2);
-
-    await vi.advanceTimersByTimeAsync(WS_RECONNECT_DELAY_MS);
-    await Promise.all(runs);
-
-    expect(connectHandler).toHaveBeenCalledTimes(3);
+    expect(expireTutorSession).not.toHaveBeenCalled();
   });
 });
 
@@ -149,6 +149,7 @@ describe("app/model/webSocket.model — lesson_status_updated", () => {
     const syncLessonHandler = vi.fn(async () => ({}) as never);
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonHandler],
         [lessonModel.syncLessonFx, syncLessonHandler],
       ],

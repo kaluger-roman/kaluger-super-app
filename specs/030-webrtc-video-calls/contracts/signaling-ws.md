@@ -1,0 +1,110 @@
+# Contract: WebRTC Signaling over the existing WebSocket
+
+Signaling rides the existing `WebSocketManager` on both pools: tutor `/ws` (keyed by `userId`) and student `/ws/student` (keyed by `studentUserId`). Messages are JSON with a `type` field. **Ephemeral** — never persisted. The server is the authorization boundary: every inbound message is validated against the caller's authorized tutor↔student pair before it is relayed; the recipient is **derived server-side**, never trusted from the client.
+
+Existing `lesson_*` message types are unaffected; call signaling adds a disjoint set of `type`s.
+
+> **Extended by 039** ([`specs/039-video-call-background/contracts/signaling-ws.md`](../../039-video-call-background/contracts/signaling-ws.md)): `presence_update`, `call_resume`, `call_state`, `call_peer_presence`, `call_peer_resumed`, `call_restart_announced` and the `peer_not_returned` end reason. A lost connection no longer ends the call: the server holds it for a 3-minute grace period, and a callee without an open app is reached by push (`services/callNotification`). Where this document says a closed socket ends the call, the 039 contract wins.
+
+---
+
+## Client → Server (inbound; sent by tutor or student client)
+
+| `type` | Payload | Meaning | Server action |
+|--------|---------|---------|---------------|
+| `call_invite` | `{ inviteId, targetStudentId }` (tutor) **or** `{ inviteId }` (student → their tutor). `inviteId` — client-generated id (≤64 chars) the server echoes in every reply to this invite | Initiate a call to the linked peer | Verify pair (R4); reject if self/cross-pair → `call_error`. If callee offline → `call_unavailable`. If callee busy → `call_busy`. Else create `LiveCall(ringing)`, generate `callId`, start 40s ring timeout, forward `call_incoming` to callee. Echo `call_ringing { callId, inviteId }` to caller; the caller gets its ICE config with `call_accepted`. A new invite from a caller whose own call still rings, to the same peer or another one, replaces that call: the old one ends as `CANCELED` (`call_canceled { reason: "canceled" }` to its callee) and a new call with a new `callId` starts, so a late `call_cancel` for the old `callId` changes nothing (FR-018). Only the caller's latest invite is served: an older invite that finishes resolving after a newer one was sent is dropped without a reply. Being in an accepted call, or being the callee of a ringing call with another peer, still answers `call_error` ("Сначала завершите текущий звонок"). |
+| `call_accept` | `{ callId }` | Callee accepts | Validate caller is the callee of `callId`. Forward `call_accepted` (+ minted ICE config) to caller. Clear ring timeout. Move to negotiation. |
+| `call_reject` | `{ callId }` | Callee declines | Forward `call_rejected` to caller; finalize `call_records` as `REJECTED`; drop `LiveCall`. |
+| `call_cancel` | `{ callId }` | Caller cancels before answer | Forward `call_canceled` to callee (dismiss incoming UI); finalize `CANCELED`; drop `LiveCall`. |
+| `call_hangup` | `{ callId, reason? }` | Either party ends an active call; `reason: "media_unavailable"` when it could not get camera/mic | Forward `call_ended { reason: "hangup" \| "media_unavailable" }` to the other party; finalize `COMPLETED` (if connected) or `FAILED`; drop `LiveCall`. |
+| `webrtc_offer` | `{ callId, sdp }` | SDP offer | Relay verbatim to the peer (`webrtc_offer`). |
+| `webrtc_answer` | `{ callId, sdp }` | SDP answer | Relay verbatim to the peer (`webrtc_answer`). |
+| `webrtc_ice` | `{ callId, candidate }` | ICE candidate (trickle) | Relay verbatim to the peer (`webrtc_ice`). |
+| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing, cameraAvailable }` | Local media-state change | Relay to peer so it updates indicators (FR-010/011/012, SC-005). |
+| `call_connected` | `{ callId }` | Media established locally | Mark `LiveCall.connectedAt` (first receipt) → enables duration calc. |
+
+Replies are matched to the request by `callId`, or, before the call exists, by `inviteId`: a client ignores a reply for an invite it no longer waits for and cancels a late `call_ringing` of such an invite. `call_media_state.cameraAvailable` and the `reason` of `call_canceled` / `call_ended` are always present.
+
+Validation: an inbound message referencing an existing `callId` the sender is not a participant of, or a target outside the sender's authorized pair, is dropped and answered with `call_error` (Russian message). A message for an unknown `callId` is stale (both parties are told before a call is removed) and is dropped silently. Malformed JSON is ignored (matches existing manager behavior).
+
+Authentication: `/ws` checks the JWT `tokenVersion` like the HTTP API (`/ws/student` already does), and a tutor socket opened before a password change, email change or password reset is revoked at once: it stops being the tutor's connection, its messages are ignored, its active call ends, and it is closed with code `4001` ("Token revoked"), or terminated if the close handshake does not finish within 1 s. Messages from a socket replaced by a newer connection are ignored too. A missing, invalid or revoked token closes the handshake with `1008`; a server-side failure while checking it (e.g. the DB is unavailable) closes with `1011`, which clients must treat as a transient error and simply reconnect. A socket whose token was revoked while its version was being read is closed with `4001` before it is registered.
+
+Several tabs or devices of one user: each pool holds one socket per user. A fresh connection (page load, or an explicit take-over by the user) replaces the live one, which is closed with `4000` ("Replaced by newer connection"). An automatic reconnect sends `resume=1` in the query; if the user already has an open socket, the new one is closed with `4000` ("Connection held by another tab") and the live socket and its call are left untouched. While the user is in a call (ringing, accepted or connected), the live socket is never replaced: any new connection of that user from another tab, fresh or `resume=1`, is kept open as a **waiting** socket. It is not registered (it gets no lesson events and no call signals, and its own messages are ignored), its first and only message is `{ "type": "connection_waiting", "reason": "call" }`, and it is pinged like any socket. When the call ends by any path (hangup, reject, cancel, ring timeout, failure, the live socket closing, being replaced or terminated), every waiting socket of both participants is closed with `4003` ("Call ended in another tab"). A token revocation closes the tutor's waiting sockets with `4001`. At most 4 sockets wait per user: a fifth closes the oldest waiting one with `4000`.
+
+Client retries: a waiting client does not poll; on `4003` it reconnects at once with `resume=1` and gets the usual rules (registered if no live socket is left, else `4000`). After `4000` it retries with `resume=1` only when the tab becomes visible again or its stored token changes (the holder may have been logged out). After any other close it reconnects with `resume=1` after 5 s. The tab that changed the password or email itself reconnects with a fresh (non-`resume`) connection, so it takes the connection back from any other tab.
+
+Tab identity: each page load generates a random tab id and sends it as `tab=<id>` in the query of every connection it opens (1-64 characters of `[A-Za-z0-9-]`; anything else counts as absent). A new connection with the same non-empty `tab` as the user's live socket is that tab replacing its own socket, which the server may still see as open after the network dropped: it is never refused with `4000` and never waits, even with `resume=1` or during a call; the old socket is closed with `4000` ("Replaced by newer connection") and its call ends, as on any replacement.
+
+Heartbeat: the server pings every registered and waiting socket each 30 s and terminates one that has not answered the previous ping with a pong (browsers answer pings automatically). A terminated socket is unregistered and its call ends, like any close; a terminated waiting socket is just forgotten.
+
+Ready message: once a socket is registered (after all checks above), the server sends it `{ "type": "connection_ready" }` as its first message; the tutor pool then also sends the legacy `connection_established`. A refused socket (`1008`, `1011`, `4000`, `4001`) is closed without it, and a waiting socket gets `connection_waiting` instead, so a client treats the socket as connected only after `connection_ready`, not on `open`.
+
+---
+
+## Server → Client (outbound; delivered via `sendToUser` / `sendToStudent`)
+
+| `type` | Payload | Delivered to | Triggers UI |
+|--------|---------|--------------|-------------|
+| `call_incoming` | `{ callId, callerName, iceServers }` (the callee's ICE config) | callee | `IncomingCallModal` (`$incomingCall.callerName`) |
+| `call_ringing` | `{ callId, inviteId }` | caller | `OutgoingCallOverlay` («Вызываем…») |
+| `call_accepted` | `{ callId, iceServers }` | caller | Begin WebRTC negotiation (create offer) |
+| `call_rejected` | `{ callId }` | caller | «Вызов отклонён» → idle |
+| `call_canceled` | `{ callId, reason }` | callee | Dismiss incoming modal → idle. `reason: "canceled"` → toast «Вызов отменён», `"timeout"` → «Пропущенный вызов от …» |
+| `call_ended` | `{ callId, reason }` | other party | Tear down, release media → idle. Toast by `reason`: `hangup` «Собеседник завершил звонок», `peer_disconnected` «Собеседник отключился», `media_unavailable` «У собеседника нет доступа к камере и микрофону» |
+| `call_history_updated` | `{}` | both parties | Sent after the call record is written (also after an invite to an offline peer); an open call history page refetches |
+| `call_unavailable` | `{ reason: "offline", inviteId }` (invite to an offline peer) **or** `{ reason: "offline", callId }` (callee dropped while ringing) | caller | «Ученик сейчас не в сети» (FR-013, Edge offline) |
+| `call_busy` | `{ inviteId }` | caller | «Абонент занят» (Edge "Занятость") |
+| `call_no_answer` | `{ callId }` | caller | «Нет ответа» on 40s timeout (FR-009) |
+| `call_error` | `{ message, callId }` **or** `{ message, inviteId }` (error on an invite) | sender | Russian error (self-call, cross-pair, a call the sender is not part of) |
+| `webrtc_offer` / `webrtc_answer` / `webrtc_ice` | relayed verbatim | peer | Drives `RTCPeerConnection` |
+| `call_media_state` | `{ callId, micOn, cameraOn, screenSharing, cameraAvailable }` | peer | Update `$peerMediaState` indicators |
+
+### `iceServers` payload (R3)
+
+Computed **server-side per call** so TURN secrets never reach the SPA:
+
+```json
+{
+  "iceServers": [
+    { "urls": "stun:stun.l.google.com:19302" },
+    {
+      "urls": "turn:turn.tutor.kaluger.ru:3478",
+      "username": "1717999999",
+      "credential": "base64-hmac-sha1(secret, username)"
+    }
+  ]
+}
+```
+
+- STUN entry always present (default overridable via `STUN_URL`).
+- TURN entry present only when `TURN_URL` + `TURN_SECRET` are configured; `username` is a Unix expiry timestamp (`now + TURN_CREDENTIAL_TTL`), `credential` is the time-limited HMAC (coturn REST-auth scheme).
+- Frontend feeds this straight into `new RTCPeerConnection({ iceServers })`. `iceTransportPolicy` stays `"all"` → direct candidates tried first, `relay` only as fallback (FR-014, never forces relay → preserves SC-002).
+
+---
+
+## Lifecycle sequence (happy path, tutor → student)
+
+```
+tutor                         server                          student
+ | call_invite{targetStudentId} ->                              |
+ |                              | (verify pair, online, free)   |
+ |                              | -- call_incoming{callId,name} ->
+ | <- call_ringing{callId,inv}  |                               |
+ |                              | <- call_accept{callId}        |
+ | <- call_accepted{callId,ice} |                               |
+ | (create RTCPeerConnection, getUserMedia)                      |
+ | webrtc_offer{sdp} ->         | -- webrtc_offer ->            |
+ |                              | <- webrtc_answer{sdp}         |
+ | <- webrtc_answer             |                               |
+ | webrtc_ice ... <->           | relay <->                     | webrtc_ice ...
+ | === direct P2P media flows (or TURN relay if P2P fails) ===   |
+ | call_connected ->            | (mark connectedAt)            | <- call_connected
+ | call_hangup{callId} ->       | -- call_ended ->              |
+ |                              | (finalize call_records=COMPLETED)
+```
+
+## Server-side gaps to close (implementation notes)
+
+- `WebSocketManager.handleStudentConnection` currently sets `ws.on("message", () => {})` — must route student inbound messages to the signaling handler (students send accept/reject/cancel/offer/answer/ice, and may initiate per the allowed extension).
+- `messageHandler.ts` (tutor pool) currently only echoes — extend to route call signaling `type`s while leaving non-call messages alone.
+- Add `sendToUser`/`sendToStudent`-based helpers on the manager (or call them directly from `services/callSignaling`) to forward outbound messages to the resolved peer pool.

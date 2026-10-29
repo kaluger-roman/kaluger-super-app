@@ -176,6 +176,19 @@ type AuthRequest = Request & { user?: JwtPayload };
 8. **Раздельные хранилища токенов на фронте** (например, ключ `studentToken` vs `authToken` в `localStorage`) и отдельный axios-инстанс (`shared/api/studentBase.ts` — `studentApi`/`publicApi`)
 9. **Раздельные route guards** на фронте — каждый guard проверяет только "свою" сессию из `entities/<role>`
 
+### Звонки: транспорт и доставка уведомлений
+
+Логика звонка (`services/callSignaling`) не знает, что клиент — браузер (FR-027 фичи 039): будущая нативная оболочка говорит по тому же протоколу.
+
+- Транспорт (`lib/websocket`) сообщает сервису звонков только доменные факты: `participantDisconnected` и `participantRevoked`; ждать ли новому сокету, решает сервис (`hasCallHeldByConnection`). Сам транспорт звонок не завершает ни закрытием, ни заменой сокета — это решает сервис. Принятый звонок (`accepted`/`connected`) участника, потерявшего соединение, ждёт (`CALL_RECONNECT_GRACE_MS`, возврат — `call_resume`). Сразу звонок завершают:
+  - сигналы участников: `call_hangup`, `call_cancel`, `call_reject`, а также новый `call_invite` звонящего, который заменяет его ещё звонящий вызов;
+  - отзыв токена (`disconnectUser` → `participantRevoked`), даже если сокета уже нет и звонок ждёт участника;
+  - ещё звонящий вызов, у адресата которого не осталось ни окна, ни устройства для push: адресат потерял соединение, а устройств нет (`calleeLeftRinging`), или push о входящем не дошёл ни до одного устройства, пока окна нет (`notifyCalleeDevices`);
+  - `call_resume`, в котором повторная авторизация пары не прошла или не удалась (сбой БД).
+- Звонок снимается только через `removeCall(call, endedBy)` из `callMessaging`: она закрывает уведомление о ещё звонящем вызове на устройствах адресата (`missed_call` или `call_closed` по `endedBy`) и отпускает ждущие вкладки. Отдельно закрывающий push шлёт только `call_accept`: звонок при этом не снимается
+- Уведомления о звонках идут только через `services/callNotification` (`hasCallNotificationDevices`, `notifyIncomingCall`, `notifyCallClosed`). Новый канал доставки (APNs VoIP, FCM) — новое значение `PushChannel` и запись в реестре каналов, без правок `callFlow`
+- Низкоуровневый web-push — только `lib/webPush.ts` (`sendWebPush`), и для напоминаний, и для звонков
+
 ## New Feature Checklist
 
 1. Define types in `src/types/index.ts`

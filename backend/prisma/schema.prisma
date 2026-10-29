@@ -39,6 +39,7 @@ model User {
   taxRatePeriods      TaxRatePeriod[]
   passwordResetTokens PasswordResetToken[]
   studentInvitations  StudentInvitation[]
+  callRecords         CallRecord[]
 
   @@map("users")
 }
@@ -100,6 +101,7 @@ model Student {
   lessons     Lesson[]
   studentUser StudentUser?
   invitations StudentInvitation[]
+  callRecords CallRecord[]
 
   @@unique([phone, tutorId])
   @@index([tutorId, archived])
@@ -122,6 +124,8 @@ model StudentUser {
 
   studentId String?  @unique
   student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  pushSubscriptions PushSubscription[]
 
   @@index([studentId])
   @@map("student_users")
@@ -186,6 +190,7 @@ model Lesson {
   prospectContactMethod ContactMethod?
 
   scheduledReminders ScheduledReminder[]
+  callRecords        CallRecord[]
 
   @@index([tutorId, startTime])
   @@index([tutorId, status])
@@ -236,28 +241,40 @@ enum ReminderStatus {
   FAILED
 }
 
+enum PushChannel {
+  WEB_PUSH
+}
+
+// Exactly one owner: a tutor (userId) or a student (studentUserId), enforced by a CHECK in the
+// 039_call_background_push migration.
 model PushSubscription {
-  id         String   @id @default(cuid())
-  endpoint   String   @unique
+  id         String      @id @default(cuid())
+  channel    PushChannel @default(WEB_PUSH)
+  endpoint   String      @unique
   p256dh     String
   auth       String
   deviceName String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime    @default(now())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentUserId String?
+  studentUser   StudentUser? @relation(fields: [studentUserId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([studentUserId])
   @@map("push_subscriptions")
 }
 
 model ReminderSettings {
-  id               String   @id @default(cuid())
-  enabled          Boolean  @default(false)
-  intervals        Int[]    @default([])
-  muteWhenInLesson Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  enabled                  Boolean  @default(false)
+  intervals                Int[]    @default([])
+  muteWhenInLesson         Boolean  @default(false)
+  callNotificationsEnabled Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -319,4 +336,42 @@ model NewsReadStatus {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("news_read_statuses")
+}
+
+enum CallStatus {
+  COMPLETED
+  MISSED
+  REJECTED
+  CANCELED
+  FAILED
+}
+
+enum CallerKind {
+  TUTOR
+  STUDENT
+}
+
+model CallRecord {
+  id              String     @id @default(cuid())
+  callerKind      CallerKind
+  status          CallStatus
+  startedAt       DateTime   @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+
+  tutorId String
+  tutor   User   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([tutorId, startedAt])
+  @@index([studentId, startedAt])
+  @@index([lessonId, startedAt])
+  @@map("call_records")
 }

@@ -1,13 +1,16 @@
 import { ThemeProvider, useMediaQuery } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { theme } from "@shared";
 import type { Student } from "@shared";
 
+import { server } from "../../../../../__tests__/mocks/server";
+import { CallConfirmDialog, callConfirmModel } from "../../../../videoCall";
 import { studentsModel, studentsArchiveModel } from "../../../models";
 import { StudentViewDialog } from "../StudentViewDialog";
 import * as studentViewDialogModel from "../StudentViewDialog.model";
@@ -62,6 +65,12 @@ const archivedStudent: Student = {
 describe("StudentViewDialog", () => {
   beforeEach(() => {
     mockUseMediaQuery.mockReturnValue(false);
+    // The dialog shows the student's cabinet invitation, which loads on mount.
+    server.use(
+      http.get("*/api/students/:studentId/invitations", () =>
+        HttpResponse.json({ status: "not_issued" })
+      )
+    );
   });
 
   describe("Rendering", () => {
@@ -382,6 +391,72 @@ describe("StudentViewDialog", () => {
 
       expect(screen.getByText(/Archived Student/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /из архива/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("Call button", () => {
+    const linkedStudent = {
+      ...mockStudent,
+      studentUser: { id: "su-1" },
+    } as Student;
+
+    it("should show the call button for a student with a cabinet and request a call on click", async () => {
+      const { scope } = renderWithProviders(
+        <StudentViewDialog open={true} student={linkedStudent} />
+      );
+      const requested: Student[] = [];
+      createWatch({
+        unit: studentViewDialogModel.callRequested,
+        fn: (student) => requested.push(student),
+        scope,
+      });
+
+      await userEvent.click(screen.getByRole("button", { name: "Видеозвонок" }));
+
+      expect(requested).toEqual([linkedStudent]);
+    });
+
+    it("should hide the call button for a student without a cabinet", () => {
+      renderWithProviders(<StudentViewDialog open={true} student={mockStudent} />);
+      expect(screen.queryByRole("button", { name: "Видеозвонок" })).not.toBeInTheDocument();
+    });
+
+    it("should show the call button for an archived student with a cabinet", () => {
+      renderWithProviders(
+        <StudentViewDialog
+          open={true}
+          student={{ ...archivedStudent, studentUser: linkedStudent.studentUser } as Student}
+        />
+      );
+      expect(screen.getByRole("button", { name: "Видеозвонок" })).toBeInTheDocument();
+    });
+
+    it("should ask for confirmation without a lesson block and keep the card open", async () => {
+      const scope = fork({
+        values: [
+          [studentsModel.$isViewDialogOpen, true],
+          [studentsModel.$viewingStudent, linkedStudent],
+        ],
+      });
+      renderWithProviders(
+        <>
+          <StudentViewDialog open={true} student={linkedStudent} />
+          <CallConfirmDialog />
+        </>,
+        scope
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Видеозвонок" }));
+
+      const confirm = await screen.findByRole("dialog", { name: "Начать видеозвонок?" });
+      expect(confirm).toHaveTextContent("Иван Иванов");
+      expect(confirm).not.toHaveTextContent("Звонок по уроку");
+      expect(scope.getState(callConfirmModel.$call)).toEqual({
+        studentId: "1",
+        peerName: "Иван Иванов",
+        lesson: null,
+      });
+      expect(scope.getState(studentsModel.$isViewDialogOpen)).toBe(true);
     });
   });
 });

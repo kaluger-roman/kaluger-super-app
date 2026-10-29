@@ -2,9 +2,12 @@ import { allSettled, fork } from "effector";
 import { describe, it, expect, vi } from "vitest";
 
 import { lessonModel, studentModel } from "@entities";
+import { lessonListLoadHandlers } from "@entities/lesson/testSeams.helpers";
 import type { Student } from "@shared";
 
+// Both reload models are wired as in the app: the test checks they do not refetch twice.
 import "../commissionReload.model";
+import "../lessonsReload.model";
 import * as viewModeModel from "../lessonsViewMode.model";
 
 const student = (commissionAmount: number): Student => ({
@@ -35,6 +38,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],
@@ -54,6 +58,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],
@@ -73,6 +78,7 @@ describe("commissionReload.model", () => {
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.removeLessonFx, removeLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
         [
@@ -93,11 +99,13 @@ describe("commissionReload.model", () => {
 
   // Regression: lessonsReload already refetches the weekly and schedule lists
   // on an update, so this model must not fire a second request for them.
+  // (It used to pass only when lessonsReload happened not to be loaded.)
   it("should not reload the weekly list on a lesson update", async () => {
     const updateLessonFn = vi.fn(() => Promise.resolve(lesson));
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
         [
@@ -116,7 +124,7 @@ describe("commissionReload.model", () => {
       params: { id: "lesson-1", data: { isPaid: true } },
     });
 
-    expect(loadWeeklyFn).not.toHaveBeenCalled();
+    expect(loadWeeklyFn).toHaveBeenCalledTimes(1);
   });
 
   it("should not reload the weekly list without commission students", async () => {
@@ -124,6 +132,7 @@ describe("commissionReload.model", () => {
     const loadWeeklyFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.removeLessonFx, removeLessonFn],
         [lessonModel.loadWeeklyLessonsFx, loadWeeklyFn],
       ],
@@ -143,6 +152,7 @@ describe("commissionReload.model", () => {
     const loadScheduleFn = vi.fn(() => Promise.resolve({ lessons: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.addLessonFx, addLessonFn],
         [lessonModel.loadScheduleLessonsFx, loadScheduleFn],
         [
@@ -175,6 +185,7 @@ describe("commissionReload.model", () => {
     const loadActiveFn = vi.fn(() => Promise.resolve({ active: [], archived: [] }));
     const scope = fork({
       handlers: [
+        ...lessonListLoadHandlers(),
         [lessonModel.updateLessonFx, updateLessonFn],
         [studentModel.refreshStudentsSilentlyFx, loadActiveFn],
       ],

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { getTutorToken, clearTutorToken } from "../auth";
+import { expireTutorSession, getTutorToken } from "../auth";
 import { API_BASE_URL } from "../config";
 
 export const api = axios.create({
@@ -25,16 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearTutorToken();
-      // Don't force redirect here - let React Router handle it
-      // Only redirect if we're not already on login/register pages
-      if (
-        window.location.pathname !== "/login" &&
-        window.location.pathname !== "/register" &&
-        window.location.pathname !== "/admin"
-      ) {
-        window.location.href = "/login";
-      }
+      expireTutorSession();
     }
     return Promise.reject(error);
   }

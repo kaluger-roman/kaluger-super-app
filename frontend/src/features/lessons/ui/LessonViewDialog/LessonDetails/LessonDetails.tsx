@@ -14,6 +14,7 @@ import {
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonDetails.styled";
+import { LessonCallList } from "../../../../videoCall";
 import { HomeworkSentStatus } from "../../HomeworkSentStatus";
 import { PaymentStatus } from "../../PaymentStatus";
 import { TaxExemptStatus } from "../../TaxExemptStatus";
@@ -68,6 +69,7 @@ export const LessonDetails: FC<LessonDetailsProps> = ({ lesson }) => {
           Окончание: {formatDateTimeLong(lesson.endTime)}
         </Typography>
       </Box>
+      <LessonCallList lessonId={lesson.id} />
       {lesson.description && (
         <Box>
           <Styled.SectionTitle variant="subtitle2">📝 Описание</Styled.SectionTitle>

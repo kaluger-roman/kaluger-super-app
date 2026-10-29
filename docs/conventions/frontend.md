@@ -190,6 +190,8 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 
 **sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last). The rule knows only those keys: put effector 23's `batch` / `name` at the end, and never apply its IDE quick fix — it rebuilds the options object out of the keys it knows and silently drops everything else, a spread inside the config included (so write the config with plain properties).
 
+**One value per tick in a clock array:** a `sample` with `clock: [a, b]` runs once per tick behind the sampler barrier, so when `a` and `b` fire in the same tick (e.g. two `.map()` of one event) only the last value reaches `fn` / `target` and the other is lost. When the clock value matters, give each event its own `sample` (`callResume.model.ts`: one per `decided.map(...)`).
+
 **Timers in models (patronum):**
 
 ```typescript
@@ -207,7 +209,7 @@ sample({ clock: tick, target: cooldownTick });
 
 Тестирование: внутренний `timeoutFx` `interval`'а остаётся `pending`, пока не сработает `setTimeout`. Поэтому в `effector` тестах с `allSettled` используем fire-and-forget паттерн (`void allSettled(...)` + `await new Promise(r => setImmediate(r))`) и явно гасим интервал событием `stop` в конце теста — иначе тест таймаутит.
 
-Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/__tests__/webSocket.model.test.ts`.
+Для одиночного `delay` — `vi.useFakeTimers()` в `beforeEach` (`vi.useRealTimers()` в `afterEach`) и `vi.advanceTimersByTimeAsync(TIMEOUT)`. `allSettled`, который планирует задержку, не await-ится сразу (внутренний эффект `delay` висит pending до таймера) — сохраняем промис, двигаем часы, потом `await`. `allSettled` на этом же scope для любых других юнитов тоже не резолвится, пока таймер не сработал, поэтому все действия «внутри окна задержки» запускаются fire-and-forget и собираются одним `Promise.all` после `advanceTimersByTimeAsync`. `delay` из `patronum` нельзя отменить: если отложенное событие должно проверять актуальность (disconnect во время ожидания), сравнивай счётчик поколения из стора, а не полагайся на сброс флага. Пример — `app/model/socketReconnect.model.ts` (счётчик поколения) и `app/model/__tests__/socketConnection.model.test.ts` (fire-and-forget + `advanceTimersByTimeAsync`).
 
 **Form state:** Keep in Effector stores, not React `useState`. Use `useState` only for purely visual state with no business logic (e.g., tooltip open, animation flag). Any state that feeds into API calls, validation, or business logic must be in Effector.
 
@@ -280,6 +282,13 @@ sample({ clock: PageGate.open, target: featureApi.loadFx });
 sample({ clock: featureApi.loadFx.doneData, target: $data });
 ```
 
+## Video calls
+
+- **One way into a call** — screens and other features start, answer, reject and restore a call only through `callEntryModel` (`startRequested`, `answerRequested`, `rejectRequested`, `resumeRequested`), never `callModel.callStarted` / `acceptCall` / `rejectCall` directly (FR-031 of 039): a native shell can then take the call over without touching the screens
+- **Peer sound is not in the video** — every call `<video>` is `muted`; the peer's voice plays through the single `<PeerAudio />` of the call screen, so iOS pausing a video in the background does not silence the call
+- **A lost socket does not end a call** — the call models keep the call while the transport reconnects (`callResumeModel`); only the server's `call_state` / `call_ended` or the local grace limit end it
+- **A session that ends takes its call with it** — a logout here, a logout in another tab or a dropped session closes its socket on purpose, which the call models would take for a lost one; `app/model/sessionLogout.model.ts` ends the call over that socket first. A new way to end a session goes through it
+
 ## Loading Indicators
 
 Use the **global blocking overlay** (`$isBlocking` in `app/model/blocking.model.ts`) for all API requests. Do NOT add per-component spinners — add the effect's `.pending` to the `$isBlocking` combine instead. The overlay covers the whole screen with a `CircularProgress`.
@@ -296,7 +305,10 @@ export const $isBlocking = combine(
 );
 ```
 
-**Single exception: incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect stays out of `$isBlocking` and shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+Two exceptions stay out of `$isBlocking`:
+
+- **Incremental "load more" requests.** Appending the next portion of an already shown list (e.g. «Показать ещё» in the income history, `loadNextPageFx`) must not block the screen: the user keeps reading the rows already loaded. Such an effect shows a spinner on its own button (`aria-busy`, clicks ignored while loading). The first page of the same list still goes through `$isBlocking`.
+- **Background refresh on a WS event.** Re-fetching a list that is already on screen because the server pushed a change (e.g. `call_history_updated` → `refreshCallHistoryFx`, `refreshLessonCallsFx`) must not interrupt the user with a full-screen spinner. Keep it a separate effect from the initial load: the initial load is blocking and a failure clears or reports, the refresh is silent and a failure keeps what is shown. Guard both with request versions so an older response never overwrites a newer one.
 
 `$isBlocking` is the raw "anything loading" flag. The component renders `$isBlockingVisible`, which only turns on after blocking has stayed continuously on for `BLOCKING_OVERLAY_DELAY_MS` (300ms) via `debounce` from patronum — fast requests must not flash the full-screen spinner. It clears the moment `$isBlocking` goes false. When adding an effect, wire its `.pending` into the `$isBlocking` combine; visibility timing is handled for you.
 

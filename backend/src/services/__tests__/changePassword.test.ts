@@ -4,6 +4,11 @@ import { hashPassword, comparePassword } from "../../utils/auth";
 import { changePassword } from "../changePassword";
 import { uniqueEmail } from "../../__tests__/helpers";
 
+const mockDisconnectUser = jest.fn();
+jest.mock("../../lib/wsManager", () => ({
+  getWebSocketManager: jest.fn(() => ({ disconnectUser: mockDisconnectUser })),
+}));
+
 describe("changePassword service", () => {
   let userId: string;
   const originalPassword = "OldPassword1";
@@ -63,5 +68,12 @@ describe("changePassword service", () => {
 
     const isOldPasswordValid = await comparePassword(originalPassword, user!.password);
     expect(isOldPasswordValid).toBe(false);
+    expect(mockDisconnectUser).toHaveBeenCalledWith(userId);
+  });
+
+  it("should keep the live socket when the password was not changed", async () => {
+    mockDisconnectUser.mockClear();
+    await expect(changePassword(userId, "WrongPassword1", "NewPassword2")).rejects.toThrow();
+    expect(mockDisconnectUser).not.toHaveBeenCalled();
   });
 });

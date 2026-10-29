@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "branch": "030-webrtc-video-calls",
+  "base_ref": "origin/main",
+  "head": "1c0728c",
+  "threshold": 50,
+  "iteration": 10,
+  "timestamp": "2026-10-20T21:37:13Z",
+  "diff_mode": "committed",
+  "diff_stats": {
+    "files_changed": 265,
+    "insertions": 19214,
+    "deletions": 182
+  },
+  "summary": {
+    "raw_findings": 16,
+    "after_dedup": 9,
+    "after_score_filter": 7,
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 6
+    },
+    "by_category": {
+      "bug": 1,
+      "claude-md": 1,
+      "convention": 2,
+      "hack": 1,
+      "logic": 1,
+      "security": 1
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "title": "Сбой БД при проверке tokenVersion в /ws закрывает сокет кодом 1008, и клиент теперь считает это отзывом токена и разлогинивает репетитора",
+      "category": "bug",
+      "file": "backend/src/lib/websocket/auth.ts",
+      "line_start": 53,
+      "line_end": 56,
+      "snippet": "  } catch (error) {\n    console.error(\"WebSocket authentication error:\", error);\n    ws.close(1008, \"Authentication failed\");\n    return null;\n  }",
+      "rationale": "В dbf8246 внутрь try добавлен prisma.user.findUnique, и любая его ошибка (рестарт БД, таймаут пула, холодный кеш после деплоя, когда все клиенты переподключаются разом) попадает в catch с кодом 1008. С 378116d клиент кладёт 1008 в WS_REVOKED_CLOSE_CODES, через 5 с resumeAfterCloseFx видит тот же токен в localStorage и вызывает expireTutorSession. В итоге временный сбой БД разлогинивает каждого репетитора, который в этот момент переподключался. HTTP-middleware authenticateToken на ту же ошибку отвечает 500, а не 401, именно чтобы не разлогинивать. (also flagged by: cross-file, hacks, removed-behavior, security, shallow-bug, type-safety, wrapper-proxy)",
+      "fix_hint": "Ошибку БД в authenticateWebSocket закрывать кодом, который клиент не считает отзывом (например 1011), и оставить 1008 только для отсутствующего, невалидного или отозванного токена. Добавить тест: findUnique бросает исключение, ожидается не 1008 и обычный реконнект без логаута.",
+      "agent": "deep-logic",
+      "score": 75,
+      "verification_note": "Цепочка подтверждена по коду: в backend/src/lib/websocket/auth.ts вызов prisma.user.findUnique стоит внутри общего try, и его ошибка уходит в catch с ws.close(1008); на клиенте 1008 входит в WS_REVOKED_CLOSE_CODES (webSocketConstants: new Set([1008, 4001])), поэтому через WS_RECONNECT_DELAY_MS (5 с) resumeAfterCloseFx при неизменном токене вызывает expireTutorSession (очистка токена и редирект на /login). Временный сбой БД при холодном кеше после деплоя или при переподключении всех клиентов действительно разлогинивает репетиторов, что противоречит HTTP-middleware (там ошибка БД даёт 500). Оценка 75, а не 100, потому что срабатывание требует сбоя БД в момент переподключения.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "title": "Новый сценарий «Приложение открыто в другой вкладке» → «Использовать здесь» добавлен без e2e",
+      "category": "claude-md",
+      "file": "frontend/src/app/components/SessionElsewhereBanner/SessionElsewhereBanner.tsx",
+      "line_start": 11,
+      "line_end": 18,
+      "snippet": "    <Snackbar open={isElsewhere} anchorOrigin={{ vertical: \"bottom\", horizontal: \"center\" }}>\n      <Alert\n        severity=\"info\"\n        variant=\"filled\"\n        action={",
+      "rationale": "docs/conventions/e2e-testing.md:130: «Если фича добавляет новый user journey — добавить соответствующий e2e с @regression + area-тег». Сценарий вытеснения вкладки виден пользователю: старая вкладка перестаёт переподключаться, показывает баннер, а кнопка «Использовать здесь» забирает соединение обратно. В CHANGELOG и news он записан отдельным пунктом. Контракт идёт через несколько слоёв: сервер закрывает старый сокет кодом 4000 (webSocketManager.ts:73/138), клиент на это не переподключается и показывает баннер. Unit-тесты подставляют code в onclose вручную, поэтому end-to-end связку не проверяет ни один тест. В frontend/e2e нет ни «Использовать здесь», ни «другой вкладке».",
+      "fix_hint": "Добавить в frontend/e2e/students/ (или в профильную область) e2e: две страницы одного репетитора; первая показывает баннер «Приложение открыто в другой вкладке…»; после клика «Использовать здесь» баннер переходит на вторую страницу, а входящий звонок приходит в первую.",
+      "agent": "claude-md",
+      "score": 60,
+      "verification_note": "Новый видимый пользователю сценарий («Приложение открыто в другой вкладке» → «Использовать здесь») подтверждён кодом SessionElsewhereBanner.tsx и CHANGELOG/news, а в frontend/e2e нет ни одного теста на вытеснение вкладки (video-call.spec.ts использует только вторую страницу ученика), поэтому правило docs/conventions/e2e-testing.md о новом user journey формально не выполнено; снижаю до 60, потому что тот же документ говорит, что e2e не блокируют merge и что не каждая фича требует нового e2e, а сценарий вытеснения можно считать edge-case, а не отдельным journey.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "title": "Гонка в проверке tokenVersion на /ws: сокет, прошедший проверку по БД до смены пароля, регистрируется уже после revokeTutorSessions и откатывает кеш на старую версию",
+      "category": "security",
+      "file": "backend/src/lib/websocket/auth.ts",
+      "line_start": 38,
+      "line_end": 50,
+      "snippet": "        ws.close(1008, \"Token revoked\");\n        return null;\n      }\n\n      setCachedTokenVersion(decoded.userId, dbUser.tokenVersion);",
+      "rationale": "Сценарий при промахе кеша (TTL 30 с). authenticateWebSocket читает старый tokenVersion из БД. Пока идёт await, changePassword, verifyEmailChange или applyPasswordReset коммитят инкремент и вызывают revokeTutorSessions: кеш получает новую версию или очищается, а disconnectUser закрывает только уже зарегистрированный сокет. Затем ожидание завершается: setCachedTokenVersion записывает в кеш старую версию, а handleConnection (webSocketManager.ts:113) кладёт в clients сокет со старым токеном. В итоге отозванный токен держит звонковый канал бессрочно, ещё до 30 с проходит HTTP и /ws, а свежий токен самого пользователя получает 401 или 1008, то есть его разлогинивает. Обход отзыва через 4001 появился в этой ветке (dbf8246/378116d): раньше /ws не проверял версию и не держал звонки.",
+      "fix_hint": "Сделать кеш монотонным: setCachedTokenVersion не должен понижать уже записанную версию, а applyPasswordReset должен передавать новую версию через select вместо null. В handleConnection перед clients.set ещё раз сверять decoded.tokenVersion с getCachedTokenVersion и при расхождении закрывать сокет с кодом 4001. Нужен регрессионный тест, в котором revoke происходит во время await findUnique.",
+      "agent": "security",
+      "score": 50,
+      "verification_note": "Гонка реальна по коду: authenticateWebSocket при промахе кеша делает await findUnique, а revokeTutorSessions (changePassword, changeEmail, passwordReset) может выполниться во время этого await и записать новую версию или инвалидировать кеш, после чего setCachedTokenVersion(старая версия) откатывает кеш, а сокет регистрируется уже после disconnectUser и живёт без повторной проверки. Окно узкое (миллисекунды между чтением БД и резолвом, при этом нужна одновременная смена пароля или email), поэтому это редкий случай, а не частый прод-сценарий, и оценка ограничена 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "title": "SessionElsewhereBanner вызывает useUnit с одиночным событием, а не с объектом действий",
+      "category": "convention",
+      "file": "frontend/src/app/components/SessionElsewhereBanner/SessionElsewhereBanner.tsx",
+      "line_start": 8,
+      "line_end": 8,
+      "snippet": "  const takeOver = useUnit(sessionTakeoverModel.takeOverRequested);",
+      "rationale": "Паттерн useUnit в docs/conventions/frontend.md:177-189 требует отдельный вызов на каждый стор, а события передавать объектом (`const actions = useUnit({ save: model.saved, ... })`). На HEAD это единственное место в frontend/src, где событие передаётся в useUnit одиночным аргументом. Такое же замечание в iter-4 было принято и исправлено в OutgoingCallOverlay (`useUnit({ cancel: callModel.cancelCall })`), а коммит 378116d повторил нарушение в новом компоненте.",
+      "fix_hint": "Заменить на `const actions = useUnit({ takeOver: sessionTakeoverModel.takeOverRequested });` и `onClick={() => actions.takeOver()}`.",
+      "agent": "claude-md",
+      "score": 50,
+      "verification_note": "Нарушение подтверждено: в SessionElsewhereBanner.tsx:8 событие takeOverRequested передано в useUnit одиночным аргументом, тогда как docs/conventions/frontend.md:184-185 задаёт для событий форму объекта, и остальные event-использования во frontend/src её соблюдают; но функционально это эквивалентно, а правило про действия не входит в явный запрещённый список, поэтому оценка выше 50 не ставится.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "title": "Автоматический реконнект старой или фоновой вкладки отбирает сокет у активной: после деплоя или сна ноутбука активная вкладка получает 4000 и навсегда остаётся без звонков",
+      "category": "logic",
+      "file": "frontend/src/app/model/webSocket.model.ts",
+      "line_start": 173,
+      "line_end": 182,
+      "snippet": "const reconnectScheduled = sample({\n  clock: webSocketClosed,\n  source: {\n    isEnabled: $isWebSocketEnabled,\n    isScheduled: $isReconnectScheduled,",
+      "rationale": "При рестарте сервера (каждый деплой), обрыве Wi-Fi или сне ноутбука сокеты всех вкладок закрываются обычным кодом, и каждая вкладка через WS_RECONNECT_DELAY_MS переподключается как новое соединение. Сервер (webSocketManager.handleConnection) закрывает кодом 4000 ту, что подключилась раньше, а с 378116d такая вкладка больше не переподключается и показывает баннер. Фоновые вкладки браузер троттлит, их таймер срабатывает позже, поэтому побеждает как раз фоновая вкладка: активная вкладка репетитора теряет звонки и обновления уроков, хотя пользователь её не покидал. Это ошибка реализации «last tab wins», а не самого решения: побеждать должна открытая или явно перехваченная вкладка, а не та, чей таймер реконнекта сработал последним. То же самое в studentWebSocket.model.ts.",
+      "fix_hint": "Отличать реконнект от нового подключения: например, передавать при реконнекте флаг (?resume=1), и тогда сервер не вытесняет живой сокет другой вкладки, а закрывает новый кодом 4000. Другой вариант: откладывать реконнект скрытой вкладки (document.visibilityState !== \"visible\") до момента, когда она станет видимой. Покрыть тестом: две вкладки после обрыва переподключаются, и активная остаётся владельцем соединения.",
+      "agent": "deep-logic",
+      "score": 50,
+      "verification_note": "Механизм подтверждён: при обрыве всех сокетов (деплой, сон) каждая вкладка переподключается через 5 с, сервер закрывает предыдущий сокет кодом 4000, а вытесненная вкладка больше не переподключается и показывает баннер «Использовать здесь» (takeover), так что исход гонки определяется таймерами, а не активностью вкладки. Но «навсегда» завышено: баннер явно предлагает вернуть соединение кнопкой, а resume-событие его не восстанавливает только автоматически; сценарий требует нескольких вкладок и троттлинга фоновой вкладки, поэтому это реальная, но ограниченная по частоте и восстанавливаемая UX/функциональная проблема в пределах принятого решения «last tab wins», а не гарантированный отказ.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "title": "Сбой транспорта в offer/answer обрабатывается по двум цепочкам: дубль-тосты гасит только порядок обработки fail в Effector и точечные фильтры",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/peerConnection.model.ts",
+      "line_start": 156,
+      "line_end": 159,
+      "snippet": "    await callTransportModel.sendCallSignalFx({\n      role: session.role,\n      message: { type: \"webrtc_answer\", callId, sdp: answer },\n    });",
+      "rationale": "sendOfferFx и sendAnswerFx теперь делают await sendCallSignalFx. Поэтому одна ошибка «нет сокета» срабатывает дважды: sendCallSignalFx.fail вызывает callFailed (callTransport.model.ts:14-20), и та же ошибка всплывает через sendAnswerFx.fail/sendOfferFx.fail в peerNegotiationFailed, а дальше через toggleCameraFx.fail/startScreenShareFx.fail. Второй тост не появляется только потому, что внутренний .fail успевает сбросить $callId до того, как отклонится внешний await. Ради этого в 378116d добавили фильтры по callId в mediaControls.model.ts:98-105 и screenShare.model.ts:132-138 с комментарием «e.g. the socket is gone». Любой новый внешний обработчик без такого фильтра снова даст двойную обработку.",
+      "fix_hint": "Пусть ошибку транспорта обрабатывает только sendCallSignalFx: в sendOfferFx/sendAnswerFx отправлять сигнал без await (через событие и sample к sendCallSignalFx) или ловить ошибку транспорта отдельным классом и не пробрасывать её. Тогда ошибки offer/answer/toggle будут означать только ошибки WebRTC.",
+      "agent": "hacks",
+      "score": 50,
+      "verification_note": "Двойной путь подтверждён кодом: sendOfferFx и sendAnswerFx делают await sendCallSignalFx, поэтому один сбой транспорта попадает и в callFailed (callTransport.model.ts), и в sendOfferFx/sendAnswerFx.fail, и дальше в toggleCameraFx.fail через mediaControls.model.ts:53; дубль-тост гасится только тем, что callFailed сбрасывает $callId раньше отклонения внешнего await, и фильтры по callId в mediaControls.model.ts:98-105 и screenShare.model.ts:132-138 держат это на обходе, что по рубрике категории hack даёт не ниже 50, но прямого пользовательского бага в текущем коде не показано.",
+      "severity": "medium"
+    },
+    {
+      "id": "f7",
+      "title": "Константа AUTH_PAGES объявлена в новом session.helpers.ts, а не в *.constants.ts",
+      "category": "convention",
+      "file": "frontend/src/shared/auth/session.helpers.ts",
+      "line_start": 3,
+      "line_end": 11,
+      "snippet": "const AUTH_PAGES = [\"/login\", \"/register\", \"/admin\"];\n\n// The tutor's token no longer works: drop it and send the user to the login page.\nexport const expireTutorSession = (): void => {\n  clearTutorToken();",
+      "rationale": "docs/conventions/frontend.md:70: «Separate files for: constants, helpers, hooks, types — never mix in one file». Новый файл из 378116d кладёт константу в один файл с хелпером; такое же замечание к call.helpers.ts (PICKER_DISMISSED_ERRORS) в iter-6 было принято. Соседний tokenStorage.helpers.ts на main держит приватные ключи так же, но это не повод множить нарушение в новом файле.",
+      "fix_hint": "Перенести AUTH_PAGES в shared/auth/session.constants.ts (или auth.constants.ts) и импортировать его в session.helpers.ts.",
+      "agent": "claude-md",
+      "score": 50,
+      "verification_note": "Нарушение буквы docs/conventions/frontend.md:70 («never mix in one file» для констант и хелперов) подтверждено: в новом session.helpers.ts константа AUTH_PAGES лежит рядом с экспортируемым хелпером, и файла session.constants.ts нет; но мелочь, а на main уже шесть *.helpers.ts с константами (studentForm, profile.helpers, finances.helpers, tokenStorage.helpers и др.), поэтому правило фактически не enforce'ится, а не явный баг.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "title": "Быстрый реконнект после своей смены пароля/email подвязан к приватным persistTokenFx двух фич и дублирует проверку токена в двух эффектах",
+      "category": "hack",
+      "file": "frontend/src/app/model/webSocket.model.ts",
+      "line_start": 207,
+      "line_end": 229,
+      "snippet": "sample({\n  clock: [\n    isTokenReplacedFx.doneData,\n    changePasswordModel.persistTokenFx.done.map(() => true),\n    changeEmailModel.persistTokenFx.done.map(() => true),",
+      "rationale": "Гонка «4001 пришёл раньше или позже HTTP-ответа с новым токеном» закрыта двумя параллельными путями. Первый путь: isTokenReplacedFx на close. Второй: подписка на persistTokenFx двух конкретных фич, которые ради этого сделали экспортируемыми (changePassword.model.ts:33, changeEmail.model.ts:47). Проверка getTutorToken() !== revokedToken повторена в isTokenReplacedFx и resumeAfterCloseFx, а revokedTokenOnClose дублирует sample в $revokedToken. Обе фичи уже шлют сущностное событие userModel.setAuthToken (changePassword.model.ts:90, changeEmail.model.ts:113), но app-модель знает поимённо, какие фичи выдают токен, и каждый новый такой флоу придётся дописывать сюда вручную.",
+      "fix_hint": "Слушать userModel.setAuthToken (или $authToken.updates) как единственный сигнал «токен сменился» и передавать токен в connectWebSocketFx из userModel.$authToken, а не читать localStorage. Тогда isTokenReplacedFx и revokedTokenOnClose можно убрать, а persistTokenFx снова сделать приватными.",
+      "agent": "hacks",
+      "score": 25,
+      "verification_note": "Код рабочий: гонка 4001 против HTTP-ответа закрыта двумя симметричными путями (isTokenReplacedFx на close и подписка на persistTokenFx.done), и каждый случай порядка событий проверен по коду; конкретного бага не видно, а замечание о связанности с именованными persistTokenFx двух фич и дублировании проверки getTutorToken() — это поддерживаемость и будущий вред, не подтверждённая проблема, поэтому 25.",
+      "filter_reason": "below threshold"
+    },
+    {
+      "title": "disconnectUser: магический таймер terminate через 1 с и третья, отличающаяся копия «вывести сокет из строя» рядом с веткой замены (4000)",
+      "category": "hack",
+      "file": "backend/src/lib/websocket/webSocketManager.ts",
+      "line_start": 250,
+      "line_end": 265,
+      "snippet": "    setTimeout(() => {\n      if (ws.readyState !== WebSocket.CLOSED) ws.terminate();\n    }, REVOKED_SOCKET_TERMINATE_MS).unref();",
+      "rationale": "В 378116d отозванный сокет сразу удаляется из clients, его звонок завершается, а сообщения отсекает identity-guard в on(\"message\"). После этого висящий до 30 с сокет уже ничего не может, и таймер на 1 с ничего не защищает. При этом вытеснение сокета (handleConnection:68-77 и handleStudentConnection:134-142) делает ту же работу: завершает звонок и закрывает сокет кодом. Но там нет ни delete до close, ни terminate. Получились три по-разному написанные копии одного действия, и правка протокола (например, коды 4000/4001, сейчас 4000 захардкожен литералом) будет расходиться между ними.",
+      "fix_hint": "Вынести приватный retireConnection(kind, id, ws, code, reason): снять регистрацию, вызвать terminateActiveCallForParticipant, сделать close(code). Вызывать его и при замене, и в disconnectUser. Таймер убрать, раз identity-guard уже нейтрализует сокет, либо применять его одинаково в обоих случаях. Коды 4000/4001 держать именованными константами.",
+      "agent": "hacks",
+      "score": 25,
+      "verification_note": "Таймер terminate на 1 с в disconnectUser (webSocketManager.ts:250-265) оправдан комментарием и защищает от клиента, который не отвечает на close-frame (иначе ws держит сокет до 30 с), а отличие от ветки замены (4000) сознательное: там нет удаления из clients и terminate, потому что release-handler и identity-guard в message уже нейтрализуют старый сокет, тогда как отозванный сокет удаляется сразу. Это вопрос читаемости и дублирования, а не подтверждённый вред; конвенции backend.md прямого правила против такого не содержат, поэтому не выше 25.",
+      "filter_reason": "below threshold"
+    }
+  ]
+}

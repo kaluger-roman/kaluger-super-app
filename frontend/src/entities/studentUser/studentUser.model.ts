@@ -19,6 +19,8 @@ export const StudentCabinetGate = createGate();
 export const studentLoggedOut = createEvent();
 export const studentAuthTokenReceived = createEvent<string>();
 export const studentSessionUpdated = createEvent<StudentSession>();
+// Another tab of the browser logged the student out.
+export const studentSessionEndedElsewhere = createEvent();
 
 // Effects
 export const getCurrentStudentFx = createEffect(async () => {
@@ -37,7 +39,7 @@ const persistStudentTokenFx = createEffect((token: string) => {
   setStudentToken(token);
 });
 
-const clearStudentSessionFx = createEffect(() => {
+export const clearStudentSessionFx = createEffect(() => {
   clearStudentToken();
   navigate("/login", { replace: true });
 });
@@ -91,5 +93,16 @@ sample({
 
 sample({
   clock: studentLoggedOut,
+  target: clearStudentSessionFx,
+});
+
+sample({
+  clock: studentSessionEndedElsewhere,
+  fn: () => null,
+  target: $studentSession,
+});
+
+sample({
+  clock: studentSessionEndedElsewhere,
   target: clearStudentSessionFx,
 });

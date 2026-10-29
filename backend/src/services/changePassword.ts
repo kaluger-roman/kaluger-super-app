@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { setCachedTokenVersion } from "../lib/tokenVersionCache";
+import { revokeTutorSessions } from "../lib/tokenRevocation";
 import { comparePassword, generateToken, hashPassword, validatePassword } from "../utils";
 
 type ChangePasswordResult = {
@@ -72,7 +72,7 @@ export const changePassword = async (
   // Prime the token-version cache with the new value so the JWT we just
   // minted passes the next authenticateToken middleware check without an
   // extra DB roundtrip (and so stale cached old version cannot reject it).
-  setCachedTokenVersion(updatedUser.id, updatedUser.tokenVersion);
+  revokeTutorSessions(updatedUser.id, updatedUser.tokenVersion);
 
   const token = generateToken({
     userId: updatedUser.id,

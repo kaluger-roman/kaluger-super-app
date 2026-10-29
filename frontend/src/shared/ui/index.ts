@@ -1,7 +1,7 @@
 export { Button } from "./Button";
 export { TextField } from "./TextField";
 export { Card } from "./Card";
-export { theme } from "./themeConfig";
+export { ABOVE_MODAL_Z_OFFSET, theme } from "./themeConfig";
 export { NotificationProvider } from "./NotificationProvider";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { ConfirmStatusDialog } from "./ConfirmStatusDialog";
@@ -22,3 +22,4 @@ export { CommissionBadge } from "./CommissionBadge";
 export { TaxExemptBadge, TAX_EXEMPT_COLOR, TAX_EXEMPT_LABEL } from "./TaxExemptBadge";
 export { ReceivedAmountHint, isReceivedAmountMismatch } from "./ReceivedAmountHint";
 export { CommissionProgress, isCommissionClosed } from "./CommissionProgress";
+export { PermissionDeniedHelp } from "./PermissionDeniedHelp";

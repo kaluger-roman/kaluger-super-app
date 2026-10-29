@@ -7,6 +7,7 @@ import { EmailVerificationForm } from "@features/emailVerification";
 
 import {
   AdminPage,
+  CallHistoryPage,
   DashboardPage,
   ForgotPasswordPage,
   LessonsPage,
@@ -124,7 +125,17 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
           <Route index element={<Navigate to="schedule" replace />} />
           <Route path="schedule" element={<StudentSchedulePage />} />
           <Route path="settings" element={<StudentSettingsPage />} />
+          <Route path="calls" element={<CallHistoryPage principal="student" />} />
         </Route>
+        <Route
+          path="/call/history"
+          element={
+            <ProtectedRoute
+              element={<CallHistoryPage principal="tutor" />}
+              isLoggedIn={isLoggedIn}
+            />
+          }
+        />
         <Route
           path="/"
           element={<ProtectedRoute element={<DashboardPage />} isLoggedIn={isLoggedIn} />}

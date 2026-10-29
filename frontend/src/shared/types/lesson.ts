@@ -51,6 +51,7 @@ export type Lesson = {
     | "archivedAt"
     | "archiveReason"
     | "archiveComment"
+    | "studentUser"
   >;
 };
 

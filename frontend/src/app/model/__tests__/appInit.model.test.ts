@@ -1,15 +1,20 @@
 import { fork, allSettled } from "effector";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { studentUserModel, userModel } from "@entities";
+import { notificationsModel, studentUserModel, userModel } from "@entities";
 import { loginFormModel } from "@features/auth";
+import { callNotificationOpenModel } from "@features/videoCall";
 import { studentsApi, lessonsApi, authApi, studentAuthApi } from "@shared";
 
+import { signedInBackgroundHandlers } from "../../../__tests__/mocks/handlers";
+import { server } from "../../../__tests__/mocks/server";
 import {
   $appInitialized,
   appBootedUnauthenticated,
+  appResumed,
   initializeAppFx,
   registerServiceWorkerFx,
+  serviceWorkerMessaged,
 } from "../appInit.model";
 
 vi.mock("@shared", async () => {
@@ -37,6 +42,7 @@ describe("app/model/appInit.model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    server.use(...signedInBackgroundHandlers);
   });
 
   describe("initializeAppFx re-fire after login", () => {
@@ -238,6 +244,105 @@ describe("app/model/appInit.model", () => {
       expect(scope.getState($appInitialized)).toBe(true);
       expect(studentsApi.getAll).not.toHaveBeenCalled();
       expect(lessonsApi.getUpcoming).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("student call notifications", () => {
+    it("should register the service worker and load the push key once a student signs in", async () => {
+      const registration = {} as ServiceWorkerRegistration;
+      const swHandler = vi.fn().mockResolvedValue(registration);
+      const vapidHandler = vi.fn().mockResolvedValue("vapid-key");
+      const scope = fork({
+        handlers: [
+          [registerServiceWorkerFx, swHandler],
+          [notificationsModel.loadVapidKeyFx, vapidHandler],
+          [notificationsModel.checkPushSubscriptionFx, () => false],
+        ],
+      });
+
+      await allSettled(studentUserModel.studentSessionUpdated, {
+        scope,
+        params: {
+          id: "s1",
+          email: "student@test.com",
+          name: "Student",
+          isEmailVerified: true,
+          tutor: null,
+        },
+      });
+
+      expect(swHandler).toHaveBeenCalledTimes(1);
+      expect(vapidHandler).toHaveBeenCalledTimes(1);
+      expect(scope.getState(notificationsModel.$serviceWorkerRegistration)).toBe(registration);
+      expect(scope.getState(notificationsModel.$vapidKey)).toBe("vapid-key");
+    });
+
+    it("should not register the service worker for a signed-out visitor", async () => {
+      const swHandler = vi.fn().mockResolvedValue(null);
+      const scope = fork({ handlers: [[registerServiceWorkerFx, swHandler]] });
+
+      await allSettled(appBootedUnauthenticated, { scope });
+
+      expect(swHandler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("returning to the app", () => {
+    it("should read the notification permission again for a signed-in tutor", async () => {
+      vi.stubGlobal("Notification", { permission: "denied" });
+      const scope = fork({
+        values: [
+          [
+            userModel.$user,
+            {
+              id: "1",
+              email: "user@test.com",
+              name: "Test",
+              createdAt: "2024-01-01T00:00:00Z",
+              isEmailVerified: true,
+            },
+          ],
+        ],
+        handlers: [[initializeAppFx, () => []]],
+      });
+
+      await allSettled(appResumed, { scope });
+
+      expect(scope.getState(notificationsModel.$pushPermission)).toBe("denied");
+    });
+  });
+
+  describe("opening an incoming call notification", () => {
+    afterEach(() => {
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("should take the call from the address once the student session is known", async () => {
+      vi.mocked(studentAuthApi.getProfile).mockResolvedValue({
+        id: "s1",
+        email: "student@test.com",
+        name: "Student",
+        isEmailVerified: true,
+        tutor: null,
+      });
+      window.history.replaceState(null, "", "/student/cabinet/schedule?call=c-7");
+      const scope = fork();
+
+      await allSettled(studentUserModel.getCurrentStudentFx, { scope });
+
+      expect(scope.getState(callNotificationOpenModel.$pendingNotificationCallId)).toBe("c-7");
+      expect(window.location.search).toBe("");
+    });
+
+    it("should hand the call the service worker posts to the call feature", async () => {
+      const scope = fork();
+
+      await allSettled(serviceWorkerMessaged, {
+        scope,
+        params: { type: "call_notification_opened", callId: "c-9" },
+      });
+
+      expect(scope.getState(callNotificationOpenModel.$pendingNotificationCallId)).toBe("c-9");
     });
   });
 });

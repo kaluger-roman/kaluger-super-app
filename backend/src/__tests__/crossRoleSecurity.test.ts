@@ -60,6 +60,7 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
       ["GET", "/api/statistics"],
       ["GET", "/api/statistics/income-history"],
       ["GET", "/api/tax-periods"],
+      ["GET", "/api/calls/history"],
       ["GET", "/api/news"],
       ["GET", "/api/reminder-settings"],
     ] as const;
@@ -74,10 +75,50 @@ describe("Cross-role security regression (SC-004, FR-017a, FR-018)", () => {
   });
 
   describe("Tutor JWT must NOT access student endpoints", () => {
-    const studentEndpoints = ["/api/student-auth/me", "/api/student-cabinet/lessons"];
+    const studentEndpoints = [
+      "/api/student-auth/me",
+      "/api/student-cabinet/lessons",
+      "/api/student/calls/history",
+    ];
 
     test.each(studentEndpoints)("GET %s rejects tutor JWT", async (path) => {
       const res = await request(app).get(path).set("Authorization", `Bearer ${tutorToken}`);
+      expect(res.status).toBe(401);
+    });
+
+    test.each([
+      ["POST", "/api/student-push/subscribe"],
+      ["DELETE", "/api/student-push/unsubscribe"],
+    ] as const)("%s %s rejects tutor JWT", async (method, path) => {
+      const body = {
+        subscription: { endpoint: "https://push.example.com/x", keys: { p256dh: "p", auth: "a" } },
+        endpoint: "https://push.example.com/x",
+      };
+      const res =
+        method === "POST"
+          ? await request(app).post(path).set("Authorization", `Bearer ${tutorToken}`).send(body)
+          : await request(app).delete(path).set("Authorization", `Bearer ${tutorToken}`).send(body);
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe("Student JWT must NOT manage tutor push subscriptions", () => {
+    test.each([
+      ["POST", "/api/push/subscribe"],
+      ["DELETE", "/api/push/unsubscribe"],
+      ["GET", "/api/push/subscriptions"],
+    ] as const)("%s %s rejects student JWT", async (method, path) => {
+      const body = {
+        subscription: { endpoint: "https://push.example.com/y", keys: { p256dh: "p", auth: "a" } },
+        endpoint: "https://push.example.com/y",
+      };
+      const auth = `Bearer ${studentToken}`;
+      const res =
+        method === "GET"
+          ? await request(app).get(path).set("Authorization", auth)
+          : method === "POST"
+            ? await request(app).post(path).set("Authorization", auth).send(body)
+            : await request(app).delete(path).set("Authorization", auth).send(body);
       expect(res.status).toBe(401);
     });
   });

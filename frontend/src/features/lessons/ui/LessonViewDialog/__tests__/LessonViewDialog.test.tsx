@@ -1,15 +1,22 @@
 import { ThemeProvider } from "@mui/material";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { allSettled, fork } from "effector";
+import { allSettled, createWatch, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { getLessonCalls } from "@entities/callRecord/api";
 import type { Lesson } from "@shared";
 
 import { theme } from "../../../../../shared/ui/themeConfig";
+import { CallConfirmDialog, callModel } from "../../../../videoCall";
 import { lessonsModel } from "../../../models";
 import { LessonViewDialog } from "../LessonViewDialog";
+
+vi.mock("@entities/callRecord/api", () => ({
+  getCallHistory: vi.fn(),
+  getLessonCalls: vi.fn(),
+}));
 
 // Mock MUI hooks before importing component
 vi.mock("@mui/material", async () => {
@@ -57,6 +64,7 @@ const mockLesson: Lesson = {
 describe("LessonViewDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLessonCalls).mockResolvedValue([]);
   });
 
   describe("Rendering", () => {
@@ -689,6 +697,61 @@ describe("LessonViewDialog", () => {
       // Should not have a cancel button (but might have other "Отменить" buttons from ConfirmDialog)
       // Just verify the lesson is shown as cancelled
       expect(screen.getByText("Отменен")).toBeInTheDocument();
+    });
+  });
+
+  describe("Call from the lesson", () => {
+    const lessonWithCabinet: Lesson = {
+      ...mockLesson,
+      student: { ...mockStudent, studentUser: { id: "su-1" } },
+    };
+
+    const openWithConfirm = async () => {
+      const scope = fork();
+      const started: unknown[] = [];
+      createWatch({ unit: callModel.callStarted, fn: (call) => started.push(call), scope });
+      await allSettled(lessonsModel.viewDialogOpened, { scope, params: lessonWithCabinet });
+      renderWithTheme(
+        <>
+          <LessonViewDialog />
+          <CallConfirmDialog />
+        </>,
+        scope
+      );
+      return { scope, started };
+    };
+
+    it("should ask to confirm the call and keep the lesson open", async () => {
+      const { scope, started } = await openWithConfirm();
+
+      await userEvent.click(screen.getByRole("button", { name: "Позвонить" }));
+
+      const confirm = await screen.findByRole("dialog", { name: "Начать видеозвонок?" });
+      expect(confirm).toHaveTextContent("Иван Иванов");
+      expect(confirm).toHaveTextContent("Звонок по уроку");
+      expect(started).toEqual([]);
+      expect(scope.getState(lessonsModel.$isViewDialogOpen)).toBe(true);
+    });
+
+    it("should close the lesson and start the call after the confirmation", async () => {
+      const { scope, started } = await openWithConfirm();
+
+      await userEvent.click(screen.getByRole("button", { name: "Позвонить" }));
+      const confirm = await screen.findByRole("dialog", { name: "Начать видеозвонок?" });
+      await userEvent.click(within(confirm).getByRole("button", { name: "Позвонить" }));
+
+      expect(started).toHaveLength(1);
+      expect(scope.getState(lessonsModel.$isViewDialogOpen)).toBe(false);
+    });
+
+    it("should keep the lesson open when the confirmation is canceled", async () => {
+      const { scope, started } = await openWithConfirm();
+
+      await userEvent.click(screen.getByRole("button", { name: "Позвонить" }));
+      await userEvent.click(await screen.findByRole("button", { name: "Отмена" }));
+
+      expect(started).toEqual([]);
+      expect(scope.getState(lessonsModel.$isViewDialogOpen)).toBe(true);
     });
   });
 });

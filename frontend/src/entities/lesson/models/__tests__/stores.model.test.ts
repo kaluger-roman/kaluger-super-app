@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 
 import type { Lesson } from "@shared";
 
+import { lessonListLoadHandlers } from "../../testSeams.helpers";
 import {
   $allLessons,
   $allPagination,
@@ -123,7 +124,7 @@ describe("stores.model — lessons refetched after a server change", () => {
         [$upcomingLessons, [mockLesson]],
         [$currentLesson, mockLesson],
       ],
-      handlers: [[syncLessonFx, async () => synced]],
+      handlers: [...lessonListLoadHandlers([synced]), [syncLessonFx, async () => synced]],
     });
 
     await allSettled(syncLessonFx, { scope, params: mockLesson.id });

@@ -6,3 +6,4 @@ export {
   setStudentToken,
   clearStudentToken,
 } from "./tokenStorage.helpers";
+export { expireTutorSession } from "./session.helpers";

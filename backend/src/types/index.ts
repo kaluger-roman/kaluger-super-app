@@ -50,6 +50,10 @@ export type {
   ReminderSettingsResponse,
   PushSubscriptionResponse,
   PushNotificationPayload,
+  WebPushDevice,
+  WebPushOptions,
+  WebPushOutcome,
+  WebPushUrgency,
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
 export type {
@@ -76,3 +80,22 @@ export type {
   ValidateInvitationResponse,
   StudentLessonWsEvent,
 } from "./studentCabinet";
+export type {
+  CallDirection,
+  CallerKindValue,
+  CallEndReason,
+  CallCancelReason,
+  CallReplyTarget,
+  CallLessonSummary,
+  IceServer,
+  SessionDescriptionPayload,
+  IceCandidatePayload,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  CallHistoryItem,
+  PresenceState,
+  PeerPresence,
+  PeerPresencePayload,
+  CallSnapshot,
+  CallSnapshotStatus,
+} from "./call";

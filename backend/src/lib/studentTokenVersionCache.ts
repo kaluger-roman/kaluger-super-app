@@ -14,15 +14,15 @@ export const getCachedStudentTokenVersion = (studentUserId: string): number | un
   return entry.tokenVersion;
 };
 
+// Versions only grow: a lookup that read the DB before a revocation must not put the old
+// version back over the one the revocation stored.
 export const setCachedStudentTokenVersion = (studentUserId: string, tokenVersion: number): void => {
+  const current = getCachedStudentTokenVersion(studentUserId);
+  if (current !== undefined && current > tokenVersion) return;
   cache.set(studentUserId, {
     tokenVersion,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
-};
-
-export const invalidateCachedStudentTokenVersion = (studentUserId: string): void => {
-  cache.delete(studentUserId);
 };
 
 export const __clearStudentTokenVersionCacheForTests = (): void => {

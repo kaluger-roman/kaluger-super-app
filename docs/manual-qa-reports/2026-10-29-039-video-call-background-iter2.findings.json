@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "branch": "039-video-call-background",
+  "feature_id": "039-video-call-background",
+  "spec_path": "specs/039-video-call-background/spec.md",
+  "base_url": "http://localhost:32773",
+  "run_at": "2026-10-29T13:35:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2.md",
+  "readiness": "green",
+  "coverage": {
+    "total": 34,
+    "passed": 29,
+    "failed": 3,
+    "warned": 2,
+    "scenarios": [
+      {
+        "id": "R1",
+        "title": "P1.14 / FR-009: голос собеседника через отдельный <audio>",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "R2",
+        "title": "P1.8: перезагрузка страницы ученика в звонке",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "R3",
+        "title": "P1.13 / US2-AS4: «Нажмите, чтобы продолжить звонок» при запрете автозапуска",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "R4",
+        "title": "P1.7: выключенные вручную микрофон и камера после возврата (решение владельца по индикатору)",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "R5",
+        "title": "Решение по #4 итерации 1: одна инструкция установки на iPhone Safari",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "R6",
+        "title": "Решение по #5 итерации 1: справка о запрете в карточке «Звонки»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "R7",
+        "title": "Вкладка «Уведомления» преподавателя при запрете: одно объяснение",
+        "priority": "P2",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "R8",
+        "title": "Переключатель звонков преподавателя при запрете",
+        "priority": "P2",
+        "status": "fail",
+        "finding_ids": [
+          2
+        ]
+      },
+      {
+        "id": "R9",
+        "title": "P3.1 / US6: картинка в картинке",
+        "priority": "P3",
+        "status": "warn"
+      },
+      {
+        "id": "F1",
+        "title": "US1-AS1 / US2-AS2: ученик (iPhone) свернул",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F2",
+        "title": "US1-AS3 / US2-AS5: возврат, подписи пропали, звук в обе стороны",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F3",
+        "title": "US1-AS4: обрыв сокета ученика, восстановление",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F4",
+        "title": "US1-AS2 / FR-032: преподаватель (iPhone) свернул, у ученика нейтральные статусы",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F5",
+        "title": "US1-AS7 / FR-007: ручные микрофон и камера после возврата",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F6",
+        "title": "US2-AS1 / FR-033: ученик (Android) свернул",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F7",
+        "title": "US1-AS5 / FR-005: не вернулся за 3 минуты",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F8",
+        "title": "FR-008: ожидающая вкладка забирает звонок",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F9",
+        "title": "Edge: выход из аккаунта в другой вкладке во время звонка",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "F10",
+        "title": "Edge: звонок занятому адресату",
+        "priority": "Edge",
+        "status": "pass",
+        "finding_ids": [
+          5
+        ]
+      },
+      {
+        "id": "F11",
+        "title": "US3-AS1 / FR-019: push при закрытом приложении ученика",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F12",
+        "title": "US3-AS2/AS3: открытие по уведомлению и «Принять»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F13",
+        "title": "US3-AS8: call_closed после ответа",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F14",
+        "title": "US3-AS4 / FR-016: отмена → missed_call",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F15",
+        "title": "US3-AS5 / FR-017: устаревшее уведомление → «Звонок уже завершён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F16",
+        "title": "US3-AS7 / FR-018: push только когда приложение не на экране",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "F17",
+        "title": "US5-AS1: ученик звонит преподавателю с закрытым приложением",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F18",
+        "title": "US5-AS2: переключатель звонков выключен → «Преподаватель сейчас не в сети»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F19",
+        "title": "US4-AS1/AS2: Android, карточка → «Включить»",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F20",
+        "title": "US4-AS3: ученик запретил уведомления",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F21",
+        "title": "US4-AS6 / FR-024: выход удаляет подписку",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F22",
+        "title": "Переключатель напоминаний при запрете (фича 008)",
+        "priority": "P2",
+        "status": "warn",
+        "finding_ids": [
+          4
+        ]
+      },
+      {
+        "id": "F23",
+        "title": "Нестабильный тест signalRouting.model.test.ts",
+        "priority": "—",
+        "status": "fail",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "F24",
+        "title": "FR-025: пустые ключи VAPID (итерация 1, код не менялся)",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "F25",
+        "title": "Smoke: звонки в открытом приложении (регресс 030)",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 5,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 5
+    },
+    "by_category": {
+      "spec-mismatch": 0,
+      "bug": 2,
+      "ux": 2,
+      "improvement": 1
+    },
+    "unambiguous_fix_count": 4
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "Во вкладке «Уведомления» преподавателя при запрете уведомлений два разных объяснения",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "R7",
+      "file": "frontend/src/features/notificationSettings/ui/ReminderSettings/ReminderSettings.tsx",
+      "line_hint": 73,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/01-before-fix-tutor-settings-two-denied-explanations.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/12-after-fix-tutor-settings-one-explanation-switch-locked.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/38-rebuilt-stack-tutor-denied-one-help-locked.png"
+      ],
+      "expected": "Одна справка PermissionDeniedHelp на вкладку",
+      "actual": "Старое предупреждение с устаревшим шагом для iOS в «Напоминаниях» и новая справка в «Звонках»",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/notificationSettings/ui/ReminderSettings/ReminderSettings.tsx"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/pages/profile/__tests__/ProfilePage.test.tsx",
+        "frontend/src/features/notificationSettings/ui/ReminderSettings/__tests__/ReminderSettings.test.tsx"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Убрать старое предупреждение из ReminderSettings, справка остаётся в карточке «Звонки»"
+    },
+    {
+      "id": 2,
+      "title": "Переключатель «Уведомления о входящих звонках» преподавателя активен при запрете, каждый тап — тост",
+      "category": "bug",
+      "severity": "low",
+      "scenario_id": "R8",
+      "file": "frontend/src/entities/notifications/callNotificationsToggle.model.ts",
+      "line_hint": 18,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/02-before-fix-tutor-denied-switch-toast.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/14-after-fix-allowed-and-returned-switch-unlocked.png"
+      ],
+      "expected": "Как у ученика: переключатель заблокирован, запрос не повторяется, тоста нет",
+      "actual": "Каждый тап вызывает requestPermission (сразу denied) и тост «Не удалось подписаться на уведомления»",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/entities/notifications/callNotificationsToggle.model.ts",
+        "frontend/src/features/notificationSettings/ui/CallNotificationSettings/CallNotificationSettings.tsx"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/entities/notifications/__tests__/callNotificationsToggle.model.test.ts",
+        "frontend/src/features/notificationSettings/ui/CallNotificationSettings/__tests__/CallNotificationSettings.test.tsx"
+      ],
+      "autofix_note": null,
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Игнорировать callNotificationsToggled при $isPushPermissionDenied, переключатель disabled"
+    },
+    {
+      "id": 3,
+      "title": "Тест stale call_accepted в signalRouting.model.test.ts зависит от предыдущего файла (утечка $syncPendingRoles)",
+      "category": "bug",
+      "severity": "low",
+      "scenario_id": "F23",
+      "file": "frontend/src/features/videoCall/model/__tests__/signalRouting.model.test.ts",
+      "line_hint": 117,
+      "screenshots": [],
+      "expected": "Тест проходит в любом порядке файлов",
+      "actual": "После mediaRecovery.model.test.ts в том же воркере: expected [] to deeply equal [ { type: 'call_sync' } ]",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/model/__tests__/callFlow.ts",
+        "frontend/src/features/videoCall/model/__tests__/signalRouting.model.test.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/videoCall/model/__tests__/signalRouting.model.test.ts"
+      ],
+      "autofix_note": "Воспроизведение: VITEST_SEED=1 npx vitest run --project shared --maxWorkers=1 mediaRecovery.model.test.ts signalRouting.model.test.ts",
+      "console_excerpt": "AssertionError: expected [] to deeply equal [ { type: 'call_sync' } ]",
+      "network_excerpt": null,
+      "fix_suggestion": "settleCallSync() в callFlow.ts (страница на экране, call_state по обеим ролям) в resetCallFlow и beforeEach"
+    },
+    {
+      "id": 4,
+      "title": "Переключатель «Включить напоминания» при запрете уведомлений повторяет запрос и показывает тост",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "F22",
+      "file": "frontend/src/entities/notifications/notificationsToggle.model.ts",
+      "line_hint": 149,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/13-after-fix-reminders-switch-denied-still-toasts.png"
+      ],
+      "expected": "Как переключатель звонков после исправления #2",
+      "actual": "Тост «Не удалось подписаться на уведомления» на каждый тап, переключатель активен",
+      "unambiguous_fix": false,
+      "autofix_status": "skipped",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Меняет поведение фичи 008 за пределами 039, решает владелец",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Блокировать переключатель напоминаний при $isPushPermissionDenied и не запускать подписку из remindersToggled"
+    },
+    {
+      "id": 5,
+      "title": "В spec.md занятость описана как «Собеседник занят», приложение (фича 030) показывает «Абонент занят»",
+      "category": "improvement",
+      "severity": "low",
+      "scenario_id": "F10",
+      "file": "specs/039-video-call-background/spec.md",
+      "line_hint": 155,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background-iter2/screenshots/31-student-calls-busy-tutor.png"
+      ],
+      "expected": "Цитата в спеке совпадает с текстом «как сейчас»",
+      "actual": "«Собеседник занят» в спеке, «Абонент занят» в приложении",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "specs/039-video-call-background/spec.md"
+      ],
+      "autofix_tests_added": null,
+      "autofix_note": "Только документация",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Исправить цитату в spec.md на «Абонент занят»"
+    }
+  ]
+}

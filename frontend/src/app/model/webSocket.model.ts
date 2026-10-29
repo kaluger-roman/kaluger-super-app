@@ -1,159 +1,81 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
-import { delay } from "patronum";
+import { createEffect, createEvent, sample } from "effector";
 
 import { lessonModel } from "@entities/lesson";
-import { resolveWsUrl } from "@shared";
+import { changeEmailModel, changePasswordModel } from "@features";
+import { callNotificationOpenModel } from "@features/videoCall";
+import { expireTutorSession, getTutorToken } from "@shared";
 
-import { WS_RECONNECT_DELAY_MS } from "./webSocket.constants";
+import * as appInitModel from "./appInit.model";
+import * as socketConnectionModel from "./socketConnection.model";
+import { WS_RECONNECT_DELAY_MS, WS_REVOKED_CLOSE_CODES } from "./webSocket.constants";
+import { dispatchTutorMessage, resumeTutorSession } from "./webSocket.helpers";
+import type { LessonStatusUpdate } from "./webSocket.types";
 
-// Events
-export const connectWebSocket = createEvent();
-export const disconnectWebSocket = createEvent();
-export const webSocketClosed = createEvent();
-export const handleLessonStatusUpdate = createEvent<{
-  lessonId: string;
-  status: string;
-}>();
+export const handleLessonStatusUpdate = createEvent<LessonStatusUpdate>();
+// The tutor token in localStorage was changed by another tab of this browser.
+export const tokenStorageChanged = createEvent();
+// Another tab of this browser logged the tutor out.
+export const tutorSessionEndedElsewhere = createEvent();
 
-// Effects
-export const connectWebSocketFx = createEffect(() => {
-  const token = localStorage.getItem("authToken");
-  if (!token) return;
-
-  const ws = new WebSocket(`${resolveWsUrl("/ws")}?token=${token}`);
-
-  ws.onopen = () => {
-    console.log("WebSocket connected");
-    setWebSocketConnection(ws);
-  };
-
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      if (data.type === "lesson_status_updated") {
-        handleLessonStatusUpdate({
-          lessonId: data.lessonId,
-          status: data.status,
-        });
-      }
-    } catch (error) {
-      console.error("WebSocket message parsing error:", error);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log("WebSocket disconnected");
-    setWebSocketConnection(null);
-    webSocketClosed();
-  };
-
-  ws.onerror = (error) => {
-    console.error("WebSocket error:", error);
-  };
-
-  return ws;
+const connection = socketConnectionModel.createSocketConnection({
+  path: "/ws",
+  role: "tutor",
+  getToken: getTutorToken,
+  dispatch: (data) => dispatchTutorMessage(data, handleLessonStatusUpdate),
+  reconnectDelayMs: WS_RECONNECT_DELAY_MS,
+  resumed: appInitModel.appResumed,
+  online: appInitModel.wentOnline,
+  openedForCall: callNotificationOpenModel.notificationOpenedInApp,
+  logLabel: "WebSocket",
+  revokedCloseCodes: WS_REVOKED_CLOSE_CODES,
+  canResume: resumeTutorSession,
 });
 
-export const disconnectWebSocketFx = createEffect((ws: WebSocket | null) => {
-  if (ws) {
-    ws.close();
-  }
-});
+const hasTutorTokenFx = createEffect((): boolean => getTutorToken() !== null);
+export const expireSessionFx = createEffect(expireTutorSession);
 
-// Stores
-export const $webSocketConnection = createStore<WebSocket | null>(null);
+export const connectWebSocket = connection.connect;
+export const disconnectWebSocket = connection.disconnect;
+export const webSocketClosed = connection.closed;
+export const connectWebSocketFx = connection.connectFx;
 
-export const $isWebSocketConnected = $webSocketConnection.map(
-  (connection) => connection?.readyState === (typeof WebSocket !== "undefined" ? WebSocket.OPEN : 1)
-);
+export const $webSocketConnection = connection.$connection;
+export const $isWebSocketConnected = connection.$isConnected;
+export const $isWebSocketEnabled = connection.$isEnabled;
+// Another tab or device of the same tutor holds the connection; this tab waits to be taken back.
+export const $elsewhere = connection.$elsewhere;
 
-export const $isWebSocketEnabled = createStore(true);
-
-const $isReconnectScheduled = createStore(false);
-// patronum `delay` cannot be cancelled. Every explicit connect/disconnect bumps
-// the generation, and a fired reconnect is honored only if its generation is
-// still current — otherwise logout + login inside the delay opens a second socket.
-const $reconnectGeneration = createStore(0);
-
-// Store setters
-export const setWebSocketConnection = createEvent<WebSocket | null>();
-
-// Logic
+// Only a tab with a tutor session follows the tutor token (the student cabinet and public pages
+// of the same browser stay as they are).
 sample({
-  clock: setWebSocketConnection,
-  target: $webSocketConnection,
+  clock: tokenStorageChanged,
+  source: connection.$isEnabled,
+  filter: Boolean,
+  fn: () => undefined,
+  target: hasTutorTokenFx,
+});
+sample({
+  clock: hasTutorTokenFx.doneData,
+  filter: Boolean,
+  fn: () => undefined,
+  target: connection.tokenRenewed,
+});
+sample({
+  clock: hasTutorTokenFx.doneData,
+  filter: (hasToken) => !hasToken,
+  fn: () => undefined,
+  target: tutorSessionEndedElsewhere,
+});
+sample({ clock: tutorSessionEndedElsewhere, target: expireSessionFx });
+sample({
+  clock: [changePasswordModel.persistTokenFx.done, changeEmailModel.persistTokenFx.done],
+  fn: () => undefined,
+  target: connection.tokenRenewedHere,
 });
 
-sample({
-  clock: connectWebSocket,
-  fn: () => true,
-  target: $isWebSocketEnabled,
-});
-
-sample({
-  clock: disconnectWebSocket,
-  fn: () => false,
-  target: $isWebSocketEnabled,
-});
-
-sample({
-  clock: connectWebSocket,
-  target: connectWebSocketFx,
-});
-
-sample({
-  clock: disconnectWebSocket,
-  source: $webSocketConnection,
-  target: disconnectWebSocketFx,
-});
-// Handle lesson status updates from WebSocket
 // The server already saved the status; refetch the lesson instead of writing it back.
 sample({
   clock: handleLessonStatusUpdate,
   fn: ({ lessonId }) => lessonId,
   target: lessonModel.syncLessonFx,
-});
-
-// Reconnect after WS_RECONNECT_DELAY_MS if WebSocket is still enabled.
-// Close events arriving while a reconnect is already scheduled are collapsed.
-sample({
-  clock: [connectWebSocket, disconnectWebSocket],
-  source: $reconnectGeneration,
-  fn: (generation) => generation + 1,
-  target: $reconnectGeneration,
-});
-
-sample({
-  clock: [connectWebSocket, disconnectWebSocket],
-  fn: () => false,
-  target: $isReconnectScheduled,
-});
-
-const reconnectScheduled = sample({
-  clock: webSocketClosed,
-  source: {
-    isEnabled: $isWebSocketEnabled,
-    isScheduled: $isReconnectScheduled,
-    generation: $reconnectGeneration,
-  },
-  filter: ({ isEnabled, isScheduled }) => isEnabled && !isScheduled,
-  fn: ({ generation }) => generation,
-});
-
-sample({
-  clock: reconnectScheduled,
-  fn: () => true,
-  target: $isReconnectScheduled,
-});
-
-const reconnectDelayPassed = delay({ source: reconnectScheduled, timeout: WS_RECONNECT_DELAY_MS });
-
-sample({
-  clock: reconnectDelayPassed,
-  source: { isEnabled: $isWebSocketEnabled, generation: $reconnectGeneration },
-  filter: ({ isEnabled, generation }, scheduledGeneration) =>
-    isEnabled && generation === scheduledGeneration,
-  fn: () => undefined,
-  target: connectWebSocket,
 });
