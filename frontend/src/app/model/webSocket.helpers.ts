@@ -22,13 +22,6 @@ export const dispatchTutorMessage = (
   if (lessonStatus) onLessonStatus(lessonStatus);
 };
 
-// Another tab changed the stored token: follow a new one, or log out with the holder tab.
-export const followStoredTutorToken = (): boolean => {
-  if (getTutorToken()) return true;
-  expireTutorSession();
-  return false;
-};
-
 // A socket closed for a revoked token reconnects only if this tab got a new token meanwhile;
 // otherwise the session is over.
 export const resumeTutorSession = (revokedToken: string | null): boolean => {

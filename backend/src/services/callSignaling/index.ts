@@ -1,1 +1,2 @@
-export { hasActiveCall, processCallSignal, terminateActiveCallForParticipant } from "./callFlow";
+export { hasCallHeldByConnection, isCallAwaitingReturnOf, processCallSignal } from "./callFlow";
+export { participantDisconnected, participantRevoked } from "./callReconnect";

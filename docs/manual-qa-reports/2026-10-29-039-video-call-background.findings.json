@@ -1,0 +1,422 @@
+{
+  "schema_version": 1,
+  "branch": "039-video-call-background",
+  "feature_id": "039-video-call-background",
+  "spec_path": "specs/039-video-call-background/spec.md",
+  "base_url": "http://localhost:32770",
+  "run_at": "2026-10-29T11:20:00Z",
+  "autofix_enabled": true,
+  "report_path": "docs/manual-qa-reports/2026-10-29-039-video-call-background.md",
+  "readiness": "yellow",
+  "coverage": {
+    "total": 35,
+    "passed": 28,
+    "failed": 4,
+    "warned": 3,
+    "scenarios": [
+      {
+        "id": "P1.1",
+        "title": "Ученик (iPhone) свернул → у преподавателя «Ученик свернул приложение» ≤5 с",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.2",
+        "title": "Преподаватель (iPhone) свернул → у ученика только нейтральные статусы",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.3",
+        "title": "Возврат → подписи пропадают ≤3–5 с",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.4",
+        "title": "Потеря сокета → «Восстанавливаем связь…», автопереподключение",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.5",
+        "title": "Ожидание 3 мин истекло → «Собеседник не вернулся в звонок», длительность до обрыва",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.6",
+        "title": "Собеседник завершил во время ожидания → «Звонок завершён» у вернувшегося",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.7",
+        "title": "Ручное выключение микрофона/камеры сохраняется после возврата",
+        "priority": "P1",
+        "status": "warn",
+        "finding_ids": [
+          2
+        ]
+      },
+      {
+        "id": "P1.8",
+        "title": "Перезагрузка страницы в звонке → звонок восстановлен",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "P1.9",
+        "title": "Ожидающая вкладка сама забирает звонок (FR-008)",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.10",
+        "title": "Android свернул → без индикатора микрофона",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.11",
+        "title": "iPhone свернул → «Микрофон ученика приостановлен…», в т.ч. во весь экран",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.12",
+        "title": "Подсказка FR-012 на iPhone один раз",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.13",
+        "title": "«Нажмите, чтобы продолжить звонок» — одно нажатие возобновляет звук и видео",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "P1.14",
+        "title": "Голос собеседника через отдельный <audio> (FR-009)",
+        "priority": "P1",
+        "status": "fail",
+        "finding_ids": [
+          1
+        ]
+      },
+      {
+        "id": "P1.15",
+        "title": "Десктоп свернул вкладку → статусов нет (FR-033)",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.16",
+        "title": "Push о входящем при закрытом приложении, у звонящего «Вызываем…»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.17",
+        "title": "Открытие по уведомлению → экран входящего, «Принять» соединяет",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.18",
+        "title": "Отмена → «Пропущенный звонок от …»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.19",
+        "title": "Устаревшее уведомление → «Звонок уже завершён»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.20",
+        "title": "Нет подписки и приложения → «Ученик сейчас не в сети»",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.21",
+        "title": "Приложение на экране → push нет; в фоне → push и экран входящего",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P1.22",
+        "title": "Ответ на одном устройстве → call_closed остальным",
+        "priority": "P1",
+        "status": "pass"
+      },
+      {
+        "id": "P2.1",
+        "title": "Карточка-приглашение в кабинете (Android)",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.2",
+        "title": "Включение уведомлений учеником",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.3",
+        "title": "Запрет уведомлений → справка без повторного диалога",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.4",
+        "title": "iPhone Safari → инструкция установки",
+        "priority": "P2",
+        "status": "pass",
+        "finding_ids": [
+          4
+        ]
+      },
+      {
+        "id": "P2.5",
+        "title": "Выход ученика удаляет подписку",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.6",
+        "title": "Переключатель преподавателя и правила подписки (FR-021)",
+        "priority": "P2",
+        "status": "pass"
+      },
+      {
+        "id": "P2.7",
+        "title": "Ключи VAPID не настроены → уведомления скрыты (FR-025)",
+        "priority": "P2",
+        "status": "fail",
+        "finding_ids": [
+          3
+        ]
+      },
+      {
+        "id": "P2.8",
+        "title": "Преподаватель включает звонки при запрещённых уведомлениях",
+        "priority": "P2",
+        "status": "pass",
+        "finding_ids": [
+          5
+        ]
+      },
+      {
+        "id": "P3.1",
+        "title": "Картинка в картинке (US6)",
+        "priority": "P3",
+        "status": "warn"
+      },
+      {
+        "id": "E1",
+        "title": "Адресат потерял связь во время вызова, есть подписка → вызов идёт, push",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E2",
+        "title": "Выход в другой вкладке во время звонка → звонок завершён сразу",
+        "priority": "Edge",
+        "status": "pass"
+      },
+      {
+        "id": "E3",
+        "title": "Второе устройство в состоянии «открыто в другой вкладке» после закрытия держателя",
+        "priority": "Edge",
+        "status": "warn"
+      },
+      {
+        "id": "E4",
+        "title": "Smoke звонков фичи 030",
+        "priority": "Smoke",
+        "status": "pass"
+      }
+    ]
+  },
+  "summary": {
+    "total_findings": 5,
+    "by_severity": {
+      "critical": 1,
+      "high": 0,
+      "medium": 0,
+      "low": 4
+    },
+    "by_category": {
+      "spec-mismatch": 1,
+      "bug": 2,
+      "ux": 1,
+      "improvement": 1
+    },
+    "unambiguous_fix_count": 2
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "Голос собеседника не воспроизводится в Chromium: <audio> получает пустой поток и не подхватывает добавленные позже треки",
+      "category": "bug",
+      "severity": "critical",
+      "scenario_id": "P1.14",
+      "file": "frontend/src/features/videoCall/model/peerAudio.helpers.ts",
+      "line_hint": 20,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/13-student-after-continue-click.png"
+      ],
+      "expected": "Голос собеседника играет через отдельный <audio>; плашка «Нажмите, чтобы продолжить звонок» пропадает после нажатия",
+      "actual": "У <audio> readyState 0, play() не завершается, все <video> muted — собеседника не слышно; плашка после перезагрузки не уходит",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/videoCall/model/peerAudio.helpers.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/videoCall/model/__tests__/peerAudio.model.test.ts"
+      ],
+      "autofix_note": "Новый MediaStream при появлении нового аудиотрека; проверено вживую на :3150 и пересобранном QA-стеке :32771: readyState 4 у обеих сторон в новом звонке и после перезагрузки, плашка не появляется. Ветка с запретом автозапуска — юнит-тестами и на устройстве",
+      "console_excerpt": "audio { readyState: 0, paused: false }, play() pending; после srcObject=null; srcObject=s → resolved, readyState 4",
+      "network_excerpt": null,
+      "fix_suggestion": "В syncPeerAudioStream возвращать новый MediaStream (прежние треки + новый), а не addTrack в уже назначенный srcObject"
+    },
+    {
+      "id": 2,
+      "title": "При вручную выключенном микрофоне свернувшийся ученик на iPhone показывается как «Микрофон ученика приостановлен — ученик свернул приложение»",
+      "category": "spec-mismatch",
+      "severity": "low",
+      "scenario_id": "P1.7",
+      "file": "frontend/src/features/videoCall/model/peerView.helpers.ts",
+      "line_hint": 23,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/08-tutor-student-minimized-with-mic-off.png"
+      ],
+      "expected": "FR-011: ручное выключение микрофона показывается как раньше (красный значок)",
+      "actual": "Красный значок заменяется янтарной плашкой о приостановке системой",
+      "unambiguous_fix": false,
+      "autofix_status": "wont_fix",
+      "autofix_files_modified": null,
+      "autofix_tests_added": null,
+      "autofix_note": "Решение владельца: оставить как есть — янтарная плашка заменяет красный значок и при ручном выключении микрофона, как в макете; записано в specs/039-video-call-background/research.md (R4)",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Не показывать getPeerAudioNotice при peerMediaState.micOn === false (или не ставить audioSuspended при ручном выключении)"
+    },
+    {
+      "id": 3,
+      "title": "Уведомления о звонках предлагаются, когда на сервере ключи VAPID заданы пустыми",
+      "category": "bug",
+      "severity": "low",
+      "scenario_id": "P2.7",
+      "file": "frontend/src/entities/notifications/notifications.model.ts",
+      "line_hint": 55,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/39-tutor-settings-no-vapid.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/40-student-settings-no-vapid.png"
+      ],
+      "expected": "FR-025: при ненастроенных ключах подписка и уведомления о звонках скрыты",
+      "actual": "GET /api/push/vapid-key → {vapidPublicKey: \"\", configured: false}; фронт считает \"\" ключом и показывает карточки и переключатели",
+      "unambiguous_fix": true,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/entities/notifications/notifications.helpers.ts",
+        "frontend/src/entities/notifications/notifications.model.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/entities/notifications/__tests__/notifications.model.test.ts",
+        "frontend/src/entities/notifications/__tests__/notifications.helpers.test.ts"
+      ],
+      "autofix_note": "toVapidKey: ключ только при configured && vapidPublicKey; проверено вживую с пустыми VAPID_*",
+      "console_excerpt": null,
+      "network_excerpt": "GET /api/push/vapid-key 200 {\"vapidPublicKey\":\"\",\"configured\":false}",
+      "fix_suggestion": "loadVapidKeyFx: configured && vapidPublicKey ? vapidPublicKey : null"
+    },
+    {
+      "id": 4,
+      "title": "На iPhone в Safari в кабинете ученика две подсказки об установке на экран «Домой»",
+      "category": "ux",
+      "severity": "low",
+      "scenario_id": "P2.4",
+      "file": "frontend/src/features/callNotifications/ui/CallNotificationsCard/CallNotificationsCard.tsx",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/01-student-cabinet-iphone-safari.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/43-after-decision-student-cabinet-iphone-one-hint.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/44-after-decision-card-closed-banner-back.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/45-after-decision-settings-iphone-one-hint.png"
+      ],
+      "expected": "Одна инструкция по установке",
+      "actual": "Карточка 039 сверху и старый баннер установки PWA снизу с почти одинаковым текстом",
+      "unambiguous_fix": false,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/features/callNotifications/model/callNotifications.model.ts",
+        "frontend/src/features/callNotifications/model/callNotifications.helpers.ts",
+        "frontend/src/features/callNotifications/model/callNotifications.types.ts",
+        "frontend/src/features/callNotifications/ui/CallNotificationsCard/CallNotificationsCard.tsx",
+        "frontend/src/features/callNotifications/ui/CallNotificationsCard/CallNotificationsCard.helpers.ts",
+        "frontend/src/features/callNotifications/ui/CallNotificationsSection/CallNotificationsSection.tsx",
+        "frontend/src/app/model/appInit.model.ts",
+        "frontend/src/app/components/InstallPrompt/InstallPrompt.tsx"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/app/components/InstallPrompt/__tests__/InstallPrompt.test.tsx",
+        "frontend/src/features/callNotifications/model/__tests__/callNotifications.model.test.ts",
+        "frontend/src/features/callNotifications/model/__tests__/callNotifications.helpers.test.ts"
+      ],
+      "autofix_note": "Решение владельца: старый баннер установки прячется, пока кабинет ученика показывает свою инструкцию (карточка-приглашение или раздел настроек); условие в callNotificationsModel.$isInstallInstructionShown, баннер берёт appInitModel.$isIosInstallHintVisible. Проверено вживую на QA-стеке :32772 (эмуляция iPhone Safari)",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Скрывать старый баннер установки в кабинете ученика, пока видна карточка уведомлений о звонках"
+    },
+    {
+      "id": 5,
+      "title": "Преподавателю при запрещённых уведомлениях не объясняют, как их разрешить",
+      "category": "improvement",
+      "severity": "low",
+      "scenario_id": "P2.8",
+      "file": "frontend/src/features/notificationSettings/ui/CallNotificationSettings/CallNotificationSettings.tsx",
+      "line_hint": null,
+      "screenshots": [
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/21-tutor-toggle-call-notifications-headless.png",
+        "docs/manual-qa-reports/2026-10-29-039-video-call-background/screenshots/46-after-decision-tutor-calls-denied-help.png"
+      ],
+      "expected": "Как у ученика (US4-AS3): сообщение о запрете и как разрешить",
+      "actual": "Только тост «Не удалось подписаться на уведомления», переключатель остаётся выключенным",
+      "unambiguous_fix": false,
+      "autofix_status": "fixed",
+      "autofix_files_modified": [
+        "frontend/src/shared/ui/PermissionDeniedHelp/PermissionDeniedHelp.tsx",
+        "frontend/src/shared/ui/PermissionDeniedHelp/PermissionDeniedHelp.constants.ts",
+        "frontend/src/shared/ui/PermissionDeniedHelp/PermissionDeniedHelp.styled.ts",
+        "frontend/src/shared/ui/index.ts",
+        "frontend/src/features/callNotifications/callNotifications.constants.ts",
+        "frontend/src/features/notificationSettings/ui/CallNotificationSettings/CallNotificationSettings.tsx",
+        "frontend/src/features/notificationSettings/ui/CallNotificationSettings/CallNotificationSettings.styled.ts",
+        "frontend/src/entities/notifications/notifications.model.ts",
+        "frontend/src/entities/notifications/notifications.helpers.ts",
+        "frontend/src/app/model/appInit.model.ts"
+      ],
+      "autofix_tests_added": [
+        "frontend/src/features/notificationSettings/ui/CallNotificationSettings/__tests__/CallNotificationSettings.test.tsx",
+        "frontend/src/entities/notifications/__tests__/notifications.model.test.ts",
+        "frontend/src/app/model/__tests__/appInit.model.test.ts",
+        "frontend/src/shared/ui/PermissionDeniedHelp/__tests__/PermissionDeniedHelp.test.tsx"
+      ],
+      "autofix_note": "Решение владельца: PermissionDeniedHelp перенесён в shared/ui и показывается в карточке «Звонки» при $isPushPermissionDenied; разрешение перечитывается после неудачной подписки и при возврате в приложение. Проверено вживую на QA-стеке :32772",
+      "console_excerpt": null,
+      "network_excerpt": null,
+      "fix_suggestion": "Показывать PermissionDeniedHelp из features/callNotifications в карточке «Звонки» при Notification.permission === \"denied\""
+    }
+  ]
+}

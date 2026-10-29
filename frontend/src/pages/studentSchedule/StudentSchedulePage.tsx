@@ -11,6 +11,7 @@ import {
   CallNotificationsCard,
   StudentLessonDialog,
   StudentWeeklyView,
+  callNotificationsModel,
   formatRangeLabel,
   studentScheduleModel,
 } from "@features";
@@ -19,6 +20,7 @@ import * as Styled from "./StudentSchedulePage.styled";
 
 export const StudentSchedulePage: FC = () => {
   useGate(studentScheduleModel.StudentSchedulePageGate);
+  useGate(callNotificationsModel.CabinetGate);
   const weekStart = useUnit(studentScheduleModel.$weekStart);
   const lessons = useUnit(studentScheduleModel.$lessons);
   const loadError = useUnit(studentScheduleModel.$loadError);

@@ -5,19 +5,12 @@ import { notificationsModel } from "@shared";
 import { CONNECTION_FAILED_TEXT, RENEGOTIATION_FAILED_TEXT } from "./call.constants";
 import { hasCallId, isCallAddress } from "./call.helpers";
 import * as callModel from "./call.model";
-import type { AcceptedCall, AddressedSignal, LocalMediaReady, OfferParams } from "./call.types";
+import type { AddressedSignal, LocalMediaParams, LocalMediaReady, OfferParams } from "./call.types";
 import * as callTransportModel from "./callTransport.model";
 import * as currentCallModel from "./currentCall.model";
 import * as peerConnectionModel from "./peerConnection.model";
 import { toMediaStateMessage } from "./transport.helpers";
 import { getSession } from "./webrtc.helpers";
-
-const callAcceptedReceivedFx = createEffect<AcceptedCall, void>(
-  async ({ callId, role, iceServers }) => {
-    await peerConnectionModel.addLocalMediaFx({ callId, role, iceServers, polite: false });
-    await peerConnectionModel.sendOfferFx(callId);
-  }
-);
 
 const offerReceivedFx = createEffect<OfferParams, void>(
   async ({ callId, role, sdp, iceServers }) => {
@@ -37,12 +30,12 @@ const recoverNegotiationFx = createEffect(async (callId: string): Promise<void> 
 const acceptedCall = sample({
   clock: callModel.callAcceptedReceived,
   source: callModel.$callRole,
-  fn: (role, target): AcceptedCall | null => (role ? { ...target, role } : null),
+  fn: (role, target): LocalMediaParams | null => (role ? { ...target, role, polite: false } : null),
 });
 sample({
   clock: acceptedCall,
-  filter: (call): call is AcceptedCall => call !== null,
-  target: callAcceptedReceivedFx,
+  filter: (call): call is LocalMediaParams => call !== null,
+  target: peerConnectionModel.sendFirstOfferFx,
 });
 const offerToAnswer = sample({
   clock: callModel.offerReceived,

@@ -17,6 +17,8 @@ export type CreateCallRecordArgs = {
   status: CallStatus;
   startedAt: Date;
   connectedAt?: Date;
+  // When the call really ended, if not now: a participant who never came back left at this moment.
+  endedAt?: Date;
   lessonId: string | null;
 };
 

@@ -6,14 +6,17 @@ import { FullscreenBottomBar } from "./FullscreenBottomBar";
 import { useControlsFocus } from "./FullscreenControls.hooks";
 import * as Styled from "./FullscreenControls.styled";
 import { FullscreenTopBar } from "./FullscreenTopBar";
-import { callFullscreenModel, callModel } from "../../model";
-import { CALL_CONTROLS_ATTR, CONNECTING_TEXT } from "../../videoCall.constants";
+import { callBannerModel, callFullscreenModel, peerViewModel } from "../../model";
+import { CALL_CONTROLS_ATTR } from "../../videoCall.constants";
 import { CallStatusBanner } from "../CallStatusBanner";
+import { PeerAudioNotice } from "../PeerAudioNotice";
 
-// The layer itself lets pointers through to the video; only the bars catch them.
+// The layer itself lets pointers through to the video; only the bars catch them. The statuses stay
+// shown while the bars are hidden, as on the tile.
 export const FullscreenControls: FC = () => {
   const visible = useUnit(callFullscreenModel.$controlsVisible);
-  const isConnecting = useUnit(callModel.$isConnecting);
+  const bannerText = useUnit(callBannerModel.$callBannerText);
+  const audioNotice = useUnit(peerViewModel.$peerAudioNotice);
   const focusHandlers = useControlsFocus();
 
   return (
@@ -24,9 +27,14 @@ export const FullscreenControls: FC = () => {
       {...focusHandlers}
     >
       <FullscreenTopBar />
-      {isConnecting && (
+      {audioNotice && (
+        <Styled.NoticeSlot>
+          <PeerAudioNotice />
+        </Styled.NoticeSlot>
+      )}
+      {bannerText && (
         <Styled.BannerSlot>
-          <CallStatusBanner text={CONNECTING_TEXT} />
+          <CallStatusBanner text={bannerText} />
         </Styled.BannerSlot>
       )}
       <FullscreenBottomBar />

@@ -48,6 +48,7 @@ describe("reminder settings integration tests", () => {
         enabled: false,
         intervals: [],
         muteWhenInLesson: false,
+        callNotificationsEnabled: true,
       });
 
       // Verify record was created in DB
@@ -76,6 +77,7 @@ describe("reminder settings integration tests", () => {
         enabled: true,
         intervals: [5, 30],
         muteWhenInLesson: true,
+        callNotificationsEnabled: true,
       });
     });
 
@@ -99,6 +101,7 @@ describe("reminder settings integration tests", () => {
           enabled: false,
           intervals: [],
           muteWhenInLesson: false,
+          callNotificationsEnabled: true,
         });
       }
 
@@ -134,6 +137,7 @@ describe("reminder settings integration tests", () => {
         enabled: true,
         intervals: [5, 15, 30],
         muteWhenInLesson: true,
+        callNotificationsEnabled: true,
       });
     });
 
@@ -228,5 +232,54 @@ describe("reminder settings integration tests", () => {
       expect(res.body.enabled).toBe(true);
       expect(res.body.intervals).toEqual([15]);
     });
+
+    it("should turn call notifications off without touching reminders", async () => {
+      await prisma.reminderSettings.create({
+        data: { userId, enabled: true, intervals: [5, 30], muteWhenInLesson: false },
+      });
+
+      const res = await request(app)
+        .put("/api/reminder-settings")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ callNotificationsEnabled: false })
+        .expect(200);
+
+      expect(res.body).toEqual({
+        enabled: true,
+        intervals: [5, 30],
+        muteWhenInLesson: false,
+        callNotificationsEnabled: false,
+      });
+      const stored = await prisma.reminderSettings.findUniqueOrThrow({ where: { userId } });
+      expect(stored.callNotificationsEnabled).toBe(false);
+      expect(stored.enabled).toBe(true);
+    });
+
+    it("should keep call notifications unchanged when the field is omitted", async () => {
+      await prisma.reminderSettings.create({
+        data: { userId, enabled: false, intervals: [], callNotificationsEnabled: false },
+      });
+
+      const res = await request(app)
+        .put("/api/reminder-settings")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ muteWhenInLesson: true })
+        .expect(200);
+
+      expect(res.body.callNotificationsEnabled).toBe(false);
+    });
+
+    it.each([["true"], [1], [null]])(
+      "should return 400 when callNotificationsEnabled is %p",
+      async (value) => {
+        const res = await request(app)
+          .put("/api/reminder-settings")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ callNotificationsEnabled: value })
+          .expect(400);
+
+        expect(res.body.error).toBe("Некорректное значение настройки уведомлений о звонках");
+      }
+    );
   });
 });

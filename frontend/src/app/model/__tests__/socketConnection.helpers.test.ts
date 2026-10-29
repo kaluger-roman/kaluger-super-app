@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildSocketUrl,
+  isTakenElsewhere,
   parseSocketMessage,
   toControlMessage,
   toSocketClose,
@@ -62,17 +63,39 @@ describe("app/model/socketConnection.helpers toControlMessage", () => {
   });
 });
 
+describe("app/model/socketConnection.helpers isTakenElsewhere", () => {
+  it("should see the connection taken elsewhere only on the held-elsewhere close", () => {
+    expect(isTakenElsewhere(closeWith(4000))).toBe(true);
+    expect(isTakenElsewhere(closeWith(1006))).toBe(false);
+    expect(isTakenElsewhere(closeWith(4004))).toBe(false);
+  });
+});
+
 describe("app/model/socketConnection.helpers toSocketClose", () => {
   it("should map close codes to what the tab does next", () => {
     expect(toSocketClose(closeWith(4000), REVOKED, null)).toEqual({
       revokedToken: null,
       elsewhere: "tab",
       callEnded: false,
+      holderGone: false,
     });
     expect(toSocketClose(closeWith(4003), REVOKED, null)).toEqual({
       revokedToken: null,
       elsewhere: null,
       callEnded: true,
+      holderGone: false,
+    });
+    expect(toSocketClose(closeWith(4004), REVOKED, null)).toEqual({
+      revokedToken: null,
+      elsewhere: null,
+      callEnded: true,
+      holderGone: true,
+    });
+    expect(toSocketClose(closeWith(4004), REVOKED, "call")).toEqual({
+      revokedToken: null,
+      elsewhere: "call",
+      callEnded: true,
+      holderGone: true,
     });
     expect(toSocketClose(closeWith(4001), REVOKED, null).revokedToken).toBe("t-1");
     expect(toSocketClose(closeWith(4001), new Set(), null).revokedToken).toBeNull();
@@ -80,6 +103,7 @@ describe("app/model/socketConnection.helpers toSocketClose", () => {
       revokedToken: null,
       elsewhere: null,
       callEnded: false,
+      holderGone: false,
     });
   });
 
@@ -89,12 +113,14 @@ describe("app/model/socketConnection.helpers toSocketClose", () => {
       revokedToken: null,
       elsewhere: "call",
       callEnded: true,
+      holderGone: false,
     });
     expect(toSocketClose(closeWith(4000), REVOKED, "call").elsewhere).toBe("tab");
     expect(toSocketClose(closeWith(4001), REVOKED, "call")).toEqual({
       revokedToken: "t-1",
       elsewhere: null,
       callEnded: false,
+      holderGone: false,
     });
   });
 });

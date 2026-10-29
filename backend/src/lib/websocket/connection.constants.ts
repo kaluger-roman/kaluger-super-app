@@ -5,6 +5,12 @@ export const REPLACED_CLOSE_CODE = 4000;
 export const TOKEN_REVOKED_CLOSE_CODE = 4001;
 // Sent to the sockets that waited for the user's call in another tab to end.
 export const CALL_ENDED_CLOSE_CODE = 4003;
+// Sent to the waiting sockets when the socket holding the call is gone but the call is kept for
+// its return: one of them may take the connection and the call at once.
+export const HOLDER_GONE_CLOSE_CODE = 4004;
+// A tab asking for the connection during a call makes the server check the holder at once
+// instead of trusting a socket that may have died with a sleeping phone.
+export const HOLDER_PROBE_TIMEOUT_MS = 5000;
 // A client that never answers the close frame would otherwise hold the socket for ws's 30 s.
 export const REVOKED_SOCKET_TERMINATE_MS = 1000;
 

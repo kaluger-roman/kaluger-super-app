@@ -1,15 +1,17 @@
-import { EventEmitter } from "events";
 import { createServer } from "http";
 import { WebSocket } from "ws";
 
 import { authenticateWebSocket } from "../auth";
 import { handleMessage } from "../messageHandler";
 import {
-  hasActiveCall,
+  hasCallHeldByConnection,
+  participantDisconnected,
+  participantRevoked,
   processCallSignal,
-  terminateActiveCallForParticipant,
 } from "../../../services/callSignaling";
 import { WebSocketManager } from "../webSocketManager";
+import { connectSocket, makeSocket } from "./wsManagerHarness";
+import type { SocketStub } from "./wsManagerHarness";
 
 jest.mock("../auth", () => ({
   authenticateWebSocket: jest.fn(),
@@ -28,50 +30,30 @@ jest.mock("../messageHandler", () => ({
 }));
 
 jest.mock("../../../services/callSignaling", () => ({
-  hasActiveCall: jest.fn(() => false),
+  hasCallHeldByConnection: jest.fn(() => false),
+  isCallAwaitingReturnOf: jest.fn(() => false),
+  participantDisconnected: jest.fn(async () => undefined),
+  participantRevoked: jest.fn(async () => undefined),
   processCallSignal: jest.fn(async () => undefined),
-  terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
-
-type SocketStub = EventEmitter & {
-  readyState: number;
-  close: jest.Mock;
-  send: jest.Mock;
-  terminate: jest.Mock;
-};
-
-const makeSocket = (): SocketStub => {
-  const emitter = new EventEmitter() as SocketStub;
-  emitter.readyState = WebSocket.OPEN;
-  emitter.close = jest.fn();
-  emitter.send = jest.fn();
-  emitter.terminate = jest.fn();
-  return emitter;
-};
 
 const inviteMessage = Buffer.from(
   JSON.stringify({ type: "call_invite", inviteId: "invite-1", lessonId: "lesson-1" })
 );
 const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 
-type ConnectionHandlers = {
-  handleConnection: (ws: unknown, request: unknown) => Promise<void>;
-  handleStudentConnection: (ws: unknown, request: unknown) => Promise<void>;
-};
-
 describe("WebSocketManager call lifecycle", () => {
   let server: ReturnType<typeof createServer>;
   let manager: WebSocketManager;
 
-  const connectStudent = (ws: SocketStub, request: { url?: string } = {}) =>
-    (manager as unknown as ConnectionHandlers).handleStudentConnection.call(manager, ws, request);
-  const connectTutor = (ws: SocketStub, request: { url?: string } = {}) =>
-    (manager as unknown as ConnectionHandlers).handleConnection.call(manager, ws, request);
-  const resumeRequest = { url: "/ws?token=t&resume=1" };
+  const connectStudent = (ws: SocketStub, url?: string) =>
+    connectSocket(manager, "student", ws, url);
+  const connectTutor = (ws: SocketStub, url?: string) => connectSocket(manager, "tutor", ws, url);
+  const resumeUrl = "/ws?token=t&resume=1";
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(hasActiveCall).mockReturnValue(false);
+    jest.mocked(hasCallHeldByConnection).mockReturnValue(false);
     jest.spyOn(console, "log").mockImplementation(() => undefined);
     jest.spyOn(console, "error").mockImplementation(() => undefined);
     (authenticateWebSocket as jest.Mock).mockResolvedValue({ userId: "tutor-1", email: "t@e.com" });
@@ -84,27 +66,35 @@ describe("WebSocketManager call lifecycle", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  it("should end the student's call once when the socket errors and then closes", async () => {
+  it("should report the student gone once, without ending its call, when the socket errors and then closes", async () => {
     const ws = makeSocket();
     await connectStudent(ws);
 
     ws.emit("error", new Error("boom"));
     ws.emit("close");
 
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledTimes(1);
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("student", "student-1");
+    expect(participantDisconnected).toHaveBeenCalledTimes(1);
+    expect(participantDisconnected).toHaveBeenCalledWith(
+      { kind: "student", id: "student-1" },
+      undefined
+    );
+    expect(participantRevoked).not.toHaveBeenCalled();
   });
 
-  it("should end the tutor's call when the tutor socket errors", async () => {
+  it("should report the tutor gone, without ending its call, when the tutor socket errors", async () => {
     const ws = makeSocket();
     await connectTutor(ws);
 
     ws.emit("error", new Error("boom"));
 
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("tutor", "tutor-1");
+    expect(participantDisconnected).toHaveBeenCalledWith(
+      { kind: "tutor", id: "tutor-1" },
+      undefined
+    );
+    expect(participantRevoked).not.toHaveBeenCalled();
   });
 
-  it("should end the call of a replaced student socket but not on its late close", async () => {
+  it("should keep the call when a newer socket replaces the student's one, also on its late close", async () => {
     const first = makeSocket();
     const second = makeSocket();
     await connectStudent(first);
@@ -112,7 +102,8 @@ describe("WebSocketManager call lifecycle", () => {
     await connectStudent(second);
     first.emit("close");
 
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledTimes(1);
+    expect(participantRevoked).not.toHaveBeenCalled();
+    expect(participantDisconnected).not.toHaveBeenCalled();
     expect(manager.getConnectedStudents()).toContain("student-1");
   });
 
@@ -137,7 +128,7 @@ describe("WebSocketManager call lifecycle", () => {
       manager.disconnectUser("tutor-1");
 
       expect(ws.close).toHaveBeenCalledWith(4001, "Token revoked");
-      expect(terminateActiveCallForParticipant).toHaveBeenCalledWith("tutor", "tutor-1");
+      expect(participantRevoked).toHaveBeenCalledWith({ kind: "tutor", id: "tutor-1" });
       expect(manager.getConnection("tutor", "tutor-1")).toBeUndefined();
 
       ws.emit("message", inviteMessage);
@@ -157,7 +148,22 @@ describe("WebSocketManager call lifecycle", () => {
     manager.disconnectUser("tutor-1");
     ws.emit("close");
 
-    expect(terminateActiveCallForParticipant).toHaveBeenCalledTimes(1);
+    expect(participantRevoked).toHaveBeenCalledTimes(1);
+    expect(participantDisconnected).not.toHaveBeenCalled();
+  });
+
+  it("should end the tutor's call on revoke also after its socket is gone", async () => {
+    const ws = makeSocket();
+    await connectTutor(ws);
+    ws.emit("close");
+
+    manager.disconnectUser("tutor-1");
+
+    expect(participantDisconnected).toHaveBeenCalledWith(
+      { kind: "tutor", id: "tutor-1" },
+      undefined
+    );
+    expect(participantRevoked).toHaveBeenCalledWith({ kind: "tutor", id: "tutor-1" });
   });
 
   it.each([["tutor", connectTutor] as const, ["student", connectStudent] as const])(
@@ -167,11 +173,11 @@ describe("WebSocketManager call lifecycle", () => {
       const resumed = makeSocket();
       await connect(live);
 
-      await connect(resumed, resumeRequest);
+      await connect(resumed, resumeUrl);
 
       expect(resumed.close).toHaveBeenCalledWith(4000, "Connection held by another tab");
       expect(live.close).not.toHaveBeenCalled();
-      expect(terminateActiveCallForParticipant).not.toHaveBeenCalled();
+      expect(participantRevoked).not.toHaveBeenCalled();
       const id = kind === "tutor" ? "tutor-1" : "student-1";
       expect(manager.getConnection(kind, id)).toBe(live);
       live.emit("message", inviteMessage);
@@ -188,7 +194,7 @@ describe("WebSocketManager call lifecycle", () => {
       stale.readyState = WebSocket.CLOSED;
       const resumed = makeSocket();
 
-      await connect(resumed, resumeRequest);
+      await connect(resumed, resumeUrl);
 
       expect(resumed.close).not.toHaveBeenCalled();
       expect(manager.getConnection(kind, kind === "tutor" ? "tutor-1" : "student-1")).toBe(resumed);
@@ -201,16 +207,17 @@ describe("WebSocketManager call lifecycle", () => {
       const live = makeSocket();
       const fresh = makeSocket();
       await connect(live);
-      jest.mocked(hasActiveCall).mockReturnValue(true);
+      jest.mocked(hasCallHeldByConnection).mockReturnValue(true);
 
-      await connect(fresh, { url: "/ws?token=t" });
+      await connect(fresh, "/ws?token=t");
 
       const id = kind === "tutor" ? "tutor-1" : "student-1";
-      expect(hasActiveCall).toHaveBeenCalledWith(kind, id);
+      expect(hasCallHeldByConnection).toHaveBeenCalledWith(kind, id);
       expect(fresh.close).not.toHaveBeenCalled();
       expect(fresh.send).toHaveBeenCalledWith(WAITING);
       expect(live.close).not.toHaveBeenCalled();
-      expect(terminateActiveCallForParticipant).not.toHaveBeenCalled();
+      expect(live.ping).toHaveBeenCalledTimes(1);
+      expect(participantRevoked).not.toHaveBeenCalled();
       expect(manager.getConnection(kind, id)).toBe(live);
       live.emit("message", inviteMessage);
       const routed = kind === "tutor" ? handleMessage : processCallSignal;
@@ -224,11 +231,11 @@ describe("WebSocketManager call lifecycle", () => {
       const live = makeSocket();
       const fresh = makeSocket();
       await connect(live);
-      jest.mocked(hasActiveCall).mockReturnValue(true);
-      await connect(makeSocket(), { url: "/ws?token=t" });
-      jest.mocked(hasActiveCall).mockReturnValue(false);
+      jest.mocked(hasCallHeldByConnection).mockReturnValue(true);
+      await connect(makeSocket(), "/ws?token=t");
+      jest.mocked(hasCallHeldByConnection).mockReturnValue(false);
 
-      await connect(fresh, { url: "/ws?token=t" });
+      await connect(fresh, "/ws?token=t");
 
       expect(live.close).toHaveBeenCalledWith(4000, "Replaced by newer connection");
       expect(manager.getConnection(kind, kind === "tutor" ? "tutor-1" : "student-1")).toBe(fresh);
@@ -240,7 +247,7 @@ describe("WebSocketManager call lifecycle", () => {
     const fresh = makeSocket();
     await connectTutor(live);
 
-    await connectTutor(fresh, { url: "/ws?token=t" });
+    await connectTutor(fresh, "/ws?token=t");
 
     expect(live.close).toHaveBeenCalledWith(4000, "Replaced by newer connection");
     expect(manager.getConnection("tutor", "tutor-1")).toBe(fresh);

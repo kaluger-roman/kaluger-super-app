@@ -1,26 +1,30 @@
 import type { FC } from "react";
-import { useState } from "react";
 
 import {
   Close as CloseIcon,
   NotificationsActive as NotificationsActiveIcon,
   NotificationsOff as NotificationsOffIcon,
 } from "@mui/icons-material";
+import { useGate, useUnit } from "effector-react";
 
-import { getCardTone, isInviteShown } from "./CallNotificationsCard.helpers";
+import { PermissionDeniedHelp } from "@shared";
+
+import { getCardTone } from "./CallNotificationsCard.helpers";
 import * as Styled from "./CallNotificationsCard.styled";
 import { DENIED_TITLE, ENABLE_LABEL, INVITE_TITLE } from "../../callNotifications.constants";
-import { getCallNotificationsStatusMock } from "../../callNotificationsMock.helpers";
+import { callNotificationsModel } from "../../model";
 import { IosInstallInstruction } from "../IosInstallInstruction";
-import { PermissionDeniedHelp } from "../PermissionDeniedHelp";
 
 export const CallNotificationsCard: FC = () => {
-  // TODO(auto-feature): replace mock with callNotificationsModel.$status
-  const status = getCallNotificationsStatusMock();
-  // TODO(auto-feature): replace with callNotificationsModel.$isInviteDismissed + inviteDismissed
-  const [dismissed, setDismissed] = useState(false);
+  useGate(callNotificationsModel.InviteCardGate);
+  const status = useUnit(callNotificationsModel.$status);
+  const shown = useUnit(callNotificationsModel.$isInviteShown);
+  const actions = useUnit({
+    enable: callNotificationsModel.enableClicked,
+    dismiss: callNotificationsModel.inviteDismissed,
+  });
 
-  if (dismissed || !isInviteShown(status)) return null;
+  if (!shown || status === null) return null;
 
   const tone = getCardTone(status);
 
@@ -34,15 +38,14 @@ export const CallNotificationsCard: FC = () => {
           {status === "denied" ? DENIED_TITLE : INVITE_TITLE}
         </Styled.Title>
         {status === "off" && (
-          // TODO(auto-feature): replace no-op with callNotificationsModel.enableClicked
-          <Styled.EnableButton variant="contained" onClick={() => undefined}>
+          <Styled.EnableButton variant="contained" onClick={() => actions.enable()}>
             {ENABLE_LABEL}
           </Styled.EnableButton>
         )}
         {status === "iosInstall" && <IosInstallInstruction />}
         {status === "denied" && <PermissionDeniedHelp />}
       </Styled.Content>
-      <Styled.CloseButton size="small" aria-label="Скрыть" onClick={() => setDismissed(true)}>
+      <Styled.CloseButton size="small" aria-label="Скрыть" onClick={() => actions.dismiss()}>
         <CloseIcon fontSize="small" />
       </Styled.CloseButton>
     </Styled.CardRoot>

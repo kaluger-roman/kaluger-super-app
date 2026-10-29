@@ -42,11 +42,17 @@ sample({
   target: [callHistoryModel.refreshRequested, lessonCallsModel.refreshRequested],
 });
 
-// Decide once: taking the call flips the phase, so later samples would see "incoming".
+// Decide once: taking the call flips the phase, so later samples would see "incoming". A repeated
+// call_incoming of the current call (a restored page, a second delivery) is neither taken nor
+// refused.
 const incomingDecided = sample({
   clock: signals.incoming,
   source: callContext,
-  fn: (context, signal) => ({ signal, take: canTakeIncoming(context) }),
+  fn: (context, signal) => ({
+    signal,
+    take: canTakeIncoming(context),
+    repeated: isCurrentCall(context, signal.message),
+  }),
 });
 
 sample({
@@ -68,7 +74,7 @@ sample({
 });
 sample({
   clock: incomingDecided,
-  filter: ({ take }) => !take,
+  filter: ({ take, repeated }) => !take && !repeated,
   fn: ({ signal: { message, role } }) => ({ callId: message.callId, role }),
   target: callModel.incomingWhileBusy,
 });

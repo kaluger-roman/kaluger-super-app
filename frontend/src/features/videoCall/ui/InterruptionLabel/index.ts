@@ -1,0 +1,1 @@
+export { InterruptionLabel } from "./InterruptionLabel";

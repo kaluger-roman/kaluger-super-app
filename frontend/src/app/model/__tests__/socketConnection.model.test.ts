@@ -2,12 +2,14 @@ import { allSettled, createEvent, createWatch, fork } from "effector";
 import type { Scope } from "effector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { callNotificationOpenModel, callPresenceModel, callResumeModel } from "@features/videoCall";
+
 import { createSocketConnection } from "../socketConnection.model";
 
 const RECONNECT_DELAY_MS = 1000;
 const CONNECTION_READY = JSON.stringify({ type: "connection_ready" });
 const CONNECTION_WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
-const PLAIN_CLOSE = { revokedToken: null, elsewhere: null, callEnded: false };
+const PLAIN_CLOSE = { revokedToken: null, elsewhere: null, callEnded: false, holderGone: false };
 
 class MockWebSocket {
   url: string;
@@ -37,6 +39,8 @@ let sockets: MockWebSocket[] = [];
 let token: string | null = "token-1";
 
 const resumed = createEvent();
+const online = createEvent();
+const openedForCall = createEvent();
 const dispatch = vi.fn();
 const canResume = vi.fn((_revokedToken: string | null) => true);
 const connection = createSocketConnection({
@@ -46,6 +50,8 @@ const connection = createSocketConnection({
   dispatch,
   reconnectDelayMs: RECONNECT_DELAY_MS,
   resumed,
+  online,
+  openedForCall,
   logLabel: "Test WS",
   revokedCloseCodes: new Set([4001]),
   canResume,
@@ -272,6 +278,26 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
     expect(scope.getState(connection.$elsewhere)).toBe("tab");
   });
 
+  it("should tell a refused reconnect from a registered socket another page replaced", async () => {
+    const scope = fork();
+    const taken: unknown[] = [];
+    createWatch({
+      unit: callResumeModel.transportTakenElsewhere,
+      fn: (value) => taken.push(value),
+      scope,
+    });
+    const first = await connectReady(scope);
+
+    await closeSocket(first, 4000);
+    await launch(() => allSettled(resumed, { scope }));
+    await closeSocket(sockets[1], 4000);
+
+    expect(taken).toEqual([
+      { role: "tutor", refused: false },
+      { role: "tutor", refused: true },
+    ]);
+  });
+
   it("should wait on the open socket while another tab is in a call and ask again once it ends", async () => {
     const scope = fork();
     await launch(() => allSettled(connection.connect, { scope }));
@@ -356,5 +382,182 @@ describe("app/model/socketConnection.model — held elsewhere", () => {
 
     expect(scope.getState(connection.$elsewhere)).toBeNull();
     expect(scope.getState(connection.$isConnected)).toBe(true);
+  });
+});
+
+describe("app/model/socketConnection.model — coming back (039)", () => {
+  it("should reconnect at once when the page comes back to a dropped socket", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+    await closeSocket(first, 1006);
+    expect(sockets).toHaveLength(1);
+
+    await launch(() => allSettled(resumed, { scope }));
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBe("1");
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS * 2);
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("should reconnect at once when the browser is online again", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+    await closeSocket(first, 1006);
+
+    await launch(() => allSettled(online, { scope }));
+
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("should not open a second socket when coming back to a connected one", async () => {
+    const scope = fork();
+    await connectReady(scope);
+
+    await launch(() => allSettled(resumed, { scope }));
+    await launch(() => allSettled(online, { scope }));
+
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("should not reconnect a disabled connection on coming back", async () => {
+    const scope = fork();
+    await connectReady(scope);
+    await launch(() => allSettled(connection.disconnect, { scope }));
+
+    await launch(() => allSettled(resumed, { scope }));
+
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("should reopen a socket that looks open but stopped answering", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+
+    await launch(() => allSettled(callResumeModel.transportStale, { scope, params: "tutor" }));
+
+    expect(first.close).toHaveBeenCalled();
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBe("1");
+    expect(sockets[1].query.get("tab")).toBe(first.query.get("tab"));
+  });
+
+  it("should reopen a dead socket without resume while a tapped notification waits for its call", async () => {
+    const scope = fork({ values: [[callNotificationOpenModel.$pendingNotificationCallId, "c-1"]] });
+    await connectReady(scope);
+
+    await launch(() => allSettled(callResumeModel.transportStale, { scope, params: "tutor" }));
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBeNull();
+  });
+
+  it("should leave the socket alone when the socket of the other role stopped answering", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+
+    await launch(() => allSettled(callResumeModel.transportStale, { scope, params: "student" }));
+
+    expect(first.close).not.toHaveBeenCalled();
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("should not force a reconnect of a tab waiting for a call elsewhere", async () => {
+    const scope = fork();
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await launch(() => allSettled(callResumeModel.transportStale, { scope, params: "tutor" }));
+
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("should ask for the connection at once when the holder of the call is gone (4004)", async () => {
+    const scope = fork();
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await closeSocket(sockets[0], 4004);
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBe("1");
+  });
+
+  it("should ask for the connection of a gone holder only once the hidden tab is looked at (regression: the hidden tab won and the visible one got «Использовать здесь»)", async () => {
+    const scope = fork({ values: [[callPresenceModel.$isVisible, false]] });
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await closeSocket(sockets[0], 4004);
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAY_MS);
+    await launch(() => allSettled(online, { scope }));
+
+    expect(sockets).toHaveLength(1);
+    expect(scope.getState(connection.$elsewhere)).toBe("call");
+
+    await launch(() => allSettled(resumed, { scope }));
+    await launch(() => allSettled(resumed, { scope }));
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBe("1");
+  });
+
+  it("should still ask at once when the call in another tab ended while hidden (4003)", async () => {
+    const scope = fork({ values: [[callPresenceModel.$isVisible, false]] });
+    await launch(() => allSettled(connection.connect, { scope }));
+    sockets[0].onmessage?.({ data: CONNECTION_WAITING });
+
+    await closeSocket(sockets[0], 4003);
+
+    expect(sockets).toHaveLength(2);
+  });
+});
+
+describe("app/model/socketConnection.model — opened from a call notification (039)", () => {
+  it("should take the connection back with an explicit connect when another device holds it", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+    await closeSocket(first, 4000);
+
+    await launch(() => allSettled(openedForCall, { scope }));
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[1].query.get("resume")).toBeNull();
+  });
+
+  it("should replace the resume reconnect opened on coming back (regression: «Использовать здесь» instead of the incoming call)", async () => {
+    const scope = fork();
+    const first = await connectReady(scope);
+    await closeSocket(first, 1006);
+    await launch(() => allSettled(resumed, { scope }));
+    expect(sockets[1].query.get("resume")).toBe("1");
+
+    await launch(() => allSettled(openedForCall, { scope }));
+
+    expect(sockets[1].close).toHaveBeenCalled();
+    expect(sockets).toHaveLength(3);
+    expect(sockets[2].query.get("resume")).toBeNull();
+    expect(sockets[2].query.get("tab")).toBe(first.query.get("tab"));
+  });
+
+  it("should keep a registered socket and a socket waiting for a call elsewhere", async () => {
+    const scope = fork();
+    await connectReady(scope);
+    await launch(() => allSettled(openedForCall, { scope }));
+    expect(sockets).toHaveLength(1);
+
+    const waitingScope = fork();
+    await launch(() => allSettled(connection.connect, { scope: waitingScope }));
+    sockets[1].onmessage?.({ data: CONNECTION_WAITING });
+    await launch(() => allSettled(openedForCall, { scope: waitingScope }));
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("should not open a disabled connection", async () => {
+    const scope = fork();
+
+    await launch(() => allSettled(openedForCall, { scope }));
+
+    expect(sockets).toHaveLength(0);
   });
 });

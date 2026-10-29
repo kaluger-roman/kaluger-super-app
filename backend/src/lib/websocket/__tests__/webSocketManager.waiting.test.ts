@@ -4,8 +4,11 @@ import { WebSocket } from "ws";
 
 import { authenticateWebSocket } from "../auth";
 import { handleMessage } from "../messageHandler";
-import { hasActiveCall, processCallSignal } from "../../../services/callSignaling";
+import { hasCallHeldByConnection, processCallSignal } from "../../../services/callSignaling";
+import { HEARTBEAT_INTERVAL_MS, HOLDER_PROBE_TIMEOUT_MS } from "../connection.constants";
 import { WebSocketManager } from "../webSocketManager";
+import { connectSocket, makeSocket } from "./wsManagerHarness";
+import type { SocketStub } from "./wsManagerHarness";
 
 jest.mock("../auth", () => ({
   authenticateWebSocket: jest.fn(),
@@ -24,38 +27,17 @@ jest.mock("../messageHandler", () => ({
 }));
 
 jest.mock("../../../services/callSignaling", () => ({
-  hasActiveCall: jest.fn(() => false),
+  hasCallHeldByConnection: jest.fn(() => false),
+  isCallAwaitingReturnOf: jest.fn(() => false),
+  participantDisconnected: jest.fn(async () => undefined),
+  participantRevoked: jest.fn(async () => undefined),
   processCallSignal: jest.fn(async () => undefined),
-  terminateActiveCallForParticipant: jest.fn(async () => undefined),
 }));
 
-type SocketStub = EventEmitter & {
-  readyState: number;
-  close: jest.Mock;
-  send: jest.Mock;
-  ping: jest.Mock;
-  terminate: jest.Mock;
-};
+// Fake timers: a terminated socket closes, as with ws.
+const closingSocket = () => makeSocket({ closeOnTerminate: true });
 
-const makeSocket = (): SocketStub => {
-  const emitter = new EventEmitter() as SocketStub;
-  emitter.readyState = WebSocket.OPEN;
-  emitter.close = jest.fn();
-  emitter.send = jest.fn();
-  emitter.ping = jest.fn();
-  emitter.terminate = jest.fn(() => {
-    emitter.readyState = WebSocket.CLOSED;
-    emitter.emit("close");
-  });
-  return emitter;
-};
-
-type ConnectionHandlers = {
-  handleConnection: (ws: unknown, request: unknown) => Promise<void>;
-  handleStudentConnection: (ws: unknown, request: unknown) => Promise<void>;
-};
-
-const HEARTBEAT_INTERVAL_MS = 30_000;
+const READY = JSON.stringify({ type: "connection_ready" });
 const WAITING = JSON.stringify({ type: "connection_waiting", reason: "call" });
 const lessonEvent = { type: "lesson_status_updated", lessonId: "l-1", status: "COMPLETED" };
 const inviteMessage = Buffer.from(
@@ -67,9 +49,9 @@ describe("WebSocketManager sockets waiting for a call in another tab", () => {
   let manager: WebSocketManager;
 
   const connectTutor = (ws: SocketStub, url = "/ws?token=t&tab=tab-a") =>
-    (manager as unknown as ConnectionHandlers).handleConnection.call(manager, ws, { url });
+    connectSocket(manager, "tutor", ws, url);
   const connectStudent = (ws: SocketStub, url = "/ws/student?token=t&tab=tab-a") =>
-    (manager as unknown as ConnectionHandlers).handleStudentConnection.call(manager, ws, { url });
+    connectSocket(manager, "student", ws, url);
   const pools = [
     ["tutor", connectTutor, "tutor-1"] as const,
     ["student", connectStudent, "student-1"] as const,
@@ -77,18 +59,20 @@ describe("WebSocketManager sockets waiting for a call in another tab", () => {
 
   // The user is in a call on `live`; `waiting` was opened from another tab meanwhile.
   const startWaiting = async (connect: typeof connectTutor) => {
-    const live = makeSocket();
-    const waiting = makeSocket();
+    const live = closingSocket();
+    const waiting = closingSocket();
     await connect(live);
-    jest.mocked(hasActiveCall).mockReturnValue(true);
+    jest.mocked(hasCallHeldByConnection).mockReturnValue(true);
     await connect(waiting, "/ws?token=t&tab=tab-b");
+    // The holder answers the probe the waiting tab started.
+    live.emit("pong");
     return { live, waiting };
   };
 
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    jest.mocked(hasActiveCall).mockReturnValue(false);
+    jest.mocked(hasCallHeldByConnection).mockReturnValue(false);
     jest.spyOn(console, "log").mockImplementation(() => undefined);
     jest.spyOn(console, "error").mockImplementation(() => undefined);
     (authenticateWebSocket as jest.Mock).mockResolvedValue({ userId: "tutor-1", email: "t@e.com" });
@@ -124,7 +108,7 @@ describe("WebSocketManager sockets waiting for a call in another tab", () => {
     "should close the waiting %s sockets with 4003 once the call ends",
     async (kind, connect, id) => {
       const { live, waiting } = await startWaiting(connect);
-      const second = makeSocket();
+      const second = closingSocket();
       await connect(second, "/ws?token=t&tab=tab-c");
 
       manager.releaseWaitingSockets(kind, id);
@@ -157,7 +141,7 @@ describe("WebSocketManager sockets waiting for a call in another tab", () => {
 
   it.each(pools)("should keep at most four waiting %s sockets", async (_kind, connect) => {
     const { waiting } = await startWaiting(connect);
-    const later = [makeSocket(), makeSocket(), makeSocket(), makeSocket()];
+    const later = [closingSocket(), closingSocket(), closingSocket(), closingSocket()];
     for (const [index, ws] of later.entries()) {
       await connect(ws, `/ws?token=t&tab=tab-${index}`);
     }
@@ -199,15 +183,49 @@ describe("WebSocketManager sockets waiting for a call in another tab", () => {
   it.each(pools)(
     "should let the same %s tab replace its live socket instead of waiting",
     async (kind, connect, id) => {
-      const live = makeSocket();
-      const resumed = makeSocket();
+      const live = closingSocket();
+      const resumed = closingSocket();
       await connect(live);
-      jest.mocked(hasActiveCall).mockReturnValue(true);
+      jest.mocked(hasCallHeldByConnection).mockReturnValue(true);
 
       await connect(resumed, "/ws?token=t&resume=1&tab=tab-a");
 
       expect(resumed.send).not.toHaveBeenCalledWith(WAITING);
       expect(manager.getConnection(kind, id)).toBe(resumed);
+    }
+  );
+
+  it.each(pools)(
+    "should close the waiting %s sockets with 4004 when the holder is gone but the call is kept",
+    async (kind, connect, id) => {
+      const { live, waiting } = await startWaiting(connect);
+
+      manager.releaseWaitingSockets(kind, id, "holder_gone");
+
+      expect(waiting.close).toHaveBeenCalledWith(4004, "Call holder is gone");
+      expect(live.close).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(pools)(
+    "should register the next %s socket once a dead holder was dropped during the call",
+    async (kind, connect, id) => {
+      const live = closingSocket();
+      await connect(live);
+      jest.mocked(hasCallHeldByConnection).mockReturnValue(true);
+      const waiting = closingSocket();
+      await connect(waiting, "/ws?token=t&tab=tab-b");
+
+      jest.advanceTimersByTime(HOLDER_PROBE_TIMEOUT_MS);
+      expect(live.terminate).toHaveBeenCalled();
+      manager.releaseWaitingSockets(kind, id, "holder_gone");
+      expect(waiting.close).toHaveBeenCalledWith(4004, "Call holder is gone");
+
+      const next = closingSocket();
+      await connect(next, "/ws?token=t&tab=tab-b");
+
+      expect(manager.getConnection(kind, id)).toBe(next);
+      expect(next.send).toHaveBeenCalledWith(READY);
     }
   );
 });

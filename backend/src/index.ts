@@ -30,6 +30,7 @@ import { testRouter } from "./routes/testSupport";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";
+import { studentPushRouter } from "./routes/studentPush";
 import { callRecordsRouter, studentCallRecordsRouter } from "./routes/callRecords";
 
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api/tax-periods", taxPeriodsRouter);
 app.use("/api/student-auth", studentAuthRouter);
 app.use("/api/student-invitations", studentInvitationsRouter);
 app.use("/api/student-cabinet", studentCabinetRouter);
+app.use("/api/student-push", studentPushRouter);
 app.use("/api/calls", callRecordsRouter);
 app.use("/api/student", studentCallRecordsRouter);
 

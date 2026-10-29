@@ -7,8 +7,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { theme } from "@shared";
 
-import { callFullscreenModel, callModel } from "../../../model";
+import { callFullscreenModel, callModel, callPresenceModel, callResumeModel } from "../../../model";
 import type { CallPhase } from "../../../model/call.types";
+import type { CallRole } from "../../../model/signaling.types";
+import type { PeerPresenceState } from "../../../videoCall.types";
 import { ActiveCallScreen } from "../ActiveCallScreen";
 
 const PEER_NAME = "Иван Смирнов";
@@ -20,6 +22,16 @@ type ScreenOptions = {
   fullscreen?: boolean;
   controlsVisible?: boolean;
   remoteStream?: MediaStream | null;
+  role?: CallRole;
+  peerPresence?: PeerPresenceState;
+  mediaLost?: boolean;
+  ownTransportLost?: boolean;
+};
+
+const ON_SCREEN: PeerPresenceState = {
+  presence: "on_screen",
+  audioSuspended: false,
+  videoSuspended: false,
 };
 
 const renderScreen = ({
@@ -29,9 +41,17 @@ const renderScreen = ({
   fullscreen = false,
   controlsVisible = true,
   remoteStream = null,
+  role = "tutor",
+  peerPresence = ON_SCREEN,
+  mediaLost = false,
+  ownTransportLost = false,
 }: ScreenOptions = {}) => {
   const scope = fork({
     values: [
+      [callModel.$callRole, role],
+      [callPresenceModel.$peerPresence, peerPresence],
+      [callPresenceModel.$mediaConnectionLost, mediaLost],
+      [callResumeModel.$isOwnTransportLost, ownTransportLost],
       [callModel.$callPhase, phase],
       [callModel.$outgoingCallPeer, { name: PEER_NAME, role: "student" }],
       [
@@ -76,6 +96,12 @@ describe("ActiveCallScreen", () => {
     expect(screen.getByTestId("local-pip")).toHaveAttribute("data-compact", "true");
   });
 
+  it("should keep the regular own tile while the sharing peer is interrupted", () => {
+    renderScreen({ peerSharing: true, mediaLost: true });
+    expect(screen.getByTestId("local-pip")).toHaveAttribute("data-compact", "false");
+    expect(screen.queryByText("Демонстрация экрана")).not.toBeInTheDocument();
+  });
+
   it("should keep the regular own tile otherwise", () => {
     renderScreen();
     expect(screen.getByTestId("local-pip")).toHaveAttribute("data-compact", "false");
@@ -89,6 +115,59 @@ describe("ActiveCallScreen", () => {
   it("should not show the connecting banner once connected", () => {
     renderScreen();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("should tell that the own connection is being restored", () => {
+    renderScreen({ ownTransportLost: true, phase: "connecting" });
+    expect(screen.getByText("Восстанавливаем связь…")).toBeInTheDocument();
+    expect(screen.queryByText("Соединение…")).not.toBeInTheDocument();
+  });
+
+  it("should tell the tutor that the student minimized the app", () => {
+    renderScreen({
+      role: "tutor",
+      peerPresence: { presence: "background", audioSuspended: true, videoSuspended: true },
+    });
+    expect(screen.getByText("Ученик свернул приложение")).toBeInTheDocument();
+    expect(
+      screen.getByText("Микрофон ученика приостановлен — ученик свернул приложение")
+    ).toBeInTheDocument();
+  });
+
+  it("should never tell the student that the tutor minimized the app (FR-032)", () => {
+    renderScreen({
+      role: "student",
+      peerPresence: { presence: "background", audioSuspended: true, videoSuspended: true },
+    });
+    expect(screen.queryByText(/свернул приложение/)).not.toBeInTheDocument();
+    expect(screen.getByText("Восстанавливаем связь…")).toBeInTheDocument();
+    expect(screen.getByText("Звук временно недоступен")).toBeInTheDocument();
+  });
+
+  it("should keep the peer's interruption and audio notice in fullscreen (regression)", () => {
+    renderScreen({
+      fullscreen: true,
+      role: "tutor",
+      peerSharing: true,
+      peerPresence: { presence: "background", audioSuspended: true, videoSuspended: true },
+    });
+
+    expect(screen.getByText("Ученик свернул приложение")).toBeInTheDocument();
+    expect(
+      screen.getByText("Микрофон ученика приостановлен — ученик свернул приложение")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Демонстрация экрана")).not.toBeInTheDocument();
+  });
+
+  it("should show the peer as reconnecting while the media of the call is lost", () => {
+    renderScreen({ mediaLost: true });
+    expect(screen.getByText("Восстанавливаем связь…")).toBeInTheDocument();
+  });
+
+  it("should show no interruption while the peer is on screen", () => {
+    renderScreen();
+    expect(screen.queryByText("Восстанавливаем связь…")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ученик свернул приложение")).not.toBeInTheDocument();
   });
 
   it("should drop the camera-off label from the compact own tile", () => {
@@ -133,6 +212,18 @@ describe("ActiveCallScreen", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Свернуть" }));
     expect(screen.getByTestId("remote-stage").querySelector("video")).toBe(video);
+  });
+
+  it("should play the peer's voice from one audio element kept across the mode switch", async () => {
+    renderScreen({ remoteStream: new MediaStream() });
+    const audio = screen.getByTestId("peer-audio");
+    expect(screen.getByTestId("remote-stage")).not.toContainElement(audio);
+
+    await userEvent.click(screen.getByRole("button", { name: "Во весь экран" }));
+    expect(screen.getByTestId("peer-audio")).toBe(audio);
+
+    await userEvent.click(screen.getByRole("button", { name: "Свернуть" }));
+    expect(screen.getByTestId("peer-audio")).toBe(audio);
   });
 
   it("should leave the mode on Escape", async () => {

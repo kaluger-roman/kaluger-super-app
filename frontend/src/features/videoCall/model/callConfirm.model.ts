@@ -3,7 +3,7 @@ import { createEvent, createStore, sample } from "effector";
 import { isPendingConfirm } from "./call.helpers";
 import * as callModel from "./call.model";
 import type { StartCallParams } from "./call.types";
-import * as callRequestModel from "./callRequest.model";
+import * as callEntryModel from "./callEntry.model";
 
 export const $isOpen = createStore(false);
 // Kept after closing, so the dialog does not flash an empty name while it fades out.
@@ -24,8 +24,8 @@ export const confirmed = sample({
 sample({ clock: callRequested, target: $call });
 sample({ clock: callRequested, fn: () => true, target: $isOpen });
 sample({
-  clock: [confirmDismissed, confirmed, callModel.incomingCallReceived],
+  clock: [confirmDismissed, confirmed, callModel.incomingCallReceived, callModel.callRestored],
   fn: () => false,
   target: $isOpen,
 });
-sample({ clock: confirmed, target: callRequestModel.callRequested });
+sample({ clock: confirmed, target: callEntryModel.startRequested });

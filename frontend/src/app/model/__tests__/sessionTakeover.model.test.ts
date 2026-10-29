@@ -22,7 +22,7 @@ const placeCallWhileHeld = async (reason: ElsewhereReason | null) => {
   void allSettled(webSocketModel.connectWebSocket, { scope });
   void allSettled(webSocketModel.webSocketClosed, {
     scope,
-    params: { revokedToken: null, elsewhere: reason, callEnded: false },
+    params: { revokedToken: null, elsewhere: reason, callEnded: false, holderGone: false },
   });
   await vi.advanceTimersByTimeAsync(0);
 

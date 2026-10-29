@@ -165,7 +165,7 @@ describe("ReminderSettings", () => {
     expect(screen.queryByText("5 мин")).not.toBeInTheDocument();
   });
 
-  it("should show permission denied alert", () => {
+  it("should leave the denied notifications help to the calls card (regression)", () => {
     const scope = fork({
       values: [
         [notificationsModel.$isPushSupported, true],
@@ -182,7 +182,8 @@ describe("ReminderSettings", () => {
 
     renderWithProviders(<ReminderSettings />, scope);
 
-    expect(screen.getByText(/Уведомления заблокированы/)).toBeInTheDocument();
+    expect(screen.queryByText(/Уведомления заблокированы/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Уведомления запрещены/)).not.toBeInTheDocument();
   });
 
   it("should call unsubscribePushFx when disabling reminders while subscribed", async () => {

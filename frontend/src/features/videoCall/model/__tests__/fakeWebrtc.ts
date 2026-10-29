@@ -3,13 +3,16 @@ import type { Mock } from "vitest";
 
 import type { WebRtcAdapter } from "../webrtc.types";
 
-type FakeTrack = {
+export type FakeTrack = {
   id: string;
   kind: "audio" | "video";
   enabled: boolean;
+  muted: boolean;
+  readyState: MediaStreamTrackState;
   stop: Mock<() => void>;
   addEventListener: (type: string, listener: () => void) => void;
   dispatchEnded: () => void;
+  dispatch: (type: string) => void;
 };
 
 export type FakeStream = {
@@ -35,12 +38,16 @@ type FakeTransceiver = {
 
 type FakePeerConnection = {
   connectionState: RTCPeerConnectionState;
+  iceConnectionState: RTCIceConnectionState;
   signalingState: RTCSignalingState;
   localDescription: RTCSessionDescriptionInit | null;
   onicecandidate:
     ((event: { candidate: { toJSON: () => RTCIceCandidateInit } | null }) => void) | null;
   ontrack: ((event: { track: FakeTrack; streams: FakeStream[] }) => void) | null;
   onconnectionstatechange: (() => void) | null;
+  oniceconnectionstatechange: (() => void) | null;
+  restartIce: Mock<() => void>;
+  setConfiguration: Mock<(config: RTCConfiguration) => void>;
   addTrack: Mock<(track: MediaStreamTrack) => FakeSender>;
   addTransceiver: Mock<(kind: string, init?: RTCRtpTransceiverInit) => FakeTransceiver>;
   getTransceivers: Mock<() => FakeTransceiver[]>;
@@ -56,18 +63,37 @@ type FakePeerConnection = {
 let trackCounter = 0;
 
 export const createFakeTrack = (kind: "audio" | "video"): FakeTrack => {
-  const listeners: Array<() => void> = [];
+  const listeners = new Map<string, Array<() => void>>();
   trackCounter += 1;
-  return {
+  const dispatch = (type: string) => listeners.get(type)?.forEach((listener) => listener());
+  const track: FakeTrack = {
     id: `track-${trackCounter}`,
     kind,
     enabled: true,
-    stop: vi.fn(),
+    muted: false,
+    readyState: "live",
+    stop: vi.fn(() => {
+      track.readyState = "ended";
+    }),
     addEventListener: (type, listener) => {
-      if (type === "ended") listeners.push(listener);
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
     },
-    dispatchEnded: () => listeners.forEach((listener) => listener()),
+    dispatchEnded: () => dispatch("ended"),
+    dispatch,
   };
+  return track;
+};
+
+// The system stopped (or resumed) feeding the track without ending it.
+export const setTrackMutedBySystem = (track: FakeTrack, muted: boolean): void => {
+  track.muted = muted;
+  track.dispatch(muted ? "mute" : "unmute");
+};
+
+// The system stopped the track (another app took the device, the OS suspended the page).
+export const endTrackBySystem = (track: FakeTrack): void => {
+  track.readyState = "ended";
+  track.dispatchEnded();
 };
 
 export const createFakeStream = (
@@ -82,7 +108,10 @@ export const createFakeStream = (
     addTrack: vi.fn((track: FakeTrack) => {
       list.push(track);
     }),
-    removeTrack: vi.fn(),
+    removeTrack: vi.fn((track: FakeTrack) => {
+      const index = list.indexOf(track);
+      if (index >= 0) list.splice(index, 1);
+    }),
   };
 };
 
@@ -106,11 +135,15 @@ const createFakePeerConnection = (): FakePeerConnection => {
   };
   const pc: FakePeerConnection = {
     connectionState: "new",
+    iceConnectionState: "new",
     signalingState: "stable",
     localDescription: null,
     onicecandidate: null,
     ontrack: null,
     onconnectionstatechange: null,
+    oniceconnectionstatechange: null,
+    restartIce: vi.fn(),
+    setConfiguration: vi.fn(),
     addTrack: vi.fn((track: MediaStreamTrack) => {
       const sender = makeSender(track);
       senders.push(sender);
@@ -165,6 +198,11 @@ export const triggerConnectionState = (
 ): void => {
   pc.connectionState = state;
   pc.onconnectionstatechange?.();
+};
+
+export const triggerIceState = (pc: FakePeerConnection, state: RTCIceConnectionState): void => {
+  pc.iceConnectionState = state;
+  pc.oniceconnectionstatechange?.();
 };
 
 type FakeAdapterOverrides = {

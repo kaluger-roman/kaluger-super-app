@@ -2,19 +2,13 @@ import type { FC } from "react";
 
 import { useUnit } from "effector-react";
 
-import { callFullscreenModel, callModel } from "../../model";
-import { CONNECTING_TEXT } from "../../videoCall.constants";
-import {
-  formatCallDuration,
-  getPeerAudioNotice,
-  getPeerInterruption,
-} from "../../videoCall.helpers";
+import { callBannerModel, callFullscreenModel, callModel, peerViewModel } from "../../model";
+import { formatCallDuration } from "../../videoCall.helpers";
 import { BackgroundAudioHint } from "../BackgroundAudioHint";
-import { getCallBackgroundMock } from "../callBackgroundMock.helpers";
 import { CallControlBar } from "../CallControlBar";
 import { CallStatusBanner } from "../CallStatusBanner";
 import { FullscreenControls } from "../FullscreenControls";
-import { RemoteAudio } from "../RemoteAudio";
+import { PeerAudio } from "../PeerAudio";
 import { VideoTile } from "../VideoTile";
 import {
   useCallActivity,
@@ -28,15 +22,11 @@ export const ActiveCallScreen: FC = () => {
   const peerName = useUnit(callModel.$activePeerName);
   const durationSeconds = useUnit(callModel.$callDurationSeconds);
   const selfMedia = useUnit(callModel.$selfMediaState);
-  const peerMedia = useUnit(callModel.$peerMediaState);
-  const isConnecting = useUnit(callModel.$isConnecting);
+  const peerMedia = useUnit(peerViewModel.$shownPeerMedia);
+  const isPeerInterrupted = useUnit(peerViewModel.$isPeerInterrupted);
   const localStream = useUnit(callModel.$localTileStream);
   const remoteStream = useUnit(callModel.$remoteStream);
-  const callRole = useUnit(callModel.$callRole);
-  // TODO(auto-feature): replace mock with callPresenceModel.$peerPresence
-  const peerPresence = getCallBackgroundMock().peerPresence;
-  const interruption = getPeerInterruption(callRole, peerPresence);
-  const audioNotice = getPeerAudioNotice(callRole, peerPresence);
+  const bannerText = useUnit(callBannerModel.$callBannerText);
   const isFullscreen = useUnit(callFullscreenModel.$isFullscreen);
   const isCursorHidden = useUnit(callFullscreenModel.$isCursorHidden);
   const activityHandlers = useCallActivity();
@@ -46,7 +36,7 @@ export const ActiveCallScreen: FC = () => {
   usePageZoomGuard();
 
   // The peer's shared screen needs the room, so the own tile shrinks while it is shown.
-  const compactPip = peerMedia.screenSharing && !interruption;
+  const compactPip = peerMedia.screenSharing;
 
   // Element order stays the same in both modes, so the peer's <video> is never remounted.
   return (
@@ -57,6 +47,8 @@ export const ActiveCallScreen: FC = () => {
       data-cursor-hidden={isCursorHidden}
       {...activityHandlers}
     >
+      <PeerAudio />
+
       {!isFullscreen && (
         <Styled.Header>
           <Styled.HeaderInfo>
@@ -71,15 +63,15 @@ export const ActiveCallScreen: FC = () => {
       {!isFullscreen && <BackgroundAudioHint />}
 
       <Styled.StageBox $fullscreen={isFullscreen}>
-        {isConnecting && !isFullscreen && (
+        {bannerText && !isFullscreen && (
           <Styled.BannerSlot>
-            <CallStatusBanner text={CONNECTING_TEXT} />
+            <CallStatusBanner text={bannerText} />
           </Styled.BannerSlot>
         )}
 
         <Styled.RemoteWrap
-          $screen={peerMedia.screenSharing && !interruption}
-          $interrupted={Boolean(interruption)}
+          $screen={peerMedia.screenSharing}
+          $interrupted={isPeerInterrupted}
           $fullscreen={isFullscreen}
           data-testid="remote-stage"
           {...doubleTapHandlers}
@@ -89,10 +81,7 @@ export const ActiveCallScreen: FC = () => {
             media={peerMedia}
             variant={isFullscreen ? "fullscreen" : "remote"}
             stream={remoteStream}
-            interruption={interruption}
-            audioNotice={audioNotice}
           />
-          <RemoteAudio />
         </Styled.RemoteWrap>
 
         {!isFullscreen && (
@@ -102,7 +91,6 @@ export const ActiveCallScreen: FC = () => {
               media={selfMedia}
               variant={compactPip ? "selfCompact" : "self"}
               stream={localStream}
-              muted
             />
           </Styled.LocalPip>
         )}

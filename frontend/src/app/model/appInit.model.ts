@@ -1,4 +1,4 @@
-import { createStore, createEvent, createEffect, sample } from "effector";
+import { combine, createStore, createEvent, createEffect, sample } from "effector";
 
 import {
   lessonModel,
@@ -9,6 +9,8 @@ import {
   userModel,
 } from "@entities";
 import { loginFormModel } from "@features/auth";
+import { callNotificationsModel } from "@features/callNotifications";
+import { callNotificationOpenModel, callPresenceModel } from "@features/videoCall";
 import { isIos, isInStandaloneMode } from "@shared";
 
 import type { InitializeAppParams, BeforeInstallPromptEvent } from "./appInit.types";
@@ -51,11 +53,20 @@ export const $appInitializing = initializeAppFx.pending;
 
 // PWA resume — refresh data when app returns to foreground
 export const appResumed = createEvent();
+// The page was shown or hidden (minimized, another app, screen lock).
+export const appVisibilityChanged = createEvent<boolean>();
+export const serviceWorkerMessaged = createEvent<unknown>();
 
 // Online/offline detection
 export const onlineStatusChanged = createEvent<boolean>();
 
 export const $isOnline = createStore(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+export const wentOnline = sample({
+  clock: onlineStatusChanged,
+  filter: Boolean,
+  fn: () => undefined,
+});
 
 // PWA install prompt
 export const installPromptCaptured = createEvent<BeforeInstallPromptEvent>();
@@ -66,6 +77,12 @@ export const $showInstallBanner = createStore(false);
 
 export const $showIosInstallHint = createStore(isIos() && !isInStandaloneMode());
 export const iosInstallHintDismissed = createEvent();
+// The student cabinet carries its own install instruction (call notifications): one on screen.
+export const $isIosInstallHintVisible = combine(
+  $showIosInstallHint,
+  callNotificationsModel.$isInstallInstructionShown,
+  (requested, shownByCabinet) => requested && !shownByCabinet
+);
 
 // Connect events
 sample({
@@ -101,12 +118,43 @@ sample({
   target: [notificationsModel.loadVapidKeyFx, notificationsModel.loadSettings],
 });
 
+// A student gets call notifications (US4): the worker and the server keys once signed in.
+sample({
+  clock: studentUserModel.$isStudentAuthenticated.updates,
+  filter: Boolean,
+  fn: () => undefined,
+  target: registerServiceWorkerFx,
+});
+
+sample({
+  clock: registerServiceWorkerFx.doneData,
+  source: studentUserModel.$isStudentAuthenticated,
+  filter: Boolean,
+  fn: () => undefined,
+  target: notificationsModel.loadVapidKeyFx,
+});
+
 // Check unread news only for authenticated users
 sample({
   clock: initializeAppFx.finally,
   source: userModel.$isAuthenticated,
   filter: (isAuthenticated) => isAuthenticated,
   target: newsModel.checkUnread,
+});
+
+sample({ clock: appVisibilityChanged, target: callPresenceModel.visibilityChanged });
+
+sample({
+  clock: serviceWorkerMessaged,
+  target: callNotificationOpenModel.serviceWorkerMessageReceived,
+});
+
+// Opened from an incoming call notification (`?call=`): read once the session is known, before
+// its sockets connect and the server describes the call.
+sample({
+  clock: [userModel.getProfileFx.done, studentUserModel.getCurrentStudentFx.done],
+  fn: () => undefined,
+  target: callNotificationOpenModel.readCallIdFromUrlFx,
 });
 
 // Online/offline status
@@ -151,7 +199,11 @@ sample({
   clock: appResumed,
   source: userModel.$isAuthenticated,
   filter: (isAuthenticated) => isAuthenticated,
-  target: [notificationsModel.loadSettings, newsModel.checkUnread],
+  target: [
+    notificationsModel.loadSettings,
+    notificationsModel.readPushPermissionFx,
+    newsModel.checkUnread,
+  ],
 });
 
 // Handle errors — still mark app as initialized so user can reach login page

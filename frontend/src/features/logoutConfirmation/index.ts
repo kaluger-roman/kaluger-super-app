@@ -1,2 +1,2 @@
 export { LogoutConfirmationDialog } from "./ui";
-export { logoutConfirmationModel } from "./models";
+export { logoutConfirmationModel, sessionCleanupModel } from "./models";

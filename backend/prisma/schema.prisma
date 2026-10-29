@@ -125,6 +125,8 @@ model StudentUser {
   studentId String?  @unique
   student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
+  pushSubscriptions PushSubscription[]
+
   @@index([studentId])
   @@map("student_users")
 }
@@ -239,28 +241,40 @@ enum ReminderStatus {
   FAILED
 }
 
+enum PushChannel {
+  WEB_PUSH
+}
+
+// Exactly one owner: a tutor (userId) or a student (studentUserId), enforced by a CHECK in the
+// 039_call_background_push migration.
 model PushSubscription {
-  id         String   @id @default(cuid())
-  endpoint   String   @unique
+  id         String      @id @default(cuid())
+  channel    PushChannel @default(WEB_PUSH)
+  endpoint   String      @unique
   p256dh     String
   auth       String
   deviceName String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime    @default(now())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentUserId String?
+  studentUser   StudentUser? @relation(fields: [studentUserId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([studentUserId])
   @@map("push_subscriptions")
 }
 
 model ReminderSettings {
-  id               String   @id @default(cuid())
-  enabled          Boolean  @default(false)
-  intervals        Int[]    @default([])
-  muteWhenInLesson Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  enabled                  Boolean  @default(false)
+  intervals                Int[]    @default([])
+  muteWhenInLesson         Boolean  @default(false)
+  callNotificationsEnabled Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

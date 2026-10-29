@@ -2,18 +2,17 @@ import request from "supertest";
 import { faker } from "@faker-js/faker";
 import { app } from "../index";
 import { prisma } from "../lib/prisma";
+import { MAX_PUSH_SUBSCRIPTIONS_PER_OWNER } from "../services";
 import { generateToken } from "../utils/auth";
-import { uniqueEmail } from "./helpers";
+import { uniqueEmail, useVapidEnv } from "./helpers";
 
 describe("push subscription integration tests", () => {
   let authToken: string;
   let userId: string;
 
-  beforeAll(async () => {
-    process.env.VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "test-vapid-public-key";
-    process.env.VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "test-vapid-private-key";
-    process.env.VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:test@test.com";
+  useVapidEnv();
 
+  beforeAll(async () => {
     const user = await prisma.user.create({
       data: {
         email: uniqueEmail(),
@@ -47,17 +46,12 @@ describe("push subscription integration tests", () => {
     });
 
     it("should return 200 with null when VAPID is not configured", async () => {
-      const prev = process.env.VAPID_PUBLIC_KEY;
       delete process.env.VAPID_PUBLIC_KEY;
 
-      try {
-        const res = await request(app).get("/api/push/vapid-key").expect(200);
+      const res = await request(app).get("/api/push/vapid-key").expect(200);
 
-        expect(res.body.vapidPublicKey).toBeNull();
-        expect(res.body.configured).toBe(false);
-      } finally {
-        process.env.VAPID_PUBLIC_KEY = prev;
-      }
+      expect(res.body.vapidPublicKey).toBeNull();
+      expect(res.body.configured).toBe(false);
     });
   });
 
@@ -158,6 +152,109 @@ describe("push subscription integration tests", () => {
       await prisma.user.delete({ where: { id: otherUser.id } });
     });
 
+    it("should reject subscribe when endpoint belongs to a student", async () => {
+      const student = await prisma.student.create({ data: { name: "Иван", tutorId: userId } });
+      const studentUser = await prisma.studentUser.create({
+        data: { email: uniqueEmail(), password: "hashed", name: "Иван", studentId: student.id },
+      });
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+      await prisma.pushSubscription.create({
+        data: { endpoint, p256dh: "key", auth: "auth", studentUserId: studentUser.id },
+      });
+
+      try {
+        const res = await request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ subscription: { endpoint, keys: { p256dh: "new-key", auth: "new-auth" } } })
+          .expect(403);
+
+        expect(res.body.error).toBe("Подписка принадлежит другому пользователю");
+        const stored = await prisma.pushSubscription.findUniqueOrThrow({ where: { endpoint } });
+        expect(stored.studentUserId).toBe(studentUser.id);
+        expect(stored.userId).toBeNull();
+      } finally {
+        await prisma.studentUser.delete({ where: { id: studentUser.id } });
+        await prisma.student.delete({ where: { id: student.id } });
+      }
+    });
+
+    it("should move a student's subscription to the tutor whose browser holds it", async () => {
+      const student = await prisma.student.create({ data: { name: "Иван", tutorId: userId } });
+      const studentUser = await prisma.studentUser.create({
+        data: { email: uniqueEmail(), password: "hashed", name: "Иван", studentId: student.id },
+      });
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+      const seeded = await prisma.pushSubscription.create({
+        data: { endpoint, p256dh: "key", auth: "auth", studentUserId: studentUser.id },
+      });
+
+      try {
+        const res = await request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ subscription: { endpoint, keys: { p256dh: "key", auth: "auth" } } })
+          .expect(200);
+
+        expect(res.body).toMatchObject({ id: seeded.id, endpoint });
+        const rows = await prisma.pushSubscription.findMany({ where: { endpoint } });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ userId, studentUserId: null, channel: "WEB_PUSH" });
+      } finally {
+        await prisma.studentUser.delete({ where: { id: studentUser.id } });
+        await prisma.student.delete({ where: { id: student.id } });
+      }
+    });
+
+    it("should move another tutor's subscription to the tutor whose browser holds it", async () => {
+      const otherUser = await prisma.user.create({
+        data: { email: uniqueEmail(), password: "hashed", name: faker.person.fullName() },
+      });
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+      await prisma.pushSubscription.create({
+        data: { endpoint, p256dh: "key", auth: "auth", userId: otherUser.id },
+      });
+
+      try {
+        await request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ subscription: { endpoint, keys: { p256dh: "key", auth: "auth" } } })
+          .expect(200);
+
+        const stored = await prisma.pushSubscription.findUniqueOrThrow({ where: { endpoint } });
+        expect(stored.userId).toBe(userId);
+        expect(await prisma.pushSubscription.count({ where: { userId: otherUser.id } })).toBe(0);
+      } finally {
+        await prisma.pushSubscription.deleteMany({ where: { userId: otherUser.id } });
+        await prisma.user.delete({ where: { id: otherUser.id } });
+      }
+    });
+
+    it("should keep another owner's subscription when only one of the keys matches", async () => {
+      const otherUser = await prisma.user.create({
+        data: { email: uniqueEmail(), password: "hashed", name: faker.person.fullName() },
+      });
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+      await prisma.pushSubscription.create({
+        data: { endpoint, p256dh: "key", auth: "auth", userId: otherUser.id },
+      });
+
+      try {
+        await request(app)
+          .post("/api/push/subscribe")
+          .set("Authorization", `Bearer ${authToken}`)
+          .send({ subscription: { endpoint, keys: { p256dh: "key", auth: "other" } } })
+          .expect(403);
+
+        const stored = await prisma.pushSubscription.findUniqueOrThrow({ where: { endpoint } });
+        expect(stored.userId).toBe(otherUser.id);
+      } finally {
+        await prisma.pushSubscription.deleteMany({ where: { userId: otherUser.id } });
+        await prisma.user.delete({ where: { id: otherUser.id } });
+      }
+    });
+
     it("should not return 500 on parallel registrations of the same endpoint (regression: findUnique+create race)", async () => {
       // Regression for bug-hunt 2026-05-09-3 #6: two concurrent POSTs with the
       // same endpoint used to both pass the `findUnique` check and race in
@@ -191,6 +288,36 @@ describe("push subscription integration tests", () => {
 
       const count = await prisma.pushSubscription.count({ where: { endpoint } });
       expect(count).toBe(1);
+    });
+
+    it("should drop the tutor's device registered longest ago beyond the per-owner cap", async () => {
+      const seeded = await Promise.all(
+        Array.from({ length: MAX_PUSH_SUBSCRIPTIONS_PER_OWNER }, (_, index) =>
+          prisma.pushSubscription.create({
+            data: {
+              endpoint: `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`,
+              p256dh: "key",
+              auth: "auth",
+              userId,
+              createdAt: new Date(Date.now() - (MAX_PUSH_SUBSCRIPTIONS_PER_OWNER - index) * 60_000),
+            },
+          })
+        )
+      );
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${faker.string.alphanumeric(20)}`;
+
+      await request(app)
+        .post("/api/push/subscribe")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ subscription: { endpoint, keys: { p256dh: "key", auth: "auth" } } })
+        .expect(201);
+
+      const endpoints = (await prisma.pushSubscription.findMany({ where: { userId } })).map(
+        (row) => row.endpoint
+      );
+      expect(endpoints).toHaveLength(MAX_PUSH_SUBSCRIPTIONS_PER_OWNER);
+      expect(endpoints).toContain(endpoint);
+      expect(endpoints).not.toContain(seeded[0].endpoint);
     });
 
     it("should return 400 when subscription data is invalid", async () => {

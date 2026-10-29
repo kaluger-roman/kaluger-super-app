@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   PINCH_WHEEL_MAX_DELTA_PX,
@@ -6,8 +6,10 @@ import {
   TILE_VARIANTS,
   WHEEL_LINE_HEIGHT_PX,
   WHEEL_ZOOM_SENSITIVITY,
+  ENTER_PIP_ACTION,
 } from "../VideoTile.constants";
 import {
+  enablePeerPictureInPicture,
   getCameraLabel,
   getPointerDistance,
   getPointerMidpoint,
@@ -18,6 +20,7 @@ import {
   getVideoLayout,
   getVideoLayoutRect,
   getWheelZoomFactor,
+  isContinueCallShown,
   readGesture,
   toCenterOffset,
 } from "../VideoTile.helpers";
@@ -191,5 +194,98 @@ describe("VideoTile helpers", () => {
 
     Object.defineProperty(video, "offsetParent", { value: null });
     expect(getVideoLayoutRect(video)).toBeNull();
+  });
+});
+
+describe("isContinueCallShown", () => {
+  const params = { videoBlocked: false, soundBlocked: false, interrupted: false };
+
+  it("should ask for a tap when the video or the sound is blocked", () => {
+    expect(isContinueCallShown(params)).toBe(false);
+    expect(isContinueCallShown({ ...params, videoBlocked: true })).toBe(true);
+    expect(isContinueCallShown({ ...params, soundBlocked: true })).toBe(true);
+  });
+
+  it("should not ask over an interrupted peer unless the sound is blocked", () => {
+    expect(isContinueCallShown({ ...params, videoBlocked: true, interrupted: true })).toBe(false);
+    expect(isContinueCallShown({ ...params, soundBlocked: true, interrupted: true })).toBe(true);
+  });
+});
+
+describe("enablePeerPictureInPicture", () => {
+  const withMediaSession = (setActionHandler: (action: string, handler: unknown) => void) =>
+    Object.defineProperty(navigator, "mediaSession", {
+      value: { setActionHandler },
+      configurable: true,
+    });
+
+  const pipVideo = () => {
+    const video = document.createElement("video");
+    Object.defineProperty(video, "autoPictureInPicture", { value: false, writable: true });
+    const requestPictureInPicture = vi.fn().mockResolvedValue({});
+    Object.defineProperty(video, "requestPictureInPicture", { value: requestPictureInPicture });
+    return { video, requestPictureInPicture };
+  };
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "mediaSession");
+  });
+
+  it("should do nothing and not throw where the browser has no picture-in-picture API", () => {
+    const video = document.createElement("video");
+
+    const undo = enablePeerPictureInPicture(video);
+    undo();
+
+    expect("autoPictureInPicture" in video).toBe(false);
+  });
+
+  it("should turn on automatic picture-in-picture and the media session action, then undo both", () => {
+    const setActionHandler = vi.fn();
+    withMediaSession(setActionHandler);
+    const { video, requestPictureInPicture } = pipVideo();
+
+    const undo = enablePeerPictureInPicture(video);
+
+    expect(
+      (video as HTMLVideoElement & { autoPictureInPicture: boolean }).autoPictureInPicture
+    ).toBe(true);
+    expect(setActionHandler).toHaveBeenCalledWith(ENTER_PIP_ACTION, expect.any(Function));
+    const handler = setActionHandler.mock.calls[0][1] as () => void;
+    handler();
+    expect(requestPictureInPicture).toHaveBeenCalledTimes(1);
+
+    undo();
+
+    expect(
+      (video as HTMLVideoElement & { autoPictureInPicture: boolean }).autoPictureInPicture
+    ).toBe(false);
+    expect(setActionHandler).toHaveBeenLastCalledWith(ENTER_PIP_ACTION, null);
+  });
+
+  it("should survive a browser that rejects the media session action", () => {
+    const setActionHandler = vi.fn(() => {
+      throw new TypeError("unknown action");
+    });
+    withMediaSession(setActionHandler);
+    const { video } = pipVideo();
+
+    const undo = enablePeerPictureInPicture(video);
+    undo();
+
+    expect(setActionHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should keep the action of a newer peer video when an older one goes away", () => {
+    const setActionHandler = vi.fn();
+    withMediaSession(setActionHandler);
+    const older = enablePeerPictureInPicture(pipVideo().video);
+    const newer = enablePeerPictureInPicture(pipVideo().video);
+
+    older();
+
+    expect(setActionHandler).not.toHaveBeenCalledWith(ENTER_PIP_ACTION, null);
+    newer();
+    expect(setActionHandler).toHaveBeenLastCalledWith(ENTER_PIP_ACTION, null);
   });
 });

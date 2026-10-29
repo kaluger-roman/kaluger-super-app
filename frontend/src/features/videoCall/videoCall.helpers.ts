@@ -1,16 +1,7 @@
 import type { CallHistoryDirection, CallHistoryStatus, CallLessonSummary } from "@entities";
 import { SUBJECT_LABELS, formatDay, formatTimeRange } from "@shared";
 
-import type { CallRole } from "./model/signaling.types";
-import {
-  CALL_STATUS_LABELS,
-  OUTGOING_UNANSWERED_LABEL,
-  PEER_AUDIO_UNAVAILABLE_TEXT,
-  RECONNECTING_TEXT,
-  STUDENT_MIC_SUSPENDED_TEXT,
-  STUDENT_MINIMIZED_TEXT,
-} from "./videoCall.constants";
-import type { PeerPresenceState, TileInterruption } from "./videoCall.types";
+import { CALL_STATUS_LABELS, OUTGOING_UNANSWERED_LABEL } from "./videoCall.constants";
 
 export const formatCallLessonSubject = (lesson: CallLessonSummary): string =>
   SUBJECT_LABELS[lesson.subject];
@@ -53,27 +44,6 @@ export const getCallStatusLabel = (
 
 export const getCallDirectionLabel = (direction: CallHistoryDirection): string =>
   direction === "outgoing" ? "Исходящий" : "Входящий";
-
-// `viewerRole` is the own role: only a tutor learns that the student left the app (FR-032).
-// A peer whose video keeps going in the background is not interrupted at all (FR-033).
-export const getPeerInterruption = (
-  viewerRole: CallRole | null,
-  { presence, videoSuspended }: PeerPresenceState
-): TileInterruption | null => {
-  if (presence === "disconnected") return { kind: "reconnecting", label: RECONNECTING_TEXT };
-  if (presence !== "background" || !videoSuspended) return null;
-  return viewerRole === "tutor"
-    ? { kind: "minimized", label: STUDENT_MINIMIZED_TEXT }
-    : { kind: "reconnecting", label: RECONNECTING_TEXT };
-};
-
-export const getPeerAudioNotice = (
-  viewerRole: CallRole | null,
-  { presence, audioSuspended }: PeerPresenceState
-): string | null => {
-  if (presence !== "background" || !audioSuspended) return null;
-  return viewerRole === "tutor" ? STUDENT_MIC_SUSPENDED_TEXT : PEER_AUDIO_UNAVAILABLE_TEXT;
-};
 
 // A button focused by a mouse click must not hold the controls; an engine that does not know
 // :focus-visible gets the old behaviour, where any focus holds them.

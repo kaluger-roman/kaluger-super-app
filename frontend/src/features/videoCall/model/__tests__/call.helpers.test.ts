@@ -62,7 +62,7 @@ describe("features/videoCall/model/call.helpers isPickerDismissed", () => {
 describe("features/videoCall/model/call.helpers toast texts", () => {
   it("should name the offline peer by role", () => {
     expect(toUnavailableText("student")).toBe("Ученик сейчас не в сети");
-    expect(toUnavailableText("tutor")).toBe("Репетитор сейчас не в сети");
+    expect(toUnavailableText("tutor")).toBe("Преподаватель сейчас не в сети");
     expect(toUnavailableText(null)).toBe("Собеседник сейчас не в сети");
   });
 

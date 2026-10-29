@@ -1,12 +1,10 @@
 import type { TileVariant, TileVariantConfig } from "./VideoTile.types";
 
-// Shown when the browser refused to resume a paused call video without a tap.
-export const VIDEO_PAUSED_LABEL = "Видео на паузе. Нажмите, чтобы продолжить";
-
 export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
   remote: {
     avatarSize: 96,
     selfAvatar: false,
+    isPeer: true,
     showCameraLabel: true,
     frameScreen: true,
     minHeight: 180,
@@ -21,6 +19,7 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
   fullscreen: {
     avatarSize: 128,
     selfAvatar: false,
+    isPeer: true,
     showCameraLabel: true,
     frameScreen: false,
     minHeight: 0,
@@ -35,6 +34,7 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
   self: {
     avatarSize: 48,
     selfAvatar: true,
+    isPeer: false,
     showCameraLabel: true,
     frameScreen: false,
     minHeight: 0,
@@ -49,6 +49,7 @@ export const TILE_VARIANTS: Record<TileVariant, TileVariantConfig> = {
   selfCompact: {
     avatarSize: 28,
     selfAvatar: true,
+    isPeer: false,
     showCameraLabel: false,
     frameScreen: false,
     minHeight: 0,
@@ -79,3 +80,5 @@ export const WHEEL_DELTA_PAGE = 2;
 export const ZOOM_SCALE_VAR = "--call-zoom-scale";
 export const ZOOM_X_VAR = "--call-zoom-x";
 export const ZOOM_Y_VAR = "--call-zoom-y";
+
+export const ENTER_PIP_ACTION = "enterpictureinpicture";

@@ -2,12 +2,14 @@ import type { FC } from "react";
 
 import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
 import { useMediaQuery } from "@mui/material";
+import { useUnit } from "effector-react";
 
+import { peerViewModel } from "../../model";
 import { SHORT_STAGE_QUERY } from "../../videoCall.constants";
-import type { CallMediaState, TileInterruption } from "../../videoCall.types";
+import type { CallMediaState } from "../../videoCall.types";
 import { CallAvatar } from "../CallAvatar";
+import { InterruptionLabel } from "../InterruptionLabel";
 import { CallVideo } from "./CallVideo";
-import { InterruptionLabel } from "./InterruptionLabel";
 import {
   getCameraLabel,
   getTileContentKind,
@@ -21,22 +23,14 @@ type TileContentProps = {
   name: string;
   media: CallMediaState;
   stream: MediaStream | null;
-  muted: boolean;
   config: TileVariantConfig;
-  interruption: TileInterruption | null;
 };
 
-export const TileContent: FC<TileContentProps> = ({
-  name,
-  media,
-  stream,
-  muted,
-  config,
-  interruption,
-}) => {
+export const TileContent: FC<TileContentProps> = ({ name, media, stream, config }) => {
+  const isPeerInterrupted = useUnit(peerViewModel.$isPeerInterrupted);
+  const interrupted = config.isPeer && isPeerInterrupted;
   const kind = getTileContentKind(media);
-  // A frozen last frame would pass for a live peer, so an interrupted tile shows the placeholder.
-  const showVideo = kind !== "placeholder" && !interruption;
+  const showVideo = kind !== "placeholder";
   const shortStage = useMediaQuery(SHORT_STAGE_QUERY);
 
   return (
@@ -44,17 +38,17 @@ export const TileContent: FC<TileContentProps> = ({
       {stream && (
         <CallVideo
           stream={stream}
-          muted={muted}
           hidden={!showVideo}
           fit={getVideoFit(kind)}
           layout={getVideoLayout(kind, config, shortStage)}
+          isPeer={config.isPeer}
         />
       )}
       {!showVideo && (
         <Styled.PlaceholderColumn>
           <CallAvatar name={name} size={config.avatarSize} isSelf={config.selfAvatar} />
-          {interruption && <InterruptionLabel interruption={interruption} />}
-          {!interruption && config.showCameraLabel && (
+          {interrupted && <InterruptionLabel />}
+          {!interrupted && config.showCameraLabel && (
             <Styled.PlaceholderLabel variant="body2">
               <VideocamOffIcon fontSize="small" />
               {getCameraLabel(media)}

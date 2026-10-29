@@ -8,7 +8,7 @@ import { appInitModel } from "../../model";
 export const InstallPrompt = () => {
   const showBanner = useUnit(appInitModel.$showInstallBanner);
   const installPrompt = useUnit(appInitModel.$installPrompt);
-  const showIosHint = useUnit(appInitModel.$showIosInstallHint);
+  const showIosHint = useUnit(appInitModel.$isIosInstallHintVisible);
 
   const actions = useUnit({
     dismiss: appInitModel.installPromptDismissed,

@@ -30,3 +30,7 @@ export const SettingDescription = styled(Typography)(({ theme }) => ({
   fontSize: "0.875rem",
   marginTop: "4px",
 }));
+
+export const DeniedHelpBox = styled(Box)({
+  marginTop: "16px",
+});

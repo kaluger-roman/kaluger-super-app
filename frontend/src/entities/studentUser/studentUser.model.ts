@@ -39,7 +39,7 @@ const persistStudentTokenFx = createEffect((token: string) => {
   setStudentToken(token);
 });
 
-const clearStudentSessionFx = createEffect(() => {
+export const clearStudentSessionFx = createEffect(() => {
   clearStudentToken();
   navigate("/login", { replace: true });
 });

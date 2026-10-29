@@ -26,8 +26,6 @@ export const PEER_AUDIO_UNAVAILABLE_TEXT = "Звук временно недос
 export const BACKGROUND_AUDIO_HINT_TEXT =
   "На iPhone, пока приложение свёрнуто, собеседник вас не слышит. Звонок не прервётся — просто вернитесь";
 
-export const ENABLE_SOUND_LABEL = "Нажмите, чтобы включить звук";
-
 // On a short stage (landscape phone) the pills overlay the shared screen instead of framing it.
 export const SHORT_STAGE_QUERY = "(max-height: 500px)";
 export const SHORT_STAGE_MEDIA = `@media ${SHORT_STAGE_QUERY}`;

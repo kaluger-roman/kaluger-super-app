@@ -190,6 +190,8 @@ const [lessons, students] = useUnit([model.$lessons, model.$students]);
 
 **sample order:** `{ clock, source, filter, fn, target }` (ESLint enforced: `effector/keep-options-order`, which puts `greedy` last). The rule knows only those keys: put effector 23's `batch` / `name` at the end, and never apply its IDE quick fix — it rebuilds the options object out of the keys it knows and silently drops everything else, a spread inside the config included (so write the config with plain properties).
 
+**One value per tick in a clock array:** a `sample` with `clock: [a, b]` runs once per tick behind the sampler barrier, so when `a` and `b` fire in the same tick (e.g. two `.map()` of one event) only the last value reaches `fn` / `target` and the other is lost. When the clock value matters, give each event its own `sample` (`callResume.model.ts`: one per `decided.map(...)`).
+
 **Timers in models (patronum):**
 
 ```typescript
@@ -279,6 +281,13 @@ export const $isLoading = featureApi.loadFx.pending;
 sample({ clock: PageGate.open, target: featureApi.loadFx });
 sample({ clock: featureApi.loadFx.doneData, target: $data });
 ```
+
+## Video calls
+
+- **One way into a call** — screens and other features start, answer, reject and restore a call only through `callEntryModel` (`startRequested`, `answerRequested`, `rejectRequested`, `resumeRequested`), never `callModel.callStarted` / `acceptCall` / `rejectCall` directly (FR-031 of 039): a native shell can then take the call over without touching the screens
+- **Peer sound is not in the video** — every call `<video>` is `muted`; the peer's voice plays through the single `<PeerAudio />` of the call screen, so iOS pausing a video in the background does not silence the call
+- **A lost socket does not end a call** — the call models keep the call while the transport reconnects (`callResumeModel`); only the server's `call_state` / `call_ended` or the local grace limit end it
+- **A session that ends takes its call with it** — a logout here, a logout in another tab or a dropped session closes its socket on purpose, which the call models would take for a lost one; `app/model/sessionLogout.model.ts` ends the call over that socket first. A new way to end a session goes through it
 
 ## Loading Indicators
 

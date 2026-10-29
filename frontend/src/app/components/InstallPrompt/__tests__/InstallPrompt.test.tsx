@@ -6,6 +6,8 @@ import { allSettled, fork } from "effector";
 import { Provider as EffectorProvider } from "effector-react";
 import { describe, it, expect, vi } from "vitest";
 
+import { notificationsModel } from "@entities";
+import { CallNotificationsCard, callNotificationsModel } from "@features/callNotifications";
 import { theme } from "@shared";
 
 import { appInitModel } from "../../../model";
@@ -122,5 +124,53 @@ describe("InstallPrompt", () => {
 
     await allSettled(appInitModel.iosInstallHintDismissed, { scope });
     expect(scope.getState(appInitModel.$showIosInstallHint)).toBe(false);
+  });
+
+  describe("in the student cabinet on an iPhone in Safari", () => {
+    const cabinetScope = () =>
+      fork({
+        values: [
+          [appInitModel.$showInstallBanner, false],
+          [appInitModel.$installPrompt, null],
+          [appInitModel.$showIosInstallHint, true],
+          [notificationsModel.$vapidKey, "key"],
+          [callNotificationsModel.$isVapidKeyLoaded, true],
+          [
+            callNotificationsModel.$environment,
+            { isIos: true, standalone: false, pushSupported: false, permission: "default" },
+          ],
+          [callNotificationsModel.$isInviteDismissed, false],
+        ],
+      });
+
+    const renderCabinet = (scope: ReturnType<typeof fork>) =>
+      renderWithProviders(
+        <>
+          <CallNotificationsCard />
+          <InstallPrompt />
+        </>,
+        scope
+      );
+
+    it("should leave the install instruction to the call notifications card", () => {
+      renderCabinet(cabinetScope());
+
+      expect(screen.getByText(/уведомления приходят только в приложение/)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Установите приложение для push-уведомлений/)
+      ).not.toBeInTheDocument();
+    });
+
+    it("should bring the install banner back once the student closes the card", async () => {
+      const user = userEvent.setup();
+      renderCabinet(cabinetScope());
+
+      await user.click(screen.getByRole("button", { name: "Скрыть" }));
+
+      expect(
+        screen.queryByText(/уведомления приходят только в приложение/)
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/Установите приложение для push-уведомлений/)).toBeInTheDocument();
+    });
   });
 });

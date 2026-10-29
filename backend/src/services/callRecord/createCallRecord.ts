@@ -23,7 +23,7 @@ const lockRecordLessonId = async (
 
 export const createCallRecord = (args: CreateCallRecordArgs): Promise<void> =>
   prisma.$transaction(async (tx) => {
-    const { tutorId, studentId, callerKind, status, startedAt, connectedAt } = args;
+    const { tutorId, studentId, callerKind, status, startedAt, connectedAt, endedAt } = args;
     await tx.callRecord.create({
       data: {
         tutorId,
@@ -32,7 +32,7 @@ export const createCallRecord = (args: CreateCallRecordArgs): Promise<void> =>
         callerKind: toPrismaCallerKind(callerKind),
         status,
         startedAt,
-        ...toFinalizedTimes(status, connectedAt, new Date()),
+        ...toFinalizedTimes(status, connectedAt, endedAt ?? new Date()),
       },
     });
   });

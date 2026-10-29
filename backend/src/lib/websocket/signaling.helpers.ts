@@ -1,6 +1,7 @@
 import type {
   CallSignalingInbound,
   IceCandidatePayload,
+  PresenceState,
   SessionDescriptionPayload,
 } from "../../types";
 import {
@@ -9,6 +10,7 @@ import {
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
   LESSON_ID_MAX_LENGTH,
+  PRESENCE_STATES,
   SDP_MAX_LENGTH,
 } from "./signaling.constants";
 import type { CallSignalType } from "./signaling.types";
@@ -81,10 +83,23 @@ const toCallInvite = (data: Record<string, unknown>): CallSignalingInbound | nul
   };
 };
 
+const isPresenceState = (value: unknown): value is PresenceState =>
+  PRESENCE_STATES.some((state) => state === value);
+
+// Presence belongs to the participant, not to a call, so it carries no callId.
+const toPresenceUpdate = (data: Record<string, unknown>): CallSignalingInbound | null => {
+  const { presence, audioSuspended, videoSuspended } = data;
+  if (!isPresenceState(presence)) return null;
+  if (typeof audioSuspended !== "boolean" || typeof videoSuspended !== "boolean") return null;
+  return { type: "presence_update", presence, audioSuspended, videoSuspended };
+};
+
 export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
   if (!isCallSignalMessage(data)) return null;
 
   if (data.type === "call_invite") return toCallInvite(data);
+  if (data.type === "presence_update") return toPresenceUpdate(data);
+  if (data.type === "call_sync") return { type: "call_sync" };
 
   if (!isNonEmptyString(data.callId)) return null;
   const { callId } = data;
@@ -112,6 +127,10 @@ export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
             screenSharing: data.screenSharing,
             cameraAvailable: data.cameraAvailable,
           }
+        : null;
+    case "call_resume":
+      return typeof data.sessionRestart === "boolean"
+        ? { type: "call_resume", callId, sessionRestart: data.sessionRestart }
         : null;
     case "call_hangup":
       return data.reason === "media_unavailable"

@@ -24,7 +24,7 @@ export const CONNECTION_FAILED_TEXT =
 
 export const UNAVAILABLE_TEXT = "Собеседник сейчас не в сети";
 export const STUDENT_UNAVAILABLE_TEXT = "Ученик сейчас не в сети";
-export const TUTOR_UNAVAILABLE_TEXT = "Репетитор сейчас не в сети";
+export const TUTOR_UNAVAILABLE_TEXT = "Преподаватель сейчас не в сети";
 export const MISSED_CALL_TEXT = "Пропущенный вызов";
 export const PEER_HUNG_UP_TEXT = "Собеседник завершил звонок";
 export const PEER_DISCONNECTED_TEXT = "Собеседник отключился";
@@ -41,14 +41,13 @@ export const RENEGOTIATION_FAILED_TEXT =
   "Не удалось обновить видео собеседника. Если оно пропало, перезвоните";
 export const PICKER_DISMISSED_ERRORS = new Set(["NotAllowedError", "AbortError"]);
 
-export const TRANSPORT_LOST_TEXT = "Связь с сервером потеряна, звонок завершён";
-// TODO(auto-feature): show via toasts.model on callModel.callEnded("peer_not_returned")
 export const PEER_NOT_RETURNED_TEXT = "Собеседник не вернулся в звонок";
 // The participant came back after the call ended without them (wait expired or the peer hung up).
-// TODO(auto-feature): show via toasts.model on callPresenceModel.returnedToEndedCall
 export const CALL_ENDED_TEXT = "Звонок завершён";
 // The app was opened from a call notification of a call that is already over (FR-017).
-// TODO(auto-feature): show via toasts.model on callModel.staleCallNotificationOpened
 export const CALL_ALREADY_ENDED_TEXT = "Звонок уже завершён";
 export const NO_TRANSPORT_TEXT = "Нет связи с сервером. Проверьте интернет и попробуйте снова";
 export const CAMERA_FAILED_TEXT = "Не удалось включить камеру. Проверьте разрешения браузера";
+export const MIC_BUSY_TEXT = "Микрофон занят другим приложением";
+export const CAMERA_BUSY_TEXT = "Камера занята другим приложением";
+export const MIC_AND_CAMERA_BUSY_TEXT = "Микрофон и камера заняты другим приложением";

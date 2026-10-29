@@ -10,6 +10,8 @@ export type WebRtcAdapter = {
 
 export type CallSession = {
   pc: RTCPeerConnection;
+  // Kept for rebuilding the connection after the peer restarted its own.
+  config: RTCConfiguration;
   role: CallRole;
   localStream: MediaStream | null;
   remoteStream: MediaStream;
@@ -24,3 +26,6 @@ export type CallSession = {
   offerPending: boolean;
   ignoreOffer: boolean;
 };
+
+// Puts the event handlers of the call on a (new) connection of the session.
+export type PeerConnectionWiring = (pc: RTCPeerConnection, remoteStream: MediaStream) => void;

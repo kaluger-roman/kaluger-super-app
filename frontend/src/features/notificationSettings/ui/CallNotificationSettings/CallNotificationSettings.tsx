@@ -1,10 +1,10 @@
 import type { FC } from "react";
-import { useState } from "react";
 
 import { Switch } from "@mui/material";
 import { useUnit } from "effector-react";
 
 import { notificationsModel } from "@entities";
+import { PermissionDeniedHelp } from "@shared";
 
 import {
   CALL_NOTIFICATIONS_DESCRIPTION,
@@ -13,13 +13,17 @@ import {
 } from "./CallNotificationSettings.constants";
 import * as Styled from "./CallNotificationSettings.styled";
 
-// FR-021: on by default and independent of the lesson reminders above it.
+// FR-021: on by default and independent of the lesson reminders above it; hidden without push
+// support or server keys (FR-025). Locked while the browser denies notifications: the help below
+// says how to allow them.
 export const CallNotificationSettings: FC = () => {
   const isPushSupported = useUnit(notificationsModel.$isPushSupported);
-  // TODO(auto-feature): replace mock with notificationsModel.$callNotificationsEnabled + callNotificationsToggled
-  const [enabled, setEnabled] = useState(true);
+  const vapidKey = useUnit(notificationsModel.$vapidKey);
+  const enabled = useUnit(notificationsModel.$isCallNotificationsOn);
+  const isPermissionDenied = useUnit(notificationsModel.$isPushPermissionDenied);
+  const toggle = useUnit(notificationsModel.callNotificationsToggled);
 
-  if (!isPushSupported) return null;
+  if (!isPushSupported || vapidKey === null) return null;
 
   return (
     <Styled.SettingsPaper elevation={0}>
@@ -31,10 +35,16 @@ export const CallNotificationSettings: FC = () => {
         </div>
         <Switch
           checked={enabled}
-          onChange={() => setEnabled((value) => !value)}
+          disabled={isPermissionDenied}
+          onChange={() => toggle()}
           slotProps={{ input: { "aria-label": CALL_NOTIFICATIONS_LABEL } }}
         />
       </Styled.SettingRow>
+      {isPermissionDenied && (
+        <Styled.DeniedHelpBox>
+          <PermissionDeniedHelp />
+        </Styled.DeniedHelpBox>
+      )}
     </Styled.SettingsPaper>
   );
 };

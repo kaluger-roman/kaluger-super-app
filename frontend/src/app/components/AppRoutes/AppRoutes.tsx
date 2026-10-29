@@ -7,7 +7,6 @@ import { EmailVerificationForm } from "@features/emailVerification";
 
 import {
   AdminPage,
-  CallBackgroundMockupPage,
   CallHistoryPage,
   DashboardPage,
   ForgotPasswordPage,
@@ -101,8 +100,6 @@ export const AppRoutes: FC<AppRoutesProps> = ({ isLoggedIn }) => {
           element={<ProtectedRoute element={<ProfilePage />} isLoggedIn={isLoggedIn} />}
         />
         <Route path="/admin" element={<AdminPage />} />
-        {/* TODO(auto-feature): remove mockup preview route */}
-        <Route path="/__mockups/call-background" element={<CallBackgroundMockupPage />} />
         <Route
           path="/forgot-password"
           element={

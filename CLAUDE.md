@@ -211,6 +211,8 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 - PostgreSQL через Prisma. Одна новая nullable-колонка `call_records."lessonId"` (FK на `lessons`, `ON DELETE SET NULL`) + индекс `(lessonId, startedAt)`; без бэкфилла (038-lesson-call-button)
 - TypeScript 5.x (strict), React 19 + React, Effector 23, effector-react, patronum 2.3 (`debounce`), Material UI (styled API из `@shared`), Pointer Events, ResizeObserver. Новых зависимостей нет (039-call-fullscreen)
 - N/A — состояние в памяти вкладки на время звонка; без изменений БД и API (039-call-fullscreen)
+- TypeScript 5.x (strict), Node.js 20; `frontend/public/push-sw.js` — ES5 JavaScript (как сейчас) + Frontend — React, Effector, patronum, effector-react, MUI (styled API), browser WebRTC, Push API, Service Worker. Backend — Express, Prisma, `ws`, `web-push` (уже есть). Новых npm-зависимостей нет (039-video-call-background)
+- PostgreSQL через Prisma: enum `PushChannel`, в `push_subscriptions` — `channel`, `studentUserId`, `userId` необязательный + CHECK одного владельца; в `reminder_settings` — `callNotificationsEnabled`. Состояние присутствия и ожидания — в памяти процесса (как `liveCalls`). На устройстве — два флага в `localStorage` (039-video-call-background)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

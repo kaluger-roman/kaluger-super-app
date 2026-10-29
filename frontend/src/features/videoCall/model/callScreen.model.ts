@@ -18,7 +18,11 @@ const outgoingStarted = sample({
 });
 sample({ clock: outgoingStarted, target: $outgoingAttempt });
 sample({ clock: outgoingStarted, fn: () => false, target: $isOutgoingRevealed });
-sample({ clock: callModel.callRinging, fn: () => true, target: $isOutgoingRevealed });
+sample({
+  clock: [callModel.callRinging, callModel.callRestored],
+  fn: () => true,
+  target: $isOutgoingRevealed,
+});
 // patronum `delay` cannot be cancelled: a reveal is honored only for the attempt still dialing.
 sample({
   clock: delay({ source: outgoingStarted, timeout: OUTGOING_REVEAL_DELAY_MS }),

@@ -5,8 +5,9 @@ export type CallMediaState = {
   cameraAvailable: boolean;
 };
 
-// Where the peer is, in domain terms (FR-030): on screen, in the background, or out of reach.
-type PeerPresence = "onScreen" | "background" | "disconnected";
+// Where a participant is, in domain terms (FR-030): on screen, in the background, or out of reach.
+export type PresenceState = "on_screen" | "background";
+export type PeerPresence = PresenceState | "disconnected";
 
 // The peer reports what it keeps sending while in the background (FR-033), not just that it left.
 export type PeerPresenceState = {

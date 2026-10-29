@@ -1,7 +1,9 @@
 import type { FC } from "react";
-import { useState } from "react";
 
 import { Switch, Typography } from "@mui/material";
+import { useGate, useUnit } from "effector-react";
+
+import { PermissionDeniedHelp } from "@shared";
 
 import { isSwitchLocked } from "./CallNotificationsSection.helpers";
 import * as Styled from "./CallNotificationsSection.styled";
@@ -13,15 +15,17 @@ import {
   SETTINGS_TITLE,
   UNSUPPORTED_TEXT,
 } from "../../callNotifications.constants";
-import { getCallNotificationsStatusMock } from "../../callNotificationsMock.helpers";
+import { callNotificationsModel } from "../../model";
 import { IosInstallInstruction } from "../IosInstallInstruction";
-import { PermissionDeniedHelp } from "../PermissionDeniedHelp";
 
 export const CallNotificationsSection: FC = () => {
-  // TODO(auto-feature): replace mock with callNotificationsModel.$status
-  const status = getCallNotificationsStatusMock();
-  // TODO(auto-feature): replace with callNotificationsModel.$status === "on" + callNotificationsModel.toggled
-  const [enabled, setEnabled] = useState(status === "on");
+  useGate(callNotificationsModel.SettingsSectionGate);
+  const status = useUnit(callNotificationsModel.$status);
+  const toggle = useUnit(callNotificationsModel.toggled);
+
+  if (status === null) return null;
+
+  const enabled = status === "on";
 
   return (
     <Styled.SectionPaper variant="outlined">
@@ -42,7 +46,7 @@ export const CallNotificationsSection: FC = () => {
             <Switch
               checked={enabled}
               disabled={isSwitchLocked(status)}
-              onChange={() => setEnabled((value) => !value)}
+              onChange={() => toggle()}
               slotProps={{ input: { "aria-label": SETTING_SWITCH_LABEL } }}
             />
           </Styled.Row>

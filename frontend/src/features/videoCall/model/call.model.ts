@@ -14,16 +14,16 @@ import type {
   CallPhase,
   CanceledNotice,
   CallSignalTarget,
-  IceServerPayload,
   IcePayload,
   IncomingCall,
   LocalStreams,
+  RestoredCall,
   SdpPayload,
   StartCallParams,
-  TerminalSignal,
   TerminatedCall,
 } from "./call.types";
-import type { CallEndReason, CallRole, ReceivedSignal } from "./signaling.types";
+import { toRestoredIncoming, toRestoredOutgoingPeer, toRestoredPhase } from "./callRestore.helpers";
+import type { CallEndReason, CallRole, IceServerPayload, ReceivedSignal } from "./signaling.types";
 
 export const $callPhase = createStore<CallPhase>("idle");
 export const $callId = createStore<string | null>(null);
@@ -98,9 +98,12 @@ export const callErrorReceived = createEvent<string>();
 export const callFailed = createEvent<string>();
 export const mediaAcquisitionFailed = createEvent();
 export const transportDisconnected = createEvent<CallRole>();
-export const callConnectionLost = createEvent();
+// The call ended without this page (the server no longer has it, or another window took it): it
+// is dropped here without telling anyone.
+export const callEndedLocally = createEvent();
 export const callTerminated = createEvent<TerminatedCall>();
-const callEnding = createEvent<TerminalSignal | null>();
+// The server still holds a call this page did not have (a reload, another window, a lost socket).
+export const callRestored = createEvent<RestoredCall>();
 
 sample({ clock: callStarted, fn: (): CallPhase => "outgoing", target: $callPhase });
 sample({ clock: callStarted, fn: toCallerRole, target: $callRole });
@@ -122,15 +125,23 @@ sample({ clock: incomingCallReceived, fn: () => null, target: $outgoingCallPeer 
 sample({ clock: incomingCallReceived, fn: ({ callId }) => callId, target: $callId });
 sample({ clock: incomingCallReceived, fn: ({ role }) => role, target: $callRole });
 sample({
-  clock: [callStarted, incomingCallReceived, callTerminated],
+  clock: [callStarted, incomingCallReceived, callRestored, callTerminated],
   fn: () => DEFAULT_SELF_MEDIA_STATE,
   target: $selfMediaState,
 });
 sample({
-  clock: [callStarted, incomingCallReceived, callTerminated],
+  clock: [callStarted, incomingCallReceived, callRestored, callTerminated],
   fn: () => DEFAULT_PEER_MEDIA_STATE,
   target: $peerMediaState,
 });
+
+sample({ clock: callRestored, fn: toRestoredPhase, target: $callPhase });
+sample({ clock: callRestored, fn: ({ snapshot }) => snapshot.callId, target: $callId });
+sample({ clock: callRestored, fn: ({ role }) => role, target: $callRole });
+sample({ clock: callRestored, fn: toRestoredIncoming, target: $incomingCall });
+sample({ clock: callRestored, fn: toRestoredOutgoingPeer, target: $outgoingCallPeer });
+sample({ clock: callRestored, fn: ({ snapshot }) => snapshot.iceServers, target: $iceServers });
+sample({ clock: callRestored, fn: (call) => call.elapsedSeconds, target: $callDurationSeconds });
 
 sample({ clock: acceptCall, fn: (): CallPhase => "connecting", target: $callPhase });
 sample({ clock: callConnected, fn: (): CallPhase => "active", target: $callPhase });
@@ -146,48 +157,6 @@ sample({
   target: $remoteStream,
 });
 sample({ clock: screenStreamChanged, target: $screenStream });
-
-sample({
-  clock: rejectCall,
-  fn: (): TerminalSignal => ({ type: "call_reject" }),
-  target: callEnding,
-});
-sample({
-  clock: cancelCall,
-  fn: (): TerminalSignal => ({ type: "call_cancel" }),
-  target: callEnding,
-});
-sample({
-  clock: [hangUp, callFailed],
-  fn: (): TerminalSignal => ({ type: "call_hangup" }),
-  target: callEnding,
-});
-sample({
-  clock: mediaAcquisitionFailed,
-  fn: (): TerminalSignal => ({ type: "call_hangup", reason: "media_unavailable" }),
-  target: callEnding,
-});
-sample({
-  clock: [
-    callEnded,
-    unavailableReceived,
-    busyReceived,
-    noAnswerReceived,
-    rejectedReceived,
-    canceledReceived,
-    callErrorReceived,
-    callConnectionLost,
-  ],
-  fn: () => null,
-  target: callEnding,
-});
-// The address is read once here, so the terminal signal still knows where to go after the reset.
-sample({
-  clock: callEnding,
-  source: $callAddress,
-  fn: (address, signal): TerminatedCall => ({ address, signal }),
-  target: callTerminated,
-});
 
 sample({ clock: callTerminated, fn: (): CallPhase => "idle", target: $callPhase });
 sample({ clock: callTerminated, fn: () => 0, target: $callDurationSeconds });

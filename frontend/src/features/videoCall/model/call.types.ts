@@ -1,7 +1,13 @@
 import type { CallLessonSummary } from "@entities";
 
 import type { CallMediaState } from "../videoCall.types";
-import type { CallCancelReason, CallRole, CallSignalingInbound } from "./signaling.types";
+import type {
+  CallCancelReason,
+  CallRole,
+  CallSignalingInbound,
+  CallSnapshot,
+  IceServerPayload,
+} from "./signaling.types";
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active";
 
@@ -15,12 +21,6 @@ export type IncomingCall = {
   callerName: string;
   role: CallRole;
   lesson: CallLessonSummary | null;
-};
-
-export type IceServerPayload = {
-  urls: string;
-  username?: string;
-  credential?: string;
 };
 
 // A student calls only from a lesson, so a student call without a lesson cannot be expressed.
@@ -43,8 +43,6 @@ export type CallAddress = {
   callId: string;
   role: CallRole;
 };
-
-export type AcceptedCall = CallSignalTarget & CallAddress;
 
 export type LocalMediaParams = CallAddress & {
   iceServers: IceServerPayload[];
@@ -117,4 +115,16 @@ export type InviteParams = {
 export type PendingConfirm = {
   isOpen: boolean;
   call: StartCallParams | null;
+};
+
+// The server still holds a call of this participant that this page does not have (reload,
+// another window, a lost connection): it is restored from the snapshot.
+export type ResumeRequest = {
+  role: CallRole;
+  snapshot: CallSnapshot;
+};
+
+// The restored call with the seconds it has been connected (from the snapshot's connectedAt).
+export type RestoredCall = ResumeRequest & {
+  elapsedSeconds: number;
 };

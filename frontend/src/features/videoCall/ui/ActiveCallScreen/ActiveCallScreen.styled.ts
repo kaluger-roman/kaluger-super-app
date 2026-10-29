@@ -62,21 +62,21 @@ type RemoteWrapProps = {
 
 // A shared screen gets the full stage height: a portrait window in a 16:9 box is tiny on a phone.
 // An interrupted peer gets a taller tile on a phone: a 16:9 strip has no room for the status and
-// notice. `isolation` keeps the tile overlays (RemoteAudio) under the own PiP.
-export const RemoteWrap = styled(Box)<RemoteWrapProps>(({ $screen, $fullscreen, $interrupted }) => ({
-  position: "relative",
-  isolation: "isolate",
-  width: "100%",
-  maxWidth: $fullscreen ? "none" : 1040,
-  aspectRatio: $screen || $fullscreen ? "auto" : "16 / 9",
-  alignSelf: $screen || $fullscreen ? "stretch" : "auto",
-  maxHeight: "100%",
-  // A double tap toggles the mode instead of zooming the page, and taps are not delayed. In the
-  // mode a pinch must not zoom the page either: only a shared screen zooms, inside the video.
-  touchAction: $fullscreen ? "none" : "manipulation",
-  "@media (max-width: 600px) and (orientation: portrait)":
-    $interrupted && !$fullscreen ? { aspectRatio: "5 / 4" } : {},
-}));
+// notice.
+export const RemoteWrap = styled(Box)<RemoteWrapProps>(
+  ({ $screen, $fullscreen, $interrupted }) => ({
+    width: "100%",
+    maxWidth: $fullscreen ? "none" : 1040,
+    aspectRatio: $screen || $fullscreen ? "auto" : "16 / 9",
+    alignSelf: $screen || $fullscreen ? "stretch" : "auto",
+    maxHeight: "100%",
+    // A double tap toggles the mode instead of zooming the page, and taps are not delayed. In the
+    // mode a pinch must not zoom the page either: only a shared screen zooms, inside the video.
+    touchAction: $fullscreen ? "none" : "manipulation",
+    "@media (max-width: 600px) and (orientation: portrait)":
+      $interrupted && !$fullscreen ? { aspectRatio: "5 / 4" } : {},
+  })
+);
 
 // While the peer shares a screen the PiP shrinks so it covers less of the shared content.
 export const LocalPip = styled(Box)<{ $compact: boolean }>(({ $compact }) => ({

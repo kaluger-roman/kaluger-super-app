@@ -1,30 +1,24 @@
 import type { FC } from "react";
-import { useState } from "react";
 
 import { Close as CloseIcon, PhoneIphone as PhoneIcon } from "@mui/icons-material";
+import { useUnit } from "effector-react";
 
 import * as Styled from "./BackgroundAudioHint.styled";
+import { backgroundHintModel } from "../../model";
 import { BACKGROUND_AUDIO_HINT_TEXT } from "../../videoCall.constants";
-import { getCallBackgroundMock } from "../callBackgroundMock.helpers";
 
-// FR-012: shown once, only where the own mic really stops in the background (FR-033).
+// FR-012: shown until dismissed, only where the own mic really stops in the background (FR-033).
 export const BackgroundAudioHint: FC = () => {
-  // TODO(auto-feature): replace mock with callPresenceModel.$isBackgroundHintShown
-  const isShown = getCallBackgroundMock().backgroundHintShown;
-  // TODO(auto-feature): replace with callPresenceModel.backgroundHintDismissed (remembered per device)
-  const [dismissed, setDismissed] = useState(false);
+  const isShown = useUnit(backgroundHintModel.$isBackgroundHintShown);
+  const { dismissed } = useUnit({ dismissed: backgroundHintModel.backgroundHintDismissed });
 
-  if (!isShown || dismissed) return null;
+  if (!isShown) return null;
 
   return (
     <Styled.HintBox role="note">
       <PhoneIcon fontSize="small" />
       <Styled.HintText variant="body2">{BACKGROUND_AUDIO_HINT_TEXT}</Styled.HintText>
-      <Styled.CloseButton
-        size="small"
-        aria-label="Закрыть подсказку"
-        onClick={() => setDismissed(true)}
-      >
+      <Styled.CloseButton size="small" aria-label="Закрыть подсказку" onClick={() => dismissed()}>
         <CloseIcon fontSize="small" />
       </Styled.CloseButton>
     </Styled.HintBox>

@@ -1,6 +1,6 @@
 import { createStore, createEvent, sample } from "effector";
 
-import { userModel } from "@entities";
+import * as sessionCleanupModel from "./sessionCleanup.model";
 
 // Stores
 export const $isDialogOpen = createStore<boolean>(false);
@@ -26,5 +26,5 @@ sample({
 // Trigger actual logout only on confirm
 sample({
   clock: logoutConfirmed,
-  target: userModel.logoutUser,
+  target: sessionCleanupModel.tutorLogoutConfirmed,
 });

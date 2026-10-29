@@ -1,26 +1,22 @@
 import { faker } from "@faker-js/faker";
-import webpush from "web-push";
 import { prisma } from "../lib/prisma";
 import {
   sendPushToUser,
   formatReminderTitle,
   formatReminderBody,
 } from "../services/pushNotification";
-import { uniqueEmail } from "./helpers";
+import { installWebPushDelivery, uniqueEmail, useVapidEnv } from "./helpers";
+import type { PushDelivery } from "./helpers";
 
-jest.mock("web-push", () => ({
-  setVapidDetails: jest.fn(),
-  sendNotification: jest.fn(),
-}));
+jest.mock("web-push", () => ({ sendNotification: jest.fn() }));
 
 describe("pushNotification service", () => {
   let userId: string;
+  let delivery: PushDelivery;
+
+  useVapidEnv();
 
   beforeAll(async () => {
-    process.env.VAPID_PUBLIC_KEY = "test-public-key";
-    process.env.VAPID_PRIVATE_KEY = "test-private-key";
-    process.env.VAPID_SUBJECT = "mailto:test@test.com";
-
     const user = await prisma.user.create({
       data: {
         email: uniqueEmail(),
@@ -33,7 +29,11 @@ describe("pushNotification service", () => {
 
   beforeEach(async () => {
     await prisma.pushSubscription.deleteMany({ where: { userId } });
-    (webpush.sendNotification as jest.Mock).mockReset();
+    delivery = installWebPushDelivery();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -62,11 +62,10 @@ describe("pushNotification service", () => {
         ],
       });
 
-      (webpush.sendNotification as jest.Mock).mockResolvedValue({});
-
       const result = await sendPushToUser(userId, payload);
 
-      expect(webpush.sendNotification).toHaveBeenCalledTimes(2);
+      expect(delivery).toHaveBeenCalledTimes(2);
+      expect(JSON.parse(delivery.mock.calls[0][1])).toEqual(payload);
       expect(result.sent).toBe(2);
       expect(result.failed).toBe(0);
     });
@@ -74,7 +73,7 @@ describe("pushNotification service", () => {
     it("should return zero counts when no subscriptions exist", async () => {
       const result = await sendPushToUser(userId, payload);
 
-      expect(webpush.sendNotification).not.toHaveBeenCalled();
+      expect(delivery).not.toHaveBeenCalled();
       expect(result.sent).toBe(0);
       expect(result.failed).toBe(0);
     });
@@ -89,7 +88,7 @@ describe("pushNotification service", () => {
         },
       });
 
-      (webpush.sendNotification as jest.Mock).mockRejectedValue({ statusCode: 410 });
+      delivery.mockRejectedValue({ statusCode: 410 });
 
       const result = await sendPushToUser(userId, payload);
 
@@ -112,7 +111,7 @@ describe("pushNotification service", () => {
         },
       });
 
-      (webpush.sendNotification as jest.Mock).mockRejectedValue({ statusCode: 404 });
+      delivery.mockRejectedValue({ statusCode: 404 });
 
       const result = await sendPushToUser(userId, payload);
 
@@ -122,6 +121,56 @@ describe("pushNotification service", () => {
         where: { userId },
       });
       expect(count).toBe(0);
+    });
+
+    it("should count a push service that is down as failed and keep the subscription", async () => {
+      await prisma.pushSubscription.create({
+        data: { endpoint: "https://down.example.com", p256dh: "key", auth: "auth", userId },
+      });
+      delivery.mockRejectedValue(new Error("ECONNREFUSED"));
+
+      const result = await sendPushToUser(userId, payload);
+
+      expect(result).toEqual({ sent: 0, failed: 1 });
+      expect(await prisma.pushSubscription.count({ where: { userId } })).toBe(1);
+    });
+
+    it("should send reminders without call notification options", async () => {
+      await prisma.pushSubscription.create({
+        data: { endpoint: "https://push3.example.com", p256dh: "key", auth: "auth", userId },
+      });
+
+      await sendPushToUser(userId, payload);
+
+      expect(delivery.mock.calls[0][2]).toEqual({});
+    });
+
+    it("should not send reminders to a student's devices", async () => {
+      const student = await prisma.student.create({ data: { name: "Ученик", tutorId: userId } });
+      const studentUser = await prisma.studentUser.create({
+        data: { email: uniqueEmail(), password: "hashed", name: "Ученик", studentId: student.id },
+      });
+      await prisma.pushSubscription.create({
+        data: {
+          endpoint: `https://student.example.com/${studentUser.id}`,
+          p256dh: "key",
+          auth: "auth",
+          studentUserId: studentUser.id,
+        },
+      });
+
+      const result = await sendPushToUser(userId, payload);
+      await prisma.studentUser.delete({ where: { id: studentUser.id } });
+      await prisma.student.delete({ where: { id: student.id } });
+
+      expect(result).toEqual({ sent: 0, failed: 0 });
+      expect(delivery).not.toHaveBeenCalled();
+    });
+
+    it("should refuse to send without VAPID keys", async () => {
+      delete process.env.VAPID_PRIVATE_KEY;
+
+      await expect(sendPushToUser(userId, payload)).rejects.toThrow("VAPID ключи не настроены");
     });
   });
 

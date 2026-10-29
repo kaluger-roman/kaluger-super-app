@@ -1,6 +1,7 @@
 import { createEffect, createEvent, sample } from "effector";
 
 import { studentUserModel } from "@entities";
+import { callNotificationOpenModel } from "@features/videoCall";
 import { getStudentToken } from "@shared";
 
 import * as appInitModel from "./appInit.model";
@@ -18,6 +19,8 @@ const connection = socketConnectionModel.createSocketConnection({
   dispatch: dispatchStudentMessage,
   reconnectDelayMs: STUDENT_WS_RECONNECT_DELAY_MS,
   resumed: appInitModel.appResumed,
+  online: appInitModel.wentOnline,
+  openedForCall: callNotificationOpenModel.notificationOpenedInApp,
   logLabel: "Student WS",
 });
 
