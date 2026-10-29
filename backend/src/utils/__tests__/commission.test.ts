@@ -345,6 +345,24 @@ describe("allocateCommission", () => {
     expect(allocation.creditByLessonId.get("l1")).toEqual({ amount: 500, state: "FACT" });
   });
 
+  // Lessons of separate recurring series get ids unrelated to their dates.
+  it("should credit lessons paid on the same date in lesson order, not id order", () => {
+    const prepaidOn = new Date(Date.UTC(2026, 8, 29, 0, 0, 0));
+    const prepaid = (id: string, day: number) =>
+      lesson({ id, startTime: new Date(Date.UTC(2026, 9, day, 14, 0, 0)), paymentDate: prepaidOn });
+
+    const allocation = allocateCommission({
+      commissionAmount: 2500,
+      lessons: [prepaid("a-third", 3), prepaid("z-first", 1), prepaid("m-second", 2)],
+    });
+
+    expect(creditsOf(allocation)).toEqual([
+      { id: "z-first", amount: 1000, state: "FACT" },
+      { id: "m-second", amount: 1000, state: "FACT" },
+      { id: "a-third", amount: 500, state: "FACT" },
+    ]);
+  });
+
   it("should fall back to the lesson date when a paid lesson has no payment date", () => {
     const withoutPaymentDate = lesson({
       id: "l1",
