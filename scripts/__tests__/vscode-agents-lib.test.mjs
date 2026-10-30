@@ -23,6 +23,7 @@ const {
   FIRST_READ_MAX,
   encodeCwd,
   underRoots,
+  issueRef,
   ago,
   userText,
   toolSummary,
@@ -173,6 +174,31 @@ test("Transcript collects titles, prompt, mode and the feed, skipping service li
   append({ type: "custom-title", customTitle: "Мой заголовок" });
   t.update();
   assert.equal(t.title, "Мой заголовок");
+});
+
+test("issueRef finds the issue a prompt is about", () => {
+  assert.equal(issueRef("глянь https://github.com/o/r/issues/105 и issue #7"), 105);
+  assert.equal(issueRef("/auto-bug-fix --new issue #42 (u): t"), 42);
+  assert.equal(issueRef("Возьми в работу Issue 12"), 12);
+  assert.equal(issueRef("почини ишью #9"), 9);
+  assert.equal(issueRef("https://github.com/o/r/pull/3"), null);
+  assert.equal(issueRef("tissue #4 и PR #5"), null);
+  assert.equal(issueRef(undefined), null);
+});
+
+test("Transcript.issue comes from the first user prompt that names an issue", () => {
+  const t = parse(
+    user("<system-reminder>issue #1</system-reminder>", 0),
+    user("привет", 0),
+    user("This session is being continued… issue #5", 0, { isCompactSummary: true }),
+    text("issue #2 из ответа не считается", 1),
+    user("/auto-feature --new issue #3 (https://github.com/o/r/issues/3): t", 2)
+  );
+  assert.equal(t.issue, 3);
+  append(user("а заодно issue #4", 3));
+  t.update();
+  assert.equal(t.issue, 3, "later prompts do not move the session to another issue");
+  assert.equal(parse(user("просто задача", 0)).issue, null);
 });
 
 test("Transcript title falls back to the prompt, then to the session id", () => {
@@ -411,6 +437,18 @@ test("Store joins `claude agents` with transcripts under the configured roots", 
   );
   assert.equal(store.session(ids.live1).live.status, "busy");
   assert.equal(store.session("nope").live, null);
+  assert.equal(store.byIssue.size, 0);
+
+  const prompt = (n) =>
+    jl(user(`Возьми в работу issue #${n} (https://github.com/o/r/issues/${n})`));
+  appendFileSync(join(proj, `${ids.live1}.jsonl`), prompt(10));
+  appendFileSync(join(wtProj, `${ids.recent}.jsonl`), prompt(10));
+  writeFileSync(join(proj, "ffff.jsonl"), prompt(11));
+  await store.refresh();
+  assert.equal(store.byIssue.get(10).id, ids.live1, "a live session wins over a finished one");
+  assert.equal(store.byIssue.get(11).id, "ffff");
+  assert.equal(store.byIssue.get(11).live, null);
+  assert.equal(store.byIssue.has(12), false);
 
   settings.claudePath = join(dir, "missing");
   await store.refresh();

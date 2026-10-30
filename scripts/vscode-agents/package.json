@@ -181,6 +181,12 @@
         "title": "Взять в работу через /auto-feature",
         "icon": "$(sparkle)",
         "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.continueIssue",
+        "title": "Продолжить работу",
+        "icon": "$(debug-continue)",
+        "category": "Агенты Super App"
       }
     ],
     "menus": {
@@ -243,6 +249,26 @@
           "group": "inline@3"
         },
         {
+          "command": "superAgents.continueIssue",
+          "when": "viewItem == issue;url;session",
+          "group": "inline@1"
+        },
+        {
+          "command": "superAgents.takeIssue",
+          "when": "viewItem == issue;url;session",
+          "group": "1_take@1"
+        },
+        {
+          "command": "superAgents.takeIssueBugFix",
+          "when": "viewItem == issue;url;session",
+          "group": "1_take@2"
+        },
+        {
+          "command": "superAgents.takeIssueFeature",
+          "when": "viewItem == issue;url;session",
+          "group": "1_take@3"
+        },
+        {
           "command": "superAgents.copy",
           "when": "view == superAgents.live || view == superAgents.recent || view == superAgents.issues",
           "group": "9_misc@2"
@@ -283,6 +309,10 @@
         },
         {
           "command": "superAgents.takeIssueFeature",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.continueIssue",
           "when": "false"
         }
       ]
