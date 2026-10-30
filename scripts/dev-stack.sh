@@ -20,7 +20,8 @@
 #   run-backend      Backend dev server (nodemon) on the branch's api port + dev DB.
 #   run-frontend     CRA dev server on the branch's web port, pointed at the branch's api.
 #   run-backend-e2e  Backend in NODE_ENV=test E2E=1 against the branch's TEST DB (for e2e).
-#   test-backend ... Jest against the branch's test DB (args passed through).
+#   test-backend ... Jest against the branch's test DB (args passed through); starts the
+#                    branch's db when it is down and applies pending migrations to the test DB.
 #   e2e ...          Playwright e2e on the branch's ports (args passed through).
 #   migrate          `prisma migrate deploy` to both branch DBs.
 #   psql [--test] SQL  Run SQL in the branch's dev (or test) database.
@@ -112,7 +113,8 @@ load_ports() {
   idx="$(branch_idx)"
   WEB_PORT=$((3000 + idx * 10))
   API_PORT=$((3001 + idx * 10))
-  DB_PORT=$((15432 + idx))
+  # DEV_STACK_DB_PORT_BASE: tests move the db port off the real stacks' range.
+  DB_PORT=$((${DEV_STACK_DB_PORT_BASE:-15432} + idx))
   DEV_DB_URL="postgresql://dev:dev@localhost:$DB_PORT/tutor_app?schema=public"
   TEST_DB_URL="postgresql://dev:dev@localhost:$DB_PORT/tutor_app_test?schema=public"
 }
@@ -172,10 +174,42 @@ cmd_run_frontend() {
     exec npm start
 }
 
+db_reachable() {
+  node -e '
+    const socket = require("net").connect(Number(process.argv[1]), "127.0.0.1");
+    socket.setTimeout(2000, () => process.exit(1));
+    socket.on("connect", () => process.exit(0)).on("error", () => process.exit(1));
+  ' "$DB_PORT"
+}
+
+# Jest against a stopped stack fails every suite with "Can't reach database server", so start it.
+# A running stack still gets the branch's new migrations: `npm run db:migrate` only migrates the
+# personal dev DB from backend/.env.
+ensure_test_db() {
+  if db_reachable; then
+    if ! (cd "$REPO_ROOT/backend" && DATABASE_URL="$TEST_DB_URL" npx prisma migrate deploy >&2); then
+      echo "prisma migrate deploy to the branch's test database (localhost:$DB_PORT) failed, see above." >&2
+      exit 1
+    fi
+    return
+  fi
+  echo "The branch's database (localhost:$DB_PORT) is not running; starting it as \`scripts/dev-stack.sh up\` does." >&2
+  if ! { compose up -d --wait >&2 && cmd_migrate_inner; }; then
+    cat >&2 <<EOF
+Could not start the branch's database, see above. Docker must be running; start the stack by hand:
+  bash scripts/dev-stack.sh up
+or run the backend tests on the shared test database of backend/.env.test:
+  npm run check -- --backend-tests npm
+EOF
+    exit 1
+  fi
+}
+
 cmd_test_backend() {
   load_ports
   use_stand_pg_client
   ensure_prisma_client
+  ensure_test_db
   cd "$REPO_ROOT/backend"
   # jest's loadTestEnv lets backend/.env.test override DATABASE_URL, but not TEST_DATABASE_URL.
   DATABASE_URL="$TEST_DB_URL" TEST_DATABASE_URL="$TEST_DB_URL" exec npm test -- "$@"
