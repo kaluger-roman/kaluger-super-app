@@ -16,6 +16,7 @@ const {
   Store,
   IssueBoard,
   issueBand,
+  issueTakeCommand,
 } = require("./lib");
 
 const cfg = () => vscode.workspace.getConfiguration("superAgents");
@@ -526,14 +527,9 @@ const activate = (ctx) => {
   };
   const issuesEvery = () => Math.max(1, cfg().get("issuesRefreshMinutes")) * 60e3;
   let issuesTimer = setInterval(refreshIssues, issuesEvery());
-  const takeIssue = (n) => {
+  const takeIssue = (mode) => (n) => {
     const i = n?.data?.issue;
-    if (!i) return;
-    const prompt = `Возьми в работу issue #${i.number} (${i.url}): ${i.title}`.replace(
-      /'/g,
-      "'\\''"
-    );
-    terminal(`#${i.number}`, cfg().get("roots")[0], `claude '${prompt}'`);
+    if (i) terminal(`#${i.number}`, cfg().get("roots")[0], issueTakeCommand(i, mode));
   };
 
   const pick = async () => {
@@ -573,7 +569,9 @@ const activate = (ctx) => {
     }),
     vscode.commands.registerCommand("superAgents.refresh", tick),
     vscode.commands.registerCommand("superAgents.refreshIssues", refreshIssues),
-    vscode.commands.registerCommand("superAgents.takeIssue", takeIssue),
+    vscode.commands.registerCommand("superAgents.takeIssue", takeIssue("plain")),
+    vscode.commands.registerCommand("superAgents.takeIssueBugFix", takeIssue("bug")),
+    vscode.commands.registerCommand("superAgents.takeIssueFeature", takeIssue("feature")),
     vscode.commands.registerCommand("superAgents.newSession", () =>
       terminal("claude", cfg().get("roots")[0], "claude")
     ),

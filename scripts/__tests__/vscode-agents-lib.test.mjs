@@ -3,6 +3,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
@@ -36,6 +37,8 @@ const {
   parseIssueScore,
   parseIssueWhy,
   rankIssues,
+  issueTakePrompt,
+  issueTakeCommand,
   IssueBoard,
 } = require("../vscode-agents/lib.js");
 const { renderBlock } = await import("../issue-priority.mjs");
@@ -478,6 +481,33 @@ test("rankIssues keeps the top N by score, newer first on ties, and counts unsco
   assert.deepEqual(r.top[0].labels, ["bug"]);
   assert.equal(r.unscored, 2);
   assert.equal(r.total, 6);
+});
+
+test("issueTakePrompt starts a plain session or an orchestrator on the issue", () => {
+  const i = { number: 42, url: "https://github.com/o/r/issues/42", title: "вход\n падает  " };
+  assert.equal(
+    issueTakePrompt(i),
+    "Возьми в работу issue #42 (https://github.com/o/r/issues/42): вход падает"
+  );
+  assert.equal(
+    issueTakePrompt(i, "bug"),
+    "/auto-bug-fix --new issue #42 (https://github.com/o/r/issues/42): вход падает. " +
+      "Полное описание и обсуждение: gh issue view 42"
+  );
+  assert.match(issueTakePrompt(i, "feature"), /^\/auto-feature --new issue #42 \(/);
+});
+
+test("issueTakeCommand passes the prompt as one single-quoted shell argument", () => {
+  const i = { number: 7, url: "u", title: "it's $HOME `x`" };
+  const cmd = issueTakeCommand(i, "bug");
+  assert.equal(cmd, `claude '${issueTakePrompt(i, "bug").replace(/'/g, "'\\''")}'`);
+  assert.equal(
+    execFileSync("/bin/sh", ["-c", `printf %s ${cmd.slice("claude ".length)}`], {
+      encoding: "utf8",
+    }),
+    issueTakePrompt(i, "bug")
+  );
+  assert.ok(!cmd.includes("\n"));
 });
 
 test("IssueBoard runs the command, keeps the last list on failure and skips overlapping runs", async () => {

@@ -520,6 +520,25 @@ const rankIssues = (issues, limit) => {
   return { top: scored.slice(0, limit), unscored, total: issues.length };
 };
 
+// How "take in work" starts a new session on an issue: a plain prompt or one of the orchestrators
+// (`--new` so an unfinished run of the same orchestrator does not turn the start into a resume)
+const ISSUE_TAKE_PREFIX = {
+  plain: "",
+  bug: "/auto-bug-fix --new ",
+  feature: "/auto-feature --new ",
+};
+
+const issueTakePrompt = (issue, mode = "plain") => {
+  const ref = `issue #${issue.number} (${issue.url}): ${one(issue.title, 300)}`;
+  return mode === "plain"
+    ? `Возьми в работу ${ref}`
+    : `${ISSUE_TAKE_PREFIX[mode]}${ref}. Полное описание и обсуждение: gh issue view ${issue.number}`;
+};
+
+// Shell command for the terminal: the prompt is a single-quoted argument of `claude`
+const issueTakeCommand = (issue, mode) =>
+  `claude '${issueTakePrompt(issue, mode).replace(/'/g, "'\\''")}'`;
+
 const fetchIssues = (command, timeout = 60000) =>
   new Promise((resolve, reject) =>
     execFile("/bin/sh", ["-c", command], { timeout, maxBuffer: 64 << 20 }, (err, out, errOut) => {
@@ -567,6 +586,9 @@ module.exports = {
   parseIssueScore,
   parseIssueWhy,
   rankIssues,
+  ISSUE_TAKE_PREFIX,
+  issueTakePrompt,
+  issueTakeCommand,
   fetchIssues,
   IssueBoard,
   FEED_MAX,
