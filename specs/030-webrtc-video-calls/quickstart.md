@@ -29,14 +29,18 @@ STUN_URL="stun:stun.l.google.com:19302"
 
 # TURN relay (optional locally; required in prod for strict-NAT users)
 # When unset, the app runs STUN-only: P2P works on permissive networks,
-# relay fallback is unavailable (logged at startup).
-TURN_URL="turn:turn.tutor.kaluger.ru:3478"
-TURN_SECRET="<coturn static-auth-secret>"
-TURN_CREDENTIAL_TTL="86400"
+# relay fallback is unavailable (warning at startup in production, plus the
+# `turn_not_configured` admin alert on the prod server).
+# Comma-separated: one ICE server per URL; a bare turn:host:3478 is UDP only.
+# Do not set locally: this is the prod coturn, a foreign secret only gets 401.
+# Prod setup: docs/ops/turn-relay.md
+# TURN_URL="turn:tutor.kaluger.ru:3478?transport=udp,turn:tutor.kaluger.ru:3478?transport=tcp,turns:tutor.kaluger.ru:5349?transport=tcp"
+# TURN_SECRET="<static-auth-secret from /etc/turnserver.conf>"
+TURN_CREDENTIAL_TTL="14400"
 ```
 
-- The backend mints **time-limited** TURN credentials per call (HMAC over the secret) and sends them to the client in `call_ringing`/`call_accepted` signaling — the secret never reaches the browser.
-- **coturn deploy (prod, operational — not an npm dep)**: install coturn on the VPS, enable `use-auth-secret` with `static-auth-secret=<TURN_SECRET>`, set `realm=tutor.kaluger.ru`, open UDP/TCP 3478 (and TLS 5349 if used), and put it behind the existing firewall. Documented in deploy notes; no code dependency.
+- The backend mints **time-limited** TURN credentials per call (HMAC over the secret) and sends them to the client in `call_incoming` (callee), `call_accepted` (caller) and the `call_sync` snapshot — the secret never reaches the browser. `TURN_CREDENTIAL_TTL` defaults to 14400 (4 h).
+- **coturn deploy (prod, operational — not an npm dep)**: install, config, certificates, verification and rollback are in [`docs/ops/turn-relay.md`](../../docs/ops/turn-relay.md); no code dependency.
 
 ## 3. Run
 

@@ -68,8 +68,18 @@ Computed **server-side per call** so TURN secrets never reach the SPA:
   "iceServers": [
     { "urls": "stun:stun.l.google.com:19302" },
     {
-      "urls": "turn:turn.tutor.kaluger.ru:3478",
-      "username": "1717999999",
+      "urls": "turn:tutor.kaluger.ru:3478?transport=udp",
+      "username": "1717999999:student-su-1",
+      "credential": "base64-hmac-sha1(secret, username)"
+    },
+    {
+      "urls": "turn:tutor.kaluger.ru:3478?transport=tcp",
+      "username": "1717999999:student-su-1",
+      "credential": "base64-hmac-sha1(secret, username)"
+    },
+    {
+      "urls": "turns:tutor.kaluger.ru:5349?transport=tcp",
+      "username": "1717999999:student-su-1",
       "credential": "base64-hmac-sha1(secret, username)"
     }
   ]
@@ -77,7 +87,7 @@ Computed **server-side per call** so TURN secrets never reach the SPA:
 ```
 
 - STUN entry always present (default overridable via `STUN_URL`).
-- TURN entry present only when `TURN_URL` + `TURN_SECRET` are configured; `username` is a Unix expiry timestamp (`now + TURN_CREDENTIAL_TTL`), `credential` is the time-limited HMAC (coturn REST-auth scheme).
+- TURN entries present only when `TURN_URL` + `TURN_SECRET` are configured: one entry per URL of the comma-separated `TURN_URL`, each with a single string `urls` and the same credentials. `username` is `<expiry>:<kind>-<id>` (Unix expiry `now + TURN_CREDENTIAL_TTL`, then the participant), `credential` is the time-limited HMAC (coturn REST-auth scheme).
 - Frontend feeds this straight into `new RTCPeerConnection({ iceServers })`. `iceTransportPolicy` stays `"all"` → direct candidates tried first, `relay` only as fallback (FR-014, never forces relay → preserves SC-002).
 
 ---

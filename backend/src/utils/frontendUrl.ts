@@ -21,3 +21,8 @@ export const findPublicUrlProblem = (url: string): string | null => {
   if (LOCAL_HOSTNAMES.includes(parsed.hostname)) return "points to the local machine";
   return null;
 };
+
+// A real production server, as opposed to the QA stack that runs a production build on localhost.
+export const isPublicProductionServer = (): boolean =>
+  process.env.NODE_ENV === "production" &&
+  findPublicUrlProblem(process.env.FRONTEND_URL ?? "") === null;

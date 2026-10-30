@@ -128,6 +128,13 @@ export const mintTurnCredentials = (
   return { username, credential };
 };
 
+// The wire format carries one string per ICE server, so every TURN URL becomes its own entry.
+export const parseTurnUrls = (value: string | undefined): string[] =>
+  (value ?? "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter((url) => url !== "");
+
 export const isSamePresence = (a: ParticipantPresence, b: ParticipantPresence): boolean =>
   a.presence === b.presence &&
   a.audioSuspended === b.audioSuspended &&

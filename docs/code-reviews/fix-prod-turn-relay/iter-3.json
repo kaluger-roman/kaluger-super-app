@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "branch": "fix-prod-turn-relay",
+  "base_ref": "origin/main",
+  "base_note": "working-tree mode: diff of the uncommitted working tree (incl. untracked files, excluding .claude/auto-bug-fix/ and docs/code-reviews/) vs merge-base 9bd6788 with origin/main; local main is stale",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-30T15:23:39Z",
+  "diff_stats": {
+    "files_changed": 20,
+    "insertions": 808,
+    "deletions": 27
+  },
+  "summary": {
+    "raw_findings": 9,
+    "after_dedup": 6,
+    "after_score_filter": 5,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 5
+    },
+    "by_category": {
+      "logic": 3,
+      "hack": 1,
+      "bug": 1
+    },
+    "agents_failed": [],
+    "agents_without_findings": [
+      "claude-md",
+      "type-safety",
+      "removed-behavior",
+      "wrapper-proxy"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "shallow-bug",
+      "title": "CHANGELOG обещает «общий лимит полосы» в конфиге coturn, а bps-capacity удалён",
+      "category": "logic",
+      "file": "CHANGELOG.md",
+      "line_start": 31,
+      "line_end": 31,
+      "snippet": "- Инструкция `docs/ops/turn-relay.md` по TURN-релею на проде: ... квоты и общий лимит полосы, секрет не попадает в командную строку) ...",
+      "rationale": "Фраза «квоты и общий лимит полосы» описывает bps-capacity из iter-1. В iter-2 его сознательно убрали, в конфиге остался только max-bps на сессию, так что запись в CHANGELOG (и news, который генерируется из неё) не соответствует тому, что делает инструкция.",
+      "fix_hint": "Заменить «квоты и общий лимит полосы» на «квоты аллокаций и лимит полосы на сессию (max-bps)».",
+      "score": 50,
+      "verification_note": "Расхождение подтверждено: в CHANGELOG.md:31 фраза «квоты и общий лимит полосы» описывает bps-capacity, который в итерации 2 убран (в docs/ops/turn-relay.md:236-238 комментарий, что bps-capacity намеренно не задаётся, остаётся только max-bps=400000), поэтому запись неточна, но это документационная мелочь без влияния на работу прода.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "hacks",
+      "title": "Шаг 5 проверяет отсутствие предупреждения отрицательным grep по скопированной строке, и при любом расхождении печатается успех",
+      "category": "hack",
+      "file": "docs/ops/turn-relay.md",
+      "line_start": 176,
+      "line_end": 182,
+      "snippet": "L=\"$(wc -l < ~/.pm2/logs/backend-error.log)\"   # the log keeps warnings of earlier starts\n...\ntail -n +\"$((L + 1))\" ~/.pm2/logs/backend-error.log | grep -F 'TURN_URL или TURN_SECRET не задан' \\\n  && echo \"STOP: still STUN-only\" || echo \"no STUN-only warning\"",
+      "rationale": "Успех здесь означает, что строка не нашлась. Ищется дословная копия `TURN_NOT_CONFIGURED_WARNING` из callSignaling.constants.ts, и тест эту копию с константой не связывает. Поэтому смена текста константы, ротация или усечение лога pm2 после `wc -l` (тогда tail выдаёт пустоту) и любая ошибка tail дают «no STUN-only warning», хотя бэкенд остался STUN-only. Это новое следствие отфильтрованного в iter-2 дубля текста: дрейф даёт тихий ложный успех, а не видимую ошибку.",
+      "fix_hint": "Проверять положительный сигнал. Например, при настроенном TURN бэкенд пишет при старте info-строку (`TURN relay: N URL(s)`), и шаг 5 ждёт её в новой части лога. Ещё вариант: оставить единственным критерием детерминированную проверку `isTurnConfigured()` → `true` (строка 185/319), а grep по логу убрать.",
+      "score": 50,
+      "verification_note": "Логика подтверждена: шаг 5 в docs/ops/turn-relay.md:181-182 печатает «no STUN-only warning» при любом невыполнении grep, включая пустой вывод tail после ротации лога и дрейф текста TURN_NOT_CONFIGURED_WARNING, и ничто не связывает копию в доке с константой; но следующий шаг требует детерминированного `true` от isTurnConfigured(), так что вред ограничен.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "deep-logic",
+      "title": "Проверка TLS в ранбуке на деле проверяет DTLS по UDP, а DTLS в конфиге выключен через no-dtls, поэтому она всегда падает",
+      "category": "bug",
+      "file": "docs/ops/turn-relay.md",
+      "line_start": 309,
+      "line_end": 309,
+      "snippet": "turnutils_uclient -u \"$U\" -w \"$C\" -y -n 3 -S -p 5349 45.133.234.3     # TLS",
+      "rationale": "У turnutils_uclient из coturn 4.6.1 (пакет Ubuntu 24.04 4.6.1-1build4) флаг -S значит «TLS for TCP, DTLS for UDP», а без -t клиент работает по UDP, так что команда идёт DTLS на UDP 5349. Конфиг из того же документа задаёт no-dtls (строка 220), и coturn на UDP 5349 не слушает. Шаг Verification для turns: даёт ложный отказ, и оператор может решить, что TLS сломан, или убрать no-dtls.",
+      "fix_hint": "Добавить -t: `turnutils_uclient -u \"$U\" -w \"$C\" -y -n 3 -t -S -p 5349 45.133.234.3  # TLS`.",
+      "score": 50,
+      "verification_note": "Ошибка подтверждена по снимку: в docs/ops/turn-relay.md:220 стоит no-dtls, а строка 309 (новая, из этого diff'а) запускает turnutils_uclient -S -p 5349 без -t, то есть по UDP, где -S означает DTLS, и слушателя на UDP 5349 нет; проверка ложно падает, но прод не ломает, поэтому не выше 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "deep-logic",
+      "title": "Фикс iter-2 неполный: раздел Bandwidth и CHANGELOG по-прежнему обещают общий лимит полосы bps-capacity, которого в конфиге нет",
+      "category": "logic",
+      "file": "docs/ops/turn-relay.md",
+      "line_start": 433,
+      "line_end": 435,
+      "snippet": "both participants' media in and out of the server: roughly 2–6 Mbit/s each way\nper call for video, capped by `max-bps` per session and `bps-capacity` for\nthe server. `total-quota` bounds the number of allocations. Watch the provider's traffic",
+      "rationale": "В iter-2 bps-capacity убрали из /etc/turnserver.conf намеренно (комментарий в строках 236-238: «No bps-capacity»). Раздел Bandwidth при этом утверждает, что трафик сервера ограничен bps-capacity, а в CHANGELOG.md:31 сказано «квоты и общий лимит полосы». Общего лимита нет, ограничены только max-bps на сессию и total-quota, так что оператор переоценивает защиту от перерасхода трафика. (also flagged by: shallow-bug, security, hacks)",
+      "fix_hint": "В Bandwidth написать «capped by `max-bps` per session; there is no server-wide cap (see the config comment), `total-quota` bounds the number of allocations». В CHANGELOG.md:31 заменить «квоты и общий лимит полосы» на «квоты и лимит полосы на сессию».",
+      "score": 50,
+      "verification_note": "Проблема подтверждена: строки 434-435 docs/ops/turn-relay.md и CHANGELOG.md:31 в diff обещают общий лимит bps-capacity, а в конфиге turnserver.conf (строки 236-238) bps-capacity намеренно не задан, поэтому защита от перерасхода трафика переоценивается; но это только документация без влияния на рантайм, поэтому выбрано 50, а не выше.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "cross-file",
+      "title": "quickstart.md называет `call_ringing` сообщением, в котором приходят TURN-креды, хотя их несут `call_incoming`, `call_accepted` и снимок `call_sync`",
+      "category": "logic",
+      "file": "specs/030-webrtc-video-calls/quickstart.md",
+      "line_start": 42,
+      "line_end": 42,
+      "snippet": "- The backend mints **time-limited** TURN credentials per call (HMAC over the secret) and sends them to the client in `call_ringing`/`call_accepted` signaling — the secret never reaches the browser. `TURN_CREDENTIAL_TTL` defaults to 14400 (4 h).",
+      "rationale": "Diff переписал эту строку, но оставил неверное имя сообщения. buildIceServers вызывается только для `call_incoming` (callFlow.ts:129), `call_accepted` (callFlow.ts:186) и снимка call_sync (callPresence.ts:35). Тест callFlow.test.ts:153 прямо проверяет, что в `call_ringing` нет iceServers, и контракт signaling-ws.md:49 с ним согласен.",
+      "fix_hint": "Заменить на «in `call_incoming` (callee), `call_accepted` (caller) and the `call_sync` snapshot», как в contracts/signaling-ws.md.",
+      "score": 50,
+      "verification_note": "Подтверждено кодом: call_ringing (callFlow.ts:50) несёт только callId и inviteId без iceServers, ICE-конфиг приходит в call_incoming (callFlow.ts:129) и call_accepted (callFlow.ts:186), а переписанная в diff строка quickstart.md:42 всё равно называет call_ringing; неточность в спеке без влияния на прод.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Фикс iter-1 неполный: матрица «прод или не прод» скопирована в тесты трёх потребителей",
+      "category": "hack",
+      "file": "backend/src/services/callAlerts/__tests__/turnNotConfiguredAlert.test.ts",
+      "line_start": 77,
+      "line_end": 91,
+      "snippet": "  it.each([\"development\", \"test\"])(\"should be inactive in %s without TURN\", async (nodeEnv) => {\n    setProdServer();\n    process.env.NODE_ENV = nodeEnv;\n...\n  it(\"should be inactive on the localhost QA stack without TURN\", async () => {",
+      "rationale": "Ветвления `isPublicProductionServer` (development, test, production на localhost) уже покрыты в utils/__tests__/frontendUrl.test.ts. Те же кейсы скопированы сюда (3 шт.) и в iceConfig.test.ts:179-183 (ещё 3). Подсказка iter-1 была оставить в тестах потребителей по одному кейсу на «публичный прод» и «не прод». Сейчас при смене правила определения прода придётся править три файла с одинаковой матрицей.",
+      "fix_hint": "Полную матрицу оставить только в frontendUrl.test.ts. В тестах алерта и `warnIfTurnNotConfigured` оставить по одному кейсу «не прод» (например, production + localhost), а остальные `it.each`-кейсы убрать.",
+      "score": 25,
+      "verification_note": "Факт подтверждён: в turnNotConfiguredAlert.test.ts остались дублирующие матрицы «не прод» (development/test через it.each и localhost), которые уже покрыты в frontendUrl.test.ts, так что исходная подсказка iter-1 выполнена не полностью. Но тесты не проходят вхолостую и не маскируют поведение, а вред ограничен поддерживаемостью, поэтому это вкусовщина и оценка нижняя.",
+      "reason": "below threshold"
+    }
+  ]
+}

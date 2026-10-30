@@ -50,6 +50,11 @@ export type CallParticipant = {
   id: string;
 };
 
+export type TurnConfig = {
+  urls: string[];
+  secret: string;
+};
+
 export type CallDropOutcome = {
   status: CallStatus;
   peerMessage: "call_ended" | "call_canceled" | "call_unavailable";

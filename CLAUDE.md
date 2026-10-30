@@ -192,6 +192,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 
 Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab, and problems open alerts in the «Алерты» tab with letters to the address from «Настройки» (`services/adminAlerts`, `services/backupAlerts`). Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
 
+## TURN Relay
+
+Video calls fall back to coturn on prod (`/etc/turnserver.conf`, ports 3478 UDP/TCP, 5349 TLS) when peer-to-peer fails. The backend reads `TURN_URL` (comma-separated, one ICE server per URL) and `TURN_SECRET` from `backend/.env` and mints short-lived credentials per call (`services/callSignaling/iceConfig.ts`); without them it runs STUN-only, warns at startup and opens the `turn_not_configured` admin alert (`services/callAlerts`). Install, verification, secret rotation and rollback: `docs/ops/turn-relay.md`.
+
 ## Prod Secrets
 
 `backend/.env` on prod holds every secret (JWT, admin, Resend, VAPID, DB) and must stay `600 root`; the backend deploy re-applies `chmod 600 .env*`. Back it up before an edit with `cp -p .env .env.bak-$(date +%Y%m%d-%H%M%S)-<reason>` (plain `cp` creates a `644` copy) and never write logs or `nohup` output next to it — the backend runs under pm2.
