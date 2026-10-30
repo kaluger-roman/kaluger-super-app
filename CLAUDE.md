@@ -191,6 +191,10 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 
 Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab, and problems open alerts in the «Алерты» tab with letters to the address from «Настройки» (`services/adminAlerts`, `services/backupAlerts`). Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
 
+## Prod Secrets
+
+`backend/.env` on prod holds every secret (JWT, admin, Resend, VAPID, DB) and must stay `600 root`; the backend deploy re-applies `chmod 600 .env*`. Back it up before an edit with `cp -p .env .env.bak-$(date +%Y%m%d-%H%M%S)-<reason>` (plain `cp` creates a `644` copy) and never write logs or `nohup` output next to it — the backend runs under pm2.
+
 ## Agents Panel (VS Code)
 
 `scripts/vscode-agents/` is a VS Code extension («Агенты Super App») that shows the live and recent Claude Code sessions of this project: what each one is doing, which ones wait for the user, a live feed, a jump to the session's terminal, and the most critical open issues (by the `docs/issue-priority.md` score). Data comes from `claude agents --json` and the transcripts in `~/.claude/projects/`; logic in `lib.js` (tested in `scripts/__tests__/`), UI in `extension.js`. Build and install: `scripts/vscode-agents/README.md`.
