@@ -13,9 +13,6 @@ const HOUR_MS = 60 * 60 * 1000;
 
 test.use({
   permissions: ["camera", "microphone"],
-  launchOptions: {
-    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
-  },
 });
 
 test.describe("Звонок по уроку", { tag: ["@regression", "@lessons"] }, () => {

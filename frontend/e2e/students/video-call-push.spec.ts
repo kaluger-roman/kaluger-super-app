@@ -14,9 +14,6 @@ import {
 
 test.use({
   permissions: ["camera", "microphone"],
-  launchOptions: {
-    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
-  },
 });
 
 const CALL_ENDED_ELSEWHERE = "Звонок уже завершён";

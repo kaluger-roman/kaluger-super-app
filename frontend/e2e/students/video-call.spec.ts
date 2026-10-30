@@ -2,6 +2,7 @@ import { test, expect } from "../fixtures";
 import { seedAuthInBrowser } from "../helpers/auth";
 import { callTutorFromLesson, confirmCall, connectTutorStudentCall } from "../helpers/call";
 import { createLesson, createStudentFor } from "../helpers/db";
+import { FAKE_MEDIA_ARGS } from "../helpers/media";
 import {
   currentWeekSlot,
   isStudentOnline,
@@ -12,11 +13,7 @@ import {
 test.use({
   permissions: ["camera", "microphone"],
   launchOptions: {
-    args: [
-      "--use-fake-ui-for-media-stream",
-      "--use-fake-device-for-media-stream",
-      "--auto-select-desktop-capture-source=Entire screen",
-    ],
+    args: [...FAKE_MEDIA_ARGS, "--auto-select-desktop-capture-source=Entire screen"],
   },
 });
 
