@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "branch": "fix-resume-ice-restart-race",
+  "base_ref": "9bd6788",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-30T15:28:19Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 17,
+    "insertions": 334,
+    "deletions": 21
+  },
+  "summary": {
+    "raw_findings": 8,
+    "after_dedup": 7,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3
+    },
+    "by_category": {
+      "convention": 1,
+      "claude-md": 1,
+      "logic": 1
+    },
+    "agents_with_findings": {
+      "claude-md": 2,
+      "deep-logic": 2,
+      "hacks": 4
+    },
+    "agents_clean": [
+      "shallow-bug",
+      "security",
+      "type-safety",
+      "removed-behavior",
+      "cross-file",
+      "wrapper-proxy"
+    ],
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "claude-md",
+      "title": "Комментарии в тесте пересказывают, что делают хелперы `returnToServer` и `returnAndGetConfirmed`",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 66,
+      "line_end": 69,
+      "snippet": "  // The page came back on a new socket and kept its connection (no session restart).\n  const returnToServer = (callId: string) => {\n    void resumeSendModel.sendResumeFx({ callId, role: \"tutor\", sessionRestart: false });\n  };",
+      "rationale": "docs/conventions/frontend.md:332 «Minimal comments — default zero… Не писать «// эта функция делает X»… Это применяется и к тестам». Имя `returnToServer` и тело `sendResumeFx({ sessionRestart: false })` уже говорят то же, что комментарий. Так же устроен переписанный комментарий на стр. 512-513 над `returnAndGetConfirmed`: он повторяет название describe «a rebuild for the peer's restart that meets the ICE restart of the own return» и имя хелпера.",
+      "fix_hint": "Удалить оба комментария (стр. 66 и 512-513). Если важна деталь «новый сокет», вынести её в имя хелпера.",
+      "score": 50,
+      "verification_note": "Правило «Minimal comments» в docs/conventions/frontend.md:332 прямо распространяется на тесты, и комментарий над returnToServer (стр. 66) в основном пересказывает тело хелпера — нарушение подтверждено, но мелкое; комментарий над returnAndGetConfirmed (стр. 512-513) добавляет условие гонки («while the ICE restart of the return is still under way»), так что там finding частично неверен.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "deep-logic",
+      "title": "Условие session?.localStream в toReturnIceRestart не покрыто: нет теста возврата при сессии без локального медиа (getUserMedia ещё идёт)",
+      "category": "claude-md",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 459,
+      "line_end": 472,
+      "snippet": "    it(\"should leave alone the first offer made after the return\", async () => {\n      callModel.callStarted({ studentId: \"stu-1\", peerName: \"Иван\", lesson: null });\n      ringCurrentInvite(\"late-first\");\n      returnToServer(\"late-first\");",
+      "rationale": "CLAUDE.md, Testing Requirements: «All new code must have full test coverage». В единственном тесте на «offer после возврата» call_resume уходит в фазе outgoing, когда сессии ещё нет (attachPeerConnection вызывается только по call_accepted). Поэтому если заменить `session?.localStream` на `session` (проверку наличия сессии), набор всё равно проходит. Не покрыт как раз реальный сценарий f7 из итерации 1: звонок принят, attachPeerConnection уже создал сессию, а getUserMedia ещё ждёт разрешения, и в этот момент сокет вернулся. Первый offer тогда уходит после call_resume, и restart возврата не должен его откатить.",
+      "fix_hint": "Добавить тест: в адаптере getUserMedia держится на отложенном промисе. call_accepted, затем returnToServer, затем отпустить getUserMedia, чтобы первый offer ушёл, затем call_resumed. Проверить, что restartIce и rollback не вызваны и offer ровно один.",
+      "score": 50,
+      "verification_note": "В тесте «should leave alone the first offer made after the return» сессии на момент returnToServer нет (её регистрирует attachPeerConnection с localStream: null по call_accepted, peerSession.helpers.ts:54-58), поэтому замена `session?.localStream` на `session` тесты не ломает; ни один другой тест не держит сессию без localStream в момент resumeSent — пробел покрытия, а не функциональный баг.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "deep-logic",
+      "title": "Restart возврата откатывает и offer, сделанный уже после call_resume (по новому сокету): решение принимается по localStream на момент resumeSent, а откат выполняется по состоянию pc на момент call_resumed",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.helpers.ts",
+      "line_start": 54,
+      "line_end": 58,
+      "snippet": "// Only an offer made before call_resume may have died with the old socket: one made after it\n// went over the new socket. Resolves with the call whose return restarts ICE, if any.\nexport const toReturnIceRestart = ({ callId, sessionRestart }: ResumeSent): string | null => {\n  const session = getSession(callId);\n  return !sessionRestart && session?.localStream && !session.polite ? callId : null;",
+      "rationale": "Комментарий и контракт 039 («offer, сделанный после него, ушёл по новому сокету и не мог потеряться») обещают не трогать offer после call_resume. Но toReturnIceRestart только проверяет, было ли медиа на момент resumeSent. Между call_resume и call_resumed проходит RTT плюс await isPairStillAuthorized (запрос в БД). Если в этом окне по новому сокету ушёл offer, его откатит restartIce(force:false) по returnConfirmed (mediaRecovery.helpers.ts:43-46: pc не connected и в have-local-offer). Такой offer дают: restart по mediaDown/stillUnstable (mediaRecovery.model.ts:81-110), первое включение камеры или демонстрация экрана (mediaControls.model.ts:54, screenShare.model.ts:41), первый offer звонящего, у которого getUserMedia завершился до call_resume, а setLocalDescription ещё шёл. Собеседник ответит на оба offer'а. Ответ на откаченный ляжет на restart-offer, второй придёт в stable: InvalidStateError → applyAnswerFx.fail → тост RENEGOTIATION_FAILED_TEXT (в фазе connecting — callFailed). Это симптом #138 в другом порядке. В базе 9bd6788 renegotiation-offer в этом окне откладывался через offerPending, а не откатывался. Различать offer'ы здесь не нужно через ids протокола (#188): достаточно знать, был ли offer сделан до call_resume. (also flagged by: hacks — localStream как прокси «offer ушёл до call_resume»: offer, который ещё создаётся (makingOffer) на момент resumeSent, уходит по новому сокету, но возврат всё равно взводится; лучше `session.localStream && !session.makingOffer` или маркер последнего отправленного offer'а)",
+      "fix_hint": "При взведении запоминать pc и его localDescription (или счётчик отправленных offer'ов сессии). Если к call_resumed pc в have-local-offer с другим offer'ом, сделанным после call_resume, не делать rollback: вызвать pc.restartIce() и выставить session.offerPending, чтобы restart-offer ушёл после ответа через applyAnswerFx; или пропустить restart, если в окне уже был ICE restart. Добавить тест: offer (restart по failed или renegotiation) между returnToServer и call_resumed не откатывается, и ответы на него не дают RENEGOTIATION_FAILED_TEXT.",
+      "score": 50,
+      "verification_note": "Механизм подтверждён кодом: между resumeSent и call_resumed offer, сделанный через новый сокет (камера, демонстрация экрана, отложенный offerPending), при call_resumed откатывается restartIce по have-local-offer, и это новая проблема diff'а, потому что в base restart шёл сразу на resumeSent, а окно теперь равно roundtrip до сервера; триггер узкий (действие пользователя в эту задержку), и последствия в основном самоисцеляются через ещё один offer, но возможны ошибка setRemoteDescription на поздний answer и потеря ICE-рестарта, если offer ещё в makingOffer.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Первая половина теста «return of another call» не падает ни при какой мутации фильтра returnConfirmed",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 414,
+      "line_end": 418,
+      "snippet": "      callResumeModel.resumed(\"other\");\n      await settleMicrotasks();\n\n      expect(pc.restartIce).not.toHaveBeenCalled();\n      expect(offersOf(sent)).toEqual([]);",
+      "rationale": "returnConfirmed берёт callId из clock (`fn: (_, callId) => ...`). Если заменить `due === callId` на `due !== null` или убрать фильтр, получится restartIceFx({ callId: \"other\" }), а getSession(\"other\") пуст, поэтому restartIce вернёт false. Значит, `pc.restartIce` для \"own\" не вызовется и offer'ов не будет: эти assertion'ы не могут упасть. Мутацию ловит только вторая половина, и то косвенно: «чужое» подтверждение сбрасывает $returnIceRestartDue, и настоящий call_resumed уже не срабатывает. Тест не проверяет то, что обещает его название.",
+      "fix_hint": "В fn returnConfirmed брать callId из взведённого `due` (source), а не из clock, тогда ослабленный фильтр перезапустит ICE у \"own\" и первая половина упадёт. Либо завести в тесте сессию и для \"other\" и проверить, что её restartIce не вызван.",
+      "score": 40,
+      "verification_note": "Факт верный: первая половина теста (resumed(\"other\") без сессии \"other\") вхолостую проходит при ослаблении фильтра, но тест в целом мутацию ловит — чужое подтверждение сбрасывает $returnIceRestartDue и вторая половина падает; вводящее в заблуждение название, а не непокрытый фильтр.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Новые backend-тесты повторяют соседние почти целиком, отличие только в sessionRestart и одном expect",
+      "category": "hack",
+      "file": "backend/src/services/callSignaling/__tests__/callReconnect.test.ts",
+      "line_start": 387,
+      "line_end": 419,
+      "snippet": "  it(\"should not confirm a resume whose pair cannot be checked\", async () => {\n    const callId = await connectCall();\n    jest\n      .spyOn(callSignalingHelpers, \"resolvePairForStudent\")\n      .mockRejectedValueOnce(new Error(\"db down\"));",
+      "rationale": "«should not confirm a resume whose pair cannot be checked» повторяет «should end the call, not answer with an error, when the pair cannot be checked on resume» (стр. 365): тот же spy на resolvePairForStudent, глушение console.error, ожидание historyRefreshed. «...socket closed while the pair was checked» повторяет сценарий «should keep waiting ... closes again while the resume is checked» (стр. 421). Отличие в обоих случаях только в `sessionRestart: false` и проверке отсутствия call_resumed. Скопированный setup будет расходиться с оригиналом при каждой правке сценария.",
+      "fix_hint": "Параметризовать исходные тесты через `it.each([true, false])` по sessionRestart и добавить в них `expect(messagesOfType(\"call_resumed\")).toEqual([])`. Отдельные копии тогда не нужны.",
+      "score": 25,
+      "verification_note": "Новые тесты повторяют соседние сценарии (стр. 365, 421) с отличием в sessionRestart и expect, но правила против дублирования/требования it.each в конвенциях нет, а новые тесты проверяют отдельный путь и не вхолостую — стилистика уровня iter-1 (25).",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "claude-md",
+      "title": "Хелпер `answerEveryOffer` вынесен на уровень describe, но вызывается один раз",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 345,
+      "line_end": 349,
+      "snippet": "    const answerEveryOffer = (callId: string) => {\n      offersOf(sent).forEach((_, index) =>\n        receive({ type: \"webrtc_answer\", callId, sdp: { type: \"answer\", sdp: `answer-${index}` } })\n      );\n    };",
+      "rationale": "docs/conventions/frontend.md:331 «Extract functions only if reused 2+ times». `answerEveryOffer` вызывается только в тесте «...(regression #138)» (стр. 384), а остальные тесты describe \"the return of the own page to the server\" его не используют.",
+      "fix_hint": "Встроить `offersOf(sent).forEach(...)` прямо в тест «should make one offer, from the rebuilt connection...» и удалить хелпер.",
+      "score": 25,
+      "verification_note": "answerEveryOffer вызывается ровно один раз, но правило frontend.md:331 «Extract functions only if reused 2+ times» в разделе Code Style для кода, а frontend-testing.md его не содержит — применимость к тестам не доказана, стилистика.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "toReturnIceRestart копирует guard из restartIce: проверка `!session.polite` дублирует его и ничего не меняет",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.helpers.ts",
+      "line_start": 39,
+      "line_end": 58,
+      "snippet": "  if (!session?.localStream || session.polite) return false;\n...\n  return !sessionRestart && session?.localStream && !session.polite ? callId : null;",
+      "rationale": "Предикат «есть локальное медиа и сторона невежливая» записан дважды (стр. 39 и 58). Часть про polite в toReturnIceRestart ни на что не влияет: если её убрать, вежливая сторона взведёт возврат, а restartIceFx по call_resumed всё равно вернёт false на той же проверке. Ни один тест этого не заметит. Это разбросанные одинаковые guard'ы: если правило «кто делает ICE restart» поменяют в restartIce, копия молча разойдётся с ним.",
+      "fix_hint": "Вынести в mediaRecovery.helpers один предикат вроде `const restartsIce = (session) => Boolean(session?.localStream) && !session?.polite` и вызывать его в restartIce и toReturnIceRestart. Или убрать polite из toReturnIceRestart и оставить там только то, что важно именно на момент resumeSent (sessionRestart и медиа/offer).",
+      "score": 25,
+      "verification_note": "Проверка `!session.polite` в toReturnIceRestart дублирует guard restartIce, но на исход не влияет: при polite-сессии restartIce вернёт false до побочных эффектов; это избыточность и риск рассинхрона, а не конкретный вред.",
+      "reason": "below threshold"
+    }
+  ]
+}

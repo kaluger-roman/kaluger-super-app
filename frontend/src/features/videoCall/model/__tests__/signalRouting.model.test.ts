@@ -90,6 +90,23 @@ describe("features/videoCall/model inbound signal routing", () => {
     expect(resumed.calls).toEqual([{ callId: "in-r", sessionRestart: false }]);
   });
 
+  it("should pass on the server's confirmation of the own return only for the current call", () => {
+    receive({
+      type: "call_incoming",
+      callId: "in-c",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
+    const confirmed = collectEvents(callResumeModel.resumed);
+
+    receive({ type: "call_resumed", callId: "other" });
+    receive({ type: "call_resumed", callId: "in-c" });
+    confirmed.unwatch();
+
+    expect(confirmed.calls).toEqual(["in-c"]);
+  });
+
   it("should cancel a call whose call_ringing arrives after the user already cancelled", async () => {
     callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
     const inviteId = readStore(callModel.$inviteId) ?? "";

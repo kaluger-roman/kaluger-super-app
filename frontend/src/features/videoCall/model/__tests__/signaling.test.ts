@@ -235,6 +235,15 @@ describe("features/videoCall/model parseCallSignal — 039 messages", () => {
     expect(parseCallSignal({ type: "call_restart_announced" })).toBeNull();
   });
 
+  it("should accept call_resumed with a call id only", () => {
+    expect(parseCallSignal({ type: "call_resumed", callId: "c-1" })).toEqual({
+      type: "call_resumed",
+      callId: "c-1",
+    });
+    expect(parseCallSignal({ type: "call_resumed" })).toBeNull();
+    expect(parseCallSignal({ type: "call_resumed", callId: 1 })).toBeNull();
+  });
+
   it("should accept call_ended with the peer_not_returned reason", () => {
     expect(
       parseCallSignal({ type: "call_ended", callId: "c-1", reason: "peer_not_returned" })

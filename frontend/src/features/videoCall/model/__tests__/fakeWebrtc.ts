@@ -182,6 +182,9 @@ const createFakePeerConnection = (): FakePeerConnection => {
       if (type === "answer") settleDirections();
     }),
     setRemoteDescription: vi.fn(async (desc?: RTCSessionDescriptionInit) => {
+      if (desc?.type === "answer" && pc.signalingState !== "have-local-offer") {
+        throw new DOMException(`Called in wrong state: ${pc.signalingState}`, "InvalidStateError");
+      }
       pc.signalingState = desc?.type === "offer" ? "have-remote-offer" : "stable";
       if (desc?.type === "answer") settleDirections();
     }),

@@ -11,6 +11,7 @@ const signals = split(callModel.signalReceived, {
   peerPresence: isSignalOf("call_peer_presence"),
   peerResumed: isSignalOf("call_peer_resumed"),
   restartAnnounced: isSignalOf("call_restart_announced"),
+  resumed: isSignalOf("call_resumed"),
 });
 
 const callContext = {
@@ -37,6 +38,13 @@ sample({
   filter: (context, { message }) => isCurrentCall(context, message),
   fn: (_, { message }) => ({ callId: message.callId, sessionRestart: message.sessionRestart }),
   target: callResumeModel.peerResumed,
+});
+sample({
+  clock: signals.resumed,
+  source: callContext,
+  filter: (context, { message }) => isCurrentCall(context, message),
+  fn: (_, { message }) => message.callId,
+  target: callResumeModel.resumed,
 });
 sample({
   clock: signals.restartAnnounced,

@@ -159,4 +159,7 @@ export const handleResume = async (
   if (missedPeerRestart) {
     send(sender, { type: "call_peer_resumed", callId: call.callId, sessionRestart: true });
   }
+  // The sender restarts ICE only on this, so it comes after the rebuild request: a restart offer of
+  // the connection the rebuild replaces would otherwise reach the peer.
+  if (!data.sessionRestart) send(sender, { type: "call_resumed", callId: call.callId });
 };

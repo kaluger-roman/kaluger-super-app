@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "branch": "fix-resume-ice-restart-race",
+  "base_ref": "main",
+  "base_commit": "9bd6788b0cdd66587e8dc7250099b19caf1a8f90",
+  "diff_mode": "working-tree",
+  "note": "Local main is stale (behind the branch's merge-base); the uncommitted working tree was diffed against merge-base 9bd6788 with origin/main. Untracked .claude/ and docs/code-reviews/ excluded (no other untracked files). Iteration-1 f6 (issue #188) not re-raised by design.",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-10-30T15:23:06Z",
+  "diff_stats": {
+    "files_changed": 16,
+    "insertions": 303,
+    "deletions": 21
+  },
+  "summary": {
+    "raw_findings": 7,
+    "after_dedup": 4,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3
+    },
+    "by_category": {
+      "logic": 1,
+      "hack": 1,
+      "claude-md": 1
+    },
+    "agents_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Фильтр phase === \"active\" убрал восстановление звонящего, вернувшегося в фазе connecting: первый offer, потерянный без сокета, больше никто не переотправляет",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.model.ts",
+      "line_start": 133,
+      "line_end": 140,
+      "snippet": "// The first offer of a connecting call may have gone out while the confirmation was on its way.\nsample({\n  clock: returnConfirmed,\n  source: callModel.$callPhase,\n  filter: (phase) => phase === \"active\",",
+      "rationale": "Сигнал, отправленный без сокета, пропадает: sendOverTransport бросает исключение, а callTransport.model.ts:20-30 гасит ошибку, пока $isOwnTransportLost, с расчётом, что «the resume brings the call up to date». В базе 9bd6788 это обеспечивал restart по resumeSent в любой фазе: сессия с localStream, pc не connected, have-local-offer → rollback → restartIce → sendOfferFx. Теперь звонящий, у которого в connecting пропал первый offer (закрытый сокет или сокет-зомби) или answer собеседника, после call_resumed ничего не делает: mediaDown, stillUnstable и lossStarted работают только в active, peerResumed{false} приходит только при возврате собеседника, таймаута connecting нет. Звонок висит в «Соединение…» или падает по failed (FR-008a), хотя раньше восстанавливался. Путь peerResumed{false} (стр. 111-117) фазу не проверяет, поведение несимметрично. Это побочный эффект фикса f7 из итерации 1: фаза на момент call_resumed не отличает offer, сделанный после call_resume (f7), от offer'а, потерянного до него. (also flagged by: removed-behavior, cross-file, hacks)",
+      "fix_hint": "Решать не по фазе на момент call_resumed, а по состоянию на момент resumeSent: хранить в $returnIceRestartDue вместе с callId pc сессии (если у неё уже был localStream) или поколение offer'а и на call_resumed перезапускать ICE, только если getSession(callId)?.pc тот же и offer сделан до возврата; фильтр по текущей фазе убрать. Добавить тест: connecting, первый offer без транспорта, возврат и call_resumed — один rollback и новый offer; и тест на f7: offer, сделанный между call_resume и call_resumed, не трогается.",
+      "score": 70,
+      "verification_note": "Регрессия подтверждена кодом: в базе 9bd6788 restartIce по resumeSent шёл в любой фазе, в текущем диффе call_resumed отсекает фазу connecting, а первый offer, отправленный без сокета (sendOverTransport бросает, callTransport глушит по $isOwnTransportLost), нигде больше не переотправляется, таймаута connecting нет; охват узкий (обрыв сокета между accept и ответом на offer), отсюда 70, а не 75+.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "hacks",
+      "title": "Тест «first offer of a call still connecting» моделирует обратный порядок и закрепляет регрессию вместо сценария f7",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 442,
+      "line_end": 456,
+      "snippet": "    it(\"should leave the first offer of a call still connecting alone\", async () => {\n      await startCallerSession(\"first\");\n      const pc = adapter.peerConnections[0];\n      sent.length = 0;\n\n      returnToServer(\"first\");",
+      "rationale": "Первый offer здесь сделан до returnToServer, то есть ушёл по старому сокету: это ровно тот случай, когда offer мог потеряться и раньше переотправлялся (см. f1). Сценарий из комментария к фильтру (offer ушёл, пока подтверждение было в пути, то есть между call_resume и call_resumed) не воспроизведён ни одним тестом. Тест проходит и подтверждает отказ от восстановления. Кроме того, проверка `signalingState === \"have-local-offer\"` его не различает: после отката и restart pc снова будет в have-local-offer.",
+      "fix_hint": "Разделить на два теста: offer, сделанный до call_resume, после call_resumed переотправляется; offer, сделанный между returnToServer и call_resumed (startCallerSession после returnToServer), остаётся нетронутым. Проверку signalingState заменить на проверку числа offer'ов.",
+      "score": 50,
+      "verification_note": "Тест вызывает startCallerSession до returnToServer, то есть offer уходит до call_resume, а комментарий в mediaRecovery.model.ts:133 описывает offer между call_resume и call_resumed, и этот сценарий тестом не покрыт; вхолостую тест не проходит (проверяет restartIce и offersOf(sent)), но закрепляет спорное поведение, поэтому 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "claude-md",
+      "title": "Сброс $returnIceRestartDue по returnConfirmed не покрыт ни одним тестом",
+      "category": "claude-md",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.model.ts",
+      "line_start": 162,
+      "line_end": 166,
+      "snippet": "sample({\n  clock: [returnConfirmed, peerRestarted, callModel.callTerminated],\n  fn: () => null,\n  target: $returnIceRestartDue,\n});",
+      "rationale": "CLAUDE.md, раздел Testing Requirements: «All new code must have full test coverage». Сбросы по peerRestarted и callTerminated проверяют тесты «...(regression #138)» и «should forget a return still to be confirmed when the call ends». Но ни один тест не присылает второй call_resumed после уже подтверждённого возврата без нового resumeSent: в каждом тесте mediaRecovery.model.test.ts call_resumed своего звонка приходит один раз. Если убрать returnConfirmed из clock, весь набор тестов всё равно пройдёт, хотя тогда два call_resumed подряд дадут два ICE restart и два offer'а.",
+      "fix_hint": "Добавить в describe \"the return of the own page to the server\" тест: returnToServer, call_resumed, затем ещё один call_resumed того же callId без нового call_resume. Проверить, что restartIce вызван один раз и ушёл один offer.",
+      "score": 50,
+      "verification_note": "Пробел подтверждён: в mediaRecovery.model.test.ts каждый тест шлёт call_resumed своего callId один раз, повторной доставки после подтверждения нет; signalRouting.model.test.ts проверяет только маршрутизацию; в проде дубликат call_resumed без нового call_resume бывает только при повторной доставке, поэтому это мелочь.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Сверка `due === callId` дублирует isCurrentCall и сброс по callTerminated, а тесты под неё подают недостижимые состояния",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/mediaRecovery.model.ts",
+      "line_start": 127,
+      "line_end": 132,
+      "snippet": "const returnConfirmed = sample({\n  clock: callResumeModel.resumed,\n  source: $returnIceRestartDue,\n  filter: (due, callId) => due === callId,\n  fn: (_, callId) => callId,",
+      "rationale": "$returnIceRestartDue равен либо null, либо текущему callId (пишется из resumeSent по текущему звонку и сбрасывается на callTerminated), а resumed приходит только для текущего звонка (resumeSignalRouting.model.ts:42-48, isCurrentCall), поэтому сверка эквивалентна `due !== null`. Проверить её удалось только недостижимыми в проде состояниями: «another call» шлёт `callResumeModel.resumed(\"other\")` в обход маршрутизации, «forget … when the call ends» использует один callId \"again\" для двух звонков. В соседнем resumeSend.model.ts для того же паттерна (restartAnnounced + `$unannouncedRestart`) роутинг callId не фильтрует, сверка там одна.",
+      "fix_hint": "Оставить один guard. Либо убрать isCurrentCall из маршрутизации call_resumed, как у restartAnnounced, и проверять «чужой звонок» через receive(), либо оставить роутинг, а $returnIceRestartDue сделать boolean и удалить тест с прямым resumed(\"other\"); в тесте на завершение звонка взять для второго звонка новый callId.",
+      "score": 25,
+      "verification_note": "Сверка due === callId по инвариантам кода эквивалентна due !== null, и resumeSent всегда несёт текущий звонок; прод-вреда нет, а тест «another call» с resumed(\"other\") реально проверяет фильтр, так что это дублирование защиты, а не костыль, который держит поведение.",
+      "reason": "below threshold"
+    }
+  ]
+}

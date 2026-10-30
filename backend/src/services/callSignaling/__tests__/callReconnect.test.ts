@@ -97,6 +97,12 @@ describe("call reconnect grace", () => {
 
   const historyRefreshed = () => messagesOfType("call_history_updated").length >= 2;
 
+  const studentResumed = (callId: string) => ({
+    kind: "student" as const,
+    id: studentUserId,
+    message: { type: "call_resumed" as const, callId },
+  });
+
   it("should keep a connected call when a participant loses the connection", async () => {
     const callId = await connectCall();
 
@@ -150,6 +156,7 @@ describe("call reconnect grace", () => {
           videoSuspended: false,
         },
       },
+      { id: studentUserId, message: { type: "call_resumed", callId } },
     ]);
   });
 
@@ -377,6 +384,40 @@ describe("call reconnect grace", () => {
     expect((await latestRecord()).status).toBe("COMPLETED");
   });
 
+  it("should not confirm a resume whose pair cannot be checked", async () => {
+    const callId = await connectCall();
+    jest
+      .spyOn(callSignalingHelpers, "resolvePairForStudent")
+      .mockRejectedValueOnce(new Error("db down"));
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
+    await waitFor(historyRefreshed);
+
+    expect(callRegistry.getCall(callId)).toBeUndefined();
+    expect(messagesOfType("call_resumed")).toEqual([]);
+  });
+
+  it("should not confirm a resume whose socket closed while the pair was checked", async () => {
+    const callId = await connectCall();
+
+    await withFakeTimers(async () => {
+      await dropStudent();
+      callWebSocket.connect("student", studentUserId);
+      callWebSocket.clearSent();
+      const resuming = signal("student", studentUserId, {
+        type: "call_resume",
+        callId,
+        sessionRestart: false,
+      });
+      await dropStudent();
+      await resuming;
+    });
+
+    expect(callRegistry.getCall(callId)?.disconnectedAt.student).toBeInstanceOf(Date);
+    expect(messagesOfType("call_resumed")).toEqual([]);
+  });
+
   it("should keep waiting for a participant whose socket closes again while the resume is checked", async () => {
     const callId = await connectCall();
 
@@ -411,7 +452,7 @@ describe("call reconnect grace", () => {
     const callId = await connectCall();
 
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
-    expect(callWebSocket.sent).toEqual([]);
+    expect(callWebSocket.sent).toEqual([studentResumed(callId)]);
 
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: true });
     expect(messagesOfType("call_peer_resumed")).toEqual([
@@ -439,7 +480,7 @@ describe("call reconnect grace", () => {
     });
   });
 
-  it("should ask a participant who was away during the peer's session restart to rebuild once it is back", async () => {
+  it("should ask a participant who was away during the peer's session restart to rebuild once it is back, before confirming its return (regression: its ICE restart offer reached the rebuilt peer)", async () => {
     const callId = await connectCall();
     await withFakeTimers(dropStudent);
     callWebSocket.clearSent();
@@ -467,11 +508,19 @@ describe("call reconnect grace", () => {
         message: { type: "call_peer_resumed", callId, sessionRestart: true },
       },
     ]);
+    expect(callWebSocket.sent.filter(({ kind }) => kind === "student")).toEqual([
+      {
+        kind: "student",
+        id: studentUserId,
+        message: { type: "call_peer_resumed", callId, sessionRestart: true },
+      },
+      studentResumed(callId),
+    ]);
 
     callWebSocket.clearSent();
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
 
-    expect(callWebSocket.sent).toEqual([]);
+    expect(callWebSocket.sent).toEqual([studentResumed(callId)]);
   });
 
   it("should not ask a participant who restarts its own session to rebuild for the peer's restart missed while away", async () => {
@@ -553,12 +602,13 @@ describe("call reconnect grace", () => {
         id: studentUserId,
         message: { type: "call_peer_resumed", callId, sessionRestart: true },
       },
+      studentResumed(callId),
     ]);
 
     callWebSocket.clearSent();
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
 
-    expect(callWebSocket.sent).toEqual([]);
+    expect(callWebSocket.sent).toEqual([studentResumed(callId)]);
   });
 
   it("should not ask the peer again once a signal came over the connection the request went to", async () => {
@@ -574,7 +624,7 @@ describe("call reconnect grace", () => {
 
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
 
-    expect(callWebSocket.sent).toEqual([]);
+    expect(callWebSocket.sent).toEqual([studentResumed(callId)]);
   });
 
   it("should not ask the peer again when it resumes over the connection the request went to", async () => {
@@ -586,7 +636,7 @@ describe("call reconnect grace", () => {
     callWebSocket.replaceConnection("student", studentUserId);
     await signal("student", studentUserId, { type: "call_resume", callId, sessionRestart: false });
 
-    expect(callWebSocket.sent).toEqual([]);
+    expect(callWebSocket.sent).toEqual([studentResumed(callId), studentResumed(callId)]);
   });
 
   const createLinkedStudent = async () => {

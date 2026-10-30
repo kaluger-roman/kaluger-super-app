@@ -25,6 +25,8 @@ import * as resumeSendModel from "./resumeSend.model";
 // patronum `delay` cannot be cancelled: delayed checks count only for the current generation.
 const $iceCheckGeneration = createStore(0);
 const $lossGeneration = createStore(0);
+// The own return (call_resume without a session restart) whose ICE restart waits for call_resumed.
+const $returnIceRestartDue = createStore<string | null>(null);
 
 const restartIceFx = createEffect(restartIce);
 const updateIceConfigFx = createEffect(updateIceConfig);
@@ -105,14 +107,39 @@ sample({
   target: restartIceFx,
 });
 
-// Back on the server, the caller restarts ICE if the media did not survive the break.
+// The peer is back on the server: the caller restarts ICE if the media did not survive the break.
 sample({
-  clock: [resumeSendModel.resumeSent, callResumeModel.peerResumed],
+  clock: callResumeModel.peerResumed,
   source: callModel.$callId,
   filter: (callId, resumed) => callId === resumed.callId && !resumed.sessionRestart,
   fn: (_, { callId }): IceRestartParams => ({ callId, force: false }),
   target: restartIceFx,
 });
+// The own return restarts ICE only once the server took it back: before that the server asks for
+// the rebuild for the peer's restart missed while away, and a restart offer of the replaced
+// connection would reach the peer and get answered on the rebuilt one.
+sample({
+  clock: resumeSendModel.resumeSent,
+  filter: ({ sessionRestart }) => !sessionRestart,
+  fn: ({ callId }) => callId,
+  target: $returnIceRestartDue,
+});
+// An offer made after call_resume went over the new socket: rolling it back for the restart would
+// get both offers answered.
+sample({
+  clock: callTransportModel.signalQueued,
+  source: $returnIceRestartDue,
+  filter: (due, { message }) => message.type === "webrtc_offer" && message.callId === due,
+  fn: () => null,
+  target: $returnIceRestartDue,
+});
+const returnConfirmed = sample({
+  clock: callResumeModel.resumed,
+  source: $returnIceRestartDue,
+  filter: (due, callId) => due === callId,
+  fn: (_, callId): IceRestartParams => ({ callId, force: false }),
+});
+sample({ clock: returnConfirmed, target: restartIceFx });
 sample({
   clock: restartIceFx.done,
   filter: ({ result }) => result,
@@ -132,6 +159,12 @@ sample({
   clock: peerRestarted,
   fn: ({ callId }) => callId,
   target: peerSessionModel.rebuildSessionFx,
+});
+// The rebuilt connection makes its own offer: the restart was due for the one it replaced.
+sample({
+  clock: [returnConfirmed, peerRestarted, callModel.callTerminated],
+  fn: () => null,
+  target: $returnIceRestartDue,
 });
 sample({
   clock: peerRestarted,

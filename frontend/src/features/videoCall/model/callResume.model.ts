@@ -56,6 +56,8 @@ export const callStateReceived = createEvent<CallStateReceived>();
 export const peerResumed = createEvent<PeerResumed>();
 // The server asked the peer to rebuild for the restored connection of this call (callId).
 export const restartAnnounced = createEvent<string>();
+// The server took the page back into the call (callId): call_resume without a session restart.
+export const resumed = createEvent<string>();
 // The server has to hear that this page holds the call (call_resume).
 export const resumeDue = createEvent<CallAddress>();
 // The socket of the role looks open but did not answer: it has to be opened again.

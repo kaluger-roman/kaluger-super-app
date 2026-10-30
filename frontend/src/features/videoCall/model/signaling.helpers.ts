@@ -133,6 +133,7 @@ export const parseCallSignal = (data: unknown): CallSignalingOutbound | null => 
     case "call_rejected":
     case "call_no_answer":
     case "call_restart_announced":
+    case "call_resumed":
       return { type: data.type, callId };
     case "call_canceled":
       return isCancelReason(data.reason)

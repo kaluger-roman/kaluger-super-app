@@ -8,6 +8,7 @@ import {
   CONNECTION_FAILED_TEXT,
   MIC_AND_CAMERA_BUSY_TEXT,
   MIC_BUSY_TEXT,
+  RENEGOTIATION_FAILED_TEXT,
 } from "../call.constants";
 import * as callPresenceModel from "../callPresence.model";
 import * as callResumeModel from "../callResume.model";
@@ -22,8 +23,10 @@ import {
   installTransport,
   receive,
   resetCallFlow,
+  ringCurrentInvite,
   settleMicrotasks,
   startCalleeSession,
+  startCallerSession,
 } from "./callFlow";
 import {
   createFakeAdapter,
@@ -58,6 +61,10 @@ describe("features/videoCall/model media recovery", () => {
     await settleMicrotasks();
     sent.length = 0;
     return pc;
+  };
+
+  const returnToServer = (callId: string) => {
+    void resumeSendModel.sendResumeFx({ callId, role: "tutor", sessionRestart: false });
   };
 
   beforeEach(() => {
@@ -333,11 +340,225 @@ describe("features/videoCall/model media recovery", () => {
     expect(pc.restartIce).toHaveBeenCalledTimes(1);
   });
 
+  describe("the return of the own page to the server", () => {
+    const answerEveryOffer = (callId: string) => {
+      offersOf(sent).forEach((_, index) =>
+        receive({ type: "webrtc_answer", callId, sdp: { type: "answer", sdp: `answer-${index}` } })
+      );
+    };
+
+    it("should restart ICE only once the server took the page back", async () => {
+      const pc = await activeCaller("back-ice");
+      pc.connectionState = "disconnected";
+
+      returnToServer("back-ice");
+      await settleMicrotasks();
+
+      expect(sent).toContainEqual({
+        type: "call_resume",
+        callId: "back-ice",
+        sessionRestart: false,
+      });
+      expect(offersOf(sent)).toEqual([]);
+      expect(pc.restartIce).not.toHaveBeenCalled();
+
+      receive({ type: "call_resumed", callId: "back-ice" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).toHaveBeenCalledTimes(1);
+      expect(offersOf(sent)).toHaveLength(1);
+    });
+
+    it("should make one offer, from the rebuilt connection, when the server first asks to rebuild for the peer's restart missed while away (regression #138)", async () => {
+      const pc = await activeCaller("missed");
+      pc.connectionState = "disconnected";
+      const errors = collectEvents(notificationsModel.showErrorEvent);
+
+      returnToServer("missed");
+      await settleMicrotasks();
+      receive({ type: "call_peer_resumed", callId: "missed", sessionRestart: true });
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "missed" });
+      await settleMicrotasks();
+      answerEveryOffer("missed");
+      await settleMicrotasks();
+      errors.unwatch();
+
+      const rebuilt = adapter.peerConnections[1];
+      expect(errors.calls).not.toContain(RENEGOTIATION_FAILED_TEXT);
+      expect(offersOf(sent)).toHaveLength(1);
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(rebuilt.restartIce).not.toHaveBeenCalled();
+      expect(getSession("missed")?.pc).toBe(rebuilt);
+      expect(rebuilt.signalingState).toBe("stable");
+    });
+
+    it("should take no confirmation for a return never sent", async () => {
+      const pc = await activeCaller("unsent");
+      pc.connectionState = "disconnected";
+
+      receive({ type: "call_resumed", callId: "unsent" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toEqual([]);
+    });
+
+    it("should take no confirmation for the return of another call", async () => {
+      const pc = await activeCaller("own");
+      pc.connectionState = "disconnected";
+
+      returnToServer("own");
+      await settleMicrotasks();
+      callResumeModel.resumed("other");
+      await settleMicrotasks();
+
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toEqual([]);
+
+      receive({ type: "call_resumed", callId: "own" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not restart ICE for a return that restarts its own session", async () => {
+      const pc = await activeCaller("own-restart");
+      pc.connectionState = "disconnected";
+
+      void resumeSendModel.sendResumeFx({
+        callId: "own-restart",
+        role: "tutor",
+        sessionRestart: true,
+      });
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "own-restart" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toEqual([]);
+    });
+
+    it("should make the first offer again when it went out before the return", async () => {
+      await startCallerSession("lost-first");
+      const pc = adapter.peerConnections[0];
+      sent.length = 0;
+
+      returnToServer("lost-first");
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "lost-first" });
+      await settleMicrotasks();
+
+      expect(readStore(callModel.$callPhase)).toBe("connecting");
+      expect(pc.setLocalDescription).toHaveBeenCalledWith({ type: "rollback" });
+      expect(pc.restartIce).toHaveBeenCalledTimes(1);
+      expect(offersOf(sent)).toHaveLength(1);
+    });
+
+    it("should leave alone the first offer made after the return", async () => {
+      callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
+      ringCurrentInvite("late-first");
+      returnToServer("late-first");
+      await settleMicrotasks();
+      receive({ type: "call_accepted", callId: "late-first", iceServers: [] });
+      await settleMicrotasks();
+      const pc = adapter.peerConnections[0];
+
+      receive({ type: "call_resumed", callId: "late-first" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toHaveLength(1);
+    });
+
+    it("should leave alone the first offer whose media came in after the return", async () => {
+      let release: () => void = () => undefined;
+      useAdapter({
+        getUserMedia: () =>
+          new Promise<FakeStream>((resolve) => {
+            release = () => resolve(createFakeStream());
+          }),
+      });
+      callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
+      ringCurrentInvite("slow-media");
+      receive({ type: "call_accepted", callId: "slow-media", iceServers: [] });
+      await settleMicrotasks();
+      returnToServer("slow-media");
+      await settleMicrotasks();
+      release();
+      await settleMicrotasks();
+      const pc = adapter.peerConnections[0];
+
+      receive({ type: "call_resumed", callId: "slow-media" });
+      await settleMicrotasks();
+
+      expect(pc.setLocalDescription).not.toHaveBeenCalledWith({ type: "rollback" });
+      expect(pc.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toHaveLength(1);
+    });
+
+    it("should keep a restart offer made while the return waited for the server", async () => {
+      const pc = await activeCaller("window");
+      pc.connectionState = "disconnected";
+      const errors = collectEvents(notificationsModel.showErrorEvent);
+
+      returnToServer("window");
+      await settleMicrotasks();
+      triggerConnectionState(pc, "failed");
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "window" });
+      await settleMicrotasks();
+      answerEveryOffer("window");
+      await settleMicrotasks();
+      errors.unwatch();
+
+      expect(pc.setLocalDescription).not.toHaveBeenCalledWith({ type: "rollback" });
+      expect(pc.restartIce).toHaveBeenCalledTimes(1);
+      expect(offersOf(sent)).toHaveLength(1);
+      expect(errors.calls).not.toContain(RENEGOTIATION_FAILED_TEXT);
+    });
+
+    it("should restart ICE once for one return confirmed twice", async () => {
+      const pc = await activeCaller("twice");
+      pc.connectionState = "disconnected";
+
+      returnToServer("twice");
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "twice" });
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId: "twice" });
+      await settleMicrotasks();
+
+      expect(pc.restartIce).toHaveBeenCalledTimes(1);
+      expect(offersOf(sent)).toHaveLength(1);
+    });
+
+    it("should forget a return still to be confirmed when the call ends", async () => {
+      const first = await activeCaller("again");
+      first.connectionState = "disconnected";
+      returnToServer("again");
+      await settleMicrotasks();
+
+      callModel.hangUp();
+      await settleMicrotasks();
+      await connectCallerSession("again");
+      const next = adapter.peerConnections[1];
+      next.connectionState = "disconnected";
+      sent.length = 0;
+
+      receive({ type: "call_resumed", callId: "again" });
+      await settleMicrotasks();
+
+      expect(next.restartIce).not.toHaveBeenCalled();
+      expect(offersOf(sent)).toEqual([]);
+    });
+  });
+
   describe("a rebuild for the peer's restart that meets the ICE restart of the own return", () => {
-    // The page came back (call_resume without a session restart) and the server answers with the
-    // peer's restart it missed while away.
-    const returnAndHearPeerRestart = (callId: string) => {
-      void resumeSendModel.sendResumeFx({ callId, role: "tutor", sessionRestart: false });
+    const returnAndGetConfirmed = async (callId: string) => {
+      returnToServer(callId);
+      await settleMicrotasks();
+      receive({ type: "call_resumed", callId });
     };
 
     const hold = () => {
@@ -355,7 +576,7 @@ describe("features/videoCall/model media recovery", () => {
       const rollback = hold();
       pc.setLocalDescription.mockImplementationOnce(() => rollback.held);
 
-      returnAndHearPeerRestart("roll");
+      await returnAndGetConfirmed("roll");
       await settleMicrotasks();
       receive({ type: "call_peer_resumed", callId: "roll", sessionRestart: true });
       await settleMicrotasks();
@@ -380,7 +601,7 @@ describe("features/videoCall/model media recovery", () => {
       const making = hold();
       pc.setLocalDescription.mockImplementationOnce(() => making.held);
 
-      returnAndHearPeerRestart("making");
+      await returnAndGetConfirmed("making");
       await settleMicrotasks();
       expect(pc.restartIce).toHaveBeenCalledTimes(1);
       receive({ type: "call_peer_resumed", callId: "making", sessionRestart: true });
@@ -405,7 +626,7 @@ describe("features/videoCall/model media recovery", () => {
       pc.setLocalDescription.mockImplementationOnce(() => making.held);
       const failures = collectEvents(peerConnectionModel.sendOfferFx.fail);
 
-      returnAndHearPeerRestart("closed");
+      await returnAndGetConfirmed("closed");
       await settleMicrotasks();
       receive({ type: "call_peer_resumed", callId: "closed", sessionRestart: true });
       await settleMicrotasks();

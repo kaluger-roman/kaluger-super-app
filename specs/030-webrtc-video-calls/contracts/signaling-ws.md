@@ -4,7 +4,7 @@ Signaling rides the existing `WebSocketManager` on both pools: tutor `/ws` (keye
 
 Existing `lesson_*` message types are unaffected; call signaling adds a disjoint set of `type`s.
 
-> **Extended by 039** ([`specs/039-video-call-background/contracts/signaling-ws.md`](../../039-video-call-background/contracts/signaling-ws.md)): `presence_update`, `call_resume`, `call_state`, `call_peer_presence`, `call_peer_resumed`, `call_restart_announced` and the `peer_not_returned` end reason. A lost connection no longer ends the call: the server holds it for a 3-minute grace period, and a callee without an open app is reached by push (`services/callNotification`). Where this document says a closed socket ends the call, the 039 contract wins.
+> **Extended by 039** ([`specs/039-video-call-background/contracts/signaling-ws.md`](../../039-video-call-background/contracts/signaling-ws.md)): `presence_update`, `call_resume`, `call_state`, `call_peer_presence`, `call_peer_resumed`, `call_restart_announced`, `call_resumed` and the `peer_not_returned` end reason. A lost connection no longer ends the call: the server holds it for a 3-minute grace period, and a callee without an open app is reached by push (`services/callNotification`). Where this document says a closed socket ends the call, the 039 contract wins.
 
 ---
 

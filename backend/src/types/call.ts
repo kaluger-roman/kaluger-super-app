@@ -127,7 +127,9 @@ export type CallSignalingOutbound =
   | { type: "call_state"; call: CallSnapshot | null }
   | ({ type: "call_peer_presence"; callId: string } & PeerPresencePayload)
   | { type: "call_peer_resumed"; callId: string; sessionRestart: boolean }
-  | { type: "call_restart_announced"; callId: string };
+  | { type: "call_restart_announced"; callId: string }
+  // The sender of a call_resume without a session restart is back in the call.
+  | { type: "call_resumed"; callId: string };
 
 export type CallHistoryItem = {
   id: string;

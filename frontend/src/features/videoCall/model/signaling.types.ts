@@ -72,7 +72,8 @@ export type CallSignalingOutbound =
   | { type: "call_state"; call: CallSnapshot | null }
   | ({ type: "call_peer_presence"; callId: string } & PeerPresenceState)
   | { type: "call_peer_resumed"; callId: string; sessionRestart: boolean }
-  | { type: "call_restart_announced"; callId: string };
+  | { type: "call_restart_announced"; callId: string }
+  | { type: "call_resumed"; callId: string };
 
 export type CallRole = "tutor" | "student";
 
