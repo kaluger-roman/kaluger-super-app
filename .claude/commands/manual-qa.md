@@ -69,6 +69,8 @@ description: Ручное QA-тестирование фичи текущей в
    bash scripts/qa-stack.sh exec-backend 'npm run db:seed'
    ```
 
+   Набор (`backend/src/services/devSeed`): преподаватель `teacher@seed.local` / `SeedTeacher!2026` (почта подтверждена, `Europe/Moscow`), три ученика (Анна и Иван активные, Мария в архиве), кабинет ученика Анны `student@seed.local` / `SeedStudent!2026`, пять уроков относительно момента запуска (вчера оплаченный, 2 ч назад неоплаченный, через 15 мин с Анной, через 3 ч с Иваном, завтра пробный без ученика). Повторный запуск пересоздаёт только этот набор, остальные данные не трогает.
+
    Пример read-запроса (Prisma-клиент уже сгенерирован в контейнере, CommonJS):
    ```bash
    bash scripts/qa-stack.sh exec-backend 'node -e "const {PrismaClient}=require(\"@prisma/client\"); const p=new PrismaClient(); p.user.findMany({take:3,select:{id:true,email:true,name:true}}).then(r=>console.log(JSON.stringify(r,null,2))).finally(()=>p.\$disconnect())"'
