@@ -24,7 +24,7 @@ bash scripts/dev-stack.sh ports            # JSON с портами ветки (
 bash scripts/dev-stack.sh run-backend      # backend dev-сервер (nodemon) на api-порту ветки, dev-БД
 bash scripts/dev-stack.sh run-frontend     # CRA dev-сервер на web-порту ветки, REACT_APP_API_URL → api ветки
 bash scripts/dev-stack.sh run-backend-e2e  # backend с NODE_ENV=test E2E=1 на ТЕСТОВОЙ БД ветки (для e2e)
-bash scripts/dev-stack.sh test-backend --testPathPatterns=students   # jest против тестовой БД ветки
+bash scripts/dev-stack.sh test-backend --testPathPatterns=students   # jest против тестовой БД ветки (поднимет её сам)
 bash scripts/dev-stack.sh e2e -- e2e/students/create-student.spec.ts # playwright на портах ветки
 bash scripts/dev-stack.sh migrate          # накатить миграции в обе БД ветки
 bash scripts/dev-stack.sh psql "select email from users limit 5;"    # SQL в dev-БД (--test — в тестовую)
@@ -73,6 +73,16 @@ bash scripts/dev-stack.sh down-all         # снести все dev-* стек�
   `E2E_API_URL`; всё выставляет команда `e2e`. Бэк для e2e поднимай отдельно: `run-backend-e2e`.
 - **Тестовая БД** (`tutor_app_test`) создаётся при первом старте тома
   (`scripts/dev-db-init.sql`) и мигрируется вместе с dev-БД на `up`/`migrate`.
+- **`test-backend` сам готовит БД ветки.** Если Postgres ветки не отвечает, он делает то же, что
+  `up` (контейнер + миграции в обе БД), а если стек уже работает, докатывает в `tutor_app_test`
+  новые миграции ветки (`npm run db:migrate` мигрирует только личную БД из `backend/.env`). Не
+  поднялся Docker — команда останавливается до jest с подсказкой: `up` руками или
+  `npm run check -- --backend-tests npm`.
+- **`--backend-tests npm` идёт в общую тестовую БД** из `backend/.env.test` (`tutor_test`), её
+  никто не мигрирует сам. `npm run check` в этом режиме сверяет её с `prisma/migrations`
+  (`prisma migrate status`) и в конце печатает предупреждение со списком недостающих миграций и
+  командой `(cd backend && npm run db:migrate:test)`. Сам он её не мигрирует: миграции фичевой
+  ветки попали бы в базу, на которой гоняет тесты `main`.
 - Docker Desktop должен быть запущен. Контейнер лёгкий (только postgres) — несколько веток
   параллельно живут спокойно.
 

@@ -1,6 +1,6 @@
 // Fixture-based test for the backend wrappers of scripts/dev-stack.sh. Run: node --test scripts/__tests__/
 // A temp git repo holds a copy of the script; `npm` is a stub that dumps its environment and exits,
-// so no server starts. The dotenv-cli and bcryptjs checks use the backend's installed packages.
+// so no server starts; `docker` and `npx` stubs log their calls. The dotenv-cli and bcryptjs checks use the backend's installed packages.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -16,6 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,8 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const BACKEND_MODULES = join(REPO_ROOT, "backend", "node_modules");
 const FAKE_NPM = '#!/bin/sh\necho "$*" > "$NPM_ARGS"\nenv > "$NPM_ENV"\n';
+const FAKE_DOCKER = '#!/bin/sh\necho "$* DEV_DB_PORT=$DEV_DB_PORT" >> "$DOCKER_CALLS"\nexit "${DOCKER_STATUS:-0}"\n';
+const FAKE_NPX = '#!/bin/sh\necho "$* DATABASE_URL=$DATABASE_URL" >> "$NPX_CALLS"\nexit "${NPX_STATUS:-0}"\n';
 const E2E_ADMIN_PASSWORD = "E2eAdmin!2026";
 
 let root;
@@ -56,8 +59,14 @@ beforeEach(() => {
   copyFileSync(join(REPO_ROOT, "scripts", "dev-stack.sh"), join(repo, "scripts", "dev-stack.sh"));
   copyFileSync(join(REPO_ROOT, "scripts", "prisma-client.mjs"), join(repo, "scripts", "prisma-client.mjs"));
   copyFileSync(join(REPO_ROOT, "docker-compose.dev.yml"), join(repo, "docker-compose.dev.yml"));
-  writeFileSync(join(bin, "npm"), FAKE_NPM);
-  chmodSync(join(bin, "npm"), 0o755);
+  for (const [name, script] of [
+    ["npm", FAKE_NPM],
+    ["docker", FAKE_DOCKER],
+    ["npx", FAKE_NPX],
+  ]) {
+    writeFileSync(join(bin, name), script);
+    chmodSync(join(bin, name), 0o755);
+  }
   env = {
     PATH: `${bin}:${process.env.PATH}`,
     HOME: root,
@@ -70,6 +79,8 @@ beforeEach(() => {
     GIT_COMMITTER_EMAIL: "test@example.com",
     NPM_ARGS: join(root, "npm-args"),
     NPM_ENV: join(root, "npm-env"),
+    DOCKER_CALLS: join(root, "docker-calls"),
+    NPX_CALLS: join(root, "npx-calls"),
   };
   git("init", "-q", "-b", "feature-x");
   git("commit", "-q", "--allow-empty", "-m", "init");
@@ -163,6 +174,86 @@ test("test-backend hands jest the branch's test database in a variable .env.test
   const branchTestDb = "postgresql://dev:dev@localhost:15433/tutor_app_test?schema=public";
   assert.equal(vars.TEST_DATABASE_URL, branchTestDb);
   assert.equal(vars.DATABASE_URL, branchTestDb);
+});
+
+const calls = (path) => (existsSync(path) ? readFileSync(path, "utf8").trim().split("\n") : []);
+const branchDb = (port, name) => `DATABASE_URL=postgresql://dev:dev@localhost:${port}/${name}?schema=public`;
+
+const listen = () =>
+  new Promise((resolve) => {
+    const server = createServer();
+    server.listen(0, "127.0.0.1", () => resolve(server));
+  });
+
+const freePort = async () => {
+  const server = await listen();
+  const { port } = server.address();
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+};
+
+// The branch is in slot 1, so its db port is the base + 1.
+const useDbPort = (port) => {
+  env.DEV_STACK_DB_PORT_BASE = String(port - 1);
+};
+
+test("test-backend starts the branch's stopped database and migrates it before jest", async () => {
+  const port = await freePort();
+  useDbPort(port);
+
+  const res = run("test-backend");
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stderr, new RegExp(`localhost:${port}\\) is not running; starting it`));
+  const docker = calls(env.DOCKER_CALLS);
+  assert.equal(docker.length, 1);
+  assert.match(docker[0], new RegExp(`^compose -p dev-feature-x -f \\S+/docker-compose\\.dev\\.yml up -d --wait DEV_DB_PORT=${port}$`));
+  assert.deepEqual(calls(env.NPX_CALLS), [
+    `prisma migrate deploy ${branchDb(port, "tutor_app")}`,
+    `prisma migrate deploy ${branchDb(port, "tutor_app_test")}`,
+  ]);
+  assert.equal(readFileSync(env.NPM_ARGS, "utf8").trim(), "test --");
+});
+
+test("test-backend on a running branch database only applies pending migrations to the test DB", async () => {
+  const server = await listen();
+  const { port } = server.address();
+  useDbPort(port);
+
+  const res = run("test-backend");
+  server.close();
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(calls(env.DOCKER_CALLS), []);
+  assert.deepEqual(calls(env.NPX_CALLS), [`prisma migrate deploy ${branchDb(port, "tutor_app_test")}`]);
+  assert.equal(readFileSync(env.NPM_ARGS, "utf8").trim(), "test --");
+});
+
+test("test-backend stops with a hint when the branch's database cannot be started", async () => {
+  useDbPort(await freePort());
+  env.DOCKER_STATUS = "1";
+
+  const res = run("test-backend");
+
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /Could not start the branch's database/);
+  assert.match(res.stderr, /bash scripts\/dev-stack\.sh up/);
+  assert.match(res.stderr, /npm run check -- --backend-tests npm/);
+  assert.deepEqual(calls(env.NPX_CALLS), []);
+  assert.equal(existsSync(env.NPM_ARGS), false);
+});
+
+test("test-backend stops before jest when migrating the running test database fails", async () => {
+  const server = await listen();
+  useDbPort(server.address().port);
+  env.NPX_STATUS = "1";
+
+  const res = run("test-backend");
+  server.close();
+
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /prisma migrate deploy to the branch's test database .* failed/);
+  assert.equal(existsSync(env.NPM_ARGS), false);
 });
 
 // The worktree layout: backend/node_modules is a symlink to the main checkout's, whose client
