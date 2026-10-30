@@ -19,7 +19,7 @@ Stack: Jest + Supertest + Faker + test database
 
 Jest runs files in parallel workers against one shared test database, so a test may only see and change its own rows.
 
-- **Test database** — `src/__tests__/loadTestEnv.ts` (jest `setupFiles`) loads `backend/.env.test` with `override`, so a local run never falls back to `backend/.env` (the dev database). Keep env loading there: anything in `setup.ts` runs after the Prisma client is required
+- **Test database** — `src/__tests__/loadTestEnv.ts` (jest `setupFiles`) loads `backend/.env.test` with `override`, so a local run never falls back to `backend/.env` (the dev database). `TEST_DATABASE_URL`, when set, wins over `.env.test`: `scripts/dev-stack.sh test-backend` passes the branch's test database in it. Keep env loading there: anything in `setup.ts` runs after the Prisma client is required
 - **Emails** — `uniqueEmail()` from `src/__tests__/helpers`, never `faker.internet.email()`: `User.email` and `StudentUser.email` are globally unique and faker collides across a parallel run
 - **Global cron services** (`processRecurringLessons`, `updateLessonStatuses`, `processScheduledReminders`) — always pass `{ tutorIds: [userId] }` (`CronScope`). Unscoped they process every tutor and mutate other files' data
 - **Global singleton rows and tables** (`backup_settings`, `admin_alerts` / `admin_settings`) — serialize through `acquireGlobalTestLock(GLOBAL_TEST_LOCK.X)` in the top `beforeAll` (timeout `GLOBAL_TEST_LOCK_TIMEOUT_MS`) and call the returned release in `afterAll`. Add a new key to `GLOBAL_TEST_LOCK` for a new shared table

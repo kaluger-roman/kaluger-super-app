@@ -168,7 +168,8 @@ cmd_test_backend() {
   load_ports
   use_stand_pg_client
   cd "$REPO_ROOT/backend"
-  DATABASE_URL="$TEST_DB_URL" exec npm test -- "$@"
+  # jest's loadTestEnv lets backend/.env.test override DATABASE_URL, but not TEST_DATABASE_URL.
+  DATABASE_URL="$TEST_DB_URL" TEST_DATABASE_URL="$TEST_DB_URL" exec npm test -- "$@"
 }
 
 cmd_e2e() {
