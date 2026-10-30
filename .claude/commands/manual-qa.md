@@ -69,6 +69,8 @@ description: Ручное QA-тестирование фичи текущей в
    bash scripts/qa-stack.sh exec-backend 'npm run db:seed'
    ```
 
+   Команда печатает JSON с логинами и паролями созданных аккаунтов; состав набора — `backend/src/services/devSeed`. Повторный запуск пересоздаёт только этот набор.
+
    Пример read-запроса (Prisma-клиент уже сгенерирован в контейнере, CommonJS):
    ```bash
    bash scripts/qa-stack.sh exec-backend 'node -e "const {PrismaClient}=require(\"@prisma/client\"); const p=new PrismaClient(); p.user.findMany({take:3,select:{id:true,email:true,name:true}}).then(r=>console.log(JSON.stringify(r,null,2))).finally(()=>p.\$disconnect())"'

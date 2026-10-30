@@ -37,7 +37,7 @@ npm test -- --testPathPattern=path  # Single test file
 npm run db:migrate       # Prisma migrate dev
 npm run db:generate      # Prisma generate client
 npm run db:studio        # Prisma Studio GUI
-npm run db:seed          # Seed database
+npm run db:seed          # Demo data (services/devSeed), prints the account credentials as JSON
 npm run db:migrate:test  # Migrate test database (.env.test)
 npm run news:generate    # Save news entry as JSON file (--title, --content, --version)
 npm run news:sync        # Sync news JSON files to database (runs on deploy)
