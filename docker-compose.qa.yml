@@ -41,6 +41,7 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       NODE_ENV: production
       PORT: "3001"
+      HOST: "0.0.0.0"
     depends_on:
       db:
         condition: service_healthy
