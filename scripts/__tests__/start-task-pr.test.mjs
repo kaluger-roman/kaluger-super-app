@@ -108,19 +108,77 @@ test("new branch without commits: empty commit, push, draft PR with session", ()
   assert.match(create.stdin, /web: https:\/\/claude\.ai\/code\/session_web123/);
 });
 
+// Only node and git on PATH: CI runners have a real gh in /usr/bin.
+const pathWithoutGh = () => {
+  const sysBin = join(root, "sysbin");
+  mkdirSync(sysBin);
+  symlinkSync(execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(), join(sysBin, "git"));
+  return `${dirname(process.execPath)}:${sysBin}`;
+};
+
 test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still found", () => {
   const home = join(root, "home");
   mkdirSync(join(home, ".local", "bin"), { recursive: true });
   renameSync(join(root, "bin", "gh"), join(home, ".local", "bin", "gh"));
   env.HOME = home;
-  // Only node and git: CI runners have a real gh in /usr/bin.
-  const sysBin = join(root, "sysbin");
-  mkdirSync(sysBin);
-  symlinkSync(execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(), join(sysBin, "git"));
-  env.PATH = `${dirname(process.execPath)}:${sysBin}`;
+  env.PATH = pathWithoutGh();
   const res = runScript("--title", "Fix the thing");
   assert.equal(res.status, 0, res.stderr);
   assert.equal(JSON.parse(res.stdout).action, "created");
+});
+
+test("no gh anywhere: clear error before any push, no spawnSync ENOENT", () => {
+  env.HOME = join(root, "home");
+  env.PATH = pathWithoutGh();
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 1);
+  assert.match(res.stderr, /GitHub CLI \(gh\) не найден ни в PATH, ни в .*home\/\.local\/bin/);
+  assert.match(res.stderr, /export PATH=/);
+  assert.doesNotMatch(res.stderr, /ENOENT/);
+  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "0");
+  assert.equal(sh(origin, "branch", "--list", "fix-thing"), "");
+});
+
+test("session passed by flags (run via ssh, no session env or transcript here): recorded in the PR", () => {
+  delete env.CLAUDE_CODE_SESSION_ID;
+  delete env.CLAUDE_CODE_BRIDGE_SESSION_ID;
+  env.CLAUDE_CONFIG_DIR = join(root, "empty-claude");
+  const id = "99999999-8888-7777-6666-555555555555";
+  const res = runScript("--title", "T", "--session-id", id, "--resume-cwd", "/root/super-app", "--web-session-id", "session_ssh");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(res.stderr, "");
+  const body = ghCall("create").stdin;
+  assert.match(body, /## Сессии Claude Code/);
+  assert.match(body, new RegExp(`\`${id}\` — \`cd /root/super-app && claude --resume ${id}\` · web: https://claude\\.ai/code/session_ssh`));
+  assert.match(sh(work, "log", "-1", "--format=%B"), new RegExp(`Claude-Session-Id: ${id}`));
+});
+
+test("session flags win over the env", () => {
+  const id = "99999999-8888-7777-6666-555555555555";
+  const res = runScript("--title", "T", "--session-id", id, "--resume-cwd", "/other/dir");
+  assert.equal(res.status, 0, res.stderr);
+  const body = ghCall("create").stdin;
+  assert.match(body, new RegExp(`cd /other/dir && claude --resume ${id}`));
+  assert.doesNotMatch(body, new RegExp(SESSION_ID));
+  assert.match(body, /web: https:\/\/claude\.ai\/code\/session_web123/);
+});
+
+test("--session-id without --resume-cwd and no transcript here: warns that the resume dir is a guess", () => {
+  delete env.CLAUDE_CODE_SESSION_ID;
+  env.CLAUDE_CONFIG_DIR = join(root, "empty-claude");
+  const id = "99999999-8888-7777-6666-555555555555";
+  const res = runScript("--title", "T", "--session-id", id);
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stderr, new RegExp(`warning: папка запуска сессии ${id} не найдена.*--resume-cwd`));
+  assert.match(ghCall("create").stdin, new RegExp(`cd ${work} && claude --resume ${id}`));
+});
+
+test("empty session flag value does not swallow the next flag", () => {
+  delete env.CLAUDE_CODE_SESSION_ID;
+  const res = runScript("--session-id", "--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(ghCall("create").args[8], "T");
+  assert.match(res.stderr, /сессия Claude Code не найдена/);
 });
 
 test("staged changes are not swallowed into the empty commit", () => {
@@ -240,10 +298,14 @@ test("open PR already mentioning this session: no-op", () => {
   assert.equal(ghCall("comment"), undefined);
 });
 
-test("without a Claude session: PR body has no sessions section", () => {
+test("without a Claude session: PR body has no sessions section, stderr warns how to pass it", () => {
   delete env.CLAUDE_CODE_SESSION_ID;
   const res = runScript("--title", "T");
   assert.equal(res.status, 0, res.stderr);
+  assert.match(
+    res.stderr,
+    /warning: сессия Claude Code не найдена \(нет --session-id и CLAUDE_CODE_SESSION_ID\), раздела «Сессии Claude Code» в PR не будет; .*--session-id, --resume-cwd и --web-session-id/
+  );
   assert.doesNotMatch(ghCall("create").stdin, /Сессии Claude Code/);
   assert.equal(sh(work, "log", "-1", "--format=%B"), 'chore: start "T"');
 });
