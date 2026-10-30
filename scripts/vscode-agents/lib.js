@@ -466,7 +466,109 @@ class Store {
   }
 }
 
+// ---- prioritized open issues (docs/issue-priority.md) ----
+
+// Same pattern as SCORE_RE in scripts/issue-priority.mjs — keep the two in sync
+const ISSUE_SCORE_RE = /Критичность:\s*\**\s*(\d{1,3})\s*\/\s*100/;
+const ISSUE_BLOCK_RE = /<!-- priority -->([\s\S]*?)<!-- \/priority -->/;
+// [min score, band label, codicon, theme color]
+const ISSUE_BANDS = [
+  [80, "P0-critical", "flame", "errorForeground"],
+  [60, "P1-high", "warning", "charts.orange"],
+  [40, "P2-medium", "circle-filled", "charts.yellow"],
+  [20, "P3-low", "circle-outline", "charts.green"],
+  [0, "P4-trivial", "circle-outline", undefined],
+];
+
+const issueBand = (score) => {
+  const [, label, icon, color] = ISSUE_BANDS.find(([min]) => score >= min);
+  return { label, icon, color };
+};
+
+const parseIssueScore = (body) => {
+  const m = (body || "").match(ISSUE_SCORE_RE);
+  return m ? Math.min(Number(m[1]), 100) : null;
+};
+
+const parseIssueWhy = (body) =>
+  (body || "")
+    .match(ISSUE_BLOCK_RE)?.[1]
+    .match(/^Почему:\s*(.+)$/m)?.[1]
+    .trim() || "";
+
+// Open issues from `gh issue list --json number,title,body,url,labels` -> the top `limit` by score
+// (newer first on ties) and how many have no score yet
+const rankIssues = (issues, limit) => {
+  const scored = [];
+  let unscored = 0;
+  for (const i of issues) {
+    const score = parseIssueScore(i.body);
+    if (score === null) {
+      unscored++;
+      continue;
+    }
+    scored.push({
+      number: i.number,
+      title: i.title,
+      url: i.url,
+      score,
+      why: parseIssueWhy(i.body),
+      labels: (i.labels || []).map((l) => l.name),
+    });
+  }
+  scored.sort((a, b) => b.score - a.score || b.number - a.number);
+  return { top: scored.slice(0, limit), unscored, total: issues.length };
+};
+
+const fetchIssues = (command, timeout = 60000) =>
+  new Promise((resolve, reject) =>
+    execFile("/bin/sh", ["-c", command], { timeout, maxBuffer: 64 << 20 }, (err, out, errOut) => {
+      if (err) return reject(new Error(one(errOut || err.message, 300)));
+      try {
+        resolve(JSON.parse(out));
+      } catch {
+        reject(new Error(`ответ не JSON: ${one(out, 100)}`));
+      }
+    })
+  );
+
+class IssueBoard {
+  // settings() -> { command, limit }
+  constructor({ settings }) {
+    this.settings = settings;
+    this.top = [];
+    this.unscored = 0;
+    this.total = 0;
+    this.at = null;
+    this.error = null;
+    this.loading = false;
+  }
+
+  // Keeps the last good list when a fetch fails; returns false when a fetch is already running
+  async refresh() {
+    if (this.loading) return false;
+    this.loading = true;
+    try {
+      const { command, limit } = this.settings();
+      const list = await fetchIssues(command);
+      if (!Array.isArray(list)) throw new Error("ответ не список issues");
+      Object.assign(this, rankIssues(list, limit), { at: Date.now(), error: null });
+    } catch (e) {
+      this.error = e.message;
+    } finally {
+      this.loading = false;
+    }
+    return true;
+  }
+}
+
 module.exports = {
+  issueBand,
+  parseIssueScore,
+  parseIssueWhy,
+  rankIssues,
+  fetchIssues,
+  IssueBoard,
   FEED_MAX,
   FIRST_READ_MAX,
   STATE,

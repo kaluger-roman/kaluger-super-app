@@ -32,7 +32,13 @@ const {
   displayName,
   nowLine,
   Store,
+  issueBand,
+  parseIssueScore,
+  parseIssueWhy,
+  rankIssues,
+  IssueBoard,
 } = require("../vscode-agents/lib.js");
+const { renderBlock } = await import("../issue-priority.mjs");
 
 const SID = "11111111-2222-3333-4444-555555555555";
 const REPO = "https://github.com/acme/app/pull/";
@@ -407,4 +413,104 @@ test("Store joins `claude agents` with transcripts under the configured roots", 
   await store.refresh();
   assert.equal(store.agentsOk, false);
   assert.equal(store.liveSessions.length, 2, "the last known live list survives a failed poll");
+});
+
+const PARTS = { impact: 30, reach: 15, urgency: 12, workaround: 15 };
+const ghIssue = (number, body, labels = []) => ({
+  number,
+  title: `t${number}`,
+  url: `https://github.com/o/r/issues/${number}`,
+  body,
+  labels: labels.map((name) => ({ name })),
+});
+
+test("the panel reads the score block written by scripts/issue-priority.mjs", () => {
+  const body = `${renderBlock(PARTS, "вход падает на телефонах")}\n\n## Описание\nПочему: не это`;
+  assert.equal(parseIssueScore(body), 72);
+  assert.equal(parseIssueWhy(body), "вход падает на телефонах");
+  assert.equal(parseIssueScore("**Критичность: 9/100**"), 9);
+  assert.equal(parseIssueScore("Критичность: 300/100"), 100);
+  assert.equal(parseIssueScore("no score"), null);
+  assert.equal(parseIssueScore(undefined), null);
+  assert.equal(parseIssueWhy("Почему: вне блока"), "");
+});
+
+test("issueBand matches the bands of docs/issue-priority.md", () => {
+  assert.deepEqual(
+    [100, 80, 79, 60, 59, 40, 39, 20, 19, 0].map((s) => issueBand(s).label),
+    [
+      "P0-critical",
+      "P0-critical",
+      "P1-high",
+      "P1-high",
+      "P2-medium",
+      "P2-medium",
+      "P3-low",
+      "P3-low",
+      "P4-trivial",
+      "P4-trivial",
+    ]
+  );
+  assert.equal(issueBand(90).icon, "flame");
+});
+
+test("rankIssues keeps the top N by score, newer first on ties, and counts unscored", () => {
+  const block = (score) => `**Критичность: ${score}/100**`;
+  const r = rankIssues(
+    [
+      ghIssue(1, block(50)),
+      ghIssue(2, "plain"),
+      ghIssue(3, block(90), ["bug"]),
+      ghIssue(4, block(50)),
+      ghIssue(5, null),
+      ghIssue(6, block(10)),
+    ],
+    3
+  );
+  assert.deepEqual(
+    r.top.map((i) => [i.number, i.score]),
+    [
+      [3, 90],
+      [4, 50],
+      [1, 50],
+    ]
+  );
+  assert.deepEqual(r.top[0].labels, ["bug"]);
+  assert.equal(r.unscored, 2);
+  assert.equal(r.total, 6);
+});
+
+test("IssueBoard runs the command, keeps the last list on failure and skips overlapping runs", async () => {
+  const listFile = join(dir, "issues.json");
+  writeFileSync(listFile, JSON.stringify([ghIssue(7, "**Критичность: 66/100**"), ghIssue(8, "x")]));
+  const settings = { command: `cat '${listFile}'`, limit: 5 };
+  const board = new IssueBoard({ settings: () => settings });
+
+  const first = board.refresh();
+  assert.equal(await board.refresh(), false);
+  assert.equal(await first, true);
+  assert.deepEqual(
+    board.top.map((i) => i.number),
+    [7]
+  );
+  assert.equal(board.unscored, 1);
+  assert.equal(board.error, null);
+  assert.ok(board.at);
+
+  settings.command = "echo 'ssh: connect timed out' >&2; exit 255";
+  await board.refresh();
+  assert.match(board.error, /connect timed out/);
+  assert.deepEqual(
+    board.top.map((i) => i.number),
+    [7],
+    "the last good list stays"
+  );
+
+  settings.command = "echo not-json";
+  await board.refresh();
+  assert.match(board.error, /не JSON/);
+
+  settings.command = "echo '{}'";
+  await board.refresh();
+  assert.match(board.error, /не список/);
 });

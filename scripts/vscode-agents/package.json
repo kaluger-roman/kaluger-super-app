@@ -1,8 +1,8 @@
 {
   "name": "super-agents",
   "displayName": "Агенты Super App",
-  "description": "Живые и недавние сессии Claude Code по super-app: что каждая делает сейчас, кто ждёт тебя, лента действий, переход в терминал сессии",
-  "version": "0.1.0",
+  "description": "Живые и недавние сессии Claude Code по super-app: что каждая делает сейчас, кто ждёт тебя, лента действий, переход в терминал сессии; самые критичные открытые issues",
+  "version": "0.2.0",
   "publisher": "kalr",
   "license": "UNLICENSED",
   "private": true,
@@ -62,6 +62,21 @@
             "Без уведомлений"
           ],
           "description": "Когда показывать уведомления"
+        },
+        "superAgents.issuesCommand": {
+          "type": "string",
+          "default": "ssh -o BatchMode=yes -o ConnectTimeout=15 home '~/.local/bin/gh issue list -R kaluger-roman/kaluger-super-app --state open --limit 300 --json number,title,body,url,labels'",
+          "description": "Shell-команда, печатающая JSON открытых issues (поля number, title, body, url, labels) для «Приоритетных issue»"
+        },
+        "superAgents.issuesLimit": {
+          "type": "number",
+          "default": 8,
+          "description": "Сколько самых критичных issues показывать"
+        },
+        "superAgents.issuesRefreshMinutes": {
+          "type": "number",
+          "default": 10,
+          "description": "Как часто обновлять список issues (минуты)"
         }
       }
     },
@@ -83,6 +98,10 @@
         {
           "id": "superAgents.recent",
           "name": "Недавние"
+        },
+        {
+          "id": "superAgents.issues",
+          "name": "Приоритетные issue"
         }
       ]
     },
@@ -138,6 +157,18 @@
         "command": "superAgents.copy",
         "title": "Копировать",
         "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.refreshIssues",
+        "title": "Обновить issues",
+        "icon": "$(refresh)",
+        "category": "Агенты Super App"
+      },
+      {
+        "command": "superAgents.takeIssue",
+        "title": "Взять в работу (новая сессия)",
+        "icon": "$(play)",
+        "category": "Агенты Super App"
       }
     ],
     "menus": {
@@ -151,6 +182,11 @@
           "command": "superAgents.refresh",
           "when": "view == superAgents.live || view == superAgents.recent",
           "group": "navigation@2"
+        },
+        {
+          "command": "superAgents.refreshIssues",
+          "when": "view == superAgents.issues",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -180,8 +216,13 @@
           "group": "9_misc@1"
         },
         {
+          "command": "superAgents.takeIssue",
+          "when": "viewItem == issue;url",
+          "group": "inline@2"
+        },
+        {
           "command": "superAgents.copy",
-          "when": "view == superAgents.live || view == superAgents.recent",
+          "when": "view == superAgents.live || view == superAgents.recent || view == superAgents.issues",
           "group": "9_misc@2"
         }
       ],
@@ -208,6 +249,10 @@
         },
         {
           "command": "superAgents.copy",
+          "when": "false"
+        },
+        {
+          "command": "superAgents.takeIssue",
           "when": "false"
         }
       ]

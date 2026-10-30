@@ -14,6 +14,8 @@ const {
   displayName,
   nowLine,
   Store,
+  IssueBoard,
+  issueBand,
 } = require("./lib");
 
 const cfg = () => vscode.workspace.getConfiguration("superAgents");
@@ -150,6 +152,48 @@ const sessionNode = (s, live) => {
     children: sessionKids(s, live),
     expanded: live && NEEDS_YOU.has(st),
   });
+};
+
+const issueNodes = (board) => {
+  if (!board.at && !board.error) return [new Node("загружаю…", { icon: "loading~spin" })];
+  const rows = board.top.map((i) => {
+    const b = issueBand(i.score);
+    return new Node(`${i.score} · #${i.number} ${i.title}`, {
+      description: b.label,
+      tooltip: [
+        `#${i.number} ${i.title}`,
+        `Критичность ${i.score}/100 (${b.label})`,
+        i.why ? `Почему: ${i.why}` : null,
+        i.labels.join(", "),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      icon: b.icon,
+      color: b.color,
+      context: "issue;url",
+      data: { url: i.url, issue: i },
+      command: urlCmd(i.url),
+    });
+  });
+  if (board.error)
+    rows.unshift(
+      new Node(`не обновилось: ${board.error}`, {
+        icon: "warning",
+        color: "charts.orange",
+        tooltip: `${board.error}\n\nКоманда: superAgents.issuesCommand`,
+      })
+    );
+  if (board.at && !board.top.length)
+    rows.push(new Node("оценённых открытых issue нет", { icon: "circle-slash" }));
+  if (board.unscored)
+    rows.push(
+      new Node(`без оценки: ${board.unscored}`, {
+        icon: "question",
+        description: "/score-issues",
+        tooltip: "Оценить их: /score-issues в сессии Claude (Haiku по docs/issue-priority.md)",
+      })
+    );
+  return rows;
 };
 
 class Provider {
@@ -464,6 +508,34 @@ const activate = (ctx) => {
   };
   let timer = setInterval(tick, cfg().get("pollSeconds") * 1000);
 
+  // Prioritized open issues: `gh` over ssh every few minutes, no model tokens
+  const board = new IssueBoard({
+    settings: () => ({ command: cfg().get("issuesCommand"), limit: cfg().get("issuesLimit") }),
+  });
+  const issuesView = new Provider(() => issueNodes(board));
+  const issuesTree = vscode.window.createTreeView("superAgents.issues", {
+    treeDataProvider: issuesView,
+  });
+  const refreshIssues = async () => {
+    issuesTree.description = "обновляю…";
+    await board.refresh();
+    issuesTree.description = board.at
+      ? `${board.error ? "ошибка, " : ""}на ${hm(board.at)}`
+      : "не загрузилось";
+    issuesView.refresh();
+  };
+  const issuesEvery = () => Math.max(1, cfg().get("issuesRefreshMinutes")) * 60e3;
+  let issuesTimer = setInterval(refreshIssues, issuesEvery());
+  const takeIssue = (n) => {
+    const i = n?.data?.issue;
+    if (!i) return;
+    const prompt = `Возьми в работу issue #${i.number} (${i.url}): ${i.title}`.replace(
+      /'/g,
+      "'\\''"
+    );
+    terminal(`#${i.number}`, cfg().get("roots")[0], `claude '${prompt}'`);
+  };
+
   const pick = async () => {
     const items = store.liveSessions.map((s) => {
       const nl = nowLine(s);
@@ -486,15 +558,22 @@ const activate = (ctx) => {
   ctx.subscriptions.push(
     vscode.window.registerTreeDataProvider("superAgents.live", liveView),
     vscode.window.registerTreeDataProvider("superAgents.recent", recentView),
+    issuesTree,
     bar,
     { dispose: () => clearInterval(timer) },
+    { dispose: () => clearInterval(issuesTimer) },
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (!e.affectsConfiguration("superAgents")) return;
       clearInterval(timer);
       timer = setInterval(tick, cfg().get("pollSeconds") * 1000);
       tick();
+      clearInterval(issuesTimer);
+      issuesTimer = setInterval(refreshIssues, issuesEvery());
+      refreshIssues();
     }),
     vscode.commands.registerCommand("superAgents.refresh", tick),
+    vscode.commands.registerCommand("superAgents.refreshIssues", refreshIssues),
+    vscode.commands.registerCommand("superAgents.takeIssue", takeIssue),
     vscode.commands.registerCommand("superAgents.newSession", () =>
       terminal("claude", cfg().get("roots")[0], "claude")
     ),
@@ -512,6 +591,7 @@ const activate = (ctx) => {
     )
   );
   tick();
+  refreshIssues();
 };
 
 const deactivate = () => undefined;

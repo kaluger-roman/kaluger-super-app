@@ -168,7 +168,8 @@ Any problem noticed along the way — a bug, a needed improvement, an infrastruc
 - Do not fix the finding in the current task and do not widen its scope; skip the issue only when the current task fixes it anyway.
 - Search first (`gh issue list --search "<keywords>" --state all`); if a matching issue exists, add a comment instead of a duplicate.
 - Body in Russian: what was seen, where (`file:line`, command, log excerpt), how to reproduce, suspected cause, possible fix, and the task/branch it was found in. Pass it with `--body-file`; label `bug`, `enhancement` or `documentation`.
-- List the filed issues with links in the final reply.
+- Score every new issue right after creating it: `/score-issues <N> [<N> ...]` (one call for all issues of the task). A Haiku subagent picks the criticality 0–100 by `docs/issue-priority.md`, `scripts/issue-priority.mjs` writes it into the issue (block at the top of the body + band label `P0-critical` … `P4-trivial`). When a comment on an existing issue changes the picture (worse impact, more reach), rescore it the same way.
+- List the filed issues with links and scores in the final reply.
 
 ## Changelog
 
@@ -190,7 +191,7 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 
 ## Agents Panel (VS Code)
 
-`scripts/vscode-agents/` is a VS Code extension («Агенты Super App») that shows the live and recent Claude Code sessions of this project: what each one is doing, which ones wait for the user, a live feed, a jump to the session's terminal. Data comes from `claude agents --json` and the transcripts in `~/.claude/projects/`; logic in `lib.js` (tested in `scripts/__tests__/`), UI in `extension.js`. Build and install: `scripts/vscode-agents/README.md`.
+`scripts/vscode-agents/` is a VS Code extension («Агенты Super App») that shows the live and recent Claude Code sessions of this project: what each one is doing, which ones wait for the user, a live feed, a jump to the session's terminal, and the most critical open issues (by the `docs/issue-priority.md` score). Data comes from `claude agents --json` and the transcripts in `~/.claude/projects/`; logic in `lib.js` (tested in `scripts/__tests__/`), UI in `extension.js`. Build and install: `scripts/vscode-agents/README.md`.
 
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
