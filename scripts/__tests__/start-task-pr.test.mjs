@@ -3,7 +3,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync, renameSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync, renameSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,7 +113,11 @@ test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still fou
   mkdirSync(join(home, ".local", "bin"), { recursive: true });
   renameSync(join(root, "bin", "gh"), join(home, ".local", "bin", "gh"));
   env.HOME = home;
-  env.PATH = `${dirname(process.execPath)}:/usr/bin:/bin`;
+  // Only node and git: CI runners have a real gh in /usr/bin.
+  const sysBin = join(root, "sysbin");
+  mkdirSync(sysBin);
+  symlinkSync(execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(), join(sysBin, "git"));
+  env.PATH = `${dirname(process.execPath)}:${sysBin}`;
   const res = runScript("--title", "Fix the thing");
   assert.equal(res.status, 0, res.stderr);
   assert.equal(JSON.parse(res.stdout).action, "created");

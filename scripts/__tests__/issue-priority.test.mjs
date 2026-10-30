@@ -242,7 +242,8 @@ test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still fou
   mkdirSync(join(home, ".local", "bin"), { recursive: true });
   renameSync(join(root, "gh"), join(home, ".local", "bin", "gh"));
   env.HOME = home;
-  env.PATH = `${dirname(process.execPath)}:/usr/bin:/bin`;
+  // Only node: CI runners have a real gh in /usr/bin.
+  env.PATH = dirname(process.execPath);
   const r = run("top");
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(JSON.parse(r.stdout), []);
