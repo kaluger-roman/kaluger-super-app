@@ -59,6 +59,14 @@ bash scripts/dev-stack.sh down-all         # снести все dev-* стек�
   `pg_dump` в Debian/Ubuntu выбирает версию локального кластера, а не новейшую, поэтому
   `run-backend`, `run-backend-e2e` и `test-backend` сами ставят в `PATH`
   `/usr/lib/postgresql/<версия образа>/bin`, если он есть.
+- **Prisma-клиент сверяется со схемой.** Worktree подключают `backend/node_modules` симлинком на
+  основную копию, поэтому сгенерированный клиент у всех общий, и `prisma generate` в одной ветке
+  переписывает его для остальных. `run-backend`, `run-backend-e2e`, `test-backend` (и
+  `npm run check`) перед стартом сравнивают `node_modules/.prisma/client/schema.prisma` с
+  `backend/prisma/schema.prisma` (`scripts/prisma-client.mjs`, разница в выравнивании не в счёт).
+  Если клиент отстал, а схема ветки совпадает со схемой основной копии, он перегенерируется сам;
+  если ветка меняет схему, команда останавливается с подсказкой поставить свой `npm ci` в
+  `backend/` вместо симлинка.
 - **WebSocket в dev** выводится из `REACT_APP_API_URL` (`resolveWsUrl` в
   `frontend/src/shared/config/index.ts`) — realtime ветки ходит в бэк своей же ветки.
 - **Playwright** читает `E2E_BASE_URL`/`PORT` (`frontend/playwright.config.ts`), API-хелперы e2e —
