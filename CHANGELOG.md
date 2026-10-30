@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - `scripts/dev-stack.sh test-backend` гоняет jest на тестовой базе ветки (`tutor_app_test` в Docker-Postgres слота), даже если в worktree есть `backend/.env.test`. Раньше `loadTestEnv.ts` загружал `.env.test` с `override` и подменял `DATABASE_URL` ветки на общую `tutor_test`, и ветки со сменой схемы падали на отсутствующих таблицах. Теперь `test-backend` передаёт базу ветки ещё и в `TEST_DATABASE_URL`, который `loadTestEnv.ts` ставит поверх `.env.test`; обычный `npm test` и CI не изменились (#114, #169)
+- `npm run db:seed` работает: раньше скрипт ссылался на несуществующий `backend/prisma/seed.ts` и падал с `MODULE_NOT_FOUND`. Сид теперь в `backend/src/scripts/seed.ts` (`services/devSeed`): преподаватель `teacher@seed.local` / `SeedTeacher!2026` с подтверждённой почтой, три ученика (один в архиве), кабинет ученика `student@seed.local` / `SeedStudent!2026` и пять уроков вокруг текущего момента (прошедшие оплаченный и неоплаченный, ближайший через 15 минут, пробный без ученика). Повторный запуск пересоздаёт только этот набор; описан в `/manual-qa`, `docs/qa-docker.md` и CLAUDE.md (#140, 9953f2d)
 
 ### Changed
 - Пороги предупреждений вкладки «Бэкапы» о резервном хранилище (24 ч) и проверке восстановления (48 ч) приходят с бэкенда (`offsite.syncStaleHours`, `offsite.restoreCheckStaleHours`) и совпадают с порогами алертов (19ff849)
