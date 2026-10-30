@@ -14,7 +14,10 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qa} -d ${POSTGRES_DB:-tutor_app}"]
+      # Over TCP: on first boot the entrypoint's initdb server listens on the socket only (#168).
+      test:
+        - CMD-SHELL
+        - pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-qa} -d ${POSTGRES_DB:-tutor_app}
       interval: 3s
       timeout: 3s
       retries: 30
@@ -38,6 +41,7 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       NODE_ENV: production
       PORT: "3001"
+      HOST: "0.0.0.0"
     depends_on:
       db:
         condition: service_healthy

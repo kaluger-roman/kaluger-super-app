@@ -136,6 +136,8 @@ jobs:
           ssh vps << 'EOF'
             set -e
             cd /home/roman-kaluger/kaluger-super-app/backend
+            # Secrets: .env and its manual .env.bak-* copies must stay owner-only (issue #191)
+            chmod 600 .env*
             npm ci --omit=dev
             node --env-file=.env dist/scripts/checkEnv.js
             npx prisma migrate deploy

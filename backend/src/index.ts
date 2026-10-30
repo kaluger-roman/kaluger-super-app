@@ -16,7 +16,7 @@ import {
   runScheduledAlertChecks,
   warnIfTurnNotConfigured,
 } from "./services";
-import { getFrontendUrl } from "./utils";
+import { getFrontendUrl, getListenHost } from "./utils";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
 if (process.env.NODE_ENV !== "test") {
@@ -139,8 +139,9 @@ if (shouldStartServer) {
 
   setWebSocketManager(wsManager);
 
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  const HOST = getListenHost();
+  server.listen(Number(PORT), HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
     console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
     console.log(`Student WebSocket server available at ws://localhost:${PORT}/ws/student`);
 

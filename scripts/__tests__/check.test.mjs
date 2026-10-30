@@ -13,6 +13,8 @@ import {
   planTests,
   runChecks,
   tailLines,
+  testDbUrl,
+  testDbWarning,
 } from "../check.mjs";
 
 test("parseArgs reads the flags and rejects unknown ones", () => {
@@ -136,4 +138,56 @@ test("runChecks reports a command that cannot start as failed", async () => {
 test("formatDuration and tailLines format the summary", () => {
   assert.equal(formatDuration(1234), "1.2s");
   assert.equal(tailLines("a\nb\nc\n", 2), "b\nc");
+});
+
+test("testDbUrl picks the database npm test runs on, like loadTestEnv", () => {
+  const envTest = "# test\nDATABASE_URL=\"postgresql://me@localhost:5432/tutor_test\"\nPORT=3002\n";
+  assert.equal(testDbUrl({ envTest, env: {} }), "postgresql://me@localhost:5432/tutor_test");
+  assert.equal(
+    testDbUrl({ envTest, env: { TEST_DATABASE_URL: "postgresql://dev:dev@localhost:15433/tutor_app_test" } }),
+    "postgresql://dev:dev@localhost:15433/tutor_app_test"
+  );
+  assert.equal(testDbUrl({ envTest: null, env: { DATABASE_URL: "postgresql://me@localhost/tutor_app" } }), null);
+});
+
+const STATUS_HEAD =
+  'Prisma schema loaded from prisma/schema.prisma\nDatasource "db": PostgreSQL database "tutor_test"\n\n44 migrations found in prisma/migrations\n';
+
+test("testDbWarning is silent when the test database is up to date", () => {
+  const output = `${STATUS_HEAD}\nDatabase schema is up to date!\n`;
+  assert.equal(testDbWarning({ url: "postgresql://me@localhost/tutor_test", code: 0, output }), null);
+});
+
+test("testDbWarning names the missing migrations and how to apply them", () => {
+  const output = `${STATUS_HEAD}Following migrations have not yet been applied:\n20261029200504_037_admin_alerts\n20261030090000_x\n\nTo apply migrations in development run prisma migrate dev.\n`;
+
+  const warning = testDbWarning({ url: "postgresql://me:secret@localhost:5432/tutor_test", code: 1, output });
+
+  assert.match(warning, /postgresql:\/\/me:\*\*\*@localhost:5432\/tutor_test lacks 2 migration\(s\): 20261029200504_037_admin_alerts, 20261030090000_x\./);
+  assert.match(warning, /\(cd backend && npm run db:migrate:test\)/);
+  assert.match(warning, /--backend-tests dev-stack/);
+  assert.doesNotMatch(warning, /secret/);
+});
+
+test("testDbWarning shortens a long list of missing migrations", () => {
+  const names = Array.from({ length: 44 }, (_, i) => `2025080${i}_m${i}`);
+  const output = `${STATUS_HEAD}Following migrations have not yet been applied:\n${names.join("\n")}\n\nTo apply`;
+
+  const warning = testDbWarning({ url: "postgresql://me@localhost/tutor_test", code: 1, output });
+
+  assert.match(warning, /lacks 44 migration\(s\): (\S+, ){5}…\./);
+});
+
+test("testDbWarning reports an unreachable test database", () => {
+  const output = "Error: P1001: Can't reach database server at `localhost:5432`\n";
+  assert.match(
+    testDbWarning({ url: "postgresql://me@localhost:5432/tutor_test", code: 1, output }),
+    /cannot reach the test database postgresql:\/\/me@localhost:5432\/tutor_test/
+  );
+});
+
+test("testDbWarning shows prisma's output for any other failure", () => {
+  const output = `${STATUS_HEAD}Your local migration history and the migrations table from your database are different\n`;
+  const warning = testDbWarning({ url: "postgresql://me@localhost/tutor_test", code: 1, output });
+  assert.match(warning, /prisma migrate status` on the test database .* failed:\n[\s\S]*are different/);
 });
