@@ -3,7 +3,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync, renameSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,6 +106,17 @@ test("new branch without commits: empty commit, push, draft PR with session", ()
   assert.match(create.stdin, /## Сессии Claude Code/);
   assert.match(create.stdin, new RegExp(`cd /launch/dir && claude --resume ${SESSION_ID}`));
   assert.match(create.stdin, /web: https:\/\/claude\.ai\/code\/session_web123/);
+});
+
+test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still found", () => {
+  const home = join(root, "home");
+  mkdirSync(join(home, ".local", "bin"), { recursive: true });
+  renameSync(join(root, "bin", "gh"), join(home, ".local", "bin", "gh"));
+  env.HOME = home;
+  env.PATH = `${dirname(process.execPath)}:/usr/bin:/bin`;
+  const res = runScript("--title", "Fix the thing");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(JSON.parse(res.stdout).action, "created");
 });
 
 test("staged changes are not swallowed into the empty commit", () => {

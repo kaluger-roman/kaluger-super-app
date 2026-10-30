@@ -13,6 +13,8 @@
 // Output: JSON on stdout; errors on stderr, exit code 1. Needs an authenticated `gh`.
 
 import { execFileSync } from "node:child_process";
+import { homedir } from "node:os";
+import { delimiter, join } from "node:path";
 
 export const CRITERIA = { impact: 40, reach: 25, urgency: 20, workaround: 15 };
 const CRITERIA_RU = { impact: "ущерб", reach: "охват", urgency: "срочность", workaround: "обход" };
@@ -87,8 +89,12 @@ const parseArgs = (argv) => {
   return args;
 };
 
+// gh is installed in ~/.local/bin on the dev machine, which non-interactive ssh shells leave off PATH.
+const GH_ENV = { ...process.env, PATH: [process.env.PATH, join(homedir(), ".local", "bin")].join(delimiter) };
+
 const gh = (args, input) =>
   execFileSync("gh", args, {
+    env: GH_ENV,
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"],
     maxBuffer: 64 << 20,

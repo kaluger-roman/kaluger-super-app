@@ -1,21 +1,27 @@
 ---
-allowed-tools: Bash(git log:*), Bash(git diff:*), Bash(git tag:*), Bash(git rev-list:*), Read, Edit
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(git log:*), Bash(git diff:*), Bash(git tag:*), Bash(git rev-list:*), Read, Edit
 description: Generate or update CHANGELOG.md from git history
 ---
 
 ## Context
 
-- Current branch: !`git branch --show-current`
-- Latest tag: !`git tag -l --sort=-creatordate | head -1`
+- Current branch: !`bash scripts/repo-git.sh branch --show-current`
+- Latest tag: !`bash scripts/repo-git.sh tag -l --sort=-creatordate | head -1`
 - Current CHANGELOG.md: !`cat CHANGELOG.md 2>/dev/null || echo "File not found"`
 
 ## Your task
 
 Generate or update `CHANGELOG.md` based on git commit history.
 
+### Checkout and git
+
+- The checkout to update is `<path>` from `--worktree <path>` in `$ARGUMENTS` (as this session sees it, e.g. `.claude/worktrees/<slug>` or `/root/super-app/.claude/worktrees/<slug>`), otherwise the session's cwd. With `--worktree`, the Context above describes the session's cwd, not the checkout: get the branch, the latest tag and `<path>/CHANGELOG.md` again for `<path>`.
+- Run every git command below as `bash scripts/repo-git.sh -C <checkout> <git args>`, not bare `git`. When the checkout is seen through an sshfs mount (session on the server, repo and worktrees on the dev machine, where their `.git` files point), the helper runs git there over ssh; otherwise it is `git -C <checkout>`.
+- Read and edit `<checkout>/CHANGELOG.md`.
+
 ### Instructions
 
-1. **Determine the range of commits to include:**
+1. **Determine the range of commits to include** (`$ARGUMENTS` without `--worktree <path>`):
    - If `$ARGUMENTS` contains a version string (e.g., `1.2.0`), use it as the new version header
    - If `$ARGUMENTS` contains a commit range or ref (e.g., `v1.0.0..HEAD`), use that range
    - If `$ARGUMENTS` is empty:
@@ -25,7 +31,7 @@ Generate or update `CHANGELOG.md` based on git commit history.
 
 2. **Read the git log** for the determined range using:
    ```
-   git log --pretty=format:"%h %s" <range>
+   bash scripts/repo-git.sh -C <checkout> log --pretty=format:"%h %s" <range>
    ```
 
 3. **Categorize commits** into these sections (skip empty sections):

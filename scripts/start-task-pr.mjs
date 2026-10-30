@@ -27,7 +27,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
 const SESSIONS_HEADING = "## Сессии Claude Code";
 
@@ -42,8 +42,12 @@ const parseArgs = (argv) => {
   return args;
 };
 
+// gh (also the git credential helper below) is installed in ~/.local/bin on the dev machine,
+// which non-interactive ssh shells leave off PATH.
+const RUN_ENV = { ...process.env, PATH: [process.env.PATH, join(homedir(), ".local", "bin")].join(delimiter) };
+
 const run = (cmd, args, opts = {}) =>
-  execFileSync(cmd, args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
+  execFileSync(cmd, args, { env: RUN_ENV, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
 
 const git = (...args) => run("git", args);
 const gitAuth = (...args) => run("git", ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential", ...args]);

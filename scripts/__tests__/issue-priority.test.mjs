@@ -3,7 +3,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -235,6 +235,18 @@ test("unscored and top read open issues", () => {
     top.map((i) => [i.number, i.score]),
     [[3, 85]]
   );
+});
+
+test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still found", () => {
+  const home = join(root, "home");
+  mkdirSync(join(home, ".local", "bin"), { recursive: true });
+  renameSync(join(root, "gh"), join(home, ".local", "bin", "gh"));
+  env.HOME = home;
+  env.PATH = `${dirname(process.execPath)}:/usr/bin:/bin`;
+  const r = run("top");
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(JSON.parse(r.stdout), []);
+  assert.equal(ghCalls().length, 1);
 });
 
 test("unknown command prints usage", () => {

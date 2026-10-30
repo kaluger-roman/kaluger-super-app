@@ -1,12 +1,12 @@
 ---
-allowed-tools: Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(git:*), Bash(curl:*), Bash(npx:*), Bash(node:*), Bash(cd:*), Bash(docker:*), Bash(bash scripts/qa-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_resize, mcp__playwright__browser_close, mcp__playwright__browser_tabs, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_file_upload
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Bash(git:*), Bash(curl:*), Bash(npx:*), Bash(node:*), Bash(cd:*), Bash(docker:*), Bash(bash scripts/qa-stack.sh:*), Read, Write, Edit, Glob, Grep, Agent, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_evaluate, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_resize, mcp__playwright__browser_close, mcp__playwright__browser_tabs, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_file_upload
 description: Ручное QA-тестирование фичи текущей ветки через Playwright MCP с проверкой соответствия спеке. Отчёт со скриншотами в docs/manual-qa-reports/. С аргументом --fix чинит однозначные баги сразу.
 ---
 
 ## Контекст
 
 - Сегодня: !`date +%Y-%m-%d`
-- Текущая ветка: !`git branch --show-current`
+- Текущая ветка: !`bash scripts/repo-git.sh branch --show-current`
 - Папки спек (подбери `specs/<id>/` по текущей ветке или её префиксу `NNN-`; в worktree-сессии `git` внутри `$(...)` блокируется, поэтому ветка не подставляется): !`ls specs/ 2>/dev/null | tail -15 || echo "(specs/ не найден)"`
 - QA-стек ветки: !`bash scripts/qa-stack.sh port 2>/dev/null || echo "не поднят — поднимется на Этапе 2"`
 - Существующие отчёты: !`ls -t docs/manual-qa-reports/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
