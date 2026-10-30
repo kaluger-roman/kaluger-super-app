@@ -408,7 +408,7 @@ describe("call notifications in the call flow", () => {
       expect(JSON.parse(delivery.mock.calls[1][1]).data.callId).toBe(callId);
     });
 
-    it("should close the notification once the student answers", async () => {
+    it("should close the notification on every device once the student answers without naming the device", async () => {
       const callId = await ringOffline();
       connectStudent();
 
@@ -419,7 +419,7 @@ describe("call notifications in the call flow", () => {
       expect(pushTypes()).toEqual(["incoming_call", "call_closed"]);
     });
 
-    it("should close the notification once the student rejects", async () => {
+    it("should close the notification on every device once the student rejects without naming the device", async () => {
       const callId = await ringOffline();
       connectStudent();
 
@@ -427,6 +427,62 @@ describe("call notifications in the call flow", () => {
 
       await waitFor(() => pushTypes().length === 2);
       expect(pushTypes()).toEqual(["incoming_call", "call_closed"]);
+    });
+
+    describe("on the student's other devices only", () => {
+      const closedOn = (): string[] =>
+        delivery.mock.calls
+          .filter(([, payload]) => JSON.parse(payload).data.type === "call_closed")
+          .map(([endpoint]) => endpoint);
+
+      const ringTwoDevices = async () => {
+        const answering = await subscribeStudent();
+        const other = await subscribeStudent();
+        await invite();
+        connectStudent();
+        return { callId: ringingCallId(), answering, other };
+      };
+
+      it("should not tell the device that answered the call was answered on another device", async () => {
+        const { callId, answering, other } = await ringTwoDevices();
+
+        await signal("student", studentUserId, {
+          type: "call_accept",
+          callId,
+          pushEndpoint: answering.endpoint,
+        });
+
+        await waitFor(() => closedOn().length === 1);
+        expect(closedOn()).toEqual([other.endpoint]);
+        expect(pushTypes()).toEqual(["incoming_call", "incoming_call", "call_closed"]);
+      });
+
+      it("should not tell the device that declined the call was declined on another device", async () => {
+        const { callId, answering, other } = await ringTwoDevices();
+
+        await signal("student", studentUserId, {
+          type: "call_reject",
+          callId,
+          pushEndpoint: answering.endpoint,
+        });
+
+        await waitFor(() => closedOn().length === 1);
+        expect(closedOn()).toEqual([other.endpoint]);
+        expect(pushTypes()).toEqual(["incoming_call", "incoming_call", "call_closed"]);
+      });
+
+      it("should still close the notification on every device for an endpoint the student does not own", async () => {
+        const { callId, answering, other } = await ringTwoDevices();
+
+        await signal("student", studentUserId, {
+          type: "call_accept",
+          callId,
+          pushEndpoint: "https://push.example.com/someone-else",
+        });
+
+        await waitFor(() => closedOn().length === 2);
+        expect(closedOn().sort()).toEqual([answering.endpoint, other.endpoint].sort());
+      });
     });
 
     it("should send no closing notification for a call the devices never heard of", async () => {

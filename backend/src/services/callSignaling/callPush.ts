@@ -33,16 +33,20 @@ export const pushIncomingCall = (call: LiveCall): Promise<number> =>
     notifyIncomingCall(calleeOf(call), toMessage(call, "incoming_call"))
   );
 
-// Replaces the incoming call notification on the callee's devices (FR-016). Sent only once the
-// push service took the incoming one: a closing push that overtook it would leave the device
-// ringing for a call that is over.
+// Replaces the incoming call notification on the callee's devices (FR-016), except the one that
+// answered or declined. Sent only once the push service took the incoming one: a closing push that
+// overtook it would leave the device ringing for a call that is over.
 export const pushCallClosed = (
   call: LiveCall,
   kind: Exclude<CallNotificationKind, "incoming_call">
 ): void => {
   if (!callRegistry.takePushNotified(call)) return;
   const incoming = call.incomingPush ?? Promise.resolve(0);
-  void incoming.then(() => notifyCallClosed(calleeOf(call), toMessage(call, kind)));
+  void incoming.then(() =>
+    notifyCallClosed(calleeOf(call), toMessage(call, kind), {
+      exceptEndpoint: call.answeringEndpoint,
+    })
+  );
 };
 
 // A ringing call ended by the caller (or without the callee) was missed; one the callee ended

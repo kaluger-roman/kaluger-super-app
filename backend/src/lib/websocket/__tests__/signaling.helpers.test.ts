@@ -3,6 +3,7 @@ import {
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
   LESSON_ID_MAX_LENGTH,
+  PUSH_ENDPOINT_MAX_LENGTH,
 } from "../signaling.constants";
 import { parseCallSignal, toIceCandidate, toSessionDescription } from "../signaling.helpers";
 
@@ -153,6 +154,50 @@ describe("parseCallSignal", () => {
       type: "call_hangup",
       callId: "c-1",
     });
+  });
+
+  it.each(["call_accept", "call_reject"] as const)(
+    "should keep the push endpoint of the device that sent %s",
+    (type) => {
+      const pushEndpoint = `https://push.example.com/${"e".repeat(64)}`;
+
+      expect(parseCallSignal({ type, callId: "c-1", pushEndpoint })).toEqual({
+        type,
+        callId: "c-1",
+        pushEndpoint,
+      });
+      expect(
+        parseCallSignal({ type, callId: "c-1", pushEndpoint: "e".repeat(PUSH_ENDPOINT_MAX_LENGTH) })
+      ).toEqual({ type, callId: "c-1", pushEndpoint: "e".repeat(PUSH_ENDPOINT_MAX_LENGTH) });
+    }
+  );
+
+  it.each(["call_accept", "call_reject"] as const)(
+    "should keep %s and drop an unusable push endpoint",
+    (type) => {
+      [
+        "",
+        42,
+        null,
+        { url: "https://push.example.com/x" },
+        "e".repeat(PUSH_ENDPOINT_MAX_LENGTH + 1),
+      ].forEach((pushEndpoint) => {
+        expect(parseCallSignal({ type, callId: "c-1", pushEndpoint })).toEqual({
+          type,
+          callId: "c-1",
+        });
+      });
+    }
+  );
+
+  it("should not take a push endpoint from other call signals", () => {
+    expect(
+      parseCallSignal({
+        type: "call_cancel",
+        callId: "c-1",
+        pushEndpoint: "https://push.example.com/x",
+      })
+    ).toEqual({ type: "call_cancel", callId: "c-1" });
   });
 
   it("should keep a known hangup reason and drop an unknown one", () => {

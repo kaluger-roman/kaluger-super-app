@@ -207,6 +207,54 @@ describe("callNotification service", () => {
       expect(headers).toEqual({ TTL: "86400", Urgency: "normal", Topic: toTopic("call-1") });
     });
 
+    it("should leave out the device that answered the call", async () => {
+      const answering = await addDevice({ studentUserId });
+      const other = await addDevice({ studentUserId });
+
+      await notifyCallClosed(student(), message("call_closed"), {
+        exceptEndpoint: answering.endpoint,
+      });
+
+      expect(delivery.mock.calls.map(([endpoint]) => endpoint)).toEqual([other.endpoint]);
+    });
+
+    it("should send nothing when the only device is the one that answered", async () => {
+      const answering = await addDevice({ studentUserId });
+
+      await notifyCallClosed(student(), message("call_closed"), {
+        exceptEndpoint: answering.endpoint,
+      });
+
+      expect(delivery).not.toHaveBeenCalled();
+    });
+
+    it("should not widen the closing fan-out past the devices that heard of the call", async () => {
+      const devices = await Promise.all(
+        Array.from({ length: MAX_PUSH_SUBSCRIPTIONS_PER_OWNER + 1 }, (_, index) =>
+          prisma.pushSubscription.create({
+            data: {
+              endpoint: `https://push.example.com/${randomUUID()}`,
+              p256dh: "k",
+              auth: "a",
+              studentUserId,
+              createdAt: new Date(Date.now() - (index + 1) * 60_000),
+            },
+          })
+        )
+      );
+
+      await notifyCallClosed(student(), message("call_closed"), {
+        exceptEndpoint: devices[0].endpoint,
+      });
+
+      expect(delivery.mock.calls.map(([endpoint]) => endpoint).sort()).toEqual(
+        devices
+          .slice(1, MAX_PUSH_SUBSCRIPTIONS_PER_OWNER)
+          .map((device) => device.endpoint)
+          .sort()
+      );
+    });
+
     it("should not fail when the push service does", async () => {
       await addDevice({ studentUserId });
       jest.spyOn(console, "error").mockImplementation(() => undefined);

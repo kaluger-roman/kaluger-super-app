@@ -89,12 +89,12 @@ export const toUnsentAccept = ({
   decision,
   local,
   received: { call, role },
-}: DecidedSnapshot): AddressedSignal | null =>
+}: DecidedSnapshot): CallAddress | null =>
   decision === "resume" &&
   local.phase === "connecting" &&
   call?.status === "ringing" &&
   call.direction === "incoming"
-    ? { role, message: { type: "call_accept", callId: call.callId } }
+    ? { callId: call.callId, role }
     : null;
 
 // A media change made while the socket was gone never reached the peer.

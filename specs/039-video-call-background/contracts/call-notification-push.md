@@ -25,7 +25,7 @@ type CallNotificationChannel = {
 |---------|------------|---------|
 | `hasCallNotificationDevices(recipient)` | `Promise<boolean>` | есть подписки получателя в настроенных каналах; для преподавателя — и `callNotificationsEnabled !== false` |
 | `notifyIncomingCall(recipient, message)` | `Promise<number>` — доставлено | на устройства получателя, параллельно, не больше `MAX_PUSH_SUBSCRIPTIONS_PER_OWNER` (10) самых свежих по `createdAt`; `gone` удаляет подписку |
-| `notifyCallClosed(recipient, message)` | `Promise<void>` | best-effort, ошибки только в лог |
+| `notifyCallClosed(recipient, message, { exceptEndpoint? })` | `Promise<void>` | best-effort, ошибки только в лог; на те же устройства, что `notifyIncomingCall` (те же 10 самых свежих), кроме подписки с `exceptEndpoint` |
 
 Новый канал = новое значение `PushChannel` + реализация `CallNotificationChannel` в реестре; `callFlow` не меняется.
 
@@ -43,9 +43,11 @@ type CallNotificationChannel = {
 
 `missed_call` / `call_closed` отправляются только после завершения отправки `incoming_call` того же вызова: иначе закрывающий мог дойти до push-сервиса первым, а входящий следом показал бы «звонящее» уведомление о завершённом вызове.
 
+`call_closed` не отправляется устройству, которое само ответило или отклонило вызов: его `call_accept` / `call_reject` несёт `pushEndpoint` своей подписки (contracts/signaling-ws.md), сервер исключает эту подписку адресата. Иначе на iOS, где service worker не может сразу закрыть показанное уведомление, на ответившем устройстве оставалось «Звонок принят или отклонён на другом устройстве». Без `pushEndpoint` `call_closed` уходит на все устройства, как раньше. Ответившая страница сама закрывает уведомления `call-<callId>` своего устройства. Если `incoming_call` дошёл до этого устройства уже после ответа, service worker после показа шлёт открытым окнам `postMessage({ type: "call_notification_shown", callId })`, и страница, где этот звонок приняли или отклонили, закрывает уведомление. На других устройствах адресата iOS тоже не закрывает `call_closed` сразу: там уведомление остаётся, но его текст верен.
+
 ## Service worker (`frontend/public/push-sw.js`)
 
-- `push`: каждый push показывает уведомление (правило iOS). `incoming_call` — `requireInteraction: true`, `renotify: true`, вибрация `[300, 200, 300, 200, 300]`. `missed_call` — заменяет по тегу. `call_closed` — показывает и сразу закрывает все уведомления с этим тегом. `lesson_reminder` — как сейчас.
+- `push`: каждый push показывает уведомление (правило iOS). `incoming_call` — `requireInteraction: true`, `renotify: true`, вибрация `[300, 200, 300, 200, 300]`. `missed_call` — заменяет по тегу. `call_closed` — показывает и сразу закрывает все уведомления с этим тегом (на iOS закрытие не срабатывает, уведомление остаётся). `lesson_reminder` — как сейчас.
 - `notificationclick`:
   - `incoming_call`: есть окно → `focus()` + `postMessage({ type: "call_notification_opened", callId })`, без `navigate`; нет → `openWindow(data.url)`. Страница, получившая `call_notification_opened`, открывает незарегистрированный сокет заново без `resume=1` (явное действие, забирает соединение у другой вкладки/устройства, пока вызов не принят; см. research.md R3).
   - остальные → прежнее поведение (`focus` + `navigate(url)` / `openWindow(url)`).

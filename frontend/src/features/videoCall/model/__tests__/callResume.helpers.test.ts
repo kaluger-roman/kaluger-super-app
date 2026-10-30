@@ -225,7 +225,7 @@ describe("features/videoCall/model callResume helpers — derived payloads", () 
     const ringing = { ...SNAPSHOT, status: "ringing" as const, direction: "incoming" as const };
     expect(toUnsentAccept(decided({ phase: "connecting" }, ringing))).toEqual({
       role: "tutor",
-      message: { type: "call_accept", callId: "c-1" },
+      callId: "c-1",
     });
     expect(toUnsentAccept(decided({ phase: "incoming" }, ringing))).toBeNull();
     expect(toUnsentAccept(decided({ phase: "connecting" }, SNAPSHOT))).toBeNull();

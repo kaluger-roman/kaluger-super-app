@@ -48,6 +48,9 @@ export const CALL_ENDED_TEXT = "Звонок завершён";
 export const CALL_ALREADY_ENDED_TEXT = "Звонок уже завершён";
 export const NO_TRANSPORT_TEXT = "Нет связи с сервером. Проверьте интернет и попробуйте снова";
 export const CAMERA_FAILED_TEXT = "Не удалось включить камеру. Проверьте разрешения браузера";
+export const MIC_FAILED_TEXT = "Не удалось включить микрофон. Проверьте разрешения браузера";
+export const MIC_AND_CAMERA_FAILED_TEXT =
+  "Не удалось включить микрофон и камеру. Проверьте разрешения браузера";
 export const MIC_BUSY_TEXT = "Микрофон занят другим приложением";
 export const CAMERA_BUSY_TEXT = "Камера занята другим приложением";
 export const MIC_AND_CAMERA_BUSY_TEXT = "Микрофон и камера заняты другим приложением";

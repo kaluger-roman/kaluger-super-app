@@ -40,6 +40,9 @@ export type LiveCall = {
   pushNotified: boolean;
   // How many of the callee's devices took that notification; set once it is sent.
   incomingPush?: Promise<number>;
+  // The push endpoint of the callee's device that answered or declined: it gets no closing push,
+  // which on iOS would stay there saying the call was taken on another device.
+  answeringEndpoint?: string;
 };
 
 export type CallParticipant = {

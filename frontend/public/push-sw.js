@@ -113,6 +113,16 @@ var closeTagged = function (tag) {
   });
 };
 
+// The device that answered gets no closing push, so a page that already took or declined this
+// call closes an incoming notification that arrived late.
+var tellAppWindows = function (message) {
+  return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    list.forEach(function (client) {
+      client.postMessage(message);
+    });
+  });
+};
+
 // Push notification handler. Every push shows a notification: iOS drops a subscription whose
 // push shows none. A call answered or declined elsewhere shows a neutral one and closes it at once.
 self.addEventListener("push", function (event) {
@@ -125,6 +135,10 @@ self.addEventListener("push", function (event) {
     if (data.type === "call_closed") {
       shown = shown.then(function () {
         return closeTagged(payload.tag);
+      });
+    } else if (data.type === "incoming_call") {
+      shown = shown.then(function () {
+        return tellAppWindows({ type: "call_notification_shown", callId: data.callId });
       });
     }
     event.waitUntil(shown);

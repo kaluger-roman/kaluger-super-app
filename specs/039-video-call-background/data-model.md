@@ -55,6 +55,7 @@
 | `pendingPeerRestart` | `Partial<Record<CallerKindValue, object \| null>>` | собеседник пересобрал соединение (`call_resume { sessionRestart: true }`), а доставка просьбы о пересборке участнику не подтверждена: значение — сокет, в который она записана (`null` — соединения не было). Снимается любым сигналом участника по этому сокету; `call_resume` участника по другому сокету получает `call_peer_resumed { sessionRestart: true }` (contracts/signaling-ws.md, `call_resume` п. 5) |
 | `pushNotified` | boolean | адресату ушёл push о входящем (нужен для закрывающего push, FR-016) |
 | `incomingPush` | `Promise<number>?` | исход push о входящем: на сколько устройств доставлен; ставится при первой отправке, следующие запросы (уход адресата в фон, потеря связи) повторно не шлют, а берут этот исход; закрывающий push ждёт его завершения |
+| `answeringEndpoint` | `string?` | `pushEndpoint` из `call_accept`/`call_reject` адресата звонящего вызова: этому устройству закрывающий `call_closed` не отправляется (contracts/call-notification-push.md) |
 
 Все таймеры снимаются в `removeCall` и `__resetLiveCallsForTests`.
 

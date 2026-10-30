@@ -81,4 +81,20 @@ describe("the closing call notification", () => {
     await waitFor(() => closingKinds().length === 1);
     expect(closingKinds()).toEqual(["call_closed"]);
   });
+
+  it.each(["call_accept", "call_reject"] as const)(
+    "should leave out the device that sent %s when closing the notification",
+    async (type) => {
+      const { callId, ringing } = await ringWhilePushInFlight();
+
+      await signal({ type, callId, pushEndpoint: "https://push.example.com/answering" }, "student");
+
+      deliverIncoming(1);
+      await ringing;
+      await waitFor(() => closingKinds().length === 1);
+      expect(jest.mocked(notifyCallClosed).mock.calls[0][2]).toEqual({
+        exceptEndpoint: "https://push.example.com/answering",
+      });
+    }
+  );
 });

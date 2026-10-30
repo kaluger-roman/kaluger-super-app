@@ -2,6 +2,7 @@ import type { Prisma, PushChannel, PushSubscription } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { MAX_PUSH_SUBSCRIPTIONS_PER_OWNER } from "../pushSubscription";
 import type {
+  CallClosedOptions,
   CallNotificationChannel,
   CallNotificationMessage,
   CallNotificationRecipient,
@@ -47,12 +48,19 @@ const findDevices = async (recipient: CallNotificationRecipient): Promise<PushSu
   });
 };
 
+// The excluded device is dropped after the cap, so the closing push never reaches a device past it
+// that was not told about the call.
 const deliverToAll = async (
   recipient: CallNotificationRecipient,
-  message: CallNotificationMessage
+  message: CallNotificationMessage,
+  exceptEndpoint?: string
 ): Promise<DeliveryOutcome[]> => {
   const devices = await findDevices(recipient);
-  return Promise.all(devices.map((device) => CHANNELS[device.channel].deliver(device, message)));
+  return Promise.all(
+    devices
+      .filter(({ endpoint }) => endpoint !== exceptEndpoint)
+      .map((device) => CHANNELS[device.channel].deliver(device, message))
+  );
 };
 
 export const hasCallNotificationDevices = async (
@@ -78,10 +86,11 @@ export const notifyIncomingCall = async (
 
 export const notifyCallClosed = async (
   recipient: CallNotificationRecipient,
-  message: CallNotificationMessage
+  message: CallNotificationMessage,
+  { exceptEndpoint }: CallClosedOptions = {}
 ): Promise<void> => {
   try {
-    await deliverToAll(recipient, message);
+    await deliverToAll(recipient, message, exceptEndpoint);
   } catch (error) {
     console.error("Closing call notification failed:", error);
   }

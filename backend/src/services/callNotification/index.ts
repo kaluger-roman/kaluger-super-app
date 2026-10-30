@@ -4,6 +4,7 @@ export {
   notifyIncomingCall,
 } from "./callNotification";
 export type {
+  CallClosedOptions,
   CallNotificationKind,
   CallNotificationMessage,
   CallNotificationRecipient,

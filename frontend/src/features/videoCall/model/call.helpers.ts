@@ -17,6 +17,7 @@ import type {
   CanceledNotice,
   PendingConfirm,
   StartCallParams,
+  TerminalSignal,
   TerminatedCall,
 } from "./call.types";
 import type { CallEndReason, CallRole, CallSignalingInbound } from "./signaling.types";
@@ -51,6 +52,22 @@ export const toTerminalSignal = ({ address, signal }: TerminatedCall): Addressed
 
 export const isAddressedSignal = (signal: AddressedSignal | null): signal is AddressedSignal =>
   signal !== null;
+
+const toPushEndpointField = (pushEndpoint: string | null): { pushEndpoint?: string } =>
+  pushEndpoint ? { pushEndpoint } : {};
+
+export const toAcceptSignal = (
+  pushEndpoint: string | null,
+  { callId, role }: CallAddress
+): AddressedSignal => ({
+  role,
+  message: { type: "call_accept", callId, ...toPushEndpointField(pushEndpoint) },
+});
+
+export const toRejectSignal = (pushEndpoint: string | null): TerminalSignal => ({
+  type: "call_reject",
+  ...toPushEndpointField(pushEndpoint),
+});
 
 export const isPickerDismissed = (error: unknown): boolean =>
   typeof error === "object" &&

@@ -93,7 +93,7 @@ export type CanceledNotice = {
 
 // The signal the own side owes the peer when the call ends here; null when the peer ended it.
 export type TerminalSignal =
-  | { type: "call_reject" }
+  | { type: "call_reject"; pushEndpoint?: string }
   | { type: "call_cancel" }
   | { type: "call_hangup"; reason?: "media_unavailable" };
 
@@ -105,6 +105,21 @@ export type TerminatedCall = {
 export type AddressedSignal = {
   role: CallRole;
   message: CallSignalingInbound;
+};
+
+export type CallNotificationsTarget = {
+  registration: ServiceWorkerRegistration;
+  callId: string;
+};
+
+export type CallNotificationsSource = {
+  registration: ServiceWorkerRegistration | null;
+  callId: string | null;
+};
+
+export type LateNotificationsSource = {
+  registration: ServiceWorkerRegistration | null;
+  answeredHere: string | null;
 };
 
 export type InviteParams = {
