@@ -2,7 +2,7 @@ import request from "supertest";
 import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { clearTestMailbox, findLatestMailFor } from "../../../lib/testMailbox";
-import { AdminEmailSendError } from "../../../utils";
+import { EmailSendError } from "../../../utils";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import {
   acquireGlobalTestLock,
@@ -170,7 +170,7 @@ describe("admin settings API", () => {
       await putSettings({ alertEmail: ADDRESS, alertEmailEnabled: true }).expect(200);
       jest
         .spyOn(emailModule, "sendAdminEmail")
-        .mockRejectedValue(new AdminEmailSendError("Invalid API key"));
+        .mockRejectedValue(new EmailSendError("Invalid API key"));
 
       const res = await sendTestEmail().expect(502);
 

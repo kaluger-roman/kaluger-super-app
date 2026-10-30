@@ -153,7 +153,7 @@ description: Сквозной оркестратор починки бага. С
 
 1. **Сгенерировать slug** из описания: `fix-` + kebab-case первых ~30 символов сути бага, безопасный для пути. Например «Уроки остаются после удаления ученика» → `fix-lessons-after-delete`.
 2. **Создать worktree** через `EnterWorktree` с `name: "<slug>"`. Worktree создастся в `.claude/worktrees/<slug>/` на новой ветке того же имени.
-3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»): `node scripts/start-task-pr.mjs --title "fix: <суть бага>" --summary "<описание бага, 1–2 предложения>"`. Скрипт сам делает пустой стартовый коммит и push. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»): `node scripts/start-task-pr.mjs --title "fix: <суть бага>" --summary "<описание бага, 1–2 предложения>"`. Если баг пришёл из GitHub issue (в `$ARGUMENTS` есть `#N` или ссылка на issue) — добавить `--closes <N>`: в теле PR появится `Closes #N`, и issue закроется при мерже. Скрипт сам делает пустой стартовый коммит и push. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
 4. **Создать state-директорию** `mkdir -p .claude/auto-bug-fix/<slug>/` и записать первичный `state.json` (см. схему; `current_phase: "diagnose"`, плюс `pr_url` из ответа скрипта).
 5. Создать **5 задач** через `TaskCreate`.
 6. Сообщить пользователю одной строкой: `🐞 Auto-bug-fix: started "<описание>". Worktree: <path>. PR: <pr_url>. State: .claude/auto-bug-fix/<slug>/state.json.`
@@ -413,7 +413,7 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Скриншоты: before — docs/bug-fixes/<slug>/screenshots/, after — docs/manual-qa-reports/<date>-<branch>[-N]/screenshots/
-- PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
+- PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» и строки `Closes #N` сохранить), `gh pr ready`
 - State: .claude/auto-bug-fix/<slug>/state.json
 
 ✋ Жду твоего следующего хода.

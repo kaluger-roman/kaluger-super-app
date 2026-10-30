@@ -6,7 +6,7 @@ import {
   GLOBAL_TEST_LOCK_TIMEOUT_MS,
 } from "../../../__tests__/helpers";
 import {
-  AdminEmailSendError,
+  EmailSendError,
   AlertEmailNotConfiguredError,
   TestEmailRateLimitError,
 } from "../../../utils";
@@ -112,7 +112,7 @@ describe("adminSettings", () => {
       await updateAdminSettings({ alertEmail: ADDRESS, alertEmailEnabled: true });
       jest
         .spyOn(emailModule, "sendAdminEmail")
-        .mockRejectedValueOnce(new AdminEmailSendError("Invalid API key"));
+        .mockRejectedValueOnce(new EmailSendError("Invalid API key"));
 
       await expect(sendTestEmail()).rejects.toThrow("Invalid API key");
       await expect(sendTestEmail()).rejects.toBeInstanceOf(TestEmailRateLimitError);

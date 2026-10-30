@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { FAKE_MEDIA_ARGS } from "./e2e/helpers/media";
+
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.PORT ?? "3000"}`;
 
 export default defineConfig({
@@ -21,6 +23,7 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         baseURL,
+        launchOptions: { args: FAKE_MEDIA_ARGS },
       },
     },
   ],
