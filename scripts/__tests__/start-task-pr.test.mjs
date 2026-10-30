@@ -144,6 +144,80 @@ test("branch already ahead of base: no extra commit", () => {
   assert.equal(sh(origin, "rev-parse", "refs/heads/fix-thing"), head);
 });
 
+// origin/main moves one commit ahead while local main stays behind, as in a main checkout nobody pulled.
+const advanceOrigin = (file = "m.txt") => {
+  sh(work, "checkout", "--quiet", "main");
+  writeFileSync(join(work, file), "m\n");
+  sh(work, "add", file);
+  sh(work, "commit", "--quiet", "-m", "upstream");
+  sh(work, "push", "--quiet", "origin", "main");
+  sh(work, "reset", "--quiet", "--hard", "HEAD~1");
+  sh(work, "checkout", "--quiet", "fix-thing");
+  return sh(origin, "rev-parse", "main");
+};
+
+test("branch up to date with base: no fast-forward, no warning", () => {
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(res.stderr, "");
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.fastForwarded, 0);
+  assert.equal(out.behindBase, 0);
+});
+
+test("branch cut from a stale local main: fast-forwarded to origin/main before the empty commit", () => {
+  const upstream = advanceOrigin();
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(res.stderr, "");
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.fastForwarded, 1);
+  assert.equal(out.behindBase, 0);
+  assert.equal(sh(work, "rev-parse", "HEAD~1"), upstream);
+  assert.equal(sh(work, "diff", "--name-only", upstream, "HEAD"), "");
+  assert.equal(readFileSync(join(work, "m.txt"), "utf8"), "m\n");
+  assert.equal(sh(origin, "rev-parse", "refs/heads/fix-thing"), sh(work, "rev-parse", "HEAD"));
+});
+
+test("stale branch with staged changes: not fast-forwarded, warns and reports behindBase", () => {
+  advanceOrigin();
+  writeFileSync(join(work, "b.txt"), "b\n");
+  sh(work, "add", "b.txt");
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stderr, /fix-thing is 1 commit\(s\) behind origin\/main; update it with `git merge --ff-only origin\/main`/);
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.fastForwarded, 0);
+  assert.equal(out.behindBase, 1);
+  assert.equal(sh(work, "rev-list", "--count", "HEAD..origin/main"), "1");
+  assert.equal(sh(work, "diff", "--cached", "--name-only"), "b.txt");
+});
+
+test("stale branch with an untracked file in the way of the fast-forward: warns instead of failing", () => {
+  advanceOrigin("n.txt");
+  writeFileSync(join(work, "n.txt"), "local\n");
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stderr, /behind origin\/main/);
+  assert.equal(JSON.parse(res.stdout).behindBase, 1);
+  assert.equal(readFileSync(join(work, "n.txt"), "utf8"), "local\n");
+});
+
+test("branch with own commits behind base: left as is, warns with a rebase hint", () => {
+  advanceOrigin();
+  writeFileSync(join(work, "c.txt"), "c\n");
+  sh(work, "add", "c.txt");
+  sh(work, "commit", "--quiet", "-m", "real work");
+  const head = sh(work, "rev-parse", "HEAD");
+  const res = runScript("--title", "T");
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stderr, /behind origin\/main; update it with `git rebase origin\/main`/);
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.emptyCommit, null);
+  assert.equal(out.behindBase, 1);
+  assert.equal(sh(work, "rev-parse", "HEAD"), head);
+});
+
 test("open PR from another session: comments this session, no commit or new PR", () => {
   env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
   env.FAKE_GH_PR_VIEW = '{"body":"started in `aaaa`","comments":[]}';

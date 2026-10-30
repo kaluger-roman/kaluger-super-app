@@ -6,7 +6,10 @@
 //   node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"] [--closes 12,34] [--base main]
 //
 // What it does:
-//   - no open PR for the branch yet: fetches <base>, adds an EMPTY commit if the
+//   - no open PR for the branch yet: fetches <base>; a branch with no commits of its
+//     own that lags behind origin/<base> (cut from a stale local main) and has no
+//     tracked changes is fast-forwarded to it, otherwise a lag is reported as a
+//     warning on stderr and `behindBase` in the JSON; adds an EMPTY commit if the
 //     branch has none on top of <base> (GitHub refuses a PR without commits; the
 //     commit carries the same tree, so index and working tree are untouched),
 //     pushes the branch and opens a draft PR whose body records the session;
@@ -178,8 +181,26 @@ const main = () => {
   const remote = process.env.START_TASK_PR_REMOTE_URL || toHttpsRemote(git("remote", "get-url", "origin"));
   gitAuth("fetch", "--quiet", remote, `refs/heads/${base}:refs/remotes/origin/${base}`);
 
+  const ahead = Number(git("rev-list", "--count", `origin/${base}..HEAD`));
+  let behind = Number(git("rev-list", "--count", `HEAD..origin/${base}`));
+  let fastForwarded = 0;
+  // A branch cut from a stale local main would start the task on old code.
+  if (ahead === 0 && behind > 0 && git("status", "--porcelain", "--untracked-files=no") === "") {
+    try {
+      git("merge", "--ff-only", "--quiet", `origin/${base}`);
+      fastForwarded = behind;
+      behind = 0;
+    } catch {
+      // e.g. an untracked file in the way: fall through to the warning
+    }
+  }
+  if (behind > 0) {
+    const fix = ahead === 0 ? `git merge --ff-only origin/${base}` : `git rebase origin/${base}`;
+    process.stderr.write(`start-task-pr: warning: ${branch} is ${behind} commit(s) behind origin/${base}; update it with \`${fix}\`\n`);
+  }
+
   let commit = null;
-  if (Number(git("rev-list", "--count", `origin/${base}..HEAD`)) === 0) {
+  if (ahead === 0) {
     const trailers = session ? `\n\nClaude-Session-Id: ${session.id}` : "";
     const head = git("rev-parse", "HEAD");
     commit = run("git", ["commit-tree", "HEAD^{tree}", "-p", head, "-F", "-"], { input: `chore: start "${args.title}"${trailers}\n` });
@@ -193,7 +214,7 @@ const main = () => {
   )
     .split("\n")
     .pop();
-  return { action: "created", url, branch, emptyCommit: commit, closes };
+  return { action: "created", url, branch, emptyCommit: commit, closes, fastForwarded, behindBase: behind };
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
