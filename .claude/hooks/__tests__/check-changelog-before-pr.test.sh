@@ -94,6 +94,48 @@ expect "resolves --head inside the ssh wrapper (deny)" deny "$tmp/wt-with" "ssh 
 expect "gates an ssh-wrapped gh pr ready" deny "$tmp/wt-with" "ssh home 'cd ~/wt-ssh-without && gh pr ready'"
 expect "ignores ssh-wrapped commands that are not gh pr create" allow "$tmp/wt-without" "ssh home 'gh run list --branch without-changelog'"
 
+# A `cd` anywhere in the chain before gh counts, not only a leading one (#100).
+expect "resolves a cd after an export prefix (allow)" allow "$tmp/wt-without" "export PATH=\$HOME/.local/bin:\$PATH; cd $tmp/wt-with && gh pr ready 98"
+expect "resolves a cd after a source prefix (deny)" deny "$tmp/wt-with" "source ~/.nvm/nvm.sh; cd $tmp/wt-without && gh pr ready"
+expect "takes the last cd before gh" allow "$tmp/wt-without" "cd $tmp/wt-without && cd $tmp/wt-with && gh pr create"
+expect "resolves a relative cd against the previous one" allow "$tmp/wt-without" "cd $tmp && cd wt-with && gh pr create"
+expect "ignores a cd after the gh call" deny "$tmp/wt-without" "gh pr create && cd $tmp/wt-with"
+expect "splits on newlines" allow "$tmp/wt-without" "cd $tmp/wt-with"$'\n'"gh pr create"
+expect "keeps redirections inside the word" allow "$tmp/wt-without" "cd $tmp/wt-with 2>/dev/null && gh pr ready 2>&1 | tail -1"
+expect "gates gh inside a subshell" deny "$tmp/wt-with" "(cd $tmp/wt-without && gh pr create)"
+expect "gates gh after env assignments" deny "$tmp/wt-without" "GH_TOKEN=x gh pr create --title x"
+expect "gates gh called by path" deny "$tmp/wt-without" "\$HOME/.local/bin/gh pr ready 5"
+expect "resolves the branch from -H" allow "$tmp/wt-without" "gh pr create -H with-changelog"
+expect "gates an ssh gh pr ready after export (allow)" allow "$tmp/wt-without" "ssh home 'export PATH=\$HOME/.local/bin:\$PATH; cd ~/wt-ssh-with && gh pr ready 98'"
+expect "gates an ssh gh pr ready after source and export (deny)" deny "$tmp/wt-with" "ssh home 'source ~/.nvm/nvm.sh; export PATH=\$HOME/.local/bin:\$PATH; cd ~/wt-ssh-without && gh pr ready 98'"
+expect "skips ssh options that take a value" deny "$tmp/wt-with" "ssh -o BatchMode=yes -p 22 home 'cd ~/wt-ssh-without && gh pr ready'"
+expect "gates the ssh call that runs gh, not the first one" allow "$tmp/wt-without" "ssh home 'git status' && ssh home 'cd ~/wt-ssh-with && gh pr ready 1'"
+expect "gates the ssh call that runs gh, not the first one (deny)" deny "$tmp/wt-with" "ssh home 'git status' && ssh home 'cd ~/wt-ssh-without && gh pr ready 1'"
+
+# Text that only mentions the command is not a call (#100).
+expect "ignores gh pr ready inside a commit message" allow "$tmp/wt-without" "git commit -m \"run gh pr ready after review\""
+expect "ignores gh pr ready inside a script argument" allow "$tmp/wt-without" "node scripts/start-task-pr.mjs --title x --summary 'then gh pr ready'"
+expect "ignores gh pr create inside an issue comment over ssh" allow "$tmp/wt-without" "ssh home 'cd ~/wt-ssh-without && gh issue comment 1 --body \"use gh pr create\"'"
+expect "ignores gh pr ready inside a double-quoted ssh command" allow "$tmp/wt-without" "ssh home \"git commit -m 'gh pr ready later'\""
+expect "ignores an escaped quote around the text" allow "$tmp/wt-without" "echo \"say \\\"gh pr ready\\\" now\""
+expect "still gates a command with an unterminated quote" deny "$tmp/wt-without" "gh pr create --body \"no closing quote"
+
+expect_reason() {
+  # $1 = name, $2 = cwd, $3 = command, $4 = fixed string the deny reason must contain
+  local reason
+  reason="$(run_hook "$2" "$3" | jq -r '.hookSpecificOutput.permissionDecisionReason // ""')"
+  if printf '%s' "$reason" | grep -qF -- "$4"; then
+    printf 'ok   %s\n' "$1"
+  else
+    printf 'FAIL %s: reason %s lacks %s\n' "$1" "$reason" "$4"
+    failures=$((failures + 1))
+  fi
+}
+
+expect_reason "names the checked checkout" "$tmp/wt-without" "gh pr ready" "Проверялся checkout $(cd "$tmp/wt-without" && pwd -P)"
+expect_reason "hints at cd or --head when the command names no branch" "$tmp/wt-without" "gh pr ready" "нет \`cd <worktree>\`"
+expect_reason "reports a cd target that does not exist" "$tmp/wt-without" "cd $tmp/missing && gh pr ready" "Каталог из \`cd\` не найден ($tmp/missing)"
+
 if [ "$failures" -ne 0 ]; then
   printf '%s failure(s)\n' "$failures"
   exit 1
