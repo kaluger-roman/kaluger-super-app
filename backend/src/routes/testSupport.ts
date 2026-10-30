@@ -10,10 +10,13 @@ import { generateStudentToken } from "../utils/studentAuth";
 import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 import {
+  ALERT_DEFINITIONS,
   BACKUP_FILE_EXTENSION,
   OFFSITE_LAST_PULL_FILE,
+  OFFSITE_STORAGE_FILE,
   RESTORE_CHECK_FILE,
   getBackupDir,
+  runAlertChecks,
 } from "../services";
 
 export const testRouter = Router();
@@ -33,6 +36,8 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.newsItem.deleteMany();
   await prisma.user.deleteMany();
   await prisma.backupSettings.deleteMany();
+  await prisma.adminAlert.deleteMany();
+  await prisma.adminSettings.deleteMany();
   clearTestMailbox();
   clearTestPushSink();
   res.status(204).end();
@@ -354,11 +359,30 @@ testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
   const fs = await import("fs");
   const path = await import("path");
   const dir = getBackupDir();
-  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE];
+  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE, OFFSITE_STORAGE_FILE];
   for (const file of fs.readdirSync(dir)) {
     if (file.endsWith(BACKUP_FILE_EXTENSION) || offsiteStatusFiles.includes(file)) {
       fs.unlinkSync(path.join(dir, file));
     }
   }
   res.status(204).end();
+});
+
+// `types` narrows the run: checks backed by the host (disk space) are not deterministic in e2e.
+testRouter.post("/admin/run-alert-checks", async (req: Request, res: Response) => {
+  const { types } = (req.body ?? {}) as { types?: unknown };
+  const requested = Array.isArray(types)
+    ? types.filter((type): type is string => typeof type === "string")
+    : null;
+  const definitions = requested
+    ? ALERT_DEFINITIONS.filter(({ type }) => requested.includes(type))
+    : ALERT_DEFINITIONS;
+  await runAlertChecks(definitions, new Date());
+  res.json({ ok: true });
+});
+
+testRouter.delete("/admin/alerts", async (_req: Request, res: Response) => {
+  await prisma.adminAlert.deleteMany();
+  await prisma.adminSettings.deleteMany();
+  res.json({ ok: true });
 });

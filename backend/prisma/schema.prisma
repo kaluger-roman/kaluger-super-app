@@ -304,15 +304,67 @@ model ScheduledReminder {
 }
 
 model BackupSettings {
-  id            String    @id @default(cuid())
-  enabled       Boolean   @default(true)
-  intervalHours Int       @default(6)
-  maxStorageMb  Int       @default(300)
-  lastBackupAt  DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  enabled          Boolean   @default(true)
+  intervalHours    Int       @default(6)
+  maxStorageMb     Int       @default(300)
+  lastBackupAt     DateTime?
+  // Last time `enabled` was switched; `updatedAt` moves on every backup.
+  enabledChangedAt DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@map("backup_settings")
+}
+
+enum AdminAlertSeverity {
+  critical
+  warning
+}
+
+enum AdminAlertEmailStatus {
+  pending
+  sent
+  failed
+  skipped_no_email
+  skipped_disabled
+}
+
+model AdminAlert {
+  id                   String                 @id @default(cuid())
+  type                 String                 @db.VarChar(64)
+  // Equals `type` while the alert is active, NULL once resolved:
+  // at most one active alert per type (NULLs are distinct in a unique index).
+  activeType           String?                @unique @db.VarChar(64)
+  severity             AdminAlertSeverity
+  title                String                 @db.VarChar(200)
+  description          String
+  eventKey             String?                @db.VarChar(200)
+  openedAt             DateTime               @default(now())
+  lastSeenAt           DateTime               @default(now())
+  occurrences          Int                    @default(1)
+  resolvedAt           DateTime?
+  readAt               DateTime?
+  openEmailStatus      AdminAlertEmailStatus
+  openEmailAttempts    Int                    @default(0)
+  openEmailError       String?
+  resolveEmailStatus   AdminAlertEmailStatus?
+  resolveEmailAttempts Int                    @default(0)
+  resolveEmailError    String?
+
+  @@index([resolvedAt])
+  @@map("admin_alerts")
+}
+
+model AdminSettings {
+  id                String   @id @default(cuid())
+  alertEmail        String?  @db.VarChar(254)
+  alertEmailEnabled Boolean  @default(true)
+  testEmailSentAt   DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("admin_settings")
 }
 
 model NewsItem {

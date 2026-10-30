@@ -2,11 +2,14 @@
 
 Prod (`45.133.234.3`, `tutor.kaluger.ru`) dumps its database on its own; the
 home dev machine (`home`, Tailscale `100.67.75.106`) pulls every dump over a
-restricted SSH key and once a day proves that the newest copy restores. The
-admin page («Админ-панель» → «Бэкапы») shows when the copy was last pulled and
-the last restore check result.
+restricted SSH key, reports its disk space back to prod and once a day proves
+that the newest copy restores. The admin page («Админ-панель» → «Бэкапы»)
+shows when the copy was last pulled and the last restore check result;
+problems open alerts («Админ-панель» → «Алерты», plus letters, see
+[Alerts](#alerts)).
 
-Spec and design: `specs/036-offsite-backups/`.
+Spec and design: `specs/036-offsite-backups/`; storage report and alerts:
+`specs/037-admin-alerts/`.
 
 ## Where things are
 
@@ -20,6 +23,7 @@ Home (`roman-kaluger@home`):
 | `/home/roman-kaluger/prod-backups/.last-restore-check` | mtime = last restore check whose result reached prod (24 h throttle) |
 | `/home/roman-kaluger/prod-backups/.lock` | `flock` shared by pull and restore check |
 | `/home/roman-kaluger/prod-backups/.verified` | Names of copies that already passed `gzip -t`; unlisted copies are checked on every pull |
+| `/home/roman-kaluger/prod-backups/.cap-pruned` | `1` if the 20 GiB cap deleted copies, else `0`; rewritten by a pull that brought a copy or deleted by the cap, repeated as `capPruned` by the pulls in between |
 | `/home/roman-kaluger/.local/share/offsite-backup/` | Installed copies of the scripts that cron runs |
 | `/home/roman-kaluger/.ssh/offsite_backup_ed25519` | Dedicated key, accepted by prod only for the wrapper below |
 
@@ -31,6 +35,7 @@ Prod (`root@45.133.234.3`):
 | `…/backend/backups/backup-*.sql.gz.tmp` | Dump in progress (renamed when complete, orphans removed after 24 h) |
 | `…/backend/backups/.offsite-last-pull` | Time of the last successful pull, written by the wrapper |
 | `…/backend/backups/.offsite-restore-check.json` | Last restore check result, written by the wrapper |
+| `…/backend/backups/.offsite-storage.json` | Last home storage report (free and total bytes of the home disk, bytes of the copies, cap, `capPruned`), written by the wrapper |
 | `/usr/local/sbin/offsite-backup-ssh` | Forced-command wrapper (`scripts/offsite-backup/prod-ssh-wrapper.sh`) |
 | `/root/.ssh/authorized_keys` | One restricted line for the home key |
 
@@ -46,20 +51,23 @@ prod backend ──pg_dump | gzip──> backups/backup-<ts>.sql.gz.tmp ──re
 
 home cron :17 hourly   pull-backups.sh  ──ssh (offsite key)──> prod wrapper ──rrsync -ro──> backups/
                        gzip -t each new copy, retention 90 days / 20 GiB     └─> writes .offsite-last-pull
+                       df of ~/prod-backups ──ssh (offsite key)──> prod wrapper "report-storage …" ──> .offsite-storage.json
 
 home cron :47 hourly   restore-check.sh (runs at most once per 24 h, --force to bypass)
                        newest copy -> docker postgres:16-alpine --network none, data in tmpfs -> counts users/students/lessons
                        ──ssh (offsite key)──> prod wrapper "report-restore-check …" ──> .offsite-restore-check.json
 
 admin page  GET /api/admin/backup/settings -> offsite.lastSyncAt, offsite.restoreCheck
+backend     alert checks every 15 min read the three dot-files -> «Алерты» tab + letters
 ```
 
 - Pull, not push: prod holds no credential to home, so a compromised prod
   cannot touch the copies.
 - The home key can only run the wrapper (`restrict`, forced command, `from=`
   home's Tailscale IP). The wrapper allows `rsync --server --sender` through
-  `rrsync -ro` (read-only, confined to the backup dir) and one strictly
-  validated `report-restore-check` command. Everything else is refused.
+  `rrsync -ro` (read-only, confined to the backup dir) and two strictly
+  validated report commands, `report-restore-check` and `report-storage`.
+  Everything else is refused.
 - Home is often off. Both jobs run hourly and catch up on the first run after
   the machine comes back; the restore check throttles itself by elapsed time,
   not by wall clock.
@@ -130,6 +138,7 @@ $SSH                       # expect: offsite-backup-ssh: command not allowed
 $SSH cat /etc/passwd       # expect: offsite-backup-ssh: command not allowed
 $SSH report-restore-check error ../x no_copy   # expect: offsite-backup-ssh: invalid report: unexpected characters
 $SSH report-restore-check error x.sql.gz no_copy   # expect: offsite-backup-ssh: invalid report: bad file name
+$SSH report-storage 1 2 3  # expect: offsite-backup-ssh: invalid report: wrong number of fields
 ```
 
 ### 4. Home: install the scripts and schedule them
@@ -167,7 +176,9 @@ the scripts need (`rsync`, `ssh`, `flock`, `gzip`, `docker`); the user must be
 in the `docker` group.
 
 Check the admin page: «Резервное хранилище: <date>» and «Проверка
-восстановления: <date> — успешно (…)» without warnings.
+восстановления: <date> — успешно (…)» without warnings; `pull.log` ends with
+`reported storage: …`. Within 15 minutes the «Алерты» tab has no open
+offsite alerts.
 
 ## Operating
 
@@ -179,11 +190,22 @@ the restore check waits for a running pull):
 ~/.local/share/offsite-backup/restore-check.sh --force   # without --force it runs only if the last check is older than 24 h
 ```
 
-Exit codes: `pull-backups.sh` 0 = pulled or skipped, 1 = rsync failed, a
-copy was not a valid gzip, or a file was refused as over
-`OFFSITE_MAX_FILE_SIZE`, 2 = bad arguments; `restore-check.sh` 0 = success reported (or
-throttled), 1 = check failed (still reported) or the report did not reach
-prod, 2 = bad arguments.
+Exit codes: `pull-backups.sh` 0 = pulled or skipped (also when the storage
+report did not reach prod), 1 = rsync failed, a copy was not a valid gzip, or
+a file was refused as over `OFFSITE_MAX_FILE_SIZE`, 2 = bad arguments;
+`restore-check.sh` 0 = success reported (or throttled), 1 = check failed
+(still reported) or the report did not reach prod, 2 = bad arguments.
+
+Storage report: after every pull that rsync completed (also one that exits 1
+for a corrupt or oversized file), `pull-backups.sh` sends prod
+`report-storage <free> <total> <backups> <cap> <capPruned>`: free and total
+bytes of the disk holding `~/prod-backups` (`df -B1`), bytes of the copies
+after retention, `OFFSITE_MAX_BYTES`, and `1` if the cap deleted copies. At
+the cap only the pull that brings a new copy deletes an old one, so a pull
+that brings nothing repeats the flag from `.cap-pruned`. A failed pull sends
+nothing. A report that does not reach prod (ssh, `df` or the wrapper refused
+it) is only logged: `ERROR could not report storage to prod (exit N): …` in
+`pull.log`; prod keeps the previous report.
 
 Overrides (environment, mostly for tests): `OFFSITE_DEST`, `OFFSITE_HOST`,
 `OFFSITE_SSH_KEY`, `OFFSITE_RETENTION_DAYS`, `OFFSITE_MAX_BYTES`,
@@ -196,16 +218,29 @@ restore), `OFFSITE_QUERY_TIMEOUT` (300 s for every other docker call),
 above the admin «Интервал (часы)»; with automatic backups switched off on prod
 the check reports `stale_copy` by design), `OFFSITE_MAX_OWNER_ROLES` (20).
 
-### Admin warnings
+### Alerts
 
-| Admin line | Meaning | Look at |
-|---|---|---|
-| «Резервное хранилище: копирование ещё не выполнялось» | No successful pull ever (or the stamp is unreadable) | setup steps 2–4 |
-| «… — давно не обновлялось (больше 24 часов)» | Home off, cron missing, key/host key broken, Tailscale down | `logs/pull.log`, `crontab -l`, manual pull |
-| «Проверка восстановления: ещё не выполнялась» | No restore result reached prod yet | `logs/restore-check.log`, manual `--force` |
-| «…, но это было больше 48 часов назад» | Checks stopped reaching prod | `logs/restore-check.log`, `crontab -l` |
-| «… — ошибка: <reason>» | Check ran and failed | table below, details in `logs/restore-check.log` |
-| «Лимит превышен: бэкапы младше 30 дней не удаляются. Увеличьте лимит.» | Fresh backups alone exceed «Макс. размер (МБ)» | raise the limit in the admin |
+The backend checks the offsite state every 15 minutes and opens an alert per
+problem: it shows in «Админ-панель» → «Алерты» (the tab counts unread open
+alerts) and goes as a letter to the address from «Админ-панель» →
+«Настройки»; when the condition clears the alert closes with a «[Решено]»
+letter. The «Бэкапы» tab keeps showing the same state with the same
+thresholds («давно не обновлялось (больше 24 часов)», «больше 48 часов
+назад», «ошибка: <reason>»).
+
+| Alert | Level | Opens when | Closes when | Look at |
+|---|---|---|---|---|
+| `offsite_stale` | warning | `.offsite-last-pull` missing or older than 24 h (home off, cron missing, key/host key broken, Tailscale down) | next successful pull | `logs/pull.log`, `crontab -l`, manual pull; never pulled: setup steps 2–4 |
+| `restore_check_stale` | warning | no restore check result, or the last one (any status) older than 48 h | a check younger than 48 h reaches prod | `logs/restore-check.log`, `crontab -l`, manual `--force` |
+| `restore_check_failed` | critical | the last restore check has `status: error` (the text is the reason from the table below) | next successful check | table below, details in `logs/restore-check.log` |
+| `offsite_disk_space_low` | critical | last storage report: home disk has less than 2 GiB or less than 10 % free | a report with more than 3 GiB and more than 15 % free | `df -h ~/prod-backups` on home, free up space there |
+| `offsite_cap_reached` | warning | last storage report: the 20 GiB cap deleted copies younger than 90 days | a report where the cap deleted nothing | `deleted … (over the … byte cap)` in `logs/pull.log`; raise `OFFSITE_MAX_BYTES` or accept a shorter history |
+
+The two storage alerts keep their state by the last report while home is off
+(that shows as `offsite_stale`) and do not run at all until the first report
+reaches prod (home scripts or prod wrapper older than 037-admin-alerts). The
+prod-side «Лимит превышен: бэкапы младше 30 дней не удаляются» is the
+`backup_storage_limit` alert: raise «Макс. размер (МБ)» in the admin.
 
 | Reason code | Admin text | Usual cause |
 |---|---|---|
@@ -270,25 +305,48 @@ Data written after the dump's timestamp is lost; the dump name is its UTC time.
 - Prod wrapper: repeat setup step 2 (`scp` + `install`). The `authorized_keys`
   line does not change.
 
+### After 037-admin-alerts
+
+The pull now sends `report-storage`, which the old wrapper refuses (`ERROR
+could not report storage to prod (exit 1): offsite-backup-ssh: command not
+allowed` in `pull.log`; the pull itself still succeeds). Once the feature is
+merged to `main`:
+
+1. Prod: reinstall the wrapper (setup step 2), then from home
+   `$SSH report-storage 1 2 3` must answer `invalid report: wrong number of
+   fields` (setup step 3).
+2. Home: reinstall the scripts (the `install` command from setup step 4) and
+   run `~/.local/share/offsite-backup/pull-backups.sh` once: `pull.log` ends
+   with `reported storage: …` and prod has `…/backend/backups/.offsite-storage.json`.
+
+Until both are done `offsite_disk_space_low` and `offsite_cap_reached` simply
+do not run; the other alerts work with the old scripts.
+
 ## Disabling
 
 1. Home: `crontab -e`, remove both lines; optionally `rm -r ~/.local/share/offsite-backup`.
 2. Prod: remove the `offsite-backup@home` line from `/root/.ssh/authorized_keys`;
-   optionally `rm /usr/local/sbin/offsite-backup-ssh` and the two dot-files in
-   the backup dir (the admin then shows «ещё не выполнялось» warnings).
+   optionally `rm /usr/local/sbin/offsite-backup-ssh` and the three dot-files in
+   the backup dir (`.offsite-last-pull`, `.offsite-restore-check.json`,
+   `.offsite-storage.json`; the admin then shows «ещё не выполнялось» warnings
+   and opens `offsite_stale` and `restore_check_stale`).
 3. Copies in `~/prod-backups/` stay until deleted by hand.
 
 ## Security notes
 
 - The home key is root on prod but cannot get a shell: `restrict` disables
   pty and all forwarding, the forced command ignores the requested command
-  except for the two allowed forms, and `from=` limits it to home's Tailscale
+  except for the three allowed forms, and `from=` limits it to home's Tailscale
   address. `rrsync -ro` refuses writes and deletes and confines paths to the
   backup dir. The client cannot set environment variables
   (`PermitUserEnvironment` is off by default).
 - `report-restore-check` accepts at most 256 chars of `[A-Za-z0-9_. -]`, an
   exact token count, a backup file name pattern, 1–9 digit counts and a fixed
   reason list; the timestamp is taken from prod's clock.
+- `report-storage` has the same length, character and spacing checks, exactly
+  four 1–15 digit numbers (total bytes above 0) and a `0`/`1` flag; the
+  timestamp is taken from prod's clock. A tampered home can at worst fake its
+  own disk numbers, which only opens or closes the two storage alerts.
 - Prod has no credential for home; the copies cannot be reached from prod.
 - Copies are not encrypted; the home disk already holds the dev environment.
   A dedicated non-root user on prod would be a further hardening (needs ACLs

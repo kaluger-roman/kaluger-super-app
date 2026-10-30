@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Home side, hourly from crontab: pull new prod backups over the restricted
-# offsite key, verify them with gzip -t and apply the home retention
-# (90 days, 20 GiB cap, newest copy always kept). See docs/ops/offsite-backups.md.
+# offsite key, verify them with gzip -t, apply the home retention (90 days,
+# 20 GiB cap, newest copy always kept) and report the disk space to prod.
+# See docs/ops/offsite-backups.md.
 set -euo pipefail
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
@@ -23,13 +24,19 @@ fi
 
 transfer_list=$(mktemp)
 rsync_errors=$(mktemp)
-trap 'rm -f "$transfer_list" "$rsync_errors"' EXIT
+report_errors=$(mktemp)
+trap 'rm -f "$transfer_list" "$rsync_errors" "$report_errors"' EXIT
 
 pulled=0
 corrupt=0
 deleted=0
+deleted_by_cap=0
 oversized=0
+total=0
+cap_pruned=0
+new_copies=()
 readonly VERIFIED_FILE="$OFFSITE_DEST/.verified"
+readonly CAP_PRUNED_FILE="$OFFSITE_DEST/.cap-pruned"
 
 # Only top-level files with the exact backup name format, dated inside the
 # home retention window (and not in the future), are requested, so files the
@@ -94,6 +101,7 @@ verify_pulled() {
     pulled=$((pulled + 1))
     # Retention never sees unrecognised or future names, so they must not stay.
     if epoch=$(backup_epoch "$name") && ((epoch <= latest)); then
+      new_copies+=("$name")
       log INFO "pulled $name"
     else
       rm -f -- "${OFFSITE_DEST:?}/$name"
@@ -141,7 +149,8 @@ apply_retention() {
 
   local cutoff=$(($(now_epoch) - OFFSITE_RETENTION_DAYS * 86400))
   local -a kept_names=() kept_sizes=()
-  local epoch size name total=0
+  local epoch size name
+  total=0
 
   while read -r epoch size name; do
     if [[ $name != "$newest" ]] && ((epoch < cutoff)); then
@@ -158,10 +167,61 @@ apply_retention() {
     ((total > OFFSITE_MAX_BYTES)) || break
     [[ ${kept_names[$i]} != "$newest" ]] || continue
     delete_copy "${kept_names[$i]}" "over the $OFFSITE_MAX_BYTES byte cap"
+    deleted_by_cap=$((deleted_by_cap + 1))
     total=$((total - kept_sizes[i]))
   done
 
   total_mb=$(awk -v bytes="$total" 'BEGIN { printf "%.1f", bytes / 1048576 }')
+}
+
+# Sets cap_pruned to 1 if the cap deleted copies. Sticky across runs that
+# added no copy: at the cap only the run that brings a new copy deletes an old
+# one, and the runs in between must not report "nothing pruned".
+update_cap_pruned() {
+  local name added=0
+  for name in "${new_copies[@]}"; do
+    if [[ -f $OFFSITE_DEST/$name ]]; then
+      added=$((added + 1))
+    fi
+  done
+
+  cap_pruned=0
+  if ((deleted_by_cap > 0)); then
+    cap_pruned=1
+  elif ((added == 0)) && [[ $(cat "$CAP_PRUNED_FILE" 2>/dev/null || true) == 1 ]]; then
+    cap_pruned=1
+  fi
+  if ((deleted_by_cap > 0 || added > 0)); then
+    printf '%s\n' "$cap_pruned" >"$CAP_PRUNED_FILE" ||
+      log ERROR "could not write $CAP_PRUNED_FILE"
+  fi
+}
+
+# Never changes the exit status of the run: a report that does not reach prod
+# is only logged (prod then keeps the previous report).
+report_storage() {
+  local df_output free="" size="" status=0
+  update_cap_pruned
+
+  df_output=$(df -B1 --output=avail,size "$OFFSITE_DEST" 2>"$report_errors") || status=$?
+  if ((status != 0)); then
+    log ERROR "could not report storage to prod (exit $status): df: $(tail -n 3 "$report_errors" | tr '\n' ' ')"
+    return 0
+  fi
+  read -r free size _ <<<"${df_output##*$'\n'}" || true
+  if [[ ! $free =~ ^[0-9]+$ || ! $size =~ ^[0-9]+$ ]]; then
+    log ERROR "could not report storage to prod (exit 1): unexpected df output: $df_output"
+    return 0
+  fi
+
+  # shellcheck disable=SC2029 # the report is plain words, expanded locally on purpose
+  ssh "${SSH_OPTS[@]}" "$OFFSITE_HOST" report-storage "$free" "$size" "$total" \
+    "$OFFSITE_MAX_BYTES" "$cap_pruned" </dev/null >/dev/null 2>"$report_errors" || status=$?
+  if ((status != 0)); then
+    log ERROR "could not report storage to prod (exit $status): $(tail -n 3 "$report_errors" | tr '\n' ' ')"
+    return 0
+  fi
+  log INFO "reported storage: free $free, total $size, backups $total, cap pruned $cap_pruned"
 }
 
 total_mb=0
@@ -176,6 +236,7 @@ verify_pulled
 verify_copies
 apply_retention
 log INFO "done: pulled $pulled, corrupt $corrupt, deleted $deleted, total $total_mb MB"
+report_storage
 
 if ((corrupt > 0 || oversized > 0)); then
   exit 1

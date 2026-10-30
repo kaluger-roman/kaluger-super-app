@@ -9,11 +9,12 @@ import {
   DAY_MS,
   ISO_UTC_SECONDS_REGEX,
   MIN_RETENTION_DAYS,
+  OFFSITE_STORAGE_KEYS,
   RESTORE_CHECK_ERROR_MESSAGES,
   STALE_TMP_MAX_AGE_MS,
   UNKNOWN_RESTORE_CHECK_ERROR,
 } from "./backup.constants";
-import type { BackupRetentionCandidate } from "./backup.types";
+import type { BackupRetentionCandidate, OffsiteStorageReport } from "./backup.types";
 
 // Prisma supports `?schema=...` in DATABASE_URL, but pg_dump rejects it.
 export const stripPrismaParams = (databaseUrl: string): string => {
@@ -48,7 +49,7 @@ export const parseBackupTimestamp = (name: string): Date | null => {
   return isSameCalendarValue ? date : null;
 };
 
-const getBackupTime = (file: BackupRetentionCandidate): number =>
+export const getBackupTime = (file: BackupRetentionCandidate): number =>
   (parseBackupTimestamp(file.name) ?? file.createdAt).getTime();
 
 export const selectBackupsToDelete = <T extends BackupRetentionCandidate>(
@@ -168,4 +169,29 @@ export const parseRestoreCheck = (content: string): BackupRestoreCheck | null =>
   }
 
   return null;
+};
+
+const isByteCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
+export const parseOffsiteStorage = (content: string): OffsiteStorageReport | null => {
+  const data = parseJson(content);
+  if (!isRecord(data)) return null;
+  if (Object.keys(data).some((key) => !OFFSITE_STORAGE_KEYS.includes(key))) return null;
+
+  const reportedAt = parseIsoUtcSeconds(data.reportedAt);
+  const { freeBytes, totalBytes, backupsBytes, capBytes, capPruned } = data;
+  if (
+    !reportedAt ||
+    !isByteCount(freeBytes) ||
+    !isByteCount(totalBytes) ||
+    totalBytes === 0 ||
+    !isByteCount(backupsBytes) ||
+    !isByteCount(capBytes) ||
+    typeof capPruned !== "boolean"
+  ) {
+    return null;
+  }
+
+  return { reportedAt, freeBytes, totalBytes, backupsBytes, capBytes, capPruned };
 };

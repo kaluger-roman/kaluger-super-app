@@ -40,6 +40,8 @@ export type BackupRestoreCheck =
 export type BackupOffsiteStatus = {
   lastSyncAt: string | null;
   restoreCheck: BackupRestoreCheck | null;
+  syncStaleHours: number;
+  restoreCheckStaleHours: number;
 };
 
 export type BackupSettingsFullResponse = {

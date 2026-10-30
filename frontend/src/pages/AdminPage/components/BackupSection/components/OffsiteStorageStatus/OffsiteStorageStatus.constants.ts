@@ -1,6 +1,7 @@
 export const HOUR_MS = 60 * 60 * 1000;
-export const OFFSITE_STALE_HOURS = 24;
-export const RESTORE_CHECK_STALE_HOURS = 48;
+
+// Genitive after «больше»: больше 1 часа, больше 24 часов.
+export const HOURS_FORMS: [string, string, string] = ["часа", "часов", "часов"];
 
 export const USERS_FORMS: [string, string, string] = [
   "пользователь",

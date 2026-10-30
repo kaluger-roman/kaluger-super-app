@@ -72,4 +72,31 @@ describe("OffsiteStorageStatus", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("— ошибка: таблица lessons пуста");
   });
+
+  it("should warn with the thresholds the backend sent", () => {
+    const now = Date.now();
+    const scope = fork({
+      values: [
+        [backupStatusModel.$offsiteLastSyncAt, new Date(now - 7 * 60 * 60 * 1000).toISOString()],
+        [backupStatusModel.$offsiteSyncStaleHours, 6],
+        [
+          backupStatusModel.$restoreCheck,
+          {
+            checkedAt: new Date(now - 13 * 60 * 60 * 1000).toISOString(),
+            fileName: "backup-2026-10-16T00-00-01-123Z.sql.gz",
+            status: "success",
+            counts: { users: 14, students: 93, lessons: 2431 },
+          },
+        ],
+        [backupStatusModel.$restoreCheckStaleHours, 12],
+      ],
+    });
+
+    renderWithScope(scope);
+
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts).toHaveLength(2);
+    expect(alerts[0]).toHaveTextContent("давно не обновлялось (больше 6 часов)");
+    expect(alerts[1]).toHaveTextContent("но это было больше 12 часов назад");
+  });
 });

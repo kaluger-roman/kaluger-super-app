@@ -186,7 +186,7 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 
 ## Offsite Backups
 
-Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab. Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
+Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab, and problems open alerts in the «Алерты» tab with letters to the address from «Настройки» (`services/adminAlerts`, `services/backupAlerts`). Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
 
 ## Active Technologies
 - TypeScript 5.x (strict) — фронт и бек (027-tax-rate-periods)
@@ -213,6 +213,8 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 - N/A — состояние в памяти вкладки на время звонка; без изменений БД и API (039-call-fullscreen)
 - TypeScript 5.x (strict), Node.js 20; `frontend/public/push-sw.js` — ES5 JavaScript (как сейчас) + Frontend — React, Effector, patronum, effector-react, MUI (styled API), browser WebRTC, Push API, Service Worker. Backend — Express, Prisma, `ws`, `web-push` (уже есть). Новых npm-зависимостей нет (039-video-call-background)
 - PostgreSQL через Prisma: enum `PushChannel`, в `push_subscriptions` — `channel`, `studentUserId`, `userId` необязательный + CHECK одного владельца; в `reminder_settings` — `callNotificationsEnabled`. Состояние присутствия и ожидания — в памяти процесса (как `liveCalls`). На устройстве — два флага в `localStorage` (039-video-call-background)
+- TypeScript 5.x strict (backend Node 20, frontend React 19); bash (home/prod offsite scripts) + Express, Prisma 6, node-cron, Resend SDK 6 (backend); React, Effector, effector-react, patronum, MUI (frontend). No new npm dependencies (`fs.promises.statfs` is in Node 20) (037-admin-alerts)
+- PostgreSQL via Prisma — new tables `admin_alerts`, `admin_settings`, enums `AdminAlertSeverity`, `AdminAlertEmailStatus`, new column `backup_settings."enabledChangedAt"` (backfilled from `updatedAt`); new prod file `$BACKUP_DIR/.offsite-storage.json`, new home file `~/prod-backups/.cap-pruned` (037-admin-alerts)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

@@ -11,12 +11,14 @@ import * as Styled from "./OffsiteStorageStatus.styled";
 export const OffsiteStorageStatus: FC = () => {
   const lastSyncAt = useUnit(backupStatusModel.$offsiteLastSyncAt);
   const restoreCheck = useUnit(backupStatusModel.$restoreCheck);
+  const syncStaleHours = useUnit(backupStatusModel.$offsiteSyncStaleHours);
+  const restoreCheckStaleHours = useUnit(backupStatusModel.$restoreCheckStaleHours);
   const now = Date.now();
 
   return (
     <Styled.StyledStatusList>
-      <BackupStatusLine line={getOffsiteSyncLine(lastSyncAt, now)} />
-      <BackupStatusLine line={getRestoreCheckLine(restoreCheck, now)} />
+      <BackupStatusLine line={getOffsiteSyncLine(lastSyncAt, syncStaleHours, now)} />
+      <BackupStatusLine line={getRestoreCheckLine(restoreCheck, restoreCheckStaleHours, now)} />
     </Styled.StyledStatusList>
   );
 };

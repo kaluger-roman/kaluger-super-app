@@ -1,10 +1,10 @@
 import type { Response } from "express";
 import type { AdminRequest } from "../../types";
-import { createManualBackup } from "../../services";
+import { createManualBackupWithAlerts } from "../../services";
 
 export const createBackup = async (req: AdminRequest, res: Response) => {
   try {
-    const result = await createManualBackup();
+    const result = await createManualBackupWithAlerts();
 
     res.json({
       name: result.name,

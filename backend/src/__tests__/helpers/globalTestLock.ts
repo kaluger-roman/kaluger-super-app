@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma";
 
 export const GLOBAL_TEST_LOCK = {
   BACKUP_SETTINGS: 35001,
+  ADMIN_ALERTS: 35002,
 } as const;
 
 type GlobalTestLockKey = (typeof GLOBAL_TEST_LOCK)[keyof typeof GLOBAL_TEST_LOCK];

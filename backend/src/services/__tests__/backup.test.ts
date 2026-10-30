@@ -8,6 +8,7 @@ import {
   getBackupSettings,
   performBackup,
   runBackupJob,
+  updateBackupSettings,
 } from "../backup";
 import {
   acquireGlobalTestLock,
@@ -95,6 +96,56 @@ describe("backup service", () => {
 
       const count = await prisma.backupSettings.count();
       expect(count).toBe(1);
+    });
+  });
+
+  describe("updateBackupSettings", () => {
+    const createSettings = (enabled: boolean, enabledChangedAt: Date) =>
+      prisma.backupSettings.create({
+        data: {
+          id: "backup-settings-singleton",
+          enabled,
+          intervalHours: 6,
+          maxStorageMb: 300,
+          enabledChangedAt,
+        },
+      });
+
+    const longAgo = new Date("2026-01-01T00:00:00.000Z");
+
+    it("should move enabledChangedAt when autobackups are switched off", async () => {
+      await createSettings(true, longAgo);
+      const before = Date.now();
+
+      const settings = await updateBackupSettings({ enabled: false });
+
+      expect(settings.enabled).toBe(false);
+      expect(settings.enabledChangedAt.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it("should move enabledChangedAt when autobackups are switched on", async () => {
+      await createSettings(false, longAgo);
+
+      const settings = await updateBackupSettings({ enabled: true });
+
+      expect(settings.enabledChangedAt.getTime()).toBeGreaterThan(longAgo.getTime());
+    });
+
+    it("should keep enabledChangedAt when only the interval changes", async () => {
+      await createSettings(false, longAgo);
+
+      const settings = await updateBackupSettings({ intervalHours: 12 });
+
+      expect(settings.intervalHours).toBe(12);
+      expect(settings.enabledChangedAt).toEqual(longAgo);
+    });
+
+    it("should keep enabledChangedAt when enabled is sent unchanged", async () => {
+      await createSettings(true, longAgo);
+
+      const settings = await updateBackupSettings({ enabled: true, maxStorageMb: 500 });
+
+      expect(settings.enabledChangedAt).toEqual(longAgo);
     });
   });
 
@@ -235,7 +286,7 @@ describe("backup service", () => {
 
       mockExec.mockClear();
 
-      await runBackupJob();
+      await expect(runBackupJob()).resolves.toEqual({ status: "skipped" });
 
       expect(mockExec).not.toHaveBeenCalled();
     });
@@ -280,9 +331,13 @@ describe("backup service", () => {
         }
       );
 
-      await runBackupJob();
+      const outcome = await runBackupJob();
 
       expect(mockExec).toHaveBeenCalled();
+      expect(outcome).toEqual({
+        status: "created",
+        fileName: expect.stringMatching(/^backup-.+Z\.sql\.gz$/),
+      });
 
       const settings = await prisma.backupSettings.findFirst();
       expect(settings!.lastBackupAt!.getTime()).toBeGreaterThan(sixHoursAgo.getTime());

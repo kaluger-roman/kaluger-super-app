@@ -57,6 +57,14 @@ export type {
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
 export type {
+  AdminAlertEmailDto,
+  AdminAlertDto,
+  AdminAlertsResponse,
+  AdminSettingsDto,
+  UpdateAdminSettingsDto,
+  TestEmailResponse,
+} from "./adminAlerts";
+export type {
   UpdateBackupSettingsDto,
   BackupSettingsResponse,
   BackupFileResponse,

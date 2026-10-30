@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "branch": "037-admin-alerts",
+  "base_ref": "origin/main",
+  "diff_mode": "working-tree",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-30T07:51:48Z",
+  "diff_stats": {
+    "files_changed": 168,
+    "insertions": 10012,
+    "deletions": 149
+  },
+  "summary": {
+    "raw_findings": 7,
+    "after_dedup": 6,
+    "after_score_filter": 3,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3
+    },
+    "by_category": {
+      "logic": 2,
+      "convention": 1
+    },
+    "agents_failed": [],
+    "notes": "Агенты shallow-bug, security, removed-behavior, cross-file и wrapper-proxy вернули 0 findings. Дубль объединён до скоринга: getEmailRecipient дублирует getOpenEmailStatus/getResolveEmailStatus (hacks + type-safety). Ревьюерам дан interdiff с итерации 2 (since-iter2.patch, 30 файлов)."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Письмо «[Решено]» прошлого эпизода уходит после письма об открытии нового эпизода того же типа: последнее письмо в ящике говорит, что проблема решена, хотя она активна",
+      "category": "logic",
+      "file": "backend/src/services/adminAlerts/alertEmails.ts",
+      "line_start": 77,
+      "line_end": 98,
+      "snippet": "  const openLetters = await prisma.adminAlert.findMany({\n    where: { openEmailStatus: retryable, openEmailAttempts: { lt: MAX_EMAIL_ATTEMPTS } },\n    orderBy: { openedAt: \"asc\" },\n  });\n  await attemptEach(openLetters, \"open\");",
+      "rationale": "dispatchOnce сначала отправляет все ожидающие письма об открытии, потом все письма о решении. Это гарантирует порядок только внутри одного эпизода. Если к моменту очередной рассылки в очереди есть «[Решено]» эпизода 1 и письмо об открытии эпизода 2 того же типа (эпизод 1 закрыт, тип открылся снова, это новая строка admin_alerts), то за один прогон уйдут open1 (если ещё не ушло), open2 и только потом resolve1. Пример для backup_failed: ручной бэкап упал (эп. 1), следующий прошёл (resolve1, но Resend ответил ошибкой, повтор только на кроне через 15 минут), ещё один упал (эп. 2). Рассылка после эп. 2 отправит «[Критично] Бэкап не создан», затем «[Решено] Бэкап не создан». То же при недоступности Resend на несколько эпизодов: после восстановления письма идут open1, open2, resolve1. Админ видит последним письмо «[Решено]» и считает проблему закрытой, хотя алерт активен. Это нарушает edge case спеки («письмо об открытии и письмо о закрытии всё равно уходят при восстановлении связи, по порядку») и цель комментария над dispatchOnce («the admin never reads «[Решено]» before the problem itself»): для эпизода 2 админ как раз читает «[Решено]» после письма о новой проблеме. Порядок сломан при любом наборе отложенных писем, не только при гонке: в каждом прогоне open-письма всегда идут раньше всех resolve-писем.",
+      "fix_hint": "Отправлять письма в хронологическом порядке событий, а не в две фазы. Например, одним запросом выбрать алерты с ожидающим open- или resolve-письмом, отсортировать по openedAt и для каждого слать open, затем resolve (если open ушло, пропущено или исчерпало попытки). Другой вариант: перед open-письмом нового эпизода отправлять ожидающие resolve-письма более ранних эпизодов того же type. Нужен регрессионный тест: эпизод 1 закрыт с resolve в pending/failed, эпизод 2 того же типа открыт; после dispatchAlertEmails темы писем идут в порядке «[Решено]» эп. 1, затем «[Критично]» эп. 2.",
+      "score": 50,
+      "verification_note": "Двухфазный порядок в dispatchOnce подтверждён кодом: все open-письма уходят раньше всех resolve в одном прогоне, так что «[Решено]» эпизода 1 может уйти после «[Критично]» эпизода 2. Сценарий требует отложенного resolve-письма, то есть сбоя Resend именно при закрытии, поэтому случай редкий; спека и research.md формулируют порядок как «open before resolve» на один алерт, а не между эпизодами, и это понижает оценку.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Новый стор $readRequests объявлен после событий, в обход порядка Gates → Stores → Events → Effects → Samples",
+      "category": "convention",
+      "file": "frontend/src/features/admin/models/adminAlerts.model.ts",
+      "line_start": 25,
+      "line_end": 30,
+      "snippet": "export const alertsFilterChanged = createEvent<AlertsFilter>();\nexport const alertMarkedRead = createEvent<string>();\nexport const allAlertsMarkedRead = createEvent();\n\n// Counts «Прочитано» requests: a list loaded before one of them started is stale.\nconst $readRequests = createStore(0);",
+      "rationale": "docs/conventions/frontend.md:157-163 задаёт порядок в модели: 1. Gates, 2. Stores, 3. Events, 4. Effects, 5. Samples. Стор $readRequests добавлен в iter-3 как фикс iter-2 f10 и стоит в строке 30, после блока событий (строки 25-27). Все остальные сторы файла (строки 17-23) объявлены до событий. Для attach стору достаточно быть объявленным раньше getAlertsFx, и место в блоке сторов это условие выполняет. ESLint этот порядок не проверяет, правило проверяется только на ревью.",
+      "fix_hint": "Перенести `const $readRequests = createStore(0);` вместе с комментарием в блок сторов: после `$alertsFilter` или после производных сторов (строки 17-23), до `alertsFilterChanged`.",
+      "score": 50,
+      "verification_note": "Нарушение явно записанного правила docs/conventions/frontend.md «Model structure order» (1. Gates, 2. Stores, 3. Events): $readRequests (adminAlerts.model.ts:30) объявлен после событий (строки 25-27), тогда как все остальные сторы файла стоят выше; правило проверяется ревью, не ESLint, и на работу кода не влияет, поэтому это подтверждённое, но мелкое нарушение.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "type-safety",
+      "title": "Контракт тестового роута POST /admin/run-alert-checks расходится с реализацией: роут принимает фильтр types и не вызывает runScheduledAlertChecks",
+      "category": "logic",
+      "file": "specs/037-admin-alerts/contracts/admin-api.md",
+      "line_start": 103,
+      "line_end": 104,
+      "snippet": "- `POST /admin/run-alert-checks` → runs `runScheduledAlertChecks()`, 200\n  `{ \"ok\": true }`.",
+      "rationale": "По контракту (и по tasks.md T063) роут без тела вызывает runScheduledAlertChecks(). В backend/src/routes/testSupport.ts:372-379 он читает `{ types?: unknown }` из тела, фильтрует ALERT_DEFINITIONS по этому списку и вызывает runAlertChecks(definitions, new Date()). На этом фильтре держится e2e: frontend/e2e/helpers/admin.ts передаёт `body: { types }`, чтобы исключить проверку диска, которая зависит от машины (фикс iter-1 f12). Контракт это поведение не описывает. Кроме того, `types` после Array.isArray имеет тип any[], и элементы никак не проверяются.",
+      "fix_hint": "В admin-api.md описать тело `{ \"types\"?: string[] }`: без него запускаются все ALERT_DEFINITIONS, с ним только перечисленные типы. Ту же правку внести в tasks.md T063 и quickstart.md:47. При желании отфильтровать в роуте только строковые элементы `types`.",
+      "score": 50,
+      "verification_note": "Расхождение реальное: контракт admin-api.md:103 описывает роут как безусловный runScheduledAlertChecks(), а testSupport.ts:372-379 читает фильтр types и запускает подмножество ALERT_DEFINITIONS (этим пользуется frontend/e2e/helpers/admin.ts), но это тестовый роут с поясняющим комментарием, так что это неточность документации спеки, а не сбой в проде.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "id": "x1",
+      "agent": "hacks",
+      "title": "Фикс iter-2 f5: новый getEmailRecipient повторяет getOpenEmailStatus и getResolveEmailStatus, правило «кому и надо ли слать» теперь живёт в двух парах функций",
+      "category": "hack",
+      "file": "backend/src/services/adminAlerts/adminAlerts.helpers.ts",
+      "line_start": 42,
+      "line_end": 57,
+      "snippet": "  if (kind === \"resolve\" && isSkippedEmailStatus(alert.openEmailStatus)) {\n    return { status: alert.openEmailStatus };\n  }\n  if (!alertEmail) return { status: \"skipped_no_email\" };\n  if (!alertEmailEnabled) return { status: \"skipped_disabled\" };",
+      "rationale": "Фикс iter-2 f5 добавил новую функцию рядом со старыми, а не на их месте. Строки 51-52 повторяют тело getOpenEmailStatus (строки 32-33). Строки 48-49 повторяют правило getResolveEmailStatus (строка 57): письмо о решении наследует пропуск письма о проблеме. Старые функции остались, и ими пользуется alertLifecycle.ts:61/86 при raiseAlert/resolveAlert. Новую использует только alertEmails.ts:22 в момент отправки. Получается, что одно и то же решение (какой статус пропуска, когда наследовать статус open) закодировано дважды и разными сигнатурами. Если добавить ещё одну причину пропуска (например, домен в стоп-листе), её нужно не забыть в обоих местах, иначе статус при создании письма и статус при отправке разойдутся. К тому же у getEmailRecipient нет unit-теста в adminAlerts.helpers.test.ts, тогда как у обеих старых функций он есть. Тесты остались на функциях, которые уже не используются в пути отправки. (also flagged by: type-safety)",
+      "fix_hint": "Оставить один источник правила. getEmailRecipient должна быть единственной реализацией, а статус при создании выводить из неё: `getOpenEmailStatus = (s) => getEmailRecipient(s, { openEmailStatus: null }, \"open\").status`. Либо удалить getOpenEmailStatus и писать в alertLifecycle `getEmailRecipient(settings, alert, kind).status`. getResolveEmailStatus выразить через isSkippedEmailStatus внутри getEmailRecipient или убрать. Перенести тесты getOpenEmailStatus/getResolveEmailStatus на getEmailRecipient: все ветки плюс наследование skipped для resolve.",
+      "score": 25,
+      "verification_note": "Дублирование правила подтверждено кодом: getEmailRecipient (adminAlerts.helpers.ts:43-53) повторяет логику getOpenEmailStatus и getResolveEmailStatus, и обе старые функции живут в alertLifecycle.ts:61/86, но расхождения сейчас нет и вреда в проде не видно, а отсутствие unit-теста getEmailRecipient частично компенсируется интеграционными тестами alertEmails.test.ts и alertLifecycle.test.ts, поэтому это скорее поддерживаемость, а не hack с обходом поведения (шкала 25).",
+      "reason": "below threshold"
+    },
+    {
+      "id": "x2",
+      "agent": "hacks",
+      "title": "Фикс iter-2 f7: dispatchLetters и sendLettersInBackground — две копии одной обёртки «dispatchAlertEmails + catch + console.error» с одинаковым сообщением",
+      "category": "hack",
+      "file": "backend/src/services/backupAlerts/backupAttempts.ts",
+      "line_start": 43,
+      "line_end": 49,
+      "snippet": "const dispatchLetters = async (): Promise<void> => {\n  try {\n    await dispatchAlertEmails();\n  } catch (error) {\n    console.error(\"Alert letters dispatch failed:\", { message: getErrorMessage(error) });",
+      "rationale": "Фикс f7 убрал колбэк-стратегию и в результате завёл второй путь, который делает то же самое. dispatchLetters в backupAttempts.ts:43 и sendLettersInBackground в alertLetters.ts:4 — один и тот же вызов dispatchAlertEmails с проглатыванием ошибки и одной и той же строкой лога «Alert letters dispatch failed:». Отличие только в том, ждёт ли вызывающий результат. Это ровно тот случай параллельных путей, о котором говорит роль. Если поменяется обработка сбоя рассылки (поля лога, метрика, отметка в алерте), правку легко сделать только в одной из копий: кроновый и HTTP-путь начнут вести себя по-разному, а в логах будут неразличимы.",
+      "fix_hint": "Держать одну функцию в alertLetters.ts: `export const dispatchLetters = (): Promise<void> => dispatchAlertEmails().catch((error: unknown) => { console.error(...) })`. Тогда фоновый вариант — `export const sendLettersInBackground = (): void => { void dispatchLetters(); }`, или вызывающий сам пишет `void dispatchLetters()` в HTTP-путях. В backupAttempts.ts импортировать её, а локальную копию удалить.",
+      "score": 25,
+      "verification_note": "Дубль подтверждён: dispatchLetters (backupAttempts.ts:43-49) и sendLettersInBackground (alertLetters.ts:4-8) оба вызывают dispatchAlertEmails с одинаковым catch и строкой лога «Alert letters dispatch failed:», но это дублирование без конкретного вреда для прода (поведение сейчас совпадает, расхождение только в будущем), а явного правила в CLAUDE.md или conventions на него нет, поэтому оценка 25.",
+      "reason": "below threshold"
+    },
+    {
+      "id": "x3",
+      "agent": "hacks",
+      "title": "Фикс iter-2 f8: секреты вычищаются у одного потребителя (алерта), а не там, где рождается сообщение с stderr; для этого алерт заново читает process.env.DATABASE_URL с фолбэком `?? \"\"`",
+      "category": "hack",
+      "file": "backend/src/services/backupAlerts/backupAttempts.ts",
+      "line_start": 21,
+      "line_end": 23,
+      "snippet": "        description: describeBackupFailure(\n          redactSecrets(getErrorMessage(error), getDatabaseSecrets(process.env.DATABASE_URL ?? \"\"))\n        ),",
+      "rationale": "Текст с секретом формирует performBackup (backup.ts:124-130): кладёт сырой stderr в `new Error(\"Ошибка pg_dump: ...\")`. У неё в области видимости уже есть и databaseUrl, и pgDumpUrl (строки 109-114). Вместо того чтобы отдать наружу уже чистое сообщение, фикс лечит симптом у одного потребителя. Модуль алертов заново достаёт DATABASE_URL из глобального окружения и восстанавливает список секретов: тот же stripPrismaParams, ради которого его пришлось вынести в barrel services/backup. Последствия. (1) Остальные потребители ошибки по-прежнему получают сырой текст: лог runBackupJob «Backup job failed» (backup.ts:222), лог крона в index.ts, и любой будущий потребитель тоже. (2) Фолбэк `?? \"\"` и ветка `if (!databaseUrl) return []` в getDatabaseSecrets (backupAlerts.helpers.ts:79) прикрывают невозможный случай: validateEnv требует DATABASE_URL, а performBackup без него бросает раньше. Ради этой ветки есть отдельный тест «without a database URL». (3) Регрессионному тесту backupAttempts.test.ts:162-172 приходится подменять глобальный process.env.DATABASE_URL, чтобы алертный слой увидел «другой» URL. Это признак того, что знание о секрете лежит не в том слое.",
+      "fix_hint": "Вычищать в performBackup: `const secrets = getDatabaseSecrets(databaseUrl)` (хелпер перенести в services/backup/backup.helpers.ts), затем `throw new Error(redactSecrets(message, secrets))`. Тогда recordBackupFailure берёт getErrorMessage(error) как есть, stripPrismaParams не нужно экспортировать из barrel, фолбэк `?? \"\"` и ветка для пустого URL исчезают. Тест перенести в services/__tests__/backup.test.ts на уровень performBackup (там уже есть шаблон подмены DATABASE_URL), а в backupAttempts оставить проверку, что описание алерта равно сообщению ошибки.",
+      "score": 25,
+      "verification_note": "Код подтверждён: backupAttempts.ts:22 redact-ит сообщение через process.env.DATABASE_URL ?? \"\" и тем самым действительно размещает очистку секретов у потребителя, а не в performBackup, но само поведение корректно (алерт не содержит URL), ветка пустого URL в проде практически недостижима, а сырой stderr с URL в лог backup.ts:222 и обёртка «Ошибка pg_dump» в backup.ts:124-130 не добавлены этим диффом, поэтому конкретного вреда в прод-поведении диффа нет и оценка остаётся на уровне замечания о дизайне.",
+      "reason": "below threshold"
+    }
+  ]
+}

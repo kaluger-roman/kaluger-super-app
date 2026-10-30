@@ -161,3 +161,90 @@ for (const [label, command] of [
     assert.equal(existsSync(stampPath()), false);
   });
 }
+
+const storagePath = () => join(fx.prod, ".offsite-storage.json");
+const readStorage = () => JSON.parse(readFileSync(storagePath(), "utf8"));
+
+test("records a storage report with numbers stripped of leading zeros", () => {
+  const res = runWrapper("report-storage 0001610612736 250059350016 0 021474836480 1");
+
+  assert.equal(res.status, 0, res.stderr);
+  const raw = readFileSync(storagePath(), "utf8");
+  assert.match(
+    raw,
+    /^\{"reportedAt":"[^"]+","freeBytes":1610612736,"totalBytes":250059350016,"backupsBytes":0,"capBytes":21474836480,"capPruned":true\}\n$/
+  );
+  const { reportedAt, ...rest } = readStorage();
+  assert.match(reportedAt, ISO_UTC);
+  assert.ok(Math.abs(Date.parse(reportedAt) - Date.now()) < 60_000);
+  assert.deepEqual(rest, {
+    freeBytes: 1610612736,
+    totalBytes: 250059350016,
+    backupsBytes: 0,
+    capBytes: 21474836480,
+    capPruned: true,
+  });
+  assert.equal(existsSync(`${storagePath()}.tmp`), false);
+  assert.equal(existsSync(resultPath()), false);
+  assert.equal(existsSync(stampPath()), false);
+});
+
+test("records capPruned false, accepts 15-digit numbers and replaces the previous report", () => {
+  writeFileSync(storagePath(), '{"previous":true}\n');
+
+  const res = runWrapper("report-storage 999999999999999 999999999999999 209715200 1 0");
+
+  assert.equal(res.status, 0, res.stderr);
+  const { reportedAt, ...rest } = readStorage();
+  assert.match(reportedAt, ISO_UTC);
+  assert.deepEqual(rest, {
+    freeBytes: 999999999999999,
+    totalBytes: 999999999999999,
+    backupsBytes: 209715200,
+    capBytes: 1,
+    capPruned: false,
+  });
+});
+
+for (const [label, command, message] of [
+  ["too few fields", "report-storage 1 2 3", "wrong number of fields"],
+  ["no fields", "report-storage 1", "wrong number of fields"],
+  ["too many fields", "report-storage 1 2 3 4 0 5", "wrong number of fields"],
+  ["a non-numeric number", "report-storage 1 2 three 4 0", "bad number"],
+  ["a negative number", "report-storage -1 2 3 4 0", "bad number"],
+  ["a fractional number", "report-storage 1.5 2 3 4 0", "bad number"],
+  ["a 16-digit number", "report-storage 1 1234567890123456 3 4 0", "bad number"],
+  ["a zero totalBytes", "report-storage 1 0 3 4 0", "bad number"],
+  ["a zero-padded zero totalBytes", "report-storage 1 000 3 4 0", "bad number"],
+  ["the flag 2", "report-storage 1 2 3 4 2", "bad flag"],
+  ["the flag true", "report-storage 1 2 3 4 true", "bad flag"],
+  ["the flag 01", "report-storage 1 2 3 4 01", "bad flag"],
+  ["double spaces", "report-storage 1  2 3 4 0", "bad spacing"],
+  ["a trailing space", "report-storage 1 2 3 4 0 ", "bad spacing"],
+  ["a tab", "report-storage 1\t2 3 4 0", "unexpected characters"],
+  ["a newline", "report-storage 1 2 3 4 0\nreport-storage 1 2 3 4 1", "unexpected characters"],
+  ["a semicolon", "report-storage 1 2 3 4 0;id", "unexpected characters"],
+  ["a dollar sign", "report-storage 1 2 3 4 $(id)", "unexpected characters"],
+  ["a slash", "report-storage 1 2 3 4 0/..", "unexpected characters"],
+  ["more than 256 chars", `report-storage 1 2 3 4 0${" 1".repeat(120)}`, "too long"],
+]) {
+  test(`rejects a storage report with ${label} and keeps the previous report`, () => {
+    writeFileSync(storagePath(), '{"previous":true}\n');
+
+    const res = runWrapper(command);
+
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, new RegExp(`offsite-backup-ssh: invalid report: ${message}`));
+    assert.equal(readFileSync(storagePath(), "utf8"), '{"previous":true}\n');
+    assert.equal(existsSync(`${storagePath()}.tmp`), false);
+    assert.equal(existsSync(resultPath()), false);
+  });
+}
+
+test("refuses report-storage without a payload", () => {
+  const res = runWrapper("report-storage");
+
+  assert.equal(res.status, 1);
+  assert.match(res.stderr, /offsite-backup-ssh: command not allowed/);
+  assert.equal(existsSync(storagePath()), false);
+});
