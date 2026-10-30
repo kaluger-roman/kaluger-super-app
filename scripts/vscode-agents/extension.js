@@ -16,6 +16,7 @@ const {
   Store,
   IssueBoard,
   issueBand,
+  issueTakeCommand,
 } = require("./lib");
 
 const cfg = () => vscode.workspace.getConfiguration("superAgents");
@@ -154,24 +155,27 @@ const sessionNode = (s, live) => {
   });
 };
 
-const issueNodes = (board) => {
+const issueNodes = (board, byIssue) => {
   if (!board.at && !board.error) return [new Node("загружаю…", { icon: "loading~spin" })];
   const rows = board.top.map((i) => {
     const b = issueBand(i.score);
+    const s = byIssue.get(i.number);
+    const work = s ? (s.live ? stateLabel(s) : `сессия ${ago(s.tr.mtime)} назад`) : null;
     return new Node(`${i.score} · #${i.number} ${i.title}`, {
-      description: b.label,
+      description: [b.label, work].filter(Boolean).join(" · "),
       tooltip: [
         `#${i.number} ${i.title}`,
         `Критичность ${i.score}/100 (${b.label})`,
         i.why ? `Почему: ${i.why}` : null,
         i.labels.join(", "),
+        s ? `В работе: «${displayName(s)}» — ${work}` : null,
       ]
         .filter(Boolean)
         .join("\n"),
       icon: b.icon,
       color: b.color,
-      context: "issue;url",
-      data: { url: i.url, issue: i },
+      context: s ? "issue;url;session" : "issue;url",
+      data: { url: i.url, issue: i, id: s?.id },
       command: urlCmd(i.url),
     });
   });
@@ -485,6 +489,7 @@ const activate = (ctx) => {
   const render = () => {
     liveView.refresh();
     recentView.refresh();
+    issuesView.refresh();
     feed.renderAll();
     const ls = store.liveSessions;
     const count = (pred) => ls.filter((s) => pred(stateOf(s))).length;
@@ -512,7 +517,7 @@ const activate = (ctx) => {
   const board = new IssueBoard({
     settings: () => ({ command: cfg().get("issuesCommand"), limit: cfg().get("issuesLimit") }),
   });
-  const issuesView = new Provider(() => issueNodes(board));
+  const issuesView = new Provider(() => issueNodes(board, store.byIssue));
   const issuesTree = vscode.window.createTreeView("superAgents.issues", {
     treeDataProvider: issuesView,
   });
@@ -526,14 +531,9 @@ const activate = (ctx) => {
   };
   const issuesEvery = () => Math.max(1, cfg().get("issuesRefreshMinutes")) * 60e3;
   let issuesTimer = setInterval(refreshIssues, issuesEvery());
-  const takeIssue = (n) => {
+  const takeIssue = (mode) => (n) => {
     const i = n?.data?.issue;
-    if (!i) return;
-    const prompt = `Возьми в работу issue #${i.number} (${i.url}): ${i.title}`.replace(
-      /'/g,
-      "'\\''"
-    );
-    terminal(`#${i.number}`, cfg().get("roots")[0], `claude '${prompt}'`);
+    if (i) terminal(`#${i.number}`, cfg().get("roots")[0], issueTakeCommand(i, mode));
   };
 
   const pick = async () => {
@@ -573,7 +573,10 @@ const activate = (ctx) => {
     }),
     vscode.commands.registerCommand("superAgents.refresh", tick),
     vscode.commands.registerCommand("superAgents.refreshIssues", refreshIssues),
-    vscode.commands.registerCommand("superAgents.takeIssue", takeIssue),
+    vscode.commands.registerCommand("superAgents.takeIssue", takeIssue("plain")),
+    vscode.commands.registerCommand("superAgents.takeIssueBugFix", takeIssue("bug")),
+    vscode.commands.registerCommand("superAgents.takeIssueFeature", takeIssue("feature")),
+    vscode.commands.registerCommand("superAgents.continueIssue", (n) => goto(idOf(n))),
     vscode.commands.registerCommand("superAgents.newSession", () =>
       terminal("claude", cfg().get("roots")[0], "claude")
     ),

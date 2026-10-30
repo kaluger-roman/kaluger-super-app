@@ -11,6 +11,8 @@ const SUBAGENT_STALE_MS = 15 * 60e3;
 const PR_RE = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/g;
 const WT_RE = /\.claude\/worktrees\/([\w.-]+)/g;
 const AUTO_NAME_RE = /^[\w.-]+-[0-9a-f]{2}$/;
+const ISSUE_URL_RE = /github\.com\/[\w.-]+\/[\w.-]+\/issues\/(\d+)/;
+const ISSUE_REF_RE = /(?:^|[^\p{L}])(?:issue|ишью)\s*#?(\d+)/iu;
 
 const encodeCwd = (p) => p.replace(/[^A-Za-z0-9]/g, "-");
 const underRoots = (roots, cwd) =>
@@ -20,6 +22,11 @@ const one = (s, n = 100) =>
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, n);
+// Issue a prompt is about: its link, else "issue #N" / "ишью #N"
+const issueRef = (text) => {
+  const m = String(text ?? "").match(ISSUE_URL_RE) || String(text ?? "").match(ISSUE_REF_RE);
+  return m ? Number(m[1]) : null;
+};
 const ago = (ms, now = Date.now()) => {
   if (!ms) return "";
   const m = Math.round((now - ms) / 60e3);
@@ -96,6 +103,7 @@ class Transcript {
     this.custom = null;
     this.ai = null;
     this.lastPrompt = null;
+    this.issue = null;
     this.mode = null;
     this.cwd = null;
     this.firstCwd = null;
@@ -174,6 +182,9 @@ class Transcript {
       if (Array.isArray(c)) for (const x of c) if (x.type === "tool_result") this.result(x, ts);
       const t = userText(c);
       if (t) this.push({ kind: "user", ts, text: t.slice(0, 4000) });
+      // The session's issue is the one of its first prompt that names one; a compaction summary
+      // retells the whole session, issues it only mentioned included
+      if (t && !this.issue && !o.isCompactSummary) this.issue = issueRef(t);
       return;
     }
     if (o.type === "assistant" && Array.isArray(c)) {
@@ -464,6 +475,16 @@ class Store {
     const a = this.live.find((x) => x.sessionId === id);
     return { id, live: a || null, tr: this.byId(id) };
   }
+
+  // Issue number -> the session working on it: a live one first, else the most recent
+  get byIssue() {
+    const m = new Map();
+    for (const s of [...this.liveSessions, ...this.recentSessions]) {
+      const n = s.tr?.issue;
+      if (n && !m.has(n)) m.set(n, s);
+    }
+    return m;
+  }
 }
 
 // ---- prioritized open issues (docs/issue-priority.md) ----
@@ -520,6 +541,25 @@ const rankIssues = (issues, limit) => {
   return { top: scored.slice(0, limit), unscored, total: issues.length };
 };
 
+// How "take in work" starts a new session on an issue: a plain prompt or one of the orchestrators
+// (`--new` so an unfinished run of the same orchestrator does not turn the start into a resume)
+const ISSUE_TAKE_PREFIX = {
+  plain: "",
+  bug: "/auto-bug-fix --new ",
+  feature: "/auto-feature --new ",
+};
+
+const issueTakePrompt = (issue, mode = "plain") => {
+  const ref = `issue #${issue.number} (${issue.url}): ${one(issue.title, 300)}`;
+  return mode === "plain"
+    ? `Возьми в работу ${ref}`
+    : `${ISSUE_TAKE_PREFIX[mode]}${ref}. Полное описание и обсуждение: gh issue view ${issue.number}`;
+};
+
+// Shell command for the terminal: the prompt is a single-quoted argument of `claude`
+const issueTakeCommand = (issue, mode) =>
+  `claude '${issueTakePrompt(issue, mode).replace(/'/g, "'\\''")}'`;
+
 const fetchIssues = (command, timeout = 60000) =>
   new Promise((resolve, reject) =>
     execFile("/bin/sh", ["-c", command], { timeout, maxBuffer: 64 << 20 }, (err, out, errOut) => {
@@ -567,6 +607,9 @@ module.exports = {
   parseIssueScore,
   parseIssueWhy,
   rankIssues,
+  ISSUE_TAKE_PREFIX,
+  issueTakePrompt,
+  issueTakeCommand,
   fetchIssues,
   IssueBoard,
   FEED_MAX,
@@ -576,6 +619,7 @@ module.exports = {
   encodeCwd,
   underRoots,
   one,
+  issueRef,
   ago,
   userText,
   toolSummary,
