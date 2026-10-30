@@ -50,6 +50,7 @@ npm install              # lint-staged + enables the pre-commit hook for the mai
 npm run check            # tsc, eslint, prettier and related tests of the touched parts, in parallel
 npm run check -- --full  # the same with the full test suites (once before a commit)
 node --test scripts/__tests__/  # Tests for scripts/ and .githooks/
+bash scripts/repo-git.sh [-C <dir>] <git args>  # git for a checkout; under an sshfs mount it runs on the machine that holds the repo
 ```
 
 ## Architecture

@@ -1,13 +1,13 @@
 ---
-allowed-tools: Bash(git:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Read, Write, Edit, Glob, Grep
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(git:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(rg:*), Bash(grep:*), Bash(find:*), Read, Write, Edit, Glob, Grep
 description: Анализ diff текущей ветки vs main — поиск user-facing изменений без e2e-покрытия, флагование возможно сломанных тестов, генерация черновиков
 ---
 
 ## Контекст
 
 - Сегодня: !`date +%Y-%m-%d`
-- Текущая ветка: !`git branch --show-current`
-- Diff vs main (только имена): !`git diff --name-status main...HEAD 2>/dev/null | head -50 || echo "(нет diff)"`
+- Текущая ветка: !`bash scripts/repo-git.sh branch --show-current`
+- Diff vs main (только имена): !`bash scripts/repo-git.sh diff --name-status main...HEAD 2>/dev/null | head -50 || echo "(нет diff)"`
 - Существующие e2e: !`ls frontend/e2e/ 2>/dev/null | head -20 || echo "(папки frontend/e2e/ ещё нет)"`
 
 ## Задача

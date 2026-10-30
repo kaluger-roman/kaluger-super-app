@@ -1,13 +1,13 @@
 ---
-allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git add:*), Bash(git reset:*), Bash(mkdir:*), Bash(date:*), Bash(ls:*), Bash(wc:*), Bash(jq:*), Read, Glob, Grep, Write, Agent
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git add:*), Bash(git reset:*), Bash(mkdir:*), Bash(date:*), Bash(ls:*), Bash(wc:*), Bash(jq:*), Read, Glob, Grep, Write, Agent
 description: Локальный code-review (9 параллельных opus reviewers + Haiku scoring 0-100) на git diff base...HEAD, с настраиваемым порогом и JSON-выводом для оркестрации.
 ---
 
 ## Контекст
 
 - Сегодня: !`date -u +%Y-%m-%dT%H:%M:%SZ`
-- Текущая ветка: !`git branch --show-current`
-- Diff stats vs main: !`git diff --shortstat main...HEAD 2>/dev/null || echo "(нет diff'а — base ref не main? см. --base-ref)"`
+- Текущая ветка: !`bash scripts/repo-git.sh branch --show-current`
+- Diff stats vs main: !`bash scripts/repo-git.sh diff --shortstat main...HEAD 2>/dev/null || echo "(нет diff'а — base ref не main? см. --base-ref)"`
 - Папки отчётов по веткам (найди папку текущей ветки; в worktree-сессии `git` внутри `$(...)` блокируется, поэтому ветка не подставляется): !`ls -t docs/code-reviews/ 2>/dev/null | head -10 || echo "(папка ещё не создана)"`
 
 ## Задача
@@ -29,21 +29,26 @@ description: Локальный code-review (9 параллельных opus rev
 - `--iter N` — номер итерации, используется в имени output-файла. По умолчанию **автоинкремент** (читать `docs/code-reviews/<branch>/` и взять `max+1`, или `1` если пусто).
 - `--silent` — не печатать findings в stdout, только путь к JSON-файлу одной строкой (для оркестратора).
 - `--feature SLUG` — переопределяет имя поддиректории для отчёта (по умолчанию — имя текущей ветки).
+- `--worktree PATH` — checkout, который ревьюить, в том виде, как его видит сессия (`.claude/worktrees/<slug>`, `/root/super-app/.claude/worktrees/<slug>`). По умолчанию — cwd сессии. С ним «Контекст» выше относится к cwd сессии, а не к checkout'у: ветку, diff stats и папки отчётов взять заново для `PATH`.
 
 Примеры:
 - `/code-review-local` — порог 50, base=main, авто-iter, человекочитаемый stdout
 - `/code-review-local --threshold 70 --base-ref origin/main` — строже + другой base
 - `/code-review-local --silent --iter 3 --feature 029-student-cabinet` — для оркестратора
 
+### Checkout и git
+
+`<checkout>` — путь из `--worktree` или cwd сессии. `<GIT>` — `bash scripts/repo-git.sh -C <checkout>`: **каждая** git-команда этой процедуры запускается как `<GIT> <аргументы>`, не голым `git`. Если checkout виден через sshfs-монтирование (сессия на сервере, репозиторий и worktree на dev-машине, куда указывают их `.git`), хелпер выполняет git там по ssh, иначе это `git -C <checkout>`. Коды выхода (`diff --quiet`) он сохраняет. Файлы репозитория (CLAUDE.md, конвенции, код для reviewer'ов, папка отчётов) читаются и пишутся по путям `<checkout>/<путь из diff'а>`.
+
 ---
 
 ## Этап 0. Предполётная проверка
 
-1. Убедиться, что есть git и мы в репозитории: `git rev-parse --is-inside-work-tree`. Если нет — ошибка.
-2. Убедиться, что `<base-ref>` существует: `git rev-parse --verify <base-ref>`. Если нет — ошибка с предложением: `--base-ref origin/main` или `--base-ref HEAD~10`.
+1. Убедиться, что есть git и мы в репозитории: `<GIT> rev-parse --is-inside-work-tree`. Если нет — ошибка.
+2. Убедиться, что `<base-ref>` существует: `<GIT> rev-parse --verify <base-ref>`. Если нет — ошибка с предложением: `--base-ref origin/main` или `--base-ref HEAD~10`.
 3. **Определить режим diff (committed vs working-tree)** — важно для интеграции с `/auto-feature`, который НЕ коммитит до финальной фазы:
-   - Закоммиченный diff поверх base непустой (`git diff --quiet <base-ref>...HEAD` завершился с кодом 1) → **committed**: дальше `<DIFF-CMD>` = `git diff <base-ref>...HEAD`.
-   - Закоммиченный diff пустой (код 0: коммитов нет или только пустой стартовый коммит от `scripts/start-task-pr.mjs`) → **working-tree** (ревью незакоммиченных изменений): один раз выполнить `git add -N -- .` (пометить untracked как intent-to-add, чтобы новые файлы попали в diff), задать `<DIFF-CMD>` = `git diff <base-ref>` (двухточечный: base ↔ рабочее дерево), и **сразу после снятия патча** восстановить индекс `git reset -q` (рабочие файлы не трогает, коммитов не создаёт).
+   - Закоммиченный diff поверх base непустой (`<GIT> diff --quiet <base-ref>...HEAD` завершился с кодом 1) → **committed**: дальше `<DIFF-CMD>` = `<GIT> diff <base-ref>...HEAD`.
+   - Закоммиченный diff пустой (код 0: коммитов нет или только пустой стартовый коммит от `scripts/start-task-pr.mjs`) → **working-tree** (ревью незакоммиченных изменений): один раз выполнить `<GIT> add -N -- .` (пометить untracked как intent-to-add, чтобы новые файлы попали в diff), задать `<DIFF-CMD>` = `<GIT> diff <base-ref>` (двухточечный: base ↔ рабочее дерево), и **сразу после снятия патча** восстановить индекс `<GIT> reset -q` (рабочие файлы не трогает, коммитов не создаёт).
    Везде ниже `<DIFF-CMD>` = выбранная команда.
 4. Посчитать размер diff'а: `<DIFF-CMD> --shortstat`. Если **0 изменений** — записать пустой JSON-отчёт и выйти со stdout `"No diff vs <base-ref> — nothing to review."`.
 5. Если diff > **2000 строк** (insertions+deletions) — предупредить пользователя в stdout: `Warning: diff is large (XXXX lines) — review may take 3-5 minutes.` и продолжить.
@@ -62,14 +67,14 @@ description: Локальный code-review (9 параллельных opus rev
    ```bash
    <DIFF-CMD> > /tmp/code-review-local-diff-$$.patch
    ```
-   (в working-tree-режиме сразу после снятия патча — `git reset -q`, см. Этап 0.3.)
+   (в working-tree-режиме сразу после снятия патча — `<GIT> reset -q`, см. Этап 0.3.)
 3. **Список релевантных CLAUDE.md:**
    - Корневой `CLAUDE.md` (если есть).
    - Для каждой изменённой папки — все `CLAUDE.md` вверх по дереву (от файла до корня).
    - Конвенции: проверить наличие `docs/conventions/{frontend,backend,frontend-testing,backend-testing,e2e-testing}.md` и подмешать в shared context (как **«дополнительный CLAUDE.md»** — нарушение конвенции = нарушение CLAUDE.md).
 4. **Последние коммиты ветки** для контекста намерения:
    ```bash
-   git log <base-ref>..HEAD --oneline --no-decorate
+   <GIT> log <base-ref>..HEAD --oneline --no-decorate
    ```
 
 Если diff пустой — см. Этап 0, шаг 3.
@@ -84,6 +89,7 @@ description: Локальный code-review (9 параллельных opus rev
 
 Запустить все 9 агентов **в одном сообщении** (параллельно). Каждому передать:
 - путь к diff-файлу (`/tmp/code-review-local-diff-$$.patch`),
+- `<checkout>`: файлы из diff'а читать по путям `<checkout>/<путь>`,
 - список изменённых файлов,
 - список путей к релевантным CLAUDE.md и docs/conventions/*,
 - последние коммиты ветки (контекст намерения),
@@ -265,7 +271,7 @@ description: Локальный code-review (9 параллельных opus rev
 
 ## Этап 5. Запись и stdout
 
-1. `mkdir -p docs/code-reviews/<branch>/` (если `--feature SLUG` — использовать SLUG вместо ветки).
+1. `mkdir -p <checkout>/docs/code-reviews/<branch>/` (если `--feature SLUG` — использовать SLUG вместо ветки).
 2. Имя файла: `iter-<N>.json` где `N` — из `--iter` или авто-определённый (см. парсинг аргументов).
 3. Write JSON в файл.
 4. Удалить временный diff: `rm -f /tmp/code-review-local-diff-$$.patch`.
@@ -278,7 +284,7 @@ description: Локальный code-review (9 параллельных opus rev
 docs/code-reviews/029-student-cabinet/iter-3.json
 ```
 
-(одна строка — путь к JSON-файлу).
+(одна строка — путь к JSON-файлу; с `--worktree` — с префиксом `PATH/`, чтобы вызывающий прочитал файл из своего cwd).
 
 **Если без `--silent`:**
 
@@ -304,7 +310,7 @@ Severity: critical <N>, high <N>, medium <N>
 ## Ограничения
 
 - **Не редактировать прод-код.** Команда строго read-only по отношению к исходникам. Фиксы — задача вызывающей стороны (оркестратора или человека).
-- **Не делать git-операций, меняющих историю/ветки/рабочие файлы.** Read-only `git diff`/`git log`/`git rev-parse`/`git rev-list` — всегда ОК. В **working-tree-режиме** (Этап 0.3) допускается ТОЛЬКО `git add -N -- .` с ОБЯЗАТЕЛЬНЫМ последующим `git reset -q` — это не меняет рабочие файлы и не создаёт коммитов. Никаких `commit`/`push`/`checkout`/`branch`/`stash`.
+- **Не делать git-операций, меняющих историю/ветки/рабочие файлы.** Read-only `diff`/`log`/`rev-parse`/`rev-list` через `<GIT>` — всегда ОК. В **working-tree-режиме** (Этап 0.3) допускается ТОЛЬКО `<GIT> add -N -- .` с ОБЯЗАТЕЛЬНЫМ последующим `<GIT> reset -q` — это не меняет рабочие файлы и не создаёт коммитов. Никаких `commit`/`push`/`checkout`/`branch`/`stash`.
 - **Не запускать тесты, линтеры, билды.** Это отдельные шаги (CI / pre-commit). Reviewer'ы должны явно игнорировать "issues a linter would catch".
 - **Не работать с GitHub** (`gh`-командами). Это локальная команда, никаких комментариев в PR не делать.
 - **Findings строго в JSON-схеме.** Если reviewer вернул не-JSON или нарушил схему — пытаться извлечь JSON по `{...}` блоку; если не получилось — пометить `agent` как `failed` и продолжить без его findings (в `summary` записать `agents_failed: ["<role>"]`).

@@ -1,12 +1,12 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и до 3 кругов manual-qa (прогон на Sonnet, фиксы в основном потоке) — с двумя human checkpoint'ами (после спеки и после макетов).
 ---
 
 ## Контекст
 
 - Сегодня: !`date -u +%Y-%m-%dT%H:%M:%SZ`
-- Текущая ветка: !`git branch --show-current 2>/dev/null || echo "(not a git repo)"`
+- Текущая ветка: !`bash scripts/repo-git.sh branch --show-current 2>/dev/null || echo "(not a git repo)"`
 - Активные state-файлы: !`ls -t .claude/auto-feature/*/state.json 2>/dev/null | head -5 || echo "(нет активных запусков)"`
 
 ## Задача
@@ -433,7 +433,7 @@ Steps:
    - `cd frontend && npm run lint` (fix violations).
    - `cd backend && npm run build` (must pass — strict TS).
 
-5. **Run `/changelog`** to update CHANGELOG.md (per project rule). Do NOT run /news yet — that's a user decision at Phase 7.
+5. **Run `/changelog --worktree <worktree_path>`** to update CHANGELOG.md (per project rule). Do NOT run /news yet — that's a user decision at Phase 7.
 
 Return JSON ONLY:
 
@@ -494,9 +494,9 @@ while iter <= 5:
 
 ```
 Operate at MAXIMUM reasoning effort. Single task: invoke /code-review-local skill with arguments:
-  --silent --threshold 50 --iter <N> --feature <slug>
+  --silent --threshold 50 --iter <N> --feature <slug> --worktree <worktree_path>
 
-The skill will write JSON to docs/code-reviews/<slug>/iter-<N>.json and print only that path to stdout.
+The skill will write JSON to <worktree_path>/docs/code-reviews/<slug>/iter-<N>.json and print only that path to stdout.
 
 Return ONLY: { "json_path": "<path printed by skill>" }
 ```

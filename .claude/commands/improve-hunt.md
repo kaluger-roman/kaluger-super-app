@@ -317,7 +317,7 @@ const x = ...
 
 ## Этап 5. Code-review loop
 
-Тот же цикл, что Фаза 5 `/auto-feature`: sub-agent (`model: "opus"`, max effort) запускает `/code-review-local --base-ref HEAD --silent --threshold 50 --iter <N> --feature improve-hunt-YYYY-MM-DD`, Main читает JSON и фиксит findings в основном потоке (с регрессионными тестами), затем следующая итерация. `--base-ref HEAD` обязателен: отчёт уже закоммичен (Этап 3б), фиксы нет, и с base `main` ревью видело бы только отчёт; при пустом `HEAD...HEAD` включается working-tree-режим, и в ревью попадают ровно незакоммиченные фиксы.
+Тот же цикл, что Фаза 5 `/auto-feature`: sub-agent (`model: "opus"`, max effort) запускает `/code-review-local --base-ref HEAD --silent --threshold 50 --iter <N> --feature improve-hunt-YYYY-MM-DD --worktree <путь worktree>`, Main читает JSON и фиксит findings в основном потоке (с регрессионными тестами), затем следующая итерация. `--base-ref HEAD` обязателен: отчёт уже закоммичен (Этап 3б), фиксы нет, и с base `main` ревью видело бы только отчёт; при пустом `HEAD...HEAD` включается working-tree-режим, и в ревью попадают ровно незакоммиченные фиксы.
 
 - **До 5 итераций.** Выход раньше, если результат сошёлся: findings нет; ≥80% сигнатур (`<category>:<file>:<line_start>:<title-first-30-chars>`) совпадают с прошлой итерацией (convergence); или все оставшиеся findings — score 50 без конкретного вреда (мелочи, которые не стоят ещё одного круга).
 - Не удавшийся после двух попыток фикс — откатить и записать в отчёт как оставшийся.
@@ -335,7 +335,7 @@ const x = ...
 
 ## Этап 7. Итог
 
-Если в Этапе 4 что-то исправлено — сначала, не спрашивая (CLAUDE.md «Commit and Push Without Asking»): `/changelog`, `git add` правок, тестов, CHANGELOG.md и `docs/code-reviews/`/md-отчётов QA (без скриншотов), коммит `fix(improve-hunt): <суть>` (или `perf`/`refactor` по сути), `git push`, затем дождаться чеков PR (`gh pr checks`; упало — `gh run view <run-id> --log-failed`, починить, повторить).
+Если в Этапе 4 что-то исправлено — сначала, не спрашивая (CLAUDE.md «Commit and Push Without Asking»): `/changelog --worktree <путь worktree>`, `git add` правок, тестов, CHANGELOG.md и `docs/code-reviews/`/md-отчётов QA (без скриншотов), коммит `fix(improve-hunt): <суть>` (или `perf`/`refactor` по сути), `git push`, затем дождаться чеков PR (`gh pr checks`; упало — `gh run view <run-id> --log-failed`, починить, повторить).
 
 Затем одно сообщение пользователю: путь к отчёту, ссылка на draft PR, что исправлено, hash коммита и итог CI, сколько кругов ревью и QA прошло и почему остановились (чисто / сошлось / cap), что осталось. Предложить следующий шаг: `/news`, `gh pr edit`, `gh pr ready` — только после ответа пользователя.
 
