@@ -4,9 +4,6 @@ import { isStudentOnline } from "../helpers/student";
 
 test.use({
   permissions: ["camera", "microphone"],
-  launchOptions: {
-    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
-  },
 });
 
 const RECONNECTING = "Восстанавливаем связь…";

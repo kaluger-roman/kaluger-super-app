@@ -20,9 +20,6 @@ import {
 
 test.use({
   permissions: ["camera", "microphone"],
-  launchOptions: {
-    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
-  },
 });
 
 const INVITE_TITLE = "Включите уведомления, чтобы не пропускать звонки преподавателя";
