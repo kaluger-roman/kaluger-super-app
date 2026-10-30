@@ -231,7 +231,7 @@ Do NOT invent. If something failed, return:
 
 1. Если в ответе `error` — записать в state.json (`phases.spec.status="blocked"`, `notes=error`), вывести пользователю, остановить pipeline.
 2. **Переименовать state-директорию** (см. примечание про worktree в Фазе 0): `mv .claude/auto-feature/<временный>/ .claude/auto-feature/<branch>/`. Обновить state.json (`feature_slug`, `branch`, `phases.spec`).
-3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»), если sub-agent его ещё не открыл: `node scripts/start-task-pr.mjs --title "feat: <короткое название фичи>" --summary "<1–2 предложения из описания>"`. Скрипт идемпотентен (при уже открытом PR только допишет сессию), сам делает пустой стартовый коммит и push. `url` из JSON-ответа записать в state.json (`pr_url`) и показать пользователю одной строкой. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»), если sub-agent его ещё не открыл: `node scripts/start-task-pr.mjs --title "feat: <короткое название фичи>" --summary "<1–2 предложения из описания>"`. Если фича пришла из GitHub issue (в `$ARGUMENTS` есть `#N` или ссылка на issue) — добавить `--closes <N>`, даже если PR уже открыт: скрипт допишет в тело `Closes #N`, и issue закроется при мерже. Скрипт идемпотентен (при уже открытом PR только допишет сессию и недостающие `Closes #N`), сам делает пустой стартовый коммит и push. `url` из JSON-ответа записать в state.json (`pr_url`) и показать пользователю одной строкой. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
 4. Записать в `phases.spec` фактические артефакты.
 5. **Human checkpoint** через `AskUserQuestion`:
 
@@ -648,7 +648,7 @@ Main делает:
 
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Фикс остатков: дать мне инструкцию какие пункты выше править
-- PR (<pr_url>, draft): `/news`, `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
+- PR (<pr_url>, draft): `/news`, `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» и строки `Closes #N` сохранить), `gh pr ready`
 - Очистка mockup-кода: если фаза 2 запускалась, убедись что нет оставшихся `TODO(auto-feature)` (проверь grep — у меня в state.implement.todo_markers_remaining = X)
 - State: .claude/auto-feature/<slug>/state.json
 
