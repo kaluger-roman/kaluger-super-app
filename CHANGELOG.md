@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Пороги предупреждений вкладки «Бэкапы» о резервном хранилище (24 ч) и проверке восстановления (48 ч) приходят с бэкенда (`offsite.syncStaleHours`, `offsite.restoreCheckStaleHours`) и совпадают с порогами алертов (19ff849)
 
+### Infrastructure
+- VS Code-расширение «Агенты Super App» (`scripts/vscode-agents/`): живые и недавние сессии Claude Code по проекту (`claude agents --json` + транскрипты), что каждая делает сейчас, кто ждёт ответа (разрешение, вопрос), лента действий, переход в терминал сессии в один клик, уведомления «закончил ход» / «нужен ты»; раздел «Приоритетные issue» — топ-8 открытых issues по критичности, обновляется раз в 10 минут через `gh` по ssh без токенов модели, ▶ запускает сессию по issue. Логика в `lib.js` с тестами, сборка и установка — `scripts/vscode-agents/README.md` (3f29800, 49aaa32)
+- Критичность issues 0–100 (`docs/issue-priority.md`): ущерб 0–40, охват 0–25, срочность 0–20, обход 0–15, метки `P0-critical` … `P4-trivial`. `scripts/issue-priority.mjs` пишет блок «Критичность: NN/100» в начало описания и метку, `/score-issues` оценивает issues Haiku-субагентами; `CLAUDE.md`, `/bug-hunt` и `/improve-hunt` оценивают каждый новый issue. Все 56 открытых issues оценены (49aaa32, c0527ad)
+
 ## 2026-10-29
 
 ### Fixed
