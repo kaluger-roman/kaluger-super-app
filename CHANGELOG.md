@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - `scripts/dev-stack.sh test-backend` гоняет jest на тестовой базе ветки (`tutor_app_test` в Docker-Postgres слота), даже если в worktree есть `backend/.env.test`. Раньше `loadTestEnv.ts` загружал `.env.test` с `override` и подменял `DATABASE_URL` ветки на общую `tutor_test`, и ветки со сменой схемы падали на отсутствующих таблицах. Теперь `test-backend` передаёт базу ветки ещё и в `TEST_DATABASE_URL`, который `loadTestEnv.ts` ставит поверх `.env.test`; обычный `npm test` и CI не изменились (#114, #169)
+- Playwright MCP больше не снимает реальную веб-камеру и микрофон машины, на которой запущен: Chromium стартует с фейковыми устройствами (`--use-fake-device-for-media-stream`, `--use-fake-ui-for-media-stream`) из `scripts/playwright-mcp.config.json`, сервер MCP подключается с `--config` на него (подсказка в `/qa-roam` обновлена). e2e получают те же флаги для всех проектов в `frontend/playwright.config.ts` (`FAKE_MEDIA_ARGS` из `e2e/helpers/media.ts`) вместо копий в спеках звонков (#107, 1d08172)
 
 ### Changed
 - Пороги предупреждений вкладки «Бэкапы» о резервном хранилище (24 ч) и проверке восстановления (48 ч) приходят с бэкенда (`offsite.syncStaleHours`, `offsite.restoreCheckStaleHours`) и совпадают с порогами алертов (19ff849)
