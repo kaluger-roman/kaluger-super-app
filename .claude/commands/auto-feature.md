@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(bash scripts/qa-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
-description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и manual-qa с автофиксом — с двумя human checkpoint'ами (после спеки и после макетов).
+description: Сквозной оркестратор разработки фичи. Создаёт worktree, гонит speckit-pipeline, делает mockups со скриншотами, code-review-loop с порогом 50 и до 3 кругов manual-qa (прогон на Sonnet, фиксы в основном потоке) — с двумя human checkpoint'ами (после спеки и после макетов).
 ---
 
 ## Контекст
@@ -30,13 +30,14 @@ description: Сквозной оркестратор разработки фич
 Фаза 5: code-review loop (cap=5, threshold=50, convergence detector)
         Sub-agent делает /code-review-local → JSON → Main парсит и фиксит сам
   ↓
-Фаза 6: /manual-qa --fix — sub-agent чинит однозначные, собирает остаток
+Фаза 6: manual-QA loop (cap=3; выход раньше, если ничего не найдено или новых сценариев нет)
+        Sonnet sub-agent прогоняет /manual-qa (без --fix) → findings.json → Main разбирает и фиксит сам
   ↓
 Фаза 7: commit + push в ветку задачи, ожидание CI, финальный отчёт (фазы + остаток QA findings)
         ✋ stop: пользователь решает что делать дальше (фиксить остаток, /news, PR ready)
 ```
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 5 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Git: стартовый draft PR в Фазе 1 (`scripts/start-task-pr.mjs`), между фазами коммитов нет, в Фазе 7 — commit + push готовой работы в ветку задачи без вопроса (CLAUDE.md «Commit and Push Without Asking»). `/news`, `gh pr ready`, merge и деплой — только по команде пользователя.
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах; исключение — браузерный прогон Фазы 6 на `sonnet`. Все правки в фазах 5 и 6 — **в основном потоке**, не в sub-agent (контекст уже прогрет, фиксы мелкие). Git: стартовый draft PR в Фазе 1 (`scripts/start-task-pr.mjs`), между фазами коммитов нет, в Фазе 7 — commit + push готовой работы в ветку задачи без вопроса (CLAUDE.md «Commit and Push Without Asking»). `/news`, `gh pr ready`, merge и деплой — только по команде пользователя.
 
 ---
 
@@ -97,10 +98,12 @@ description: Сквозной оркестратор разработки фич
     { "iter": 1, "json_path": "docs/code-reviews/030-invoices-list/iter-1.json", "findings_before": 12, "findings_applied": 12, "convergence_signature": ["bug:frontend/.../List.tsx:42:Missing-null-check", "..."] }
   ],
   "qa_iterations": [
-    { "iter": 1, "json_path": "docs/manual-qa-reports/2026-05-24-030-invoices-list.findings.json", "findings_total": 7, "autofix_applied": 5, "remaining": 2 }
+    { "iter": 1, "context_path": ".claude/auto-feature/030-invoices-list/qa-context-1.json", "json_path": "docs/manual-qa-reports/2026-05-24-030-invoices-list.findings.json", "findings_new": 7, "fixed": 4, "open": 2, "rejected": 1, "recheck_still_reproduces": 0, "untested": 3 }
   ],
+  "qa_covered_scenarios": [ { "id": "P1.1", "title": "..." } ],
+  "qa_exit_reason": "clean|exhausted|cap",
   "remaining_qa_findings": [
-    { "id": 4, "title": "...", "category": "spec-mismatch", "severity": "medium", "screenshot": "...", "fix_suggestion": "...", "needs_decision": "PO" }
+    { "id": 4, "title": "...", "category": "spec-mismatch", "severity": "medium", "screenshot": "...", "fix_suggestion": "...", "status": "open|rejected", "reason": "нужно решение PO" }
   ]
 }
 ```
@@ -123,7 +126,7 @@ description: Сквозной оркестратор разработки фич
 3. [pending] Plan / Tasks (/speckit.clarify, /speckit.plan, /speckit.tasks)
 4. [pending] Implement (/speckit.implement)
 5. [pending] Code-review loop (порог 50, cap 5 итераций)
-6. [pending] Manual QA (--fix) — автофикс однозначных, сбор остатка
+6. [pending] Manual QA loop (до 3 кругов, прогон на Sonnet, фиксы в Main)
 7. [pending] Финальный отчёт
 ```
 
@@ -131,9 +134,9 @@ description: Сквозной оркестратор разработки фич
 
 ## Сквозные принципы оркестрации
 
-1. **Max effort везде.** В **каждом** промпте `Agent` явно писать:
+1. **Max effort везде** (кроме браузерного прогона Фазы 6). В **каждом** промпте `Agent` явно писать:
    > Operate at **maximum reasoning effort**. Use deep, careful thinking at every step. Quality matters more than speed.
-2. **Sub-agents всегда `model: "opus"`** (если не указано иное в конкретной фазе — см. Фаза 5, scorer'ы там через `code-review-local` запускают Haiku сами).
+2. **Sub-agents всегда `model: "opus"`** (если не указано иное в конкретной фазе — см. Фаза 5, scorer'ы там через `code-review-local` запускают Haiku сами; Фаза 6 — браузерный прогон на `sonnet`, без строки про max effort).
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, текущее состояние (релевантный кусок state.json), ожидаемый формат ответа (JSON или короткий текст).
 4. **Возврат от sub-agent — структурированный.** Каждая фаза описывает свой контракт. Текстовые отчёты — короткие, чтобы не съедать контекст Main.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
@@ -519,59 +522,80 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 
 ---
 
-### Фаза 6. Manual QA loop (`/manual-qa --fix`)
+### Фаза 6. Manual QA loop (до 3 кругов)
 
-**Цель:** прогнать `/manual-qa --fix` через sub-agent (он умеет Playwright и сам чинит однозначные). Получить `findings.json`, записать остаток в state.
+**Цель:** прогнать фичу в браузере кругами. Прогон (Playwright: сотни механических шагов) делает дешёвый sub-agent на `sonnet` через `/manual-qa` **без** `--fix`: он только тестирует и пишет отчёт. Находки разбирает и чинит Main на штатной сильной модели, как фиксы ревью в Фазе 5. Следующий круг перепроверяет исправленное и берёт ещё не пройденные сценарии.
 
-**Sub-agent:**
+> **БЕЗ КОММИТОВ**, как в Фазе 5. `bash scripts/qa-stack.sh up` пересобирает образы из рабочего дерева (`up --build`), поэтому каждый круг видит фиксы прошлого; БД стека между кругами сохраняется.
 
-- `model: "opus"`
-- `description: "Run manual-qa --fix"`
-- Промпт:
+**Логика цикла (в Main):**
 
 ```
-Operate at MAXIMUM reasoning effort. Single task: invoke /manual-qa skill with argument `--fix` and let it do the full run.
+iter = 1
+covered = []     # сценарии, пройденные в прошлых кругах: { id, title }
+recheck = []     # находки, исправленные Main в прошлом круге, с шагами воспроизведения
+known = []       # находки, которые Main не чинит: open (нужно решение / не вышло) и rejected (не подтвердились)
+while iter <= 3:
+  1. Main пишет .claude/auto-feature/<slug>/qa-context-<iter>.json:
+     { iteration: iter, recheck, covered_scenarios: covered, known_open_findings: known }
+  2. Sub-agent (sonnet) → /manual-qa --context <path> → краткий JSON с путём к findings.json
+  3. Main: Read findings.json; covered += coverage.scenarios (pass|fail|warn)
+  4. recheck_results со статусом still_reproduces → вторая попытка фикса; снова не вышло → в known (open)
+  5. Main разбирает новые findings (см. ниже) → fixed | open | rejected
+  6. Записать state.qa_iterations[iter], state.qa_covered_scenarios = covered
+  7. Выход:
+     - новых findings нет и ни одна перепроверка не still_reproduces → BREAK (clean)
+     - coverage.untested пуст и в этом круге ничего не исправлено → BREAK (exhausted:
+       все сценарии пройдены в прошлых кругах, перепроверять нечего, нового не потестить)
+  8. recheck = исправленные в этом круге (шаги и expected из findings.json); iter += 1
+```
+
+После 3-го круга исправленное в нём не перепроверяется браузером — это `cap`; его покрывают регрессионные тесты фиксов. Записать `qa_exit_reason`.
+
+**Sub-agent для прогона:**
+
+- `model: "sonnet"`
+- `description: "Run manual-qa iter N"`
+- Промпт (без строки про max effort: шаги механические, на высоком effort они только дороже):
+
+```
+Single task: invoke the /manual-qa skill with arguments `--context <path to qa-context-N.json>` and let it do the full run.
+Do NOT pass --fix and do NOT edit any source code: you test and report, the orchestrator fixes.
 
 Pre-checks:
 - Ensure Docker is running (`docker info`). /manual-qa boots its own isolated per-branch QA stack
   (`bash scripts/qa-stack.sh up`) — do NOT start dev servers on :3000/:3001 for it.
   If Docker is down — abort and report (the user must start Docker Desktop).
 
-After /manual-qa completes:
-- It writes both an MD report and a findings.json next to it.
-- Read the findings.json.
-- Leave the QA stack up (default /manual-qa behaviour) — the user may want to re-check by hand.
+Be precise in findings: exact steps, expected vs actual, a screenshot, the file/line if you can see it.
+Do not report what you could not observe yourself.
+
+After /manual-qa completes, leave the QA stack up (default behaviour).
 
 Return JSON ONLY:
 
 {
-  "report_md_path": "docs/manual-qa-reports/<date>-<branch>.md",
-  "findings_json_path": "docs/manual-qa-reports/<date>-<branch>.findings.json",
+  "report_md_path": "docs/manual-qa-reports/<date>-<branch>[-N].md",
+  "findings_json_path": "docs/manual-qa-reports/<date>-<branch>[-N].findings.json",
   "readiness": "green|yellow|red",
-  "coverage": { "total": N, "passed": N, "failed": N, "warned": N },
-  "summary": {
-    "total_findings": N,
-    "by_severity": {...},
-    "autofix_applied": N,
-    "autofix_failed": N,
-    "remaining": N
-  },
-  "remaining_findings_compact": [
-    { "id": ..., "title": ..., "category": ..., "severity": ..., "unambiguous_fix": false, "fix_suggestion": "..." }
-  ],
-  "started_dev_servers": true|false
+  "scenarios_run": N,
+  "untested": N,
+  "new_findings": N,
+  "recheck": { "fixed": N, "still_reproduces": N }
 }
 
 On failure: { "error": "...", "details": "..." }
 ```
 
-**Main:**
+**Main разбирает находки (в основном потоке, по severity DESC):**
 
-1. Если error — записать blocked, сообщить.
-2. Записать в state.qa_iterations + `remaining_qa_findings = remaining_findings_compact`.
-3. Перейти к Фазе 7.
+1. **Подтвердить.** Sonnet может ошибиться: Read скриншоты находки и код по `file`/`line_hint`, найти причину. Не подтверждается ни кодом, ни скриншотом — `rejected` с причиной (в `known`, чтобы следующий круг не репортил снова; в финальном отчёте отдельной строкой).
+2. **Решить, чинить ли.** Флаг `unambiguous_fix` от прогона — подсказка, решает Main по критериям Этапа 6 `/manual-qa` («Что чинить» / «Что НЕ чинить»: без миграций, смены API-контрактов, архитектурных перестановок и решений PO). Не подходит — `open` с причиной, без вопроса пользователю (pipeline автономный, остаток уходит в Фазу 7).
+3. **Починить** как фикс ревью в Фазе 5: перечитать `docs/conventions/*.md`, минимальная правка, регрессионный тест для `bug` и `spec-mismatch` (кроме чисто визуального без логики), тесты + lint/tsc затронутого. Две неудачные попытки — откатить (`git checkout -- <file>`), `open`.
 
-> **Можно ли повторять QA?** На текущей итерации — нет. /manual-qa уже сам чинит однозначные внутри одного запуска. Повторные запуски (если пользователь захочет после Фазы 7) — отдельная команда.
+**После цикла:** `remaining_qa_findings` = все `open` и `rejected`, плюс `coverage.untested` последнего круга, если остался. `cap` — warning в отчёте Фазы 7, pipeline продолжается.
+
+> **Почему прогон на Sonnet, а фиксы в Main:** прогон — это navigate/click/snapshot по чек-листу, сильная модель там почти ничего не добавляет, а стоит в разы дороже и медленнее. Разбор и починка требуют понимания причины и соседних сценариев — это делает Main, у которого контекст фичи уже прогрет.
 
 ---
 
@@ -603,20 +627,22 @@ Main делает:
 | 3 | Plan/Tasks | ✅ | plan.md, tasks.md (N задач) |
 | 4 | Implement | ✅ | X файлов, Y миграций, Z тестов; lint+tsc clean |
 | 5 | Code-review loop | ✅ / ⚠️ convergence | N итераций, M findings зафикшено |
-| 6 | Manual QA | ✅ | K сценариев, J автофиксов, R осталось |
+| 6 | Manual QA loop | ✅ clean / ✅ exhausted / ⚠️ cap | N кругов, K сценариев, J находок исправлено, R осталось |
 | 7 | Commit + CI | ✅ | <hash>, чеки PR зелёные |
 
 ## Что осталось решить руками
 
 <если remaining_qa_findings пусто>
-✨ Ничего — все находки автофикснуты.
+✨ Ничего — все находки исправлены.
 
 <иначе — таблица>
-| # | Severity | Категория | Заголовок | Где | Что предлагает QA |
-|---|---|---|---|---|---|
-| 1 | high | spec-mismatch | ... | frontend/.../X.tsx | ... |
+| # | Severity | Категория | Заголовок | Где | Статус и причина | Что предлагает QA |
+|---|---|---|---|---|---|---|
+| 1 | high | spec-mismatch | ... | frontend/.../X.tsx | open: нужно решение PO | ... |
 
-Скриншоты остатков — в docs/manual-qa-reports/<date>-<branch>/screenshots/
+<если остались непройденные сценарии (coverage.untested) — список одной строкой>
+
+Скриншоты остатков — в docs/manual-qa-reports/<date>-<branch>[-N]/screenshots/
 
 ## Дальше — твои решения
 
@@ -664,5 +690,5 @@ Main делает:
 - **Не запускать /e2e-check автоматически.** Он создаёт черновики тестов — это отдельный шаг по запросу пользователя после ревью.
 - **Не пропускать конвенции.** Каждый sub-agent в фазах 2, 4 обязан прочитать docs/conventions/* перед написанием кода.
 - **Не отвечать пользователю длинно.** В чат — только то что просит phase (sub-agent summary), AskUserQuestion на checkpoint, финальный отчёт. Между фазами достаточно одной строки `→ Фаза N: <название>...`.
-- **При cap=5 в review loop** — это **не ошибка**, а warning. Зацикливание может означать спорные стилистические выборы, не блокирует PR. Сообщить пользователю в Фазе 7.
+- **При cap=5 в review loop** — это **не ошибка**, а warning. Зацикливание может означать спорные стилистические выборы, не блокирует PR. Сообщить пользователю в Фазе 7. То же для cap=3 в QA loop.
 - **Если worktree УЖЕ существует** (повторный запуск с тем же описанием) — не создавать второй, использовать `EnterWorktree path:` для входа в существующий.

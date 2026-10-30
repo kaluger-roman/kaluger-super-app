@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
-description: Сквозной оркестратор починки бага. Создаёт worktree, воспроизводит баг и находит root cause (✋ checkpoint), фиксит с обязательным регрессионным тестом, гонит code-review-loop с порогом 50 и верифицирует фикс по шагам воспроизведения.
+description: Сквозной оркестратор починки бага. Создаёт worktree, воспроизводит баг и находит root cause (✋ checkpoint), фиксит с обязательным регрессионным тестом, гонит code-review-loop с порогом 50 и до 3 кругов manual-qa (повтор шагов воспроизведения и смежных сценариев на Sonnet, фиксы в основном потоке).
 ---
 
 ## Контекст
@@ -26,7 +26,8 @@ description: Сквозной оркестратор починки бага. С
 Фаза 3: code-review loop (cap=3, threshold=50, convergence detector)
         Sub-agent делает /code-review-local → JSON → Main парсит и фиксит сам
   ↓
-Фаза 4: верификация — повтор шагов воспроизведения (Playwright для UI, тесты для бэка)
+Фаза 4: верификация + manual-QA loop (cap=3; выход раньше, если ничего не найдено или новых сценариев нет)
+        тесты области в Main; Sonnet sub-agent повторяет шаги воспроизведения и смежные сценарии через /manual-qa → Main разбирает и фиксит
   ↓
 Фаза 5: commit + push в ветку задачи, ожидание CI, финальный отчёт
         ✋ stop: пользователь решает что дальше (/news, PR ready)
@@ -34,7 +35,7 @@ description: Сквозной оркестратор починки бага. С
 
 Отличия от `/auto-feature` (осознанно выкинуто): нет speckit-pipeline (specify/clarify/plan/tasks/implement), нет фазы mockups, один checkpoint вместо двух, cap review-loop 3 вместо 5. Баг — это не фича: вместо спеки — диагноз, вместо макетов — воспроизведение.
 
-Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах. Все правки в фазе 3 — **в основном потоке**, не в sub-agent. Git: стартовый draft PR в Фазе 0 (`scripts/start-task-pr.mjs`), между фазами коммитов нет, в Фазе 5 — commit + push готовой работы в ветку задачи без вопроса (CLAUDE.md «Commit and Push Without Asking»). `/news`, `gh pr ready`, merge и деплой — только по команде пользователя.
+Все sub-agents — **opus + max reasoning effort**, явно прописано в промптах; исключение — браузерный прогон Фазы 4 на `sonnet`. Все правки в фазах 3 и 4 — **в основном потоке**, не в sub-agent. Git: стартовый draft PR в Фазе 0 (`scripts/start-task-pr.mjs`), между фазами коммитов нет, в Фазе 5 — commit + push готовой работы в ветку задачи без вопроса (CLAUDE.md «Commit and Push Without Asking»). `/news`, `gh pr ready`, merge и деплой — только по команде пользователя.
 
 ---
 
@@ -91,10 +92,19 @@ description: Сквозной оркестратор починки бага. С
   ],
   "verification": {
     "regression_test_passed": true,
+    "area_tests_passed": true,
     "repro_verified_fixed": true,
-    "screenshots": ["docs/bug-fixes/<slug>/screenshots/after-01.png"],
+    "qa_skipped_reason": null,
     "notes": "..."
-  }
+  },
+  "qa_iterations": [
+    { "iter": 1, "context_path": ".claude/auto-bug-fix/<slug>/qa-context-1.json", "json_path": "docs/manual-qa-reports/2026-09-05-fix-lessons-after-delete.findings.json", "findings_new": 1, "fixed": 1, "open": 0, "rejected": 0, "recheck_still_reproduces": 0, "untested": 0 }
+  ],
+  "qa_covered_scenarios": [ { "id": "R1", "title": "Повтор бага: ..." } ],
+  "qa_exit_reason": "clean|exhausted|cap|skipped",
+  "remaining_qa_findings": [
+    { "title": "...", "severity": "low", "status": "open|rejected", "reason": "..." }
+  ]
 }
 ```
 
@@ -113,7 +123,7 @@ description: Сквозной оркестратор починки бага. С
 1. [pending] Диагностика (repro + root cause) + ✋ approve
 2. [pending] Fix + регрессионный тест
 3. [pending] Code-review loop (порог 50, cap 3 итерации)
-4. [pending] Верификация фикса
+4. [pending] Верификация + manual QA loop (до 3 кругов)
 5. [pending] Финальный отчёт
 ```
 
@@ -121,15 +131,15 @@ description: Сквозной оркестратор починки бага. С
 
 ## Сквозные принципы оркестрации
 
-1. **Max effort везде.** В **каждом** промпте `Agent` явно писать:
+1. **Max effort везде** (кроме браузерного прогона Фазы 4). В **каждом** промпте `Agent` явно писать:
    > Operate at **maximum reasoning effort**. Use deep, careful thinking at every step. Quality matters more than speed.
-2. **Sub-agents всегда `model: "opus"`.**
+2. **Sub-agents всегда `model: "opus"`**, кроме браузерного прогона Фазы 4 (`sonnet`).
 3. **Sub-agent промпты самодостаточны.** Включают: цель, ссылки на CLAUDE.md и конвенции, релевантный кусок state.json, ожидаемый формат ответа (JSON).
 4. **Возврат от sub-agent — структурированный JSON.** Текстовые отчёты — короткие.
 5. **Main делает запись в state.json.** Sub-agent создаёт артефакты, Main фиксирует их в state.
 6. **Git только в начале и в конце.** Worktree создаётся через `EnterWorktree`. Фаза 0 — стартовый draft PR (`node scripts/start-task-pr.mjs`): пустой коммит + push + `gh pr create --draft` делает скрипт. Фазы 1–4 не коммитят. Фаза 5 — commit + push в ветку задачи без вопроса и ожидание CI.
 7. **При ошибке любой фазы** — записать `phases[i].status = "blocked"`, в `notes` причину, прервать pipeline, сообщить пользователю и ждать решений.
-8. **Регрессионный тест обязателен** (правило проекта): фикс без теста, покрывающего именно сценарий бага, не считается завершённым. Исключение — чисто визуальный баг без логики; тогда обязателен скриншот «после» в Фазе 4 и явная пометка в отчёте.
+8. **Регрессионный тест обязателен** (правило проекта): фикс без теста, покрывающего именно сценарий бага, не считается завершённым. Исключение — чисто визуальный баг без логики; тогда обязателен скриншот «после» из QA-круга Фазы 4 (QA-цикл для такого бага не пропускается) и явная пометка в отчёте.
 
 ---
 
@@ -349,45 +359,22 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 
 ---
 
-### Фаза 4. Верификация фикса
+### Фаза 4. Верификация + manual QA loop (до 3 кругов)
 
-**Цель:** подтвердить, что баг действительно починен, повторив шаги воспроизведения из диагноза. Это НЕ полный /manual-qa — только целевой сценарий бага + ближайшие смежные сценарии.
+**Цель:** подтвердить, что баг действительно починен, и что рядом ничего не сломалось. Это не полный прогон фичи: в фокусе шаги воспроизведения бага и смежные сценарии затронутого места.
 
-**Sub-agent:**
+**Шаг 1. Тесты (Main сам):** регрессионный тест + полный набор тестов затронутой области (не только регрессионный). Упало — чинить до зелёного; не выходит — blocked.
 
-- `model: "opus"`
-- `description: "Verify bug is fixed"`
-- Промпт:
+**Шаг 2. Нужен ли браузер.** Если фикс не виден пользователю (правка не меняет UI, API-ответы, тексты; обычно `repro_kind` `test`/`code-trace` во внутренней логике) — QA-цикл пропустить: `qa_exit_reason: "skipped"`, причину в `verification.qa_skipped_reason`, перейти к Фазе 5.
 
-```
-Operate at MAXIMUM reasoning effort. Task: verify a bug fix by re-running the original reproduction.
+**Шаг 3. QA-цикл** — ровно как Фаза 6 `/auto-feature` (прочитать её в `.claude/commands/auto-feature.md`): тот же `sonnet` sub-agent с `/manual-qa --context <path>` без `--fix`, тот же разбор находок в Main, те же условия выхода (`clean` — ничего не найдено; `exhausted` — новых сценариев нет и перепроверять нечего; `cap` — 3 круга). Отличия:
 
-Diagnosis repro steps:
-<repro_steps + repro_kind из state.json>
+- Контекст кладётся в `.claude/auto-bug-fix/<slug>/qa-context-<iter>.json`.
+- В контексте 1-го круга `must_check` = шаги воспроизведения из диагноза (`repro_steps`, `expected` — поведение без бага, `title` с префиксом «Повтор бага:») + 1–2 смежных сценария того же экрана. Спеки у бага нет: остальной план `/manual-qa` строит по diff ветки.
+- Шаги воспроизведения бага в каком-либо круге снова дают баг (`must_check` или `recheck` в статусе fail/`still_reproduces`) — это блокер, а не обычная находка: записать blocked, вернуть пользователю краткий диагноз и спросить через `AskUserQuestion`: вернуться к Фазе 1 (передиагностика с новыми данными) или остановиться.
+- Фиксы находок минимальные, в духе «Ограничений» ниже: находка, не связанная с фиксом (баг был и до ветки), не чинится, а уходит в `open` с пометкой «вне задачи» и в GitHub issue (правило проекта «File an Issue for Every Finding»).
 
-Steps:
-
-1. Run the regression test: <path> — must pass.
-2. If repro_kind is "ui-playwright": start the dev servers on the branch ports (`bash scripts/dev-stack.sh up`, then `run-backend` + `run-frontend`, both run_in_background, curl-poll `<apiUrl>`/`<webUrl>` до готовности, max 120s; seed the branch DB if the repro needs data), re-run the EXACT repro steps via Playwright MCP, confirm the buggy behavior is gone. Capture "after" screenshots to docs/bug-fixes/<slug>/screenshots/after-NN.png. Also sanity-check 1-2 adjacent scenarios of the same screen (no new breakage). Stop servers you started.
-3. If repro_kind is "test" or "code-trace": run the full test suite of the touched area (not just the regression test).
-
-Return JSON ONLY:
-
-{
-  "regression_test_passed": true,
-  "repro_verified_fixed": true|false,
-  "adjacent_checks": [ { "scenario": "...", "ok": true } ],
-  "screenshots": ["docs/bug-fixes/<slug>/screenshots/after-01.png"],
-  "notes": "..."
-}
-
-On failure or if the bug still reproduces: { "error": "...", "still_reproduces": true|false, "details": "..." }
-```
-
-**Main:**
-
-1. Если `still_reproduces: true` — это блокер: записать blocked, вернуть краткий диагноз пользователю, спросить через AskUserQuestion: вернуться к Фазе 1 (передиагностика с новыми данными) или остановиться.
-2. Иначе записать `verification` в state.json, перейти к Фазе 5.
+**Main:** записать `verification` (`repro_verified_fixed` — по `must_check` 1-го круга), `qa_iterations`, `qa_exit_reason`, `remaining_qa_findings` в state.json, перейти к Фазе 5.
 
 ---
 
@@ -396,7 +383,7 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 **Цель:** закоммитить и запушить проверенный фикс в ветку задачи (не спрашивая), дождаться CI, дать сводку.
 
 1. Прочитать актуальный state.json.
-2. **Commit + push** (внутри worktree): `git add` только файлы фикса, тесты, CHANGELOG.md и `docs/code-reviews/<slug>/`; НЕ добавлять `.claude/auto-bug-fix/` и скриншоты. Один коммит в стиле `fix(<область>): <суть>` (тело — причина и что изменено). Pre-commit хук упал — исправить причину и закоммитить снова, `--no-verify` не использовать. Затем `git push origin <branch>`.
+2. **Commit + push** (внутри worktree): `git add` только файлы фикса, тесты, CHANGELOG.md, `docs/code-reviews/<slug>/` и md-отчёты manual-qa (с `.findings.json`); НЕ добавлять `.claude/auto-bug-fix/` и скриншоты. Один коммит в стиле `fix(<область>): <суть>` (тело — причина и что изменено). Pre-commit хук упал — исправить причину и закоммитить снова, `--no-verify` не использовать. Затем `git push origin <branch>`.
 3. **CI:** дождаться завершения чеков PR (`gh pr checks <pr>` в цикле до исчезновения `pending`). Упало — `gh run view <run-id> --log-failed`, починить, новый коммит + push, ждать снова (до 3 попыток; дальше — blocked с хвостом лога).
 4. Записать в state.json `commit` (hash) и `ci` (итог чеков).
 5. Сформировать компактный отчёт:
@@ -415,15 +402,17 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 | 1 | Диагностика | ✅ | root cause: <кратко>; repro: <ui/test/trace> |
 | 2 | Fix + тест | ✅ | N файлов, регрессионный тест red→green |
 | 3 | Code-review loop | ✅ / ⚠️ convergence | N итераций, M findings зафикшено |
-| 4 | Верификация | ✅ | repro не воспроизводится, K смежных проверок ok |
+| 4 | Верификация + QA loop | ✅ clean / ✅ exhausted / ⚠️ cap / ➖ skipped | repro не воспроизводится; N кругов, K сценариев, J находок исправлено, R осталось |
 | 5 | Commit + CI | ✅ | <hash>, чеки PR зелёные |
 
 <warnings, если есть: тест не был red, convergence, cap, visual-only без теста и т.п.>
 
+<если remaining_qa_findings не пусто — таблица: Severity | Заголовок | Где | Статус и причина (open / rejected / вне задачи + ссылка на issue)>
+
 ## Дальше — твои решения
 
 - Просмотр диффа: `git -C <worktree_path> diff main`
-- Скриншоты before/after: docs/bug-fixes/<slug>/screenshots/
+- Скриншоты: before — docs/bug-fixes/<slug>/screenshots/, after — docs/manual-qa-reports/<date>-<branch>[-N]/screenshots/
 - PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
 - State: .claude/auto-bug-fix/<slug>/state.json
 
@@ -463,7 +452,8 @@ On failure or if the bug still reproduces: { "error": "...", "still_reproduces":
 - **Не запускать deploy.**
 - **Не удалять worktree.**
 - **Минимальный фикс.** Никакого попутного рефакторинга; найденные по дороге чужие проблемы — в warnings финального отчёта, не в дифф.
-- **Не пропускать конвенции.** Sub-agents фаз 2 и 3 обязаны читать docs/conventions/* перед написанием кода.
+- **Не пропускать конвенции.** Фаза 2 (sub-agent) и фиксы фаз 3 и 4 (Main) — читать docs/conventions/* перед написанием кода.
 - **Не отвечать пользователю длинно.** Между фазами — одна строка `→ Фаза N: <название>...`; полноценно — только checkpoint и финальный отчёт.
-- **Скриншоты не коммитить** (`docs/bug-fixes/<slug>/screenshots/`, `.playwright-mcp/` — local-only, правило проекта).
+- **Скриншоты не коммитить** (`docs/bug-fixes/<slug>/screenshots/`, `docs/manual-qa-reports/**/screenshots/`, `.playwright-mcp/` — local-only, правило проекта).
+- **При cap=3 в review или QA loop** — warning, не ошибка; сообщить в Фазе 5.
 - **Если worktree УЖЕ существует** (повторный запуск с тем же описанием) — не создавать второй, войти через `EnterWorktree path:`.
