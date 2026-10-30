@@ -3,11 +3,11 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync, renameSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { toHttpsRemote } from "../start-task-pr.mjs";
+import { toHttpsRemote, parseIssues, isLinked, addClosesToBody } from "../start-task-pr.mjs";
 
 const SCRIPT = join(dirname(dirname(fileURLToPath(import.meta.url))), "start-task-pr.mjs");
 const SESSION_ID = "11111111-2222-3333-4444-555555555555";
@@ -108,6 +108,21 @@ test("new branch without commits: empty commit, push, draft PR with session", ()
   assert.match(create.stdin, /web: https:\/\/claude\.ai\/code\/session_web123/);
 });
 
+test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still found", () => {
+  const home = join(root, "home");
+  mkdirSync(join(home, ".local", "bin"), { recursive: true });
+  renameSync(join(root, "bin", "gh"), join(home, ".local", "bin", "gh"));
+  env.HOME = home;
+  // Only node and git: CI runners have a real gh in /usr/bin.
+  const sysBin = join(root, "sysbin");
+  mkdirSync(sysBin);
+  symlinkSync(execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(), join(sysBin, "git"));
+  env.PATH = `${dirname(process.execPath)}:${sysBin}`;
+  const res = runScript("--title", "Fix the thing");
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(JSON.parse(res.stdout).action, "created");
+});
+
 test("staged changes are not swallowed into the empty commit", () => {
   writeFileSync(join(work, "b.txt"), "b\n");
   sh(work, "add", "b.txt");
@@ -166,6 +181,71 @@ test("refuses to run on main and without --title", () => {
   assert.notEqual(res.status, 0);
   assert.match(res.stderr, /refusing/);
   assert.equal(ghCalls().length, 0);
+});
+
+test("--closes: draft PR body links each issue with a Closes line before the sessions section", () => {
+  const res = runScript("--title", "T", "--summary", "S.", "--closes", "#12, 34 https://github.com/o/r/issues/56 12");
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).closes, ["12", "34", "56"]);
+  const body = ghCall("create").stdin;
+  assert.match(body, /S\.\n\nCloses #12\nCloses #34\nCloses #56\n\n## Сессии Claude Code/);
+});
+
+test("--closes with a bad or missing value fails before any git or gh call", () => {
+  for (const value of [["abc"], ["#12x"], []]) {
+    const res = runScript("--title", "T", "--closes", ...value);
+    assert.notEqual(res.status, 0);
+    assert.match(res.stderr, /--closes/);
+  }
+  assert.equal(ghCalls().length, 0);
+  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "0");
+});
+
+test("--closes on an open PR: adds only the missing lines to its body and records the session", () => {
+  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
+  env.FAKE_GH_PR_VIEW = JSON.stringify({ body: "Intro\n\nFixes #12\n\n## Сессии Claude Code\n\n- old", comments: [] });
+  const res = runScript("--title", "T", "--closes", "12,34");
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    action: "session-added",
+    url: "https://github.com/o/r/pull/7",
+    closesAdded: ["34"],
+  });
+  const edit = ghCall("edit");
+  assert.deepEqual(edit.args, ["pr", "edit", "7", "--body-file", "-"]);
+  assert.equal(edit.stdin, "Intro\n\nFixes #12\n\nCloses #34\n\n## Сессии Claude Code\n\n- old");
+  assert.ok(ghCall("comment"));
+  assert.equal(ghCall("create"), undefined);
+});
+
+test("--closes on an open PR that already links the issues, no Claude session: no-op", () => {
+  delete env.CLAUDE_CODE_SESSION_ID;
+  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
+  env.FAKE_GH_PR_VIEW = JSON.stringify({ body: "closes #12", comments: [] });
+  const res = runScript("--title", "T", "--closes", "12");
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), { action: "exists", url: "https://github.com/o/r/pull/7" });
+  assert.equal(ghCall("edit"), undefined);
+  assert.equal(ghCall("comment"), undefined);
+});
+
+test("parseIssues, isLinked and addClosesToBody", () => {
+  assert.deepEqual(parseIssues("1,#2 3"), ["1", "2", "3"]);
+  assert.throws(() => parseIssues("https://github.com/o/r/pull/5"), /not an issue number/);
+  assert.throws(() => parseIssues(" , "), /at least one/);
+
+  assert.ok(isLinked("Resolves: #5", "5"));
+  assert.ok(isLinked("fixed #5.", "5"));
+  assert.ok(!isLinked("Closes #50", "5"));
+  assert.ok(!isLinked("see #5", "5"));
+
+  assert.deepEqual(addClosesToBody("", ["5"]), { body: "Closes #5", added: ["5"] });
+  assert.deepEqual(addClosesToBody("Text\n", ["5", "6"]), { body: "Text\n\nCloses #5\nCloses #6", added: ["5", "6"] });
+  assert.deepEqual(addClosesToBody("## Сессии Claude Code\n\n- x", ["5"]), {
+    body: "Closes #5\n\n## Сессии Claude Code\n\n- x",
+    added: ["5"],
+  });
+  assert.deepEqual(addClosesToBody("Closes #5", ["5"]), { body: "Closes #5", added: [] });
 });
 
 test("toHttpsRemote converts GitHub SSH URLs and leaves others alone", () => {

@@ -1,12 +1,12 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
+allowed-tools: Bash(bash scripts/repo-git.sh:*), Bash(git:*), Bash(mkdir:*), Bash(ls:*), Bash(cat:*), Bash(date:*), Bash(jq:*), Bash(rm:*), Bash(test:*), Bash(echo:*), Bash(npm:*), Bash(curl:*), Bash(pkill:*), Bash(lsof:*), Bash(docker:*), Bash(bash scripts/dev-stack.sh:*), Bash(node scripts/start-task-pr.mjs:*), Read, Write, Edit, Glob, Grep, Agent, EnterWorktree, AskUserQuestion, TaskCreate, TaskUpdate, TaskGet, TaskList, Skill
 description: Сквозной оркестратор починки бага. Создаёт worktree, воспроизводит баг и находит root cause (✋ checkpoint), фиксит с обязательным регрессионным тестом, гонит code-review-loop с порогом 50 и до 3 кругов manual-qa (повтор шагов воспроизведения и смежных сценариев на Sonnet, фиксы в основном потоке).
 ---
 
 ## Контекст
 
 - Сегодня: !`date -u +%Y-%m-%dT%H:%M:%SZ`
-- Текущая ветка: !`git branch --show-current 2>/dev/null || echo "(not a git repo)"`
+- Текущая ветка: !`bash scripts/repo-git.sh branch --show-current 2>/dev/null || echo "(not a git repo)"`
 - Активные state-файлы: !`ls -t .claude/auto-bug-fix/*/state.json 2>/dev/null | head -5 || echo "(нет активных запусков)"`
 
 ## Задача
@@ -153,7 +153,7 @@ description: Сквозной оркестратор починки бага. С
 
 1. **Сгенерировать slug** из описания: `fix-` + kebab-case первых ~30 символов сути бага, безопасный для пути. Например «Уроки остаются после удаления ученика» → `fix-lessons-after-delete`.
 2. **Создать worktree** через `EnterWorktree` с `name: "<slug>"`. Worktree создастся в `.claude/worktrees/<slug>/` на новой ветке того же имени.
-3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»): `node scripts/start-task-pr.mjs --title "fix: <суть бага>" --summary "<описание бага, 1–2 предложения>"`. Скрипт сам делает пустой стартовый коммит и push. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
+3. **Открыть draft PR** (правило проекта, CLAUDE.md «Draft PR at Task Start»): `node scripts/start-task-pr.mjs --title "fix: <суть бага>" --summary "<описание бага, 1–2 предложения>"`. Если баг пришёл из GitHub issue (в `$ARGUMENTS` есть `#N` или ссылка на issue) — добавить `--closes <N>`: в теле PR появится `Closes #N`, и issue закроется при мерже. Скрипт сам делает пустой стартовый коммит и push. Если скрипт упал (нет сети/токена) — предупредить одной строкой и продолжить, pipeline не блокировать.
 4. **Создать state-директорию** `mkdir -p .claude/auto-bug-fix/<slug>/` и записать первичный `state.json` (см. схему; `current_phase: "diagnose"`, плюс `pr_url` из ответа скрипта).
 5. Создать **5 задач** через `TaskCreate`.
 6. Сообщить пользователю одной строкой: `🐞 Auto-bug-fix: started "<описание>". Worktree: <path>. PR: <pr_url>. State: .claude/auto-bug-fix/<slug>/state.json.`
@@ -280,7 +280,7 @@ Steps:
    - `cd frontend && npm run lint` (if frontend touched)
    - `cd backend && npm run build` (if backend touched — strict TS must pass)
 
-5. **Run /changelog** via the Skill tool to update CHANGELOG.md. Do NOT run /news — that's the user's decision later.
+5. **Run /changelog** via the Skill tool with `--worktree <worktree_path>` to update CHANGELOG.md. Do NOT run /news — that's the user's decision later.
 
 Return JSON ONLY:
 
@@ -336,9 +336,9 @@ while iter <= 3:
 
 ```
 Operate at MAXIMUM reasoning effort. Single task: invoke /code-review-local skill with arguments:
-  --silent --threshold 50 --iter <N> --feature <slug>
+  --silent --threshold 50 --iter <N> --feature <slug> --worktree <worktree_path>
 
-The skill will write JSON to docs/code-reviews/<slug>/iter-<N>.json and print only that path to stdout.
+The skill will write JSON to <worktree_path>/docs/code-reviews/<slug>/iter-<N>.json and print only that path to stdout.
 
 Return ONLY: { "json_path": "<path printed by skill>" }
 ```
@@ -413,7 +413,7 @@ Return ONLY: { "json_path": "<path printed by skill>" }
 
 - Просмотр диффа: `git -C <worktree_path> diff main`
 - Скриншоты: before — docs/bug-fixes/<slug>/screenshots/, after — docs/manual-qa-reports/<date>-<branch>[-N]/screenshots/
-- PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» сохранить), `gh pr ready`
+- PR (<pr_url>, draft): `/news` (по твоему решению), `gh pr edit` (заголовок и описание, секцию «Сессии Claude Code» и строки `Closes #N` сохранить), `gh pr ready`
 - State: .claude/auto-bug-fix/<slug>/state.json
 
 ✋ Жду твоего следующего хода.

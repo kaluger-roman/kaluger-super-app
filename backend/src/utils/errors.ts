@@ -102,10 +102,10 @@ export class TestEmailRateLimitError extends Error {
   }
 }
 
-// The message is Resend's own error text, shown to the admin as is.
-export class AdminEmailSendError extends Error {
+// The message is Resend's own error text; the admin test letter shows it as is.
+export class EmailSendError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "AdminEmailSendError";
+    this.name = "EmailSendError";
   }
 }

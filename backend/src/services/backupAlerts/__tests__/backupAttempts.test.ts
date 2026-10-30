@@ -9,7 +9,7 @@ import {
   GLOBAL_TEST_LOCK_TIMEOUT_MS,
   waitFor,
 } from "../../../__tests__/helpers";
-import { AdminEmailSendError } from "../../../utils";
+import { EmailSendError } from "../../../utils";
 import * as adminAlertsModule from "../../adminAlerts";
 import * as emailModule from "../../email";
 import { createManualBackupWithAlerts, runBackupJobWithAlerts } from "../backupAttempts";
@@ -147,7 +147,7 @@ describe("backup attempts with alerts", () => {
   it("should keep the alert with the Resend error when the letter fails", async () => {
     jest
       .spyOn(emailModule, "sendAdminEmail")
-      .mockRejectedValue(new AdminEmailSendError("Invalid API key"));
+      .mockRejectedValue(new EmailSendError("Invalid API key"));
     failDump("connection refused");
 
     await expect(runBackupJobWithAlerts()).rejects.toThrow();

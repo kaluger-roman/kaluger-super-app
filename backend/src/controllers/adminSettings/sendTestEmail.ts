@@ -1,11 +1,7 @@
 import type { Response } from "express";
 import type { AdminRequest, TestEmailResponse } from "../../types";
 import { sendTestEmail as sendTestEmailService } from "../../services";
-import {
-  AdminEmailSendError,
-  AlertEmailNotConfiguredError,
-  TestEmailRateLimitError,
-} from "../../utils";
+import { EmailSendError, AlertEmailNotConfiguredError, TestEmailRateLimitError } from "../../utils";
 
 export const sendTestEmail = async (req: AdminRequest, res: Response) => {
   try {
@@ -20,7 +16,7 @@ export const sendTestEmail = async (req: AdminRequest, res: Response) => {
         .status(429)
         .json({ error: "Тестовое письмо можно отправлять не чаще раза в минуту" });
     }
-    if (error instanceof AdminEmailSendError) {
+    if (error instanceof EmailSendError) {
       return res.status(502).json({ error: `Не удалось отправить письмо: ${error.message}` });
     }
     console.error("Error sending admin test email:", error);
