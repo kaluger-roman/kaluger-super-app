@@ -7,7 +7,7 @@ import { Provider as EffectorProvider } from "effector-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { theme } from "@shared";
-import { userModel } from "@entities";
+import { notificationsModel, userModel } from "@entities";
 
 import { ProfilePage } from "../ProfilePage";
 import { profileModel } from "../models";
@@ -183,6 +183,25 @@ describe("ProfilePage", () => {
 
     expect(screen.getByRole("button", { name: /настроить ставки/i })).toBeInTheDocument();
     expect(screen.getByText(/учитывать налог/i)).toBeInTheDocument();
+  });
+
+  it("should explain denied notifications once on the notifications tab (regression)", () => {
+    const scope = fork({
+      values: [
+        [userModel.$user, mockUser],
+        [profileModel.$activeTab, "notifications"],
+        [notificationsModel.$isPushSupported, true],
+        [notificationsModel.$vapidKey, "key"],
+        [notificationsModel.$pushPermission, "denied"],
+      ],
+    });
+
+    renderWithProviders(<ProfilePage />, scope);
+
+    expect(screen.getByText("Напоминания об уроках")).toBeInTheDocument();
+    expect(screen.getByText("Звонки")).toBeInTheDocument();
+    expect(screen.getAllByText(/Уведомления (запрещены|заблокированы)/)).toHaveLength(1);
+    expect(screen.getByText(/Уведомления запрещены в настройках браузера/)).toBeInTheDocument();
   });
 
   it("should not render when user is null", () => {

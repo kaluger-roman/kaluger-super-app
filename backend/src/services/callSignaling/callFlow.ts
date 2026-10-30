@@ -1,92 +1,49 @@
-import type { CallStatus } from "@prisma/client";
-import { getWebSocketManager } from "../../lib/wsManager";
-import type {
-  CallEndReason,
-  CallerKindValue,
-  CallReplyTarget,
-  CallSignalingInbound,
-  CallSignalingOutbound,
-} from "../../types";
+import type { CallerKindValue, CallReplyTarget, CallSignalingInbound } from "../../types";
 import {
   CallAuthorizationError,
   CallPeerBusyError,
   CallPeerOfflineError,
   CallRateLimitError,
 } from "../../utils";
-import { createCallRecord } from "../callRecord";
-import type { CreateCallRecordArgs } from "../callRecord";
+import { toCallLessonSummary } from "../callRecord";
+import type { CallLesson } from "../callRecord";
+import {
+  connectionOf,
+  finishCall,
+  hangUp,
+  notifyCalleeDevices,
+  recordCall,
+  relayToPeer,
+  removeCall,
+  send,
+} from "./callMessaging";
+import {
+  handlePresenceUpdate,
+  isVisible,
+  sendAwayPresencesOnAccept,
+  sendCallState,
+} from "./callPresence";
+import { calleeHasDevices, pushCallClosed } from "./callPush";
+import { confirmPeerRestartDelivery, handleResume } from "./callReconnect";
 import * as callRegistry from "./callSignaling";
 import {
   ALREADY_IN_CALL_MESSAGE,
   CALL_FAILED_MESSAGE,
   CALL_NOT_FOUND_MESSAGE,
+  STUDENT_INVITE_WITHOUT_LESSON_MESSAGE,
   TUTOR_INVITE_WITHOUT_TARGET_MESSAGE,
 } from "./callSignaling.constants";
 import {
+  isRingingCallee,
   isSamePair,
-  resolveDropOutcome,
-  resolveHangupStatus,
+  resolveCallLesson,
   resolvePairForStudent,
   resolvePairForTutor,
-  toDropPeerMessage,
 } from "./callSignaling.helpers";
 import type { CallParticipant, LiveCall, ResolvedPair } from "./callSignaling.types";
 import { buildIceServers } from "./iceConfig";
 import { registerInviteAttempt } from "./inviteRateLimit";
 import { isLatestInvite, issueInviteTicket } from "./inviteSequence";
-
-const send = (to: CallParticipant, message: CallSignalingOutbound): void => {
-  getWebSocketManager()?.sendToParticipant(to.kind, to.id, message);
-};
-
-const connectionOf = (participant: CallParticipant) =>
-  getWebSocketManager()?.getConnection(participant.kind, participant.id);
-
-// Tabs of either participant that waited for this call to end may ask for the connection again.
-const removeCall = (call: LiveCall): boolean => {
-  if (!callRegistry.removeCall(call.callId)) return false;
-  const manager = getWebSocketManager();
-  manager?.releaseWaitingSockets("tutor", call.tutorUserId);
-  manager?.releaseWaitingSockets("student", call.studentUserId);
-  return true;
-};
-
-const relayToPeer = (
-  call: LiveCall,
-  senderKind: CallerKindValue,
-  message: CallSignalingOutbound
-): void => {
-  send(callRegistry.getPeer(call, senderKind), message);
-};
-
-// Both parties already know how the call ended, so a failed write costs only the history
-// entry: it is logged, and the history refresh is skipped because nothing changed.
-const recordCall = async (
-  record: CreateCallRecordArgs,
-  pair: Pick<ResolvedPair, "tutorUserId" | "studentUserId">
-): Promise<void> => {
-  try {
-    await createCallRecord(record);
-  } catch (error) {
-    console.error("Call record was not saved:", error);
-    return;
-  }
-  send({ kind: "tutor", id: pair.tutorUserId }, { type: "call_history_updated" });
-  send({ kind: "student", id: pair.studentUserId }, { type: "call_history_updated" });
-};
-
-const finishCall = (call: LiveCall, status: CallStatus): Promise<void> =>
-  recordCall(
-    {
-      tutorId: call.tutorUserId,
-      studentId: call.studentId,
-      callerKind: call.callerKind,
-      status,
-      startedAt: call.startedAt,
-      connectedAt: call.connectedAt,
-    },
-    call
-  );
 
 // The caller gets ICE servers with call_accepted, when it actually starts connecting.
 const sendRinging = (call: LiveCall, inviteId: string): void => {
@@ -94,21 +51,29 @@ const sendRinging = (call: LiveCall, inviteId: string): void => {
 };
 
 const expireRinging = async (call: LiveCall): Promise<void> => {
-  if (!removeCall(call)) return;
+  if (!removeCall(call, call.callerKind)) return;
   const caller = callRegistry.getCaller(call);
   send(caller, { type: "call_no_answer", callId: call.callId });
   relayToPeer(call, caller.kind, { type: "call_canceled", callId: call.callId, reason: "timeout" });
   await finishCall(call, "MISSED");
 };
 
-const resolvePair = (sender: CallParticipant, targetStudentId?: string): Promise<ResolvedPair> => {
-  if (sender.kind === "student") return resolvePairForStudent(sender.id);
-  if (!targetStudentId) throw new CallAuthorizationError(TUTOR_INVITE_WITHOUT_TARGET_MESSAGE);
-  return resolvePairForTutor(sender.id, targetStudentId);
+const resolvePair = (
+  sender: CallParticipant,
+  data: Extract<CallSignalingInbound, { type: "call_invite" }>
+): Promise<ResolvedPair> => {
+  if (sender.kind === "student") {
+    if (!data.lessonId) throw new CallAuthorizationError(STUDENT_INVITE_WITHOUT_LESSON_MESSAGE);
+    return resolvePairForStudent(sender.id);
+  }
+  if (!data.targetStudentId) {
+    throw new CallAuthorizationError(TUTOR_INVITE_WITHOUT_TARGET_MESSAGE);
+  }
+  return resolvePairForTutor(sender.id, data.targetStudentId);
 };
 
 const cancelRinging = (call: LiveCall): Promise<void> => {
-  if (!removeCall(call)) return Promise.resolve();
+  if (!removeCall(call, call.callerKind)) return Promise.resolve();
   relayToPeer(call, call.callerKind, {
     type: "call_canceled",
     callId: call.callId,
@@ -117,17 +82,26 @@ const cancelRinging = (call: LiveCall): Promise<void> => {
   return finishCall(call, "CANCELED");
 };
 
+const calleeOf = (sender: CallParticipant, pair: ResolvedPair): CallParticipant =>
+  sender.kind === "tutor"
+    ? { kind: "student", id: pair.studentUserId }
+    : { kind: "tutor", id: pair.tutorUserId };
+
+// R9: a busy callee is never notified; one without a window that looks at the call gets a push
+// on its devices, and the call rings as long as some window or device can answer it.
 const ringCallee = async (
   sender: CallParticipant,
   pair: ResolvedPair,
-  inviteId: string
+  lesson: CallLesson | null,
+  inviteId: string,
+  hasDevices: boolean
 ): Promise<void> => {
-  const callee: CallParticipant =
-    sender.kind === "tutor"
-      ? { kind: "student", id: pair.studentUserId }
-      : { kind: "tutor", id: pair.tutorUserId };
-
-  if (!connectionOf(callee)) {
+  const callee = calleeOf(sender, pair);
+  if (callRegistry.findActiveCallForParticipant(callee.kind, callee.id)) {
+    throw new CallPeerBusyError();
+  }
+  const connected = connectionOf(callee) !== undefined;
+  if (!connected && !hasDevices) {
     await recordCall(
       {
         tutorId: pair.tutorUserId,
@@ -135,26 +109,29 @@ const ringCallee = async (
         callerKind: sender.kind,
         status: "MISSED",
         startedAt: new Date(),
+        lessonId: lesson?.id ?? null,
       },
       pair
     );
     throw new CallPeerOfflineError();
   }
-  if (callRegistry.findActiveCallForParticipant(callee.kind, callee.id)) {
-    throw new CallPeerBusyError();
-  }
 
-  const call = callRegistry.startCall(pair, sender.kind, (timedOut) => {
+  const call = callRegistry.startCall(pair, sender.kind, lesson, (timedOut) => {
     void expireRinging(timedOut);
   });
 
-  send(callee, {
-    type: "call_incoming",
-    callId: call.callId,
-    callerName: sender.kind === "tutor" ? pair.tutorName : pair.studentName,
-    iceServers: buildIceServers(callee),
-  });
+  if (connected) {
+    send(callee, {
+      type: "call_incoming",
+      callId: call.callId,
+      callerName: sender.kind === "tutor" ? pair.tutorName : pair.studentName,
+      lesson: toCallLessonSummary(lesson),
+      iceServers: buildIceServers(callee),
+    });
+  }
   sendRinging(call, inviteId);
+  if (!hasDevices || isVisible(callee)) return;
+  await notifyCalleeDevices(call);
 };
 
 const handleInvite = async (
@@ -165,7 +142,9 @@ const handleInvite = async (
 
   const ticket = issueInviteTicket(sender);
   const senderConnection = connectionOf(sender);
-  const pair = await resolvePair(sender, data.targetStudentId);
+  const pair = await resolvePair(sender, data);
+  const lesson = data.lessonId ? await resolveCallLesson(pair, data.lessonId) : null;
+  const hasDevices = await calleeHasDevices(calleeOf(sender, pair));
   // The caller's socket may have closed, or been replaced by a new one, while the pair was resolved.
   if (!senderConnection || connectionOf(sender) !== senderConnection) return;
   // The caller sent a newer invite meanwhile and waits for that one; this one is stale.
@@ -173,48 +152,43 @@ const handleInvite = async (
 
   const senderCall = callRegistry.findActiveCallForParticipant(sender.kind, sender.id);
   if (!senderCall) {
-    await ringCallee(sender, pair, data.inviteId);
+    await ringCallee(sender, pair, lesson, data.inviteId, hasDevices);
     return;
   }
   if (senderCall.callerKind === sender.kind && senderCall.status === "ringing") {
     // The caller gave up on its previous invite before call_ringing came back and called again,
     // the same peer or another one: the new invite replaces that call, so a late call_cancel
     // for it changes nothing.
-    await Promise.all([cancelRinging(senderCall), ringCallee(sender, pair, data.inviteId)]);
+    await Promise.all([
+      cancelRinging(senderCall),
+      ringCallee(sender, pair, lesson, data.inviteId, hasDevices),
+    ]);
     return;
   }
   if (isSamePair(senderCall, pair)) throw new CallPeerBusyError();
   throw new CallAuthorizationError(ALREADY_IN_CALL_MESSAGE);
 };
 
-const hangUp = async (
-  call: LiveCall,
-  senderKind: CallerKindValue,
-  reason: CallEndReason
-): Promise<void> => {
-  const status = resolveHangupStatus(call);
-  if (!removeCall(call)) return;
-  relayToPeer(call, senderKind, { type: "call_ended", callId: call.callId, reason });
-  await finishCall(call, status);
-};
-
 const handleRingingAnswer = async (
   call: LiveCall,
   sender: CallParticipant,
-  type: "call_accept" | "call_reject"
+  { type, pushEndpoint }: Extract<CallSignalingInbound, { type: "call_accept" | "call_reject" }>
 ): Promise<void> => {
   if (sender.kind === call.callerKind || call.status !== "ringing") return;
+  call.answeringEndpoint = pushEndpoint;
   if (type === "call_accept") {
     callRegistry.markAccepted(call.callId);
+    pushCallClosed(call, "call_closed");
     const caller = callRegistry.getCaller(call);
     send(caller, {
       type: "call_accepted",
       callId: call.callId,
       iceServers: buildIceServers(caller),
     });
+    sendAwayPresencesOnAccept(call);
     return;
   }
-  if (!removeCall(call)) return;
+  if (!removeCall(call, sender.kind)) return;
   relayToPeer(call, sender.kind, { type: "call_rejected", callId: call.callId });
   await finishCall(call, "REJECTED");
 };
@@ -241,8 +215,21 @@ const relayMediaSignal = (
 };
 
 const handleSignal = async (sender: CallParticipant, data: CallSignalingInbound): Promise<void> => {
+  confirmPeerRestartDelivery(sender);
   if (data.type === "call_invite") {
     await handleInvite(sender, data);
+    return;
+  }
+  if (data.type === "presence_update") {
+    handlePresenceUpdate(sender, data);
+    return;
+  }
+  if (data.type === "call_sync") {
+    sendCallState(sender);
+    return;
+  }
+  if (data.type === "call_resume") {
+    await handleResume(sender, data);
     return;
   }
 
@@ -256,7 +243,7 @@ const handleSignal = async (sender: CallParticipant, data: CallSignalingInbound)
   switch (data.type) {
     case "call_accept":
     case "call_reject":
-      await handleRingingAnswer(call, sender, data.type);
+      await handleRingingAnswer(call, sender, data);
       return;
     case "call_cancel":
       await handleCancel(call, sender);
@@ -272,8 +259,12 @@ const handleSignal = async (sender: CallParticipant, data: CallSignalingInbound)
   }
 };
 
-const replyTargetOf = (data: CallSignalingInbound): CallReplyTarget =>
-  data.type === "call_invite" ? { inviteId: data.inviteId } : { callId: data.callId };
+// Presence and sync are about the participant, not a call: a failure there has nobody to answer.
+const replyTargetOf = (data: CallSignalingInbound): CallReplyTarget | null => {
+  if (data.type === "call_invite") return { inviteId: data.inviteId };
+  if (data.type === "presence_update" || data.type === "call_sync") return null;
+  return { callId: data.callId };
+};
 
 export const processCallSignal = async (
   sender: CallParticipant,
@@ -283,6 +274,10 @@ export const processCallSignal = async (
     await handleSignal(sender, data);
   } catch (error) {
     const target = replyTargetOf(data);
+    if (!target) {
+      console.error("processCallSignal failed:", error);
+      return;
+    }
     if (error instanceof CallPeerOfflineError) {
       send(sender, { type: "call_unavailable", reason: "offline", ...target });
       return;
@@ -300,17 +295,26 @@ export const processCallSignal = async (
   }
 };
 
-export const terminateActiveCallForParticipant = async (
-  kind: CallerKindValue,
-  id: string
-): Promise<void> => {
+// The participant's call is held by their connection: a new one waits for the call to end. An
+// incoming call still ringing is held by none yet, so the device opened from its notification can
+// take the connection and answer (R3). Nor is a call that waits for the participant to come back:
+// the connection registered since (a hidden tab let in by 4004) has not picked it up with
+// call_resume, and the page that holds the call must be able to take the connection back.
+export const hasCallHeldByConnection = (kind: CallerKindValue, id: string): boolean => {
   const call = callRegistry.findActiveCallForParticipant(kind, id);
-  if (!call) return;
-  const outcome = resolveDropOutcome(call, { kind, id });
-  if (!removeCall(call)) return;
-  relayToPeer(call, kind, toDropPeerMessage(outcome, call.callId));
-  await finishCall(call, outcome.status);
+  return call !== undefined && !isRingingCallee(call, { kind, id }) && !call.disconnectedAt[kind];
 };
 
-export const hasActiveCall = (kind: CallerKindValue, id: string): boolean =>
-  callRegistry.findActiveCallForParticipant(kind, id) !== undefined;
+// The participant lost the connection in a call that is kept for their return (call_resume), and
+// the page `tabId` may be the one that held it. Other pages let in meanwhile (several tabs released
+// by 4004) must not take the connection from each other, or the one restoring the call loses it.
+export const isCallAwaitingReturnOf = (
+  kind: CallerKindValue,
+  id: string,
+  tabId: string | undefined
+): boolean => {
+  const call = callRegistry.findActiveCallForParticipant(kind, id);
+  if (call?.disconnectedAt[kind] === undefined) return false;
+  const holderTabId = call.disconnectedTabId[kind];
+  return holderTabId === undefined || holderTabId === tabId;
+};

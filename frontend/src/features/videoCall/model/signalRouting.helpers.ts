@@ -1,4 +1,4 @@
-import type { CallMediaState } from "../videoCall.types";
+import type { CallMediaState, PeerPresenceState } from "../videoCall.types";
 import type { CallSignalRoutingContext } from "./call.types";
 import type { CallReplyTarget, CallSignalingOutbound, ReceivedSignal } from "./signaling.types";
 
@@ -37,4 +37,12 @@ export const toPeerMediaState = (
   cameraOn: message.cameraOn,
   screenSharing: message.screenSharing,
   cameraAvailable: message.cameraAvailable,
+});
+
+export const toPeerPresenceState = (
+  message: Extract<CallSignalingOutbound, { type: "call_peer_presence" }>
+): PeerPresenceState => ({
+  presence: message.presence,
+  audioSuspended: message.audioSuspended,
+  videoSuspended: message.videoSuspended,
 });

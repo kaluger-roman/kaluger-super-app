@@ -1,6 +1,8 @@
+import { createECDH, randomBytes } from "crypto";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import { findLatestMailFor, clearTestMailbox } from "../lib/testMailbox";
+import { clearTestPushSink, listTestPushes } from "../lib/testPushSink";
 import { prisma } from "../lib/prisma";
 import { getWebSocketManager } from "../lib/wsManager";
 import { generateAdminToken } from "../utils/auth";
@@ -8,10 +10,13 @@ import { generateStudentToken } from "../utils/studentAuth";
 import { generateVerificationCode, getVerificationCodeExpiry } from "../utils/verification";
 import { hashPassword, generateToken, normalizeEmail } from "../utils";
 import {
+  ALERT_DEFINITIONS,
   BACKUP_FILE_EXTENSION,
   OFFSITE_LAST_PULL_FILE,
+  OFFSITE_STORAGE_FILE,
   RESTORE_CHECK_FILE,
   getBackupDir,
+  runAlertChecks,
 } from "../services";
 
 export const testRouter = Router();
@@ -31,7 +36,10 @@ testRouter.post("/reset", async (_req: Request, res: Response) => {
   await prisma.newsItem.deleteMany();
   await prisma.user.deleteMany();
   await prisma.backupSettings.deleteMany();
+  await prisma.adminAlert.deleteMany();
+  await prisma.adminSettings.deleteMany();
   clearTestMailbox();
+  clearTestPushSink();
   res.status(204).end();
 });
 
@@ -282,13 +290,55 @@ testRouter.get("/ws/students/:studentUserId", (req: Request, res: Response) => {
   res.json({ connected: socket !== undefined });
 });
 
+testRouter.get("/ws/tutors/:userId", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("tutor", req.params.userId);
+  res.json({ connected: socket !== undefined });
+});
+
+// Drops a registered socket without a close handshake, like a phone losing the network.
+testRouter.post("/ws/students/:studentUserId/drop", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("student", req.params.studentUserId);
+  socket?.terminate();
+  res.json({ dropped: socket !== undefined });
+});
+
+testRouter.post("/ws/tutors/:userId/drop", (req: Request, res: Response) => {
+  const socket = getWebSocketManager()?.getConnection("tutor", req.params.userId);
+  socket?.terminate();
+  res.json({ dropped: socket !== undefined });
+});
+
+// Seeds a device subscription of a student (`studentUserId`) or a tutor (`userId`). The keys are
+// a real P-256 pair, so the backend can encrypt pushes to it like to a browser.
+testRouter.post("/push-subscriptions", async (req: Request, res: Response) => {
+  const { endpoint, userId, studentUserId } = req.body;
+  const ecdh = createECDH("prime256v1");
+  ecdh.generateKeys();
+  const subscription = await prisma.pushSubscription.create({
+    data: {
+      endpoint,
+      p256dh: ecdh.getPublicKey().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+      userId: userId ?? null,
+      studentUserId: studentUserId ?? null,
+    },
+  });
+  res.status(201).json({ id: subscription.id, endpoint: subscription.endpoint });
+});
+
+// A seeded subscription's endpoint points here; lib/webPush hands such pushes to the sink.
+testRouter.get("/push-sink/:key", (req: Request, res: Response) => {
+  res.json({ pushes: listTestPushes(req.params.key) });
+});
+
 testRouter.post("/call-records", async (req: Request, res: Response) => {
-  const { tutorId, studentId, callerKind, status, startedAt, durationSeconds } = req.body;
+  const { tutorId, studentId, lessonId, callerKind, status, startedAt, durationSeconds } = req.body;
   const started = startedAt ? new Date(startedAt) : new Date();
   const record = await prisma.callRecord.create({
     data: {
       tutorId,
       studentId,
+      lessonId: lessonId ?? null,
       callerKind: callerKind ?? "TUTOR",
       status: status ?? "COMPLETED",
       startedAt: started,
@@ -309,11 +359,30 @@ testRouter.delete("/backup/files", async (_req: Request, res: Response) => {
   const fs = await import("fs");
   const path = await import("path");
   const dir = getBackupDir();
-  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE];
+  const offsiteStatusFiles = [OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE, OFFSITE_STORAGE_FILE];
   for (const file of fs.readdirSync(dir)) {
     if (file.endsWith(BACKUP_FILE_EXTENSION) || offsiteStatusFiles.includes(file)) {
       fs.unlinkSync(path.join(dir, file));
     }
   }
   res.status(204).end();
+});
+
+// `types` narrows the run: checks backed by the host (disk space) are not deterministic in e2e.
+testRouter.post("/admin/run-alert-checks", async (req: Request, res: Response) => {
+  const { types } = (req.body ?? {}) as { types?: unknown };
+  const requested = Array.isArray(types)
+    ? types.filter((type): type is string => typeof type === "string")
+    : null;
+  const definitions = requested
+    ? ALERT_DEFINITIONS.filter(({ type }) => requested.includes(type))
+    : ALERT_DEFINITIONS;
+  await runAlertChecks(definitions, new Date());
+  res.json({ ok: true });
+});
+
+testRouter.delete("/admin/alerts", async (_req: Request, res: Response) => {
+  await prisma.adminAlert.deleteMany();
+  await prisma.adminSettings.deleteMany();
+  res.json({ ok: true });
 });

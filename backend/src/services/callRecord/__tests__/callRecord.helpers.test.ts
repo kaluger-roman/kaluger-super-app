@@ -1,5 +1,10 @@
 import { DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT } from "../callRecord.constants";
-import { clampLimit, toCallHistoryItem, toFinalizedTimes } from "../callRecord.helpers";
+import {
+  clampLimit,
+  toCallHistoryItem,
+  toCallLessonSummary,
+  toFinalizedTimes,
+} from "../callRecord.helpers";
 import type { CallRecordWithPeer } from "../callRecord.types";
 
 describe("clampLimit", () => {
@@ -50,9 +55,11 @@ describe("toCallHistoryItem", () => {
     durationSeconds: 60,
     tutorId: "t1",
     studentId: "s1",
+    lessonId: null,
     createdAt: new Date("2026-06-04T10:01:00.000Z"),
     student: { name: "Иван" },
     tutor: { name: "Анна" },
+    lesson: null,
   };
 
   it("should show the student as an outgoing call to the tutor who called", () => {
@@ -68,5 +75,48 @@ describe("toCallHistoryItem", () => {
       peerName: "Анна",
       direction: "incoming",
     });
+  });
+
+  it("should leave the lesson empty for a call without a lesson", () => {
+    expect(toCallHistoryItem(record, "tutor").lesson).toBeNull();
+  });
+
+  it("should add the lesson summary with ISO dates", () => {
+    const withLesson: CallRecordWithPeer = {
+      ...record,
+      lessonId: "l1",
+      lesson: {
+        id: "l1",
+        subject: "PHYSICS",
+        startTime: new Date("2026-06-04T09:30:00.000Z"),
+        endTime: new Date("2026-06-04T10:30:00.000Z"),
+      },
+    };
+
+    expect(toCallHistoryItem(withLesson, "student").lesson).toEqual({
+      id: "l1",
+      subject: "PHYSICS",
+      startTime: "2026-06-04T09:30:00.000Z",
+      endTime: "2026-06-04T10:30:00.000Z",
+    });
+  });
+});
+
+describe("toCallLessonSummary", () => {
+  it("should serialize the lesson dates and keep null", () => {
+    expect(
+      toCallLessonSummary({
+        id: "l-1",
+        subject: "MATHEMATICS",
+        startTime: new Date("2026-10-23T15:00:00.000Z"),
+        endTime: new Date("2026-10-23T16:00:00.000Z"),
+      })
+    ).toEqual({
+      id: "l-1",
+      subject: "MATHEMATICS",
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    });
+    expect(toCallLessonSummary(null)).toBeNull();
   });
 });

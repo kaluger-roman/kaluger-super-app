@@ -1,7 +1,13 @@
 import * as callModel from "../call.model";
-import type { IceServerPayload } from "../call.types";
+import { CALL_ROLES } from "../callPresence.constants";
+import * as callPresenceModel from "../callPresence.model";
 import { dispatchCallSignal } from "../signaling.helpers";
-import type { CallRole, CallSignalingInbound, CallSignalingOutbound } from "../signaling.types";
+import type {
+  CallRole,
+  CallSignalingInbound,
+  CallSignalingOutbound,
+  IceServerPayload,
+} from "../signaling.types";
 import { resetCallTransportsForTests, setCallTransport } from "../transport.helpers";
 import { resetWebRtcAdapter, stopAllSessions } from "../webrtc.helpers";
 import { readStore } from "./storeProbe";
@@ -16,8 +22,17 @@ export const installTransport = (): CallSignalingInbound[] => {
   return sent;
 };
 
+// The call flow is unscoped, so a call_sync a test left unanswered (the page came back on screen)
+// would keep the next test's page from asking the server again: the page is on screen and every
+// role got its call_state, as at the start of a session.
+export const settleCallSync = (): void => {
+  callPresenceModel.visibilityChanged(true);
+  CALL_ROLES.forEach((role) => dispatchCallSignal({ type: "call_state", call: null }, role));
+};
+
 export const resetCallFlow = (): void => {
   callModel.hangUp();
+  settleCallSync();
   stopAllSessions();
   resetCallTransportsForTests();
   resetWebRtcAdapter();
@@ -37,7 +52,7 @@ export const startCallerSession = async (
   callId: string,
   iceServers: IceServerPayload[] = []
 ): Promise<void> => {
-  callModel.callStarted({ studentId: "stu-1", peerName: "Иван" });
+  callModel.callStarted({ studentId: "stu-1", peerName: "Иван", lesson: null });
   ringCurrentInvite(callId);
   receive({ type: "call_accepted", callId, iceServers });
   await settleMicrotasks();
@@ -47,7 +62,7 @@ export const startCalleeSession = async (
   callId: string,
   iceServers: IceServerPayload[] = []
 ): Promise<void> => {
-  receive({ type: "call_incoming", callId, callerName: "Анна", iceServers });
+  receive({ type: "call_incoming", callId, callerName: "Анна", lesson: null, iceServers });
   callModel.acceptCall();
   receive({ type: "webrtc_offer", callId, sdp: { type: "offer", sdp: "initial" } });
   await settleMicrotasks();

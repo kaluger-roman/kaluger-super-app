@@ -1,5 +1,13 @@
+import type { CallLessonSummary } from "@entities";
+
 import type { CallMediaState } from "../videoCall.types";
-import type { CallCancelReason, CallRole, CallSignalingInbound } from "./signaling.types";
+import type {
+  CallCancelReason,
+  CallRole,
+  CallSignalingInbound,
+  CallSnapshot,
+  IceServerPayload,
+} from "./signaling.types";
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active";
 
@@ -12,15 +20,13 @@ export type IncomingCall = {
   callId: string;
   callerName: string;
   role: CallRole;
+  lesson: CallLessonSummary | null;
 };
 
-export type IceServerPayload = {
-  urls: string;
-  username?: string;
-  credential?: string;
-};
-
-export type StartCallParams = { studentId: string; peerName: string } | { peerName: string };
+// A student calls only from a lesson, so a student call without a lesson cannot be expressed.
+export type StartCallParams =
+  | { studentId: string; peerName: string; lesson: CallLessonSummary | null }
+  | { peerName: string; lesson: CallLessonSummary };
 
 export type LocalMediaResult = {
   stream: MediaStream;
@@ -37,8 +43,6 @@ export type CallAddress = {
   callId: string;
   role: CallRole;
 };
-
-export type AcceptedCall = CallSignalTarget & CallAddress;
 
 export type LocalMediaParams = CallAddress & {
   iceServers: IceServerPayload[];
@@ -89,7 +93,7 @@ export type CanceledNotice = {
 
 // The signal the own side owes the peer when the call ends here; null when the peer ended it.
 export type TerminalSignal =
-  | { type: "call_reject" }
+  | { type: "call_reject"; pushEndpoint?: string }
   | { type: "call_cancel" }
   | { type: "call_hangup"; reason?: "media_unavailable" };
 
@@ -103,7 +107,39 @@ export type AddressedSignal = {
   message: CallSignalingInbound;
 };
 
+export type CallNotificationsTarget = {
+  registration: ServiceWorkerRegistration;
+  callId: string;
+};
+
+export type CallNotificationsSource = {
+  registration: ServiceWorkerRegistration | null;
+  callId: string | null;
+};
+
+export type LateNotificationsSource = {
+  registration: ServiceWorkerRegistration | null;
+  answeredHere: string | null;
+};
+
 export type InviteParams = {
   call: StartCallParams;
   role: CallRole;
+};
+
+export type PendingConfirm = {
+  isOpen: boolean;
+  call: StartCallParams | null;
+};
+
+// The server still holds a call of this participant that this page does not have (reload,
+// another window, a lost connection): it is restored from the snapshot.
+export type ResumeRequest = {
+  role: CallRole;
+  snapshot: CallSnapshot;
+};
+
+// The restored call with the seconds it has been connected (from the snapshot's connectedAt).
+export type RestoredCall = ResumeRequest & {
+  elapsedSeconds: number;
 };

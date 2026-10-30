@@ -18,16 +18,6 @@ const compareById = (a: CommissionLessonInput, b: CommissionLessonInput) =>
 const getEffectivePaymentDate = (lesson: CommissionLessonInput) =>
   (lesson.paymentDate ?? lesson.startTime).getTime();
 
-// Repayment follows the order money actually arrived: the period a write-off
-// lands in is decided by the payment date, so allocating by any other order
-// would let a late payment for an early lesson rewrite a closed period.
-const compareByPaymentThenId = (a: CommissionLessonInput, b: CommissionLessonInput) => {
-  const byPayment = getEffectivePaymentDate(a) - getEffectivePaymentDate(b);
-  if (byPayment !== 0) return byPayment;
-
-  return compareById(a, b);
-};
-
 // Lessons that are not paid yet have no payment order to follow, so the
 // forecast walks them in the order they will be taught.
 const compareByStartTimeThenId = (a: CommissionLessonInput, b: CommissionLessonInput) => {
@@ -35,6 +25,17 @@ const compareByStartTimeThenId = (a: CommissionLessonInput, b: CommissionLessonI
   if (byStartTime !== 0) return byStartTime;
 
   return compareById(a, b);
+};
+
+// Repayment follows the order money actually arrived: the period a write-off
+// lands in is decided by the payment date, so allocating by any other order
+// would let a late payment for an early lesson rewrite a closed period.
+// Lessons prepaid on one date are then repaid in the order they are taught.
+const compareByPaymentThenStartTime = (a: CommissionLessonInput, b: CommissionLessonInput) => {
+  const byPayment = getEffectivePaymentDate(a) - getEffectivePaymentDate(b);
+  if (byPayment !== 0) return byPayment;
+
+  return compareByStartTimeThenId(a, b);
 };
 
 const isFactEligible = (lesson: CommissionLessonInput) =>
@@ -90,7 +91,7 @@ export const allocateCommission = ({
   // The forecast pass starts from what the fact pass left over, so an unpaid
   // early lesson can never eat into the actually written-off amount.
   const factRemainingKop = runPass(
-    [...lessons].sort(compareByPaymentThenId),
+    [...lessons].sort(compareByPaymentThenStartTime),
     commissionKop,
     isFactEligible,
     getReceivedAmount,

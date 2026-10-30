@@ -26,6 +26,7 @@ export {
   capitalizeFirst,
 } from "./lib.helpers";
 export { extractAxiosError } from "./error.helpers";
+export { pluralize } from "./plural.helpers";
 export { setNavigate, navigate } from "./navigation.helpers";
 export {
   getLessonDisplayName,
@@ -41,6 +42,6 @@ export { useNotifications } from "./notifications.hooks";
 export { useDisableNumberScroll } from "./disableNumberScroll.hooks";
 export { useTooltipTrigger } from "./tooltipTrigger.hooks";
 export { styled } from "./styled.helpers";
-export { isIos, isInStandaloneMode } from "./platform.helpers";
-export { isRecord } from "./typeGuards.helpers";
+export { isAndroid, isIos, isInStandaloneMode } from "./platform.helpers";
+export { isRecord, isSubject } from "./typeGuards.helpers";
 export { handleActivationKey } from "./keyboard.helpers";

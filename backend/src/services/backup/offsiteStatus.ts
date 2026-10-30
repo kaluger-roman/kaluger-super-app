@@ -2,10 +2,17 @@ import fs from "fs";
 import path from "path";
 import type { BackupOffsiteStatus } from "../../types";
 import { getBackupDir } from "./backup";
-import { OFFSITE_LAST_PULL_FILE, RESTORE_CHECK_FILE } from "./backup.constants";
-import { parseLastPull, parseRestoreCheck } from "./backup.helpers";
+import {
+  OFFSITE_LAST_PULL_FILE,
+  OFFSITE_STALE_HOURS,
+  OFFSITE_STORAGE_FILE,
+  RESTORE_CHECK_FILE,
+  RESTORE_CHECK_STALE_HOURS,
+} from "./backup.constants";
+import { parseLastPull, parseOffsiteStorage, parseRestoreCheck } from "./backup.helpers";
+import type { OffsiteStorageReport } from "./backup.types";
 
-// Both files are written on prod by the offsite SSH wrapper; a missing or
+// The files are written on prod by the offsite SSH wrapper; a missing or
 // unreadable file means "never happened", it must not break the settings page.
 const readStatusFile = (name: string): string | null => {
   try {
@@ -22,5 +29,12 @@ export const getOffsiteStatus = (): BackupOffsiteStatus => {
   return {
     lastSyncAt: lastPull === null ? null : parseLastPull(lastPull),
     restoreCheck: restoreCheck === null ? null : parseRestoreCheck(restoreCheck),
+    syncStaleHours: OFFSITE_STALE_HOURS,
+    restoreCheckStaleHours: RESTORE_CHECK_STALE_HOURS,
   };
+};
+
+export const readOffsiteStorage = (): OffsiteStorageReport | null => {
+  const content = readStatusFile(OFFSITE_STORAGE_FILE);
+  return content === null ? null : parseOffsiteStorage(content);
 };

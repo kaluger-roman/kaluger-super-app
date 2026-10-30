@@ -2,6 +2,8 @@ import {
   ICE_CANDIDATE_MAX_LENGTH,
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
+  LESSON_ID_MAX_LENGTH,
+  PUSH_ENDPOINT_MAX_LENGTH,
 } from "../signaling.constants";
 import { parseCallSignal, toIceCandidate, toSessionDescription } from "../signaling.helpers";
 
@@ -102,6 +104,43 @@ describe("parseCallSignal", () => {
     ).toBeNull();
   });
 
+  it("should keep the lessonId of an invite with and without a target", () => {
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        targetStudentId: "s-1",
+        lessonId: "l-1",
+      })
+    ).toEqual({ type: "call_invite", inviteId: "i-1", targetStudentId: "s-1", lessonId: "l-1" });
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: "l-1" })).toEqual({
+      type: "call_invite",
+      inviteId: "i-1",
+      lessonId: "l-1",
+    });
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        lessonId: "l".repeat(LESSON_ID_MAX_LENGTH),
+      })
+    ).toEqual({ type: "call_invite", inviteId: "i-1", lessonId: "l".repeat(LESSON_ID_MAX_LENGTH) });
+  });
+
+  it("should drop an invite with an unusable lessonId", () => {
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: "" })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: 42 })).toBeNull();
+    expect(parseCallSignal({ type: "call_invite", inviteId: "i-1", lessonId: null })).toBeNull();
+    expect(
+      parseCallSignal({
+        type: "call_invite",
+        inviteId: "i-1",
+        targetStudentId: "s-1",
+        lessonId: "l".repeat(LESSON_ID_MAX_LENGTH + 1),
+      })
+    ).toBeNull();
+  });
+
   it("should drop an invite without a usable inviteId", () => {
     expect(parseCallSignal({ type: "call_invite" })).toBeNull();
     expect(parseCallSignal({ type: "call_invite", inviteId: "" })).toBeNull();
@@ -117,6 +156,50 @@ describe("parseCallSignal", () => {
     });
   });
 
+  it.each(["call_accept", "call_reject"] as const)(
+    "should keep the push endpoint of the device that sent %s",
+    (type) => {
+      const pushEndpoint = `https://push.example.com/${"e".repeat(64)}`;
+
+      expect(parseCallSignal({ type, callId: "c-1", pushEndpoint })).toEqual({
+        type,
+        callId: "c-1",
+        pushEndpoint,
+      });
+      expect(
+        parseCallSignal({ type, callId: "c-1", pushEndpoint: "e".repeat(PUSH_ENDPOINT_MAX_LENGTH) })
+      ).toEqual({ type, callId: "c-1", pushEndpoint: "e".repeat(PUSH_ENDPOINT_MAX_LENGTH) });
+    }
+  );
+
+  it.each(["call_accept", "call_reject"] as const)(
+    "should keep %s and drop an unusable push endpoint",
+    (type) => {
+      [
+        "",
+        42,
+        null,
+        { url: "https://push.example.com/x" },
+        "e".repeat(PUSH_ENDPOINT_MAX_LENGTH + 1),
+      ].forEach((pushEndpoint) => {
+        expect(parseCallSignal({ type, callId: "c-1", pushEndpoint })).toEqual({
+          type,
+          callId: "c-1",
+        });
+      });
+    }
+  );
+
+  it("should not take a push endpoint from other call signals", () => {
+    expect(
+      parseCallSignal({
+        type: "call_cancel",
+        callId: "c-1",
+        pushEndpoint: "https://push.example.com/x",
+      })
+    ).toEqual({ type: "call_cancel", callId: "c-1" });
+  });
+
   it("should keep a known hangup reason and drop an unknown one", () => {
     expect(
       parseCallSignal({ type: "call_hangup", callId: "c-1", reason: "media_unavailable" })
@@ -125,5 +208,73 @@ describe("parseCallSignal", () => {
       type: "call_hangup",
       callId: "c-1",
     });
+  });
+
+  it("should accept a presence_update without a callId", () => {
+    expect(
+      parseCallSignal({
+        type: "presence_update",
+        presence: "background",
+        audioSuspended: true,
+        videoSuspended: false,
+        callId: "ignored",
+      })
+    ).toEqual({
+      type: "presence_update",
+      presence: "background",
+      audioSuspended: true,
+      videoSuspended: false,
+    });
+    expect(
+      parseCallSignal({
+        type: "presence_update",
+        presence: "on_screen",
+        audioSuspended: false,
+        videoSuspended: false,
+      })
+    ).toEqual({
+      type: "presence_update",
+      presence: "on_screen",
+      audioSuspended: false,
+      videoSuspended: false,
+    });
+  });
+
+  it("should drop a presence_update with an unknown presence or non-boolean flags", () => {
+    const valid = { type: "presence_update", audioSuspended: false, videoSuspended: false };
+    expect(parseCallSignal({ ...valid, presence: "disconnected" })).toBeNull();
+    expect(parseCallSignal({ ...valid, presence: "hidden" })).toBeNull();
+    expect(parseCallSignal({ ...valid })).toBeNull();
+    expect(parseCallSignal({ ...valid, presence: "background", audioSuspended: "yes" })).toBeNull();
+    expect(parseCallSignal({ ...valid, presence: "background", videoSuspended: 1 })).toBeNull();
+    expect(
+      parseCallSignal({ type: "presence_update", presence: "background", audioSuspended: true })
+    ).toBeNull();
+  });
+
+  it("should accept a call_sync, which carries nothing", () => {
+    expect(parseCallSignal({ type: "call_sync", callId: "c-1", junk: 1 })).toEqual({
+      type: "call_sync",
+    });
+  });
+
+  it("should accept a call_resume with a boolean sessionRestart", () => {
+    expect(
+      parseCallSignal({ type: "call_resume", callId: "c-1", sessionRestart: true, extra: 1 })
+    ).toEqual({ type: "call_resume", callId: "c-1", sessionRestart: true });
+    expect(parseCallSignal({ type: "call_resume", callId: "c-1", sessionRestart: false })).toEqual({
+      type: "call_resume",
+      callId: "c-1",
+      sessionRestart: false,
+    });
+  });
+
+  it("should drop a call_resume without a callId or a boolean sessionRestart", () => {
+    expect(parseCallSignal({ type: "call_resume", callId: "c-1" })).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_resume", callId: "c-1", sessionRestart: "true" })
+    ).toBeNull();
+    expect(parseCallSignal({ type: "call_resume", sessionRestart: true })).toBeNull();
+    expect(parseCallSignal({ type: "call_resume", callId: "", sessionRestart: true })).toBeNull();
   });
 });

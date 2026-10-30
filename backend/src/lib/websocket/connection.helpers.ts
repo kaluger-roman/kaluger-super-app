@@ -1,7 +1,7 @@
 import { parse } from "url";
 import { WebSocket } from "ws";
 import type { IncomingMessage } from "http";
-import { hasActiveCall } from "../../services/callSignaling";
+import { hasCallHeldByConnection, isCallAwaitingReturnOf } from "../../services/callSignaling";
 import type { CallerKindValue } from "../../types";
 import {
   CONNECTION_READY_MESSAGE,
@@ -21,10 +21,13 @@ export const readTabId = (request: IncomingMessage): string | undefined => {
   return typeof tab === "string" && TAB_ID_PATTERN.test(tab) ? tab : undefined;
 };
 
-// A live socket keeps the connection while its user is in a call, so opening another tab never
-// drops the call: the new socket waits for the call to end. Otherwise an automatic reconnect
-// leaves the live socket alone and a fresh connect takes over. The same tab reconnecting
-// replaces its own socket, which the server may still see as open after the network dropped.
+// A live socket keeps the connection while it holds its user's call, so opening another tab never
+// drops the call: the new socket waits for the call to end. Otherwise (also while an incoming call
+// still rings) an automatic reconnect leaves the live socket alone and a fresh connect takes over;
+// while the call waits for its participant to come back, a reconnect of the page that held the call
+// takes over as well, so it gets the call back from a tab that never picked it up.
+// The same tab reconnecting replaces its own socket, which the server may still see as open after
+// the network dropped.
 export const toTakeoverDecision = (
   kind: CallerKindValue,
   id: string,
@@ -36,8 +39,8 @@ export const toTakeoverDecision = (
     return { action: "register" };
   }
   if (ws.tabId !== undefined && previous.tabId === ws.tabId) return { action: "register" };
-  if (hasActiveCall(kind, id)) return { action: "wait" };
-  if (isResumeRequest(request)) {
+  if (hasCallHeldByConnection(kind, id)) return { action: "wait" };
+  if (isResumeRequest(request) && !isCallAwaitingReturnOf(kind, id, ws.tabId)) {
     return {
       action: "refuse",
       code: REPLACED_CLOSE_CODE,

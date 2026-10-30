@@ -1,4 +1,4 @@
-import type { IceServerPayload } from "./call.types";
+import type { IceServerPayload } from "./signaling.types";
 
 export const buildRtcConfiguration = (iceServers: IceServerPayload[]): RTCConfiguration => ({
   iceServers: iceServers.map((server) => ({

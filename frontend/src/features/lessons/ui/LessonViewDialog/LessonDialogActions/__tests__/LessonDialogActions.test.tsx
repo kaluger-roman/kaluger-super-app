@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Lesson } from "@shared";
 
 import { theme } from "../../../../../../shared/ui/themeConfig";
+import { callConfirmModel } from "../../../../../videoCall";
 import { lessonsModel } from "../../../../models";
 import { LessonDialogActions } from "../LessonDialogActions";
 
@@ -374,6 +375,74 @@ describe("LessonDialogActions", () => {
       expect(screen.getByRole("button", { name: /редактировать/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /закрыть/i })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /восстановить/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Call button", () => {
+    const withCabinet = (overrides: Partial<Lesson> = {}) =>
+      createMockLesson({
+        student: {
+          id: "student-1",
+          name: "Иван Иванов",
+          archived: false,
+          studentUser: { id: "su-1" },
+        },
+        ...overrides,
+      });
+
+    it.each(["SCHEDULED", "COMPLETED", "CANCELLED"] as const)(
+      "should show «Позвонить» for a %s lesson of a student with a cabinet",
+      (status) => {
+        renderWithTheme(<LessonDialogActions lesson={withCabinet({ status })} isMobile={false} />);
+        expect(screen.getByRole("button", { name: "Позвонить" })).toBeInTheDocument();
+      }
+    );
+
+    it("should show «Позвонить» for an archived student with a cabinet", () => {
+      const lesson = withCabinet({
+        student: {
+          id: "student-1",
+          name: "Иван Иванов",
+          archived: true,
+          studentUser: { id: "su-1" },
+        },
+      });
+      renderWithTheme(<LessonDialogActions lesson={lesson} isMobile={false} />);
+      expect(screen.getByRole("button", { name: "Позвонить" })).toBeInTheDocument();
+    });
+
+    it("should hide «Позвонить» for a student without a cabinet and for a trial lesson", () => {
+      const { unmount } = renderWithTheme(
+        <LessonDialogActions lesson={createMockLesson()} isMobile={false} />
+      );
+      expect(screen.queryByRole("button", { name: "Позвонить" })).not.toBeInTheDocument();
+      unmount();
+
+      renderWithTheme(
+        <LessonDialogActions
+          lesson={createMockLesson({ studentId: null, student: undefined, prospectName: "Пётр" })}
+          isMobile={false}
+        />
+      );
+      expect(screen.queryByRole("button", { name: "Позвонить" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /редактировать/i })).toBeInTheDocument();
+    });
+
+    it("should ask to confirm the call of the opened lesson on click", async () => {
+      const lesson = withCabinet();
+      const scope = fork();
+      await allSettled(lessonsModel.viewDialogOpened, { scope, params: lesson });
+      renderWithTheme(<LessonDialogActions lesson={lesson} isMobile={false} />, scope);
+
+      await userEvent.click(screen.getByRole("button", { name: "Позвонить" }));
+
+      expect(scope.getState(callConfirmModel.$isOpen)).toBe(true);
+      expect(scope.getState(callConfirmModel.$call)).toMatchObject({
+        studentId: "student-1",
+        peerName: "Иван Иванов",
+        lesson: { id: "lesson-1" },
+      });
+      expect(scope.getState(lessonsModel.$isViewDialogOpen)).toBe(true);
     });
   });
 });

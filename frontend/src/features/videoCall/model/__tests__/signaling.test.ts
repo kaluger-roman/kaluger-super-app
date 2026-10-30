@@ -55,9 +55,190 @@ describe("features/videoCall/model parseCallSignal", () => {
     expect(parseCallSignal({ type: "call_error", message: "Ошибка" })).toBeNull();
   });
 
+  it("should keep the lesson of an incoming call", () => {
+    const lesson = {
+      id: "l-1",
+      subject: "PHYSICS",
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    };
+
+    expect(
+      parseCallSignal({
+        type: "call_incoming",
+        callId: "c-1",
+        callerName: "Анна",
+        lesson: { ...lesson, extra: 1 },
+        iceServers: [],
+      })
+    ).toEqual({ type: "call_incoming", callId: "c-1", callerName: "Анна", lesson, iceServers: [] });
+  });
+
+  it("should accept an incoming call without a lesson", () => {
+    expect(
+      parseCallSignal({ type: "call_incoming", callId: "c-1", callerName: "Анна", iceServers: [] })
+    ).toMatchObject({ type: "call_incoming", callId: "c-1", lesson: null });
+    expect(
+      parseCallSignal({
+        type: "call_incoming",
+        callId: "c-1",
+        callerName: "Анна",
+        lesson: null,
+        iceServers: [],
+      })
+    ).toMatchObject({ lesson: null });
+  });
+
+  it("should still ring with a malformed lesson, without the lesson", () => {
+    const base = { type: "call_incoming", callId: "c-1", callerName: "Анна", iceServers: [] };
+    const valid = {
+      id: "l-1",
+      subject: "MATHEMATICS",
+      startTime: "2026-10-23T15:00:00.000Z",
+      endTime: "2026-10-23T16:00:00.000Z",
+    };
+
+    expect(parseCallSignal({ ...base, lesson: { ...valid, subject: "CHEMISTRY" } })).toMatchObject({
+      type: "call_incoming",
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: { ...valid, id: 1 } })).toMatchObject({
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: { ...valid, endTime: undefined } })).toMatchObject({
+      lesson: null,
+    });
+    expect(parseCallSignal({ ...base, lesson: "l-1" })).toMatchObject({ lesson: null });
+  });
+
   it("should not take a lesson event for a call signal", () => {
     expect(parseCallSignal({ type: "lesson_status_updated", lessonId: "l-1" })).toBeNull();
     expect(parseCallSignal("call_busy")).toBeNull();
+  });
+});
+
+const SNAPSHOT = {
+  callId: "c-1",
+  status: "connected",
+  direction: "outgoing",
+  peerName: "Анна",
+  lesson: null,
+  iceServers: [{ urls: "stun:stun.example.org" }],
+  peerPresence: { presence: "background", audioSuspended: true, videoSuspended: false },
+  connectedAt: "2026-10-27T10:00:00.000Z",
+};
+
+describe("features/videoCall/model parseCallSignal — 039 messages", () => {
+  it("should accept call_state without a call", () => {
+    expect(parseCallSignal({ type: "call_state", call: null })).toEqual({
+      type: "call_state",
+      call: null,
+    });
+  });
+
+  it("should keep a well-formed call snapshot", () => {
+    expect(parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, extra: 1 } })).toEqual({
+      type: "call_state",
+      call: { ...SNAPSHOT, iceServers: [{ urls: "stun:stun.example.org" }] },
+    });
+    expect(
+      parseCallSignal({
+        type: "call_state",
+        call: { ...SNAPSHOT, status: "ringing", direction: "incoming", connectedAt: null },
+      })
+    ).toEqual({
+      type: "call_state",
+      call: { ...SNAPSHOT, status: "ringing", direction: "incoming", connectedAt: null },
+    });
+  });
+
+  it("should drop call_state with a broken snapshot instead of reading it as no call", () => {
+    expect(parseCallSignal({ type: "call_state" })).toBeNull();
+    expect(parseCallSignal({ type: "call_state", call: "c-1" })).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, status: "ended" } })
+    ).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, direction: "sideways" } })
+    ).toBeNull();
+    expect(parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, callId: "" } })).toBeNull();
+    expect(parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, peerName: 1 } })).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, iceServers: [{ urls: 1 }] } })
+    ).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, connectedAt: undefined } })
+    ).toBeNull();
+    expect(
+      parseCallSignal({
+        type: "call_state",
+        call: { ...SNAPSHOT, peerPresence: { ...SNAPSHOT.peerPresence, presence: "away" } },
+      })
+    ).toBeNull();
+    expect(
+      parseCallSignal({ type: "call_state", call: { ...SNAPSHOT, peerPresence: null } })
+    ).toBeNull();
+  });
+
+  it("should keep the snapshot when only its lesson is malformed", () => {
+    const parsed = parseCallSignal({
+      type: "call_state",
+      call: { ...SNAPSHOT, lesson: { id: "l-1", subject: "CHEMISTRY" } },
+    });
+    expect(parsed).toEqual({ type: "call_state", call: { ...SNAPSHOT, lesson: null } });
+  });
+
+  it("should accept call_peer_presence with a known presence and boolean flags", () => {
+    expect(
+      parseCallSignal({
+        type: "call_peer_presence",
+        callId: "c-1",
+        presence: "disconnected",
+        audioSuspended: false,
+        videoSuspended: false,
+      })
+    ).toEqual({
+      type: "call_peer_presence",
+      callId: "c-1",
+      presence: "disconnected",
+      audioSuspended: false,
+      videoSuspended: false,
+    });
+  });
+
+  it("should drop call_peer_presence with an unknown presence or non-boolean flags", () => {
+    const valid = {
+      type: "call_peer_presence",
+      callId: "c-1",
+      presence: "background",
+      audioSuspended: true,
+      videoSuspended: true,
+    };
+    expect(parseCallSignal({ ...valid, presence: "onScreen" })).toBeNull();
+    expect(parseCallSignal({ ...valid, audioSuspended: "true" })).toBeNull();
+    expect(parseCallSignal({ ...valid, videoSuspended: undefined })).toBeNull();
+    expect(parseCallSignal({ ...valid, callId: undefined })).toBeNull();
+  });
+
+  it("should accept call_peer_resumed with a boolean sessionRestart only", () => {
+    expect(
+      parseCallSignal({ type: "call_peer_resumed", callId: "c-1", sessionRestart: true })
+    ).toEqual({ type: "call_peer_resumed", callId: "c-1", sessionRestart: true });
+    expect(parseCallSignal({ type: "call_peer_resumed", callId: "c-1" })).toBeNull();
+  });
+
+  it("should accept call_restart_announced with a call id only", () => {
+    expect(parseCallSignal({ type: "call_restart_announced", callId: "c-1" })).toEqual({
+      type: "call_restart_announced",
+      callId: "c-1",
+    });
+    expect(parseCallSignal({ type: "call_restart_announced" })).toBeNull();
+  });
+
+  it("should accept call_ended with the peer_not_returned reason", () => {
+    expect(
+      parseCallSignal({ type: "call_ended", callId: "c-1", reason: "peer_not_returned" })
+    ).toEqual({ type: "call_ended", callId: "c-1", reason: "peer_not_returned" });
   });
 });
 
@@ -131,7 +312,13 @@ describe("features/videoCall/model client signaling", () => {
     setCallTransport("student", (message) => sent.push(message), "student-socket");
     const errors = collectEvents(notificationsModel.showErrorEvent);
 
-    receive({ type: "call_incoming", callId: "c-no-socket", callerName: "Анна", iceServers: [] });
+    receive({
+      type: "call_incoming",
+      callId: "c-no-socket",
+      callerName: "Анна",
+      lesson: null,
+      iceServers: [],
+    });
     callModel.acceptCall();
     await settleMicrotasks();
     errors.unwatch();

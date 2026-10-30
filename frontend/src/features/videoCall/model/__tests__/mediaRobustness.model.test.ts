@@ -13,7 +13,12 @@ import {
   settleMicrotasks,
   startCallerSession,
 } from "./callFlow";
-import { createFakeAdapter, createFakeStream, createFakeTrack } from "./fakeWebrtc";
+import {
+  createFakeAdapter,
+  createFakeStream,
+  createFakeTrack,
+  triggerConnectionState,
+} from "./fakeWebrtc";
 import type { FakeAdapter, FakeStream } from "./fakeWebrtc";
 import { collectEvents, readStore } from "./storeProbe";
 
@@ -368,5 +373,17 @@ describe("features/videoCall/model media robustness", () => {
     const types = sent.map((m) => m.type);
     expect(types).toContain("webrtc_answer");
     expect(types.lastIndexOf("webrtc_offer")).toBeGreaterThan(types.indexOf("webrtc_answer"));
+  });
+
+  it("should keep an active call when its connection fails (039: recovered, not ended)", async () => {
+    useAdapter();
+    await connectCallerSession("failed-active");
+    sent.length = 0;
+
+    triggerConnectionState(adapter.peerConnections[0], "failed");
+    await settleMicrotasks();
+
+    expect(readStore(callModel.$callPhase)).toBe("active");
+    expect(sent.some((message) => message.type === "call_hangup")).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { userModel } from "@entities/user";
 import { notificationsApi, showNotification } from "@shared";
+import type { User } from "@shared";
 
 import * as notificationsModel from "../notifications.model";
 import { $autoSubscribeAttempted } from "../notificationsToggle.model";
@@ -21,6 +22,8 @@ vi.mock("@shared", async () => {
     },
   };
 });
+
+const TUTOR = { id: "tutor-1", name: "Анна", email: "anna@example.com" } as User;
 
 const mockedGetVapidKey = vi.mocked(notificationsApi.getVapidKey);
 const mockedGetSettings = vi.mocked(notificationsApi.getSettings);
@@ -49,6 +52,16 @@ describe("notifications.model", () => {
 
       expect(scope.getState(notificationsModel.$vapidKey)).toBeNull();
     });
+
+    it("should keep $vapidKey null when the backend sends an empty key with VAPID not configured (regression)", async () => {
+      mockedGetVapidKey.mockResolvedValue({ vapidPublicKey: "", configured: false });
+
+      const scope = fork();
+      await allSettled(notificationsModel.loadVapidKeyFx, { scope, params: undefined });
+
+      expect(scope.getState(notificationsModel.$vapidKey)).toBeNull();
+      expect(scope.getState(notificationsModel.$canSubscribePush)).toBe(false);
+    });
   });
 
   describe("$isPushSupported", () => {
@@ -66,6 +79,7 @@ describe("notifications.model", () => {
         enabled: true,
         intervals: [5, 30],
         muteWhenInLesson: false,
+        callNotificationsEnabled: true,
       };
       mockedGetSettings.mockResolvedValue(settings);
 
@@ -81,6 +95,7 @@ describe("notifications.model", () => {
         enabled: true,
         intervals: [10, 30],
         muteWhenInLesson: true,
+        callNotificationsEnabled: true,
       };
       mockedUpdateSettings.mockResolvedValue(updatedSettings);
 
@@ -88,7 +103,12 @@ describe("notifications.model", () => {
         values: [
           [
             notificationsModel.$reminderSettings,
-            { enabled: false, intervals: [], muteWhenInLesson: false },
+            {
+              enabled: false,
+              intervals: [],
+              muteWhenInLesson: false,
+              callNotificationsEnabled: true,
+            },
           ],
         ],
       });
@@ -109,11 +129,9 @@ describe("notifications.model", () => {
 
   describe("push subscription state", () => {
     it("should set $isPushSubscribed to true after successful subscribe", async () => {
-      const mockResult = { subscription: {} as PushSubscription, serverResponse: {} as never };
-
       const scope = fork({
         values: [[notificationsModel.$isPushSubscribed, false]],
-        handlers: [[notificationsModel.subscribePushFx, () => mockResult]],
+        handlers: [[notificationsModel.subscribePushFx, () => undefined]],
       });
 
       await allSettled(notificationsModel.subscribePushFx, {
@@ -123,6 +141,23 @@ describe("notifications.model", () => {
 
       expect(scope.getState(notificationsModel.$isPushSubscribed)).toBe(true);
       expect(scope.getState(notificationsModel.$pushPermission)).toBe("granted");
+    });
+
+    it("should read the permission again after the browser refused a subscribe", async () => {
+      vi.stubGlobal("Notification", {
+        permission: "denied",
+        requestPermission: vi.fn().mockResolvedValue("denied"),
+      });
+      const scope = fork();
+      expect(scope.getState(notificationsModel.$isPushPermissionDenied)).toBe(false);
+
+      await allSettled(notificationsModel.subscribePushFx, {
+        scope,
+        params: { vapidKey: "test-key", registration: {} as ServiceWorkerRegistration },
+      });
+
+      expect(scope.getState(notificationsModel.$pushPermission)).toBe("denied");
+      expect(scope.getState(notificationsModel.$isPushPermissionDenied)).toBe(true);
     });
 
     it("should set $isPushSubscribed to false after unsubscribe", async () => {
@@ -137,6 +172,50 @@ describe("notifications.model", () => {
       });
 
       expect(scope.getState(notificationsModel.$isPushSubscribed)).toBe(false);
+    });
+  });
+
+  describe("syncSubscriptionFx", () => {
+    const registrationWith = (subscription: PushSubscription | null) =>
+      ({
+        pushManager: { getSubscription: vi.fn().mockResolvedValue(subscription) },
+      }) as unknown as ServiceWorkerRegistration;
+
+    it("should send the browser's subscription with its keys to the tutor API", async () => {
+      const endpoint = "https://push.example.com/device";
+      const subscription = {
+        endpoint,
+        toJSON: () => ({ endpoint, keys: { p256dh: "p", auth: "a" } }),
+      } as unknown as PushSubscription;
+      vi.mocked(notificationsApi.subscribe).mockResolvedValue({
+        id: "s1",
+        endpoint,
+        deviceName: null,
+        createdAt: "",
+      });
+      const scope = fork();
+
+      const result = await allSettled(notificationsModel.syncSubscriptionFx, {
+        scope,
+        params: registrationWith(subscription),
+      });
+
+      expect(result).toEqual({ status: "done", value: true });
+      expect(notificationsApi.subscribe).toHaveBeenCalledWith({
+        subscription: { endpoint, keys: { p256dh: "p", auth: "a" } },
+      });
+    });
+
+    it("should report a browser without a subscription", async () => {
+      const scope = fork();
+
+      const result = await allSettled(notificationsModel.syncSubscriptionFx, {
+        scope,
+        params: registrationWith(null),
+      });
+
+      expect(result).toEqual({ status: "done", value: false });
+      expect(notificationsApi.subscribe).not.toHaveBeenCalled();
     });
   });
 
@@ -174,7 +253,12 @@ describe("notifications.model", () => {
 
   describe("toast feedback", () => {
     it("should show success toast after settings update", async () => {
-      const updatedSettings = { enabled: true, intervals: [30], muteWhenInLesson: false };
+      const updatedSettings = {
+        enabled: true,
+        intervals: [30],
+        muteWhenInLesson: false,
+        callNotificationsEnabled: true,
+      };
       const messages: Array<{ message: string; type: string }> = [];
 
       const scope = fork({
@@ -231,7 +315,12 @@ describe("notifications.model", () => {
         values: [
           [
             notificationsModel.$reminderSettings,
-            { enabled: true, intervals: [], muteWhenInLesson: false },
+            {
+              enabled: true,
+              intervals: [],
+              muteWhenInLesson: false,
+              callNotificationsEnabled: false,
+            },
           ],
           [notificationsModel.$isPushSubscribed, true],
           [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
@@ -245,13 +334,7 @@ describe("notifications.model", () => {
               throw new Error("sw gone");
             },
           ],
-          [
-            notificationsModel.subscribePushFx,
-            () => ({
-              subscription: {} as PushSubscription,
-              serverResponse: {} as never,
-            }),
-          ],
+          [notificationsModel.subscribePushFx, () => undefined],
         ],
       });
 
@@ -269,10 +352,7 @@ describe("notifications.model", () => {
     });
 
     it("should auto-subscribe only once per session even on repeated loadSettingsFx (regression: bug-hunt 2026-05-24 #2)", async () => {
-      const subscribePushHandler = vi.fn(() => ({
-        subscription: {} as PushSubscription,
-        serverResponse: {} as never,
-      }));
+      const subscribePushHandler = vi.fn();
 
       const scope = fork({
         values: [
@@ -283,6 +363,7 @@ describe("notifications.model", () => {
           [notificationsModel.$isPushSubscribed, false],
           [notificationsModel.$vapidKey, "vapid-key"],
           [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
+          [userModel.$user, TUTOR],
         ],
         handlers: [[notificationsModel.subscribePushFx, subscribePushHandler]],
       });
@@ -291,6 +372,7 @@ describe("notifications.model", () => {
         enabled: true,
         intervals: [],
         muteWhenInLesson: false,
+        callNotificationsEnabled: true,
       });
 
       await allSettled(notificationsModel.loadSettings, { scope });
@@ -325,6 +407,7 @@ describe("notifications.model", () => {
           [notificationsModel.$isPushSubscribed, false],
           [notificationsModel.$vapidKey, "vapid-key"],
           [notificationsModel.$serviceWorkerRegistration, {} as ServiceWorkerRegistration],
+          [userModel.$user, TUTOR],
         ],
         handlers: [[notificationsModel.subscribePushFx, subscribePushHandler]],
       });
@@ -333,6 +416,7 @@ describe("notifications.model", () => {
         enabled: true,
         intervals: [],
         muteWhenInLesson: false,
+        callNotificationsEnabled: true,
       });
 
       await allSettled(notificationsModel.loadSettings, { scope });

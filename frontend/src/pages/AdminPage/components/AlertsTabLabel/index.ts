@@ -1,0 +1,1 @@
+export { AlertsTabLabel } from "./AlertsTabLabel";

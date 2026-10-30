@@ -3,6 +3,7 @@ import { createEffect, createEvent, sample } from "effector";
 import { NO_TRANSPORT_TEXT } from "./call.constants";
 import * as callModel from "./call.model";
 import type { AddressedSignal } from "./call.types";
+import * as callResumeModel from "./callResume.model";
 import * as currentCallModel from "./currentCall.model";
 import { sendOverTransport } from "./transport.helpers";
 
@@ -17,11 +18,14 @@ export const signalQueued = createEvent<AddressedSignal>();
 sample({ clock: signalQueued, target: sendCallSignalFx });
 
 // A signal the current call cannot do without ends it. Signals of another call, or of a call
-// already over here, need no handling: the server ends that call when its socket closes.
+// already over here, need no handling: the server ends that call when its socket closes. While the
+// call's own socket is being restored the loss is expected: the resume brings the call up to date.
 sample({
   clock: currentCallModel.forCurrentCall(sendCallSignalFx.fail, ({ params: { message } }) =>
     "callId" in message ? message.callId : null
   ),
+  source: callResumeModel.$isOwnTransportLost,
+  filter: (transportLost) => !transportLost,
   fn: () => NO_TRANSPORT_TEXT,
   target: callModel.callFailed,
 });

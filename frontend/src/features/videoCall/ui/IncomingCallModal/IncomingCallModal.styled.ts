@@ -27,6 +27,19 @@ export const Name = styled(Typography)({
   fontWeight: 600,
 });
 
+export const LessonBox = styled(Box)(({ theme }) => ({
+  alignSelf: "stretch",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 2,
+  marginTop: 4,
+  padding: "10px 16px",
+  borderRadius: 12,
+  textAlign: "center",
+  background: theme.palette.grey[100],
+}));
+
 export const Actions = styled(Box)({
   display: "flex",
   justifyContent: "center",

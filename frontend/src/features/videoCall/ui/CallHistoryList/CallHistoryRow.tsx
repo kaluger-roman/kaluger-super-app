@@ -3,6 +3,7 @@ import type { FC } from "react";
 import {
   CallMade as CallMadeIcon,
   CallReceived as CallReceivedIcon,
+  MenuBook as MenuBookIcon,
   Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import { Chip, Typography } from "@mui/material";
@@ -14,6 +15,7 @@ import { getStatusChipColor } from "./CallHistoryList.helpers";
 import * as Styled from "./CallHistoryList.styled";
 import {
   formatCallDuration,
+  formatCallLesson,
   getCallDirectionLabel,
   getCallStatusLabel,
 } from "../../videoCall.helpers";
@@ -55,6 +57,13 @@ export const CallHistoryRow: FC<CallHistoryRowProps> = ({ record }) => {
             </Styled.Duration>
           )}
         </Styled.RowMeta>
+
+        {record.lesson && (
+          <Styled.LessonLine variant="body2">
+            <MenuBookIcon fontSize="inherit" />
+            Урок: {formatCallLesson(record.lesson)}
+          </Styled.LessonLine>
+        )}
       </Styled.RowMain>
     </Styled.RowCard>
   );

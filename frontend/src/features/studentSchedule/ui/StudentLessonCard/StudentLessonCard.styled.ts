@@ -1,4 +1,4 @@
-import { Box, Card, Chip, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, Chip, Typography } from "@mui/material";
 
 import { styled } from "@shared";
 
@@ -11,12 +11,16 @@ const statusBorder: Record<string, string> = {
 };
 
 export const StyledCard = styled(Card)<{ $status: string }>(({ theme, $status }) => ({
-  padding: theme.spacing(2),
   borderLeftWidth: "4px",
   borderLeftStyle: "solid",
   borderLeftColor: statusBorder[$status] ?? theme.palette.divider,
+}));
+
+export const ActionArea = styled(CardActionArea)(({ theme }) => ({
+  padding: theme.spacing(2),
   display: "flex",
   flexDirection: "column",
+  alignItems: "stretch",
   gap: theme.spacing(0.5),
 }));
 

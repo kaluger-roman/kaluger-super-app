@@ -178,3 +178,133 @@ describe("Call history REST API", () => {
     });
   });
 });
+
+describe("Call history REST API: lesson of a call", () => {
+  let tutorId: string;
+  let tutorToken: string;
+  let studentId: string;
+  let studentUserId: string;
+  let studentToken: string;
+  let lessonId: string;
+  let deletedLessonId: string;
+
+  beforeAll(async () => {
+    const tutor = await prisma.user.create({
+      data: {
+        email: uniqueEmail().toLowerCase(),
+        password: "hash",
+        name: "Анна",
+        isEmailVerified: true,
+      },
+    });
+    tutorId = tutor.id;
+    tutorToken = generateToken({ userId: tutor.id, email: tutor.email });
+    const student = await prisma.student.create({ data: { name: "Иван", tutorId } });
+    studentId = student.id;
+    const studentUser = await prisma.studentUser.create({
+      data: {
+        email: uniqueEmail().toLowerCase(),
+        password: "hash",
+        name: "Иван",
+        isEmailVerified: true,
+        studentId,
+      },
+    });
+    studentUserId = studentUser.id;
+    studentToken = generateStudentToken({
+      studentUserId,
+      email: studentUser.email,
+      isStudent: true,
+      tokenVersion: studentUser.tokenVersion,
+    });
+    const lesson = await prisma.lesson.create({
+      data: {
+        tutorId,
+        studentId,
+        subject: "PHYSICS",
+        startTime: new Date("2026-06-05T15:00:00.000Z"),
+        endTime: new Date("2026-06-05T16:00:00.000Z"),
+      },
+    });
+    lessonId = lesson.id;
+    const deletedLesson = await prisma.lesson.create({
+      data: {
+        tutorId,
+        studentId,
+        startTime: new Date("2026-06-06T15:00:00.000Z"),
+        endTime: new Date("2026-06-06T16:00:00.000Z"),
+      },
+    });
+    deletedLessonId = deletedLesson.id;
+
+    await prisma.callRecord.createMany({
+      data: [
+        {
+          tutorId,
+          studentId,
+          lessonId,
+          callerKind: "STUDENT",
+          status: "COMPLETED",
+          startedAt: new Date("2026-06-05T15:01:00.000Z"),
+          endedAt: new Date("2026-06-05T15:31:00.000Z"),
+          durationSeconds: 1800,
+        },
+        {
+          tutorId,
+          studentId,
+          lessonId: deletedLessonId,
+          callerKind: "TUTOR",
+          status: "MISSED",
+          startedAt: new Date("2026-06-06T15:01:00.000Z"),
+        },
+        {
+          tutorId,
+          studentId,
+          callerKind: "TUTOR",
+          status: "CANCELED",
+          startedAt: new Date("2026-06-07T15:01:00.000Z"),
+        },
+      ],
+    });
+    await prisma.lesson.delete({ where: { id: deletedLessonId } });
+  });
+
+  afterAll(async () => {
+    await prisma.callRecord.deleteMany({ where: { tutorId } });
+    await prisma.lesson.deleteMany({ where: { tutorId } });
+    await prisma.studentUser.deleteMany({ where: { id: studentUserId } });
+    await prisma.student.deleteMany({ where: { id: studentId } });
+    await prisma.user.deleteMany({ where: { id: tutorId } });
+  });
+
+  const expectedLesson = () => ({
+    id: lessonId,
+    subject: "PHYSICS",
+    startTime: "2026-06-05T15:00:00.000Z",
+    endTime: "2026-06-05T16:00:00.000Z",
+  });
+
+  it("should give the tutor the lesson of a lesson call and null otherwise", async () => {
+    const res = await request(app)
+      .get("/api/calls/history")
+      .set("Authorization", `Bearer ${tutorToken}`)
+      .expect(200);
+
+    expect(res.body.items.map((item: { lesson: unknown }) => item.lesson)).toEqual([
+      null,
+      null,
+      expectedLesson(),
+    ]);
+  });
+
+  it("should give the student the lesson of a lesson call and null otherwise", async () => {
+    const res = await request(app)
+      .get("/api/student/calls/history")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(res.body.items).toHaveLength(3);
+    expect(res.body.items[2]).toMatchObject({ direction: "outgoing", lesson: expectedLesson() });
+    expect(res.body.items[1]).toMatchObject({ status: "MISSED", lesson: null });
+  });
+});

@@ -2,7 +2,8 @@
 // A temp root holds a fake prod backup dir, a fake home copy dir and stub
 // binaries: `ssh` routes the remote command into the real prod wrapper, the
 // `rrsync` stub execs the real `rsync --server` inside the prod dir, `docker`
-// records its argv and answers from env switches.
+// records its argv and answers from env switches, `df` prints the space from
+// DF_STUB_AVAIL / DF_STUB_SIZE.
 import { test as nodeTest } from "node:test";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,6 +28,8 @@ export const test = (name, ...args) => {
 
 export const NOW = Date.parse("2026-10-16T12:00:00Z");
 export const DAY_MS = 24 * 60 * 60 * 1000;
+export const DF_AVAIL = 107374182400;
+export const DF_SIZE = 250059350016;
 
 const SSH_STUB = `#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$SSH_STUB_LOG"
@@ -43,7 +46,21 @@ while (($#)); do
 done
 shift
 export SSH_ORIGINAL_COMMAND="$*"
+if [[ -n \${SSH_STUB_FAIL_PATTERN:-} && $SSH_ORIGINAL_COMMAND == *"$SSH_STUB_FAIL_PATTERN"* ]]; then
+  echo "ssh: connect to host: Connection timed out" >&2
+  exit 255
+fi
 exec "$OFFSITE_TEST_WRAPPER" "$OFFSITE_TEST_PROD_DIR"
+`;
+
+const DF_STUB = `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$DF_STUB_LOG"
+if [[ -n \${DF_STUB_EXIT:-} ]]; then
+  echo "df: cannot read table of mounted file systems" >&2
+  exit "$DF_STUB_EXIT"
+fi
+echo "       Avail    1B-blocks"
+echo "  $DF_STUB_AVAIL $DF_STUB_SIZE"
 `;
 
 const RRSYNC_STUB = `#!/usr/bin/env bash
@@ -144,6 +161,7 @@ export const createFixture = () => {
   writeExecutable(join(bin, "ssh"), SSH_STUB);
   writeExecutable(join(bin, "rrsync"), RRSYNC_STUB);
   writeExecutable(join(bin, "docker"), DOCKER_STUB);
+  writeExecutable(join(bin, "df"), DF_STUB);
 
   const env = {
     PATH: `${bin}:${process.env.PATH}`,
@@ -160,6 +178,9 @@ export const createFixture = () => {
     RRSYNC_STUB_LOG: join(root, "rrsync.log"),
     DOCKER_LOG: join(root, "docker.log"),
     DOCKER_RESTORE_INPUT: join(root, "restore-input.sql"),
+    DF_STUB_LOG: join(root, "df.log"),
+    DF_STUB_AVAIL: String(DF_AVAIL),
+    DF_STUB_SIZE: String(DF_SIZE),
   };
 
   return {

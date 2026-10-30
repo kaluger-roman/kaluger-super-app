@@ -1,7 +1,7 @@
 import { useGate, useUnit } from "effector-react";
 
 import { userModel } from "@entities";
-import { ReminderSettings, TaxRatePeriodsModal } from "@features";
+import { CallNotificationSettings, ReminderSettings, TaxRatePeriodsModal } from "@features";
 
 import { FinancesSection, PersonalDataSection, ProfileTabs, SecuritySection } from "./components";
 import { profileModel } from "./models";
@@ -26,7 +26,12 @@ export const ProfilePage = () => {
       {activeTab === "personal" && <PersonalDataSection />}
       {activeTab === "security" && <SecuritySection />}
       {activeTab === "finances" && <FinancesSection />}
-      {activeTab === "notifications" && <ReminderSettings />}
+      {activeTab === "notifications" && (
+        <Styled.SettingsStack>
+          <ReminderSettings />
+          <CallNotificationSettings />
+        </Styled.SettingsStack>
+      )}
 
       <TaxRatePeriodsModal />
     </Styled.StyledContainer>

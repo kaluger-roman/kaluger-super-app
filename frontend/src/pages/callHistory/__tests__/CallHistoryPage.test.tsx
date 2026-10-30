@@ -24,6 +24,7 @@ const record: CallHistoryRecord = {
   startedAt: "2026-06-03T14:32:00.000Z",
   durationSeconds: 1845,
   status: "COMPLETED",
+  lesson: null,
 };
 
 const renderPage = (principal: CallHistoryPrincipal = "tutor"): void => {

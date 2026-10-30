@@ -13,7 +13,8 @@ import { useUnit } from "effector-react";
 import type { Lesson } from "@shared";
 
 import * as Styled from "./LessonDialogActions.styled";
-import { lessonsModel } from "../../../models";
+import { CallButton } from "../../../../videoCall";
+import { hasCallableStudent, lessonCallModel, lessonsModel } from "../../../models";
 
 type LessonDialogActionsProps = {
   lesson: Lesson;
@@ -28,74 +29,85 @@ export const LessonDialogActions: FC<LessonDialogActionsProps> = ({ lesson, isMo
     editFromViewRequested: lessonsModel.editFromViewRequested,
     viewDialogClosed: lessonsModel.viewDialogClosed,
     rescheduleDialogOpened: lessonsModel.rescheduleDialogOpened,
+    lessonCallRequested: lessonCallModel.lessonCallRequested,
   });
 
   return (
-    <Styled.Container $isMobile={isMobile}>
-      {/* Первый столбец: действия с уроком */}
-      <Styled.ActionsColumn>
-        {lesson.status !== "CANCELLED" && (
-          <Button
-            onClick={() => actions.rescheduleDialogOpened(lesson)}
-            variant="outlined"
-            color="info"
-            size="small"
-            startIcon={<RescheduleIcon />}
-            fullWidth
-          >
-            Перенести
-          </Button>
-        )}
-        {lesson.status !== "CANCELLED" && (
-          <Button
-            onClick={() => actions.openCancelConfirmForLesson(lesson)}
-            variant="outlined"
-            color="warning"
-            size="small"
-            startIcon={<CancelIcon />}
-            fullWidth
-          >
-            Отменить
-          </Button>
-        )}
-        {lesson.status === "CANCELLED" && (
-          <Button
-            onClick={() => actions.openRestoreConfirmForLesson(lesson)}
-            variant="outlined"
-            color="success"
-            size="small"
-            startIcon={<RestoreIcon />}
-            fullWidth
-          >
-            Восстановить
-          </Button>
-        )}
-        <Button
-          onClick={() => actions.openDeleteConfirmForLesson(lesson)}
-          variant="outlined"
-          color="error"
-          size="small"
-          startIcon={<DeleteIcon />}
+    <Styled.Root>
+      {hasCallableStudent(lesson) && (
+        <CallButton
+          label="Позвонить"
+          color="success"
           fullWidth
-        >
-          Удалить
-        </Button>
-      </Styled.ActionsColumn>
+          onClick={() => actions.lessonCallRequested()}
+        />
+      )}
+      <Styled.Container $isMobile={isMobile}>
+        {/* Первый столбец: действия с уроком */}
+        <Styled.ActionsColumn>
+          {lesson.status !== "CANCELLED" && (
+            <Button
+              onClick={() => actions.rescheduleDialogOpened(lesson)}
+              variant="outlined"
+              color="info"
+              size="small"
+              startIcon={<RescheduleIcon />}
+              fullWidth
+            >
+              Перенести
+            </Button>
+          )}
+          {lesson.status !== "CANCELLED" && (
+            <Button
+              onClick={() => actions.openCancelConfirmForLesson(lesson)}
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<CancelIcon />}
+              fullWidth
+            >
+              Отменить
+            </Button>
+          )}
+          {lesson.status === "CANCELLED" && (
+            <Button
+              onClick={() => actions.openRestoreConfirmForLesson(lesson)}
+              variant="outlined"
+              color="success"
+              size="small"
+              startIcon={<RestoreIcon />}
+              fullWidth
+            >
+              Восстановить
+            </Button>
+          )}
+          <Button
+            onClick={() => actions.openDeleteConfirmForLesson(lesson)}
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<DeleteIcon />}
+            fullWidth
+          >
+            Удалить
+          </Button>
+        </Styled.ActionsColumn>
 
-      {/* Второй столбец: закрыть и редактировать */}
-      <Styled.CloseEditColumn $isMobile={isMobile}>
-        <Button onClick={actions.viewDialogClosed} variant="outlined" fullWidth>
-          Закрыть
-        </Button>
-        <Button
-          onClick={actions.editFromViewRequested}
-          variant="contained"
-          startIcon={<EditIcon />}
-          fullWidth
-        >
-          Редактировать
-        </Button>
-      </Styled.CloseEditColumn>
-    </Styled.Container>
+        {/* Второй столбец: закрыть и редактировать */}
+        <Styled.CloseEditColumn $isMobile={isMobile}>
+          <Button onClick={actions.viewDialogClosed} variant="outlined" fullWidth>
+            Закрыть
+          </Button>
+          <Button
+            onClick={actions.editFromViewRequested}
+            variant="contained"
+            startIcon={<EditIcon />}
+            fullWidth
+          >
+            Редактировать
+          </Button>
+        </Styled.CloseEditColumn>
+      </Styled.Container>
+    </Styled.Root>
   );
 };

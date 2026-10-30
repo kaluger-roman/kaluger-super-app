@@ -1,7 +1,6 @@
 import { isRecord } from "@shared";
 
 import * as callModel from "./call.model";
-import type { IceServerPayload } from "./call.types";
 import { CALL_CANCEL_REASONS, CALL_END_REASONS } from "./signaling.constants";
 import type {
   CallCancelReason,
@@ -10,8 +9,13 @@ import type {
   CallRole,
   CallSignalingOutbound,
 } from "./signaling.types";
-
-const isString = (value: unknown): value is string => typeof value === "string";
+import {
+  isString,
+  toCallLesson,
+  toCallSnapshot,
+  toIceServers,
+  toPeerPresenceState,
+} from "./signalingSnapshot.helpers";
 
 const isOptionalString = (value: unknown): value is string | undefined =>
   value === undefined || isString(value);
@@ -24,20 +28,6 @@ const isEndReason = (value: unknown): value is CallEndReason =>
 
 const isCancelReason = (value: unknown): value is CallCancelReason =>
   CALL_CANCEL_REASONS.some((reason) => reason === value);
-
-const toIceServers = (value: unknown): IceServerPayload[] | null => {
-  if (!Array.isArray(value)) return null;
-  const servers: IceServerPayload[] = [];
-  for (const item of value) {
-    if (!isRecord(item)) return null;
-    const { urls, username, credential } = item;
-    if (!isString(urls) || !isOptionalString(username) || !isOptionalString(credential)) {
-      return null;
-    }
-    servers.push({ urls, username, credential });
-  }
-  return servers;
-};
 
 const toSdp = (value: unknown): RTCSessionDescriptionInit | null => {
   if (!isRecord(value) || !isString(value.sdp)) return null;
@@ -79,11 +69,19 @@ const toMediaSignal = (
   return { type: "call_media_state", callId, micOn, cameraOn, screenSharing, cameraAvailable };
 };
 
-// Signals that carry no callId: replies to an invite and the history notice.
+const toCallState = (data: Record<string, unknown>): CallSignalingOutbound | null => {
+  if (data.call === null) return { type: "call_state", call: null };
+  const call = toCallSnapshot(data.call);
+  return call ? { type: "call_state", call } : null;
+};
+
+// Signals that carry no callId: replies to an invite, the history notice and the call snapshot.
 const parseCallFreeSignal = (data: Record<string, unknown>): CallSignalingOutbound | null => {
   switch (data.type) {
     case "call_history_updated":
       return { type: "call_history_updated" };
+    case "call_state":
+      return toCallState(data);
     case "call_busy":
       return isString(data.inviteId) ? { type: "call_busy", inviteId: data.inviteId } : null;
     case "call_unavailable": {
@@ -115,7 +113,13 @@ export const parseCallSignal = (data: unknown): CallSignalingOutbound | null => 
     case "call_incoming": {
       const iceServers = toIceServers(data.iceServers);
       return iceServers && isString(data.callerName)
-        ? { type: "call_incoming", callId, callerName: data.callerName, iceServers }
+        ? {
+            type: "call_incoming",
+            callId,
+            callerName: data.callerName,
+            lesson: toCallLesson(data.lesson),
+            iceServers,
+          }
         : null;
     }
     case "call_ringing":
@@ -128,6 +132,7 @@ export const parseCallSignal = (data: unknown): CallSignalingOutbound | null => 
     }
     case "call_rejected":
     case "call_no_answer":
+    case "call_restart_announced":
       return { type: data.type, callId };
     case "call_canceled":
       return isCancelReason(data.reason)
@@ -146,6 +151,14 @@ export const parseCallSignal = (data: unknown): CallSignalingOutbound | null => 
     }
     case "call_media_state":
       return toMediaSignal(data, callId);
+    case "call_peer_presence": {
+      const presence = toPeerPresenceState(data);
+      return presence ? { type: "call_peer_presence", callId, ...presence } : null;
+    }
+    case "call_peer_resumed":
+      return typeof data.sessionRestart === "boolean"
+        ? { type: "call_peer_resumed", callId, sessionRestart: data.sessionRestart }
+        : null;
     default:
       return null;
   }

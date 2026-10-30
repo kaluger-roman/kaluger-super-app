@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "branch": "039-call-fullscreen",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 4,
+  "timestamp": "2026-10-23T19:11:53Z",
+  "diff_stats": {
+    "files_changed": 62,
+    "insertions": 3737,
+    "deletions": 166
+  },
+  "summary": {
+    "raw_findings": 4,
+    "after_dedup": 2,
+    "after_score_filter": 1,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1
+    },
+    "by_category": {
+      "logic": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Исправление iter-3 f7 сделало масштаб тачпадом немонотонным: на |deltaY| = 10 чувствительность падает в 5 раз, и более быстрый щипок увеличивает слабее медленного",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.helpers.ts",
+      "line_start": 93,
+      "line_end": 95,
+      "snippet": "  const isPinch = ctrlKey && Math.abs(deltaPx) <= PINCH_WHEEL_MAX_DELTA_PX;\n  const sensitivity = isPinch ? PINCH_WHEEL_ZOOM_SENSITIVITY : WHEEL_ZOOM_SENSITIVITY;\n  return Math.exp(-deltaPx * sensitivity);",
+      "rationale": "Щипок и щелчок колеса теперь различаются по порогу, и на пороге коэффициент масштаба разрывается: при ctrlKey и deltaY = 10 factor = exp(-0.1) ≈ 0,905 (шаг около 10 %), а при deltaY = 10,5 factor = exp(-0.021) ≈ 0,979 (около 2 %). Chrome переводит щипок тачпада в ctrl + wheel с deltaY ≈ 100·ln(scale) и сливает события щипка, пока ждёт подтверждения предыдущего. Поэтому у быстрого или «тяжёлого» по кадрам щипка дельты больше 10, и картинка рывком замедляется ровно тогда, когда пользователь щиплет энергичнее. Тесты проверяют только точки -10 и -100, разрыв между ними не виден. (also flagged by: shallow-bug, hacks)",
+      "fix_hint": "Сделать функцию непрерывной: при ctrlKey ограничивать дельту, а не переключать чувствительность, например deltaPx = Math.sign(deltaPx) * Math.min(Math.abs(deltaPx), PINCH_WHEEL_MAX_DELTA_PX) с PINCH-чувствительностью. Тогда щелчок колеса с Ctrl (deltaY 100) даёт тот же шаг около 10 %, что и предельный щипок. Добавить тест: при ctrlKey |ln factor| не убывает с ростом |deltaY| (например, factor(-11) ≥ factor(-10)).",
+      "score": 50,
+      "verification_note": "Разрыв подтверждён кодом: в VideoTile.helpers.ts при ctrlKey порог PINCH_WHEEL_MAX_DELTA_PX=10 переключает чувствительность с 0,01 на 0,002, так что deltaY=10 даёт exp(-0,1), а deltaY=10,5 даёт exp(-0,021), и немонотонность реальна, но это регрессия тонкой настройки жеста без краша и без нарушения CLAUDE.md, поэтому 50 (все три независимые оценки одинаковых находок от shallow-bug, deep-logic и hacks — 50).",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Решение «касание открыло скрытую панель, включить защиту» принимает хук по $isCursorHidden, а не модель по $controlsVisible",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/ui/ActiveCallScreen/ActiveCallScreen.hooks.ts",
+      "line_start": 73,
+      "line_end": 76,
+      "snippet": "    onPointerDown: (event) => {\n      if (event.pointerType !== \"mouse\" && isCursorHidden) actions.hiddenControlsTapped();\n      else actions.activityDetected();\n    },",
+      "rationale": "От этой ветки зависит, будет ли запущен $isRevealGuarded, то есть модельная логика лежит в UI (docs/conventions/frontend.md:104 «Business logic in models, not components»). Признак «панель скрыта» хук берёт из стора о курсоре, и это значение из замыкания рендера. Сейчас $isCursorHidden совпадает с «режим и панель скрыта» только по формуле combine. Если поменять правило скрытия курсора (например, скрывать его только над видео или не скрывать на touch-устройствах), защита от касания-призрака молча изменится, и ни один тест модели этого не заметит: тесты модели запускают hiddenControlsTapped напрямую.",
+      "fix_hint": "Пусть хук шлёт одно событие нажатия с типом указателя, например `pointerPressed({ isTouch })`, а модель сама решает: `sample({ clock: pointerPressed, source: { isFullscreen: $isFullscreen, visible: $controlsVisible }, filter: ({ isFullscreen, visible }, { isTouch }) => isFullscreen && !visible && isTouch, target: hiddenControlsTapped })` и activityDetected для всех нажатий. Тогда useCallActivity не читает $isCursorHidden, а ветку можно проверить тестом модели.",
+      "score": 25,
+      "verification_note": "Хук действительно решает, слать ли hiddenControlsTapped, по $isCursorHidden из рендера, а не по модели, но сейчас $isCursorHidden точно равен isFullscreen && !visible, а отдельного сценария поломки не показано, так что это структурная претензия к месту решения, а не подтверждённый вред.",
+      "reason": "below threshold"
+    }
+  ]
+}

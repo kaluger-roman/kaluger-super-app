@@ -7,7 +7,9 @@ import { getBackupSettingsFx } from "../adminData.model";
 import {
   $minRetentionDays,
   $offsiteLastSyncAt,
+  $offsiteSyncStaleHours,
   $restoreCheck,
+  $restoreCheckStaleHours,
   $storageLimitExceeded,
 } from "../backupStatus.model";
 
@@ -25,6 +27,8 @@ const response: BackupSettingsFullResponse = {
       status: "success",
       counts: { users: 14, students: 93, lessons: 2431 },
     },
+    syncStaleHours: 12,
+    restoreCheckStaleHours: 36,
   },
 };
 
@@ -42,6 +46,15 @@ describe("features/admin/models/backupStatus.model", () => {
     expect(scope.getState($storageLimitExceeded)).toBe(false);
     expect(scope.getState($offsiteLastSyncAt)).toBeNull();
     expect(scope.getState($restoreCheck)).toBeNull();
+    expect(scope.getState($offsiteSyncStaleHours)).toBe(24);
+    expect(scope.getState($restoreCheckStaleHours)).toBe(48);
+  });
+
+  it("should take the offsite stale thresholds from the response", async () => {
+    const scope = await loadSettings(response);
+
+    expect(scope.getState($offsiteSyncStaleHours)).toBe(12);
+    expect(scope.getState($restoreCheckStaleHours)).toBe(36);
   });
 
   it("should take the retention floor and the limit flag from the response", async () => {
@@ -68,6 +81,8 @@ describe("features/admin/models/backupStatus.model", () => {
       values: [
         [$offsiteLastSyncAt, "2026-10-16T14:17:03Z"],
         [$storageLimitExceeded, true],
+        [$offsiteSyncStaleHours, 12],
+        [$restoreCheckStaleHours, 36],
       ],
       handlers: [[getBackupSettingsFx, () => Promise.resolve(legacy)]],
     });
@@ -78,6 +93,8 @@ describe("features/admin/models/backupStatus.model", () => {
     expect(scope.getState($storageLimitExceeded)).toBe(false);
     expect(scope.getState($offsiteLastSyncAt)).toBeNull();
     expect(scope.getState($restoreCheck)).toBeNull();
+    expect(scope.getState($offsiteSyncStaleHours)).toBe(24);
+    expect(scope.getState($restoreCheckStaleHours)).toBe(48);
   });
 
   it("should reset the offsite fields to null when a later response has none", async () => {

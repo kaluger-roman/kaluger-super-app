@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { tryAttachCommissionToLessons } from "../commission";
+import { LESSON_STUDENT_INCLUDE } from "./lessonsQuery.constants";
 import type { LessonsPageOptions, PaymentsSummary } from "./lessonsQuery.types";
 
 export const fetchLessonsPage = async (
@@ -10,7 +11,7 @@ export const fetchLessonsPage = async (
   const [lessons, total, paymentsAggregate] = await Promise.all([
     prisma.lesson.findMany({
       where,
-      include: { student: true },
+      include: LESSON_STUDENT_INCLUDE,
       orderBy: { startTime: orderAsc ? "asc" : "desc" },
       ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
     }),

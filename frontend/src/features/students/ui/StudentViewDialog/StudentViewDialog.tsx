@@ -101,7 +101,7 @@ export const StudentViewDialog: FC<StudentViewDialogProps> = ({ open, student })
 
         <Styled.ActionsContainer $isMobile={isMobile}>
           <Styled.ActionsLeft>
-            {student.studentUser && !student.archived && (
+            {student.studentUser && (
               <CallButton fullWidth={isMobile} onClick={() => actions.callRequested(student)} />
             )}
             {student.archived ? (

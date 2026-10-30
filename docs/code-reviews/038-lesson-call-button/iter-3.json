@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "branch": "038-lesson-call-button",
+  "base_ref": "2352a4da634ea748fd7c6e1361bf972c516f6160 (merge-base main HEAD, working-tree mode)",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-23T18:32:56Z",
+  "diff_stats": {
+    "files_changed": 142,
+    "insertions": 4699,
+    "deletions": 352
+  },
+  "summary": {
+    "raw_findings": 5,
+    "after_dedup": 3,
+    "after_score_filter": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 2
+    },
+    "by_category": {
+      "logic": 1,
+      "convention": 1
+    },
+    "agents_failed": [],
+    "agents_findings": {
+      "claude-md": 1,
+      "shallow-bug": 0,
+      "deep-logic": 1,
+      "security": 1,
+      "type-safety": 0,
+      "removed-behavior": 0,
+      "cross-file": 0,
+      "wrapper-proxy": 0,
+      "hacks": 2
+    },
+    "scoring_notes": "deep-logic, security and hacks all flagged the non-atomic check-then-insert in createCallRecord; merged into one finding. Excluded from scope: specs/**, docs/mockups/**, docs/code-reviews/**, CHANGELOG.md, CLAUDE.md (Active Technologies lines only), package-lock.json, .claude/auto-feature/**. No null scores.",
+    "iter2_fixes_verified": "f1: resolveRecordLessonId closes the reported live-call/reassignment case and is covered by tests; the remaining gap is the millisecond window between the check and the insert (f1 of this iteration). f2: the two named e2e tests were renamed; a third test in lesson-call.spec.ts:22 still does not follow the naming rule (f2 of this iteration). f3: not re-reported, no reviewer found a type-checking alternative."
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Гонка check-then-insert в createCallRecord: запись может остаться привязанной к уроку, который уже передан другому ученику",
+      "category": "logic",
+      "file": "backend/src/services/callRecord/createCallRecord.ts",
+      "line_start": 41,
+      "line_end": 49,
+      "snippet": "export const createCallRecord = async (args: CreateCallRecordArgs): Promise<void> => {\n  const lessonId = await resolveRecordLessonId(args);\n  try {\n    await insertCallRecord(args, lessonId);\n  } catch (error) {",
+      "rationale": "Проверка принадлежности урока (findFirst по tutorId+studentId) и вставка записи идут отдельными запросами без транзакции и блокировки. Если между ними коммитится смена ученика урока в runLessonUpdateTransaction (lessonUpdate.ts), её updateMany запись ещё не видит, а FK-проверка при вставке берёт только FOR KEY SHARE, который не конфликтует с FOR NO KEY UPDATE от lesson.update. В итоге запись остаётся привязанной к уроку нового ученика: звонок старого ученика виден в карточке урока, а старый ученик в своей истории видит чужой урок. Окно узкое (миллисекунды при завершении звонка), поэтому важность низкая, но это ровно тот инвариант, ради которого добавлены resolveRecordLessonId и updateMany. Agent hacks дополнительно отмечает, что инвариант теперь держится в трёх местах (updateMany в lessonUpdate, предпроверка, FK-повтор) вместо одного атомарного механизма. (also flagged by: security, hacks)",
+      "fix_hint": "Делать проверку и вставку атомарно: prisma.$transaction, в нём SELECT ... FROM lessons WHERE id=$1 AND \"tutorId\"=$2 AND \"studentId\"=$3 FOR SHARE (конфликтует с FOR NO KEY UPDATE от lesson.update, поэтому операции выстроятся по очереди), затем create. Либо одним INSERT ... SELECT. Если окно сочтено допустимым, явно описать это допущение в комментарии к resolveRecordLessonId.",
+      "score": 50,
+      "verification_note": "Гонка реальна и введена этим diff: createCallRecord делает findFirst и create без транзакции и без advisory lock, который берёт runLessonUpdateTransaction, а FK-проверка при вставке (FOR KEY SHARE) не конфликтует с обновлением studentId урока, поэтому окно миллисекундное и редкое, оценка 50 как подтверждённая, но минорная проблема, а не 75.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "claude-md",
+      "title": "Исправление f2 из iter-2 неполное: первый тест в lesson-call.spec.ts всё ещё назван не в форме «учитель делает X и видит Y»",
+      "category": "convention",
+      "file": "frontend/e2e/lessons/lesson-call.spec.ts",
+      "line_start": 22,
+      "line_end": 22,
+      "snippet": "  test(\"учитель звонит из окна урока: подтверждение, урок во входящем, звонок в окне урока\", async ({",
+      "rationale": "Правило docs/conventions/e2e-testing.md:75 требует для test('...') форму «учитель делает X и видит Y». В iter-3 переименовали только два теста, указанных в f2 (lesson-call.spec.ts:140 и call-history.spec.ts:58). Этот новый тест из того же файла остался с перечислением через двоеточие вместо «и видит …». Соседние тесты (lesson-call.spec.ts:93, :140, call-history.spec.ts:6, :28, :58) правилу следуют.",
+      "fix_hint": "Переименовать, например: «учитель звонит из окна урока, подтверждает звонок и видит его в списке звонков урока, а ученик видит урок во входящем».",
+      "score": 50,
+      "verification_note": "Правило «учитель делает X и видит Y» для test() явно записано в docs/conventions/e2e-testing.md:75, и название теста в lesson-call.spec.ts:22 через двоеточие ему не соответствует, но в самом репозитории такие имена встречаются широко (например, «учитель отменяет оплаченный урок и оплата переносится…» в cancel-with-payment-shift.spec.ts:5), поэтому это подтверждённое, но мелкое отклонение по именованию, а не функциональная проблема.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Тест повтора по FK в createCallRecord.test не отличает ветку повтора от ветки предпроверки: обе дают lessonId null, а подмена findFirst нигде не проверяется",
+      "category": "hack",
+      "file": "backend/src/services/callRecord/__tests__/createCallRecord.test.ts",
+      "line_start": 225,
+      "line_end": 244,
+      "snippet": "  it(\"should retry without the lesson when the lesson is deleted right after the check\", async () => {\n    const lesson = await createLesson();\n    const findLesson = jest.spyOn(prisma.lesson, \"findFirst\").mockResolvedValueOnce(lesson);\n    await prisma.lesson.delete({ where: { id: lesson.id } });\n    try {",
+      "rationale": "Ожидаемый результат `{ status: \"MISSED\", lessonId: null }` совпадает с тем, что даёт предпроверка без всякой гонки. Тест не проверяет ни того, что заглушка findFirst сработала, ни того, что create вызван дважды. Поэтому если resolveRecordLessonId перейдёт на findUnique или на клиент транзакции, mockResolvedValueOnce тихо перестанет срабатывать, тест останется зелёным, а ветку повтора можно будет удалить незаметно. Та же проблема в тесте на строках 201-205: подставленный `{ ...lesson, studentId: \"missing-student\" }` вводит в заблуждение, потому что код читает только `.id`. Кроме того, spy создаётся до `await prisma.lesson.delete` вне try и при падении этого вызова не восстанавливается: в файле нет afterEach с jest.restoreAllMocks, как в callFlow.test.",
+      "fix_hint": "Если гонку закрыть блокировкой (см. предыдущую находку), эти тесты удаляются вместе с повтором. Пока повтор есть: добавить `expect(findLesson).toHaveBeenCalledTimes(1)` и spy на prisma.callRecord.create с `toHaveBeenCalledTimes(2)`, создавать spy внутри try или добавить afterEach(jest.restoreAllMocks), а в заглушке возвращать только `{ id }`.",
+      "score": 25,
+      "verification_note": "Утверждение, что удаление ветки повтора пройдёт незамеченным, в текущем коде неверно: без повтора create с устаревшим lessonId падает по FK, тест падает; замечания про неснятый spy при падении delete и вводящую в заблуждение заглушку в тесте на строках 201-205 справедливы, но это гигиена тестов без реального вреда, поэтому 25.",
+      "reason": "below threshold"
+    }
+  ]
+}

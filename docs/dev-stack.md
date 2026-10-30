@@ -49,6 +49,10 @@ bash scripts/dev-stack.sh down-all         # снести все dev-* стек�
 - **`run-backend-e2e` от `.env` не зависит.** Он выставляет фиксированные тестовые секреты и
   тестового админа: `admin@e2e.local` / `E2eAdmin!2026` (хеш — `E2E_ADMIN_PASSWORD_HASH` в
   `scripts/dev-stack.sh`). Ими пользуются `e2e/admin/*` и тестовый роут `/api/__test__/admin/token`.
+  Там же тестовая пара VAPID (`E2E_VAPID_*`): `e2e/students/video-call-push.spec.ts` проверяет
+  push о звонке через приёмник бэкенда `/api/__test__/push-sink/:key` и без ключей падает в
+  `beforeAll`. Бэкенд e2e, запущенный вручную, нужно стартовать с `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (пара — `npx web-push generate-vapid-keys`).
 - **`pg_dump` на хосте должен быть не старше Postgres стенда (16).** Бэкап (`e2e/admin/create-backup`)
   зовёт `pg_dump` с хоста; на Ubuntu 22.04 из apt ставится 14, и он отказывается работать с сервером
   16 (`server version mismatch`). Нужен `postgresql-client-16` из репозитория PGDG. Обёртка

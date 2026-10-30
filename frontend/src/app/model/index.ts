@@ -1,3 +1,5 @@
+import "./sessionLogout.model";
+
 export * as appInitModel from "./appInit.model";
 export * as webSocketModel from "./webSocket.model";
 export * as studentWebSocketModel from "./studentWebSocket.model";

@@ -7,10 +7,11 @@ import { AVAILABLE_INTERVALS } from "./ReminderSettings.constants";
 import { formatInterval } from "./ReminderSettings.helpers";
 import * as Styled from "./ReminderSettings.styled";
 
+// How to allow notifications the browser denied is explained once for the tab, in the calls card
+// below (CallNotificationSettings).
 export const ReminderSettings = () => {
   const settings = useUnit(notificationsModel.$reminderSettings);
   const isPushSupported = useUnit(notificationsModel.$isPushSupported);
-  const pushPermission = useUnit(notificationsModel.$pushPermission);
 
   const actions = useUnit({
     remindersToggled: notificationsModel.remindersToggled,
@@ -68,13 +69,6 @@ export const ReminderSettings = () => {
             <Switch checked={settings.muteWhenInLesson} onChange={() => actions.muteToggled()} />
           </Styled.SettingRow>
         </>
-      )}
-
-      {pushPermission === "denied" && (
-        <Styled.PermissionAlert severity="warning">
-          Уведомления заблокированы. Чтобы разрешить: Android — Настройки сайта → Уведомления; iOS —
-          Настройки → Safari → Уведомления; Desktop — значок 🔒 в адресной строке → Уведомления
-        </Styled.PermissionAlert>
       )}
     </Styled.SettingsPaper>
   );

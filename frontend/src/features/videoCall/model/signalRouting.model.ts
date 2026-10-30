@@ -1,6 +1,6 @@
 import { sample, split } from "effector";
 
-import { callHistoryModel } from "@entities";
+import { callHistoryModel, lessonCallsModel } from "@entities";
 
 import * as callModel from "./call.model";
 import {
@@ -37,13 +37,22 @@ const signals = split(callModel.signalReceived, {
   historyUpdated: isSignalOf("call_history_updated"),
 });
 
-sample({ clock: signals.historyUpdated, target: callHistoryModel.refreshRequested });
+sample({
+  clock: signals.historyUpdated,
+  target: [callHistoryModel.refreshRequested, lessonCallsModel.refreshRequested],
+});
 
-// Decide once: taking the call flips the phase, so later samples would see "incoming".
+// Decide once: taking the call flips the phase, so later samples would see "incoming". A repeated
+// call_incoming of the current call (a restored page, a second delivery) is neither taken nor
+// refused.
 const incomingDecided = sample({
   clock: signals.incoming,
   source: callContext,
-  fn: (context, signal) => ({ signal, take: canTakeIncoming(context) }),
+  fn: (context, signal) => ({
+    signal,
+    take: canTakeIncoming(context),
+    repeated: isCurrentCall(context, signal.message),
+  }),
 });
 
 sample({
@@ -59,12 +68,13 @@ sample({
     callId: message.callId,
     callerName: message.callerName,
     role,
+    lesson: message.lesson,
   }),
   target: callModel.incomingCallReceived,
 });
 sample({
   clock: incomingDecided,
-  filter: ({ take }) => !take,
+  filter: ({ take, repeated }) => !take && !repeated,
   fn: ({ signal: { message, role } }) => ({ callId: message.callId, role }),
   target: callModel.incomingWhileBusy,
 });

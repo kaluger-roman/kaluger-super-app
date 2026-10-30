@@ -15,3 +15,10 @@ export const getCallHistory = async (
       : await api.get<CallHistoryResponse>("/calls/history");
   return data.items;
 };
+
+export const getLessonCalls = async (lessonId: string): Promise<CallHistoryRecord[]> => {
+  const { data } = await api.get<CallHistoryResponse>(
+    `/calls/lessons/${encodeURIComponent(lessonId)}`
+  );
+  return data.items;
+};

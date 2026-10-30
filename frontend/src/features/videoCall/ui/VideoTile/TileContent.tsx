@@ -2,11 +2,14 @@ import type { FC } from "react";
 
 import { VideocamOff as VideocamOffIcon } from "@mui/icons-material";
 import { useMediaQuery } from "@mui/material";
+import { useUnit } from "effector-react";
 
+import { peerViewModel } from "../../model";
+import { SHORT_STAGE_QUERY } from "../../videoCall.constants";
 import type { CallMediaState } from "../../videoCall.types";
 import { CallAvatar } from "../CallAvatar";
+import { InterruptionLabel } from "../InterruptionLabel";
 import { CallVideo } from "./CallVideo";
-import { SHORT_STAGE_QUERY } from "./VideoTile.constants";
 import {
   getCameraLabel,
   getTileContentKind,
@@ -20,11 +23,12 @@ type TileContentProps = {
   name: string;
   media: CallMediaState;
   stream: MediaStream | null;
-  muted: boolean;
   config: TileVariantConfig;
 };
 
-export const TileContent: FC<TileContentProps> = ({ name, media, stream, muted, config }) => {
+export const TileContent: FC<TileContentProps> = ({ name, media, stream, config }) => {
+  const isPeerInterrupted = useUnit(peerViewModel.$isPeerInterrupted);
+  const interrupted = config.isPeer && isPeerInterrupted;
   const kind = getTileContentKind(media);
   const showVideo = kind !== "placeholder";
   const shortStage = useMediaQuery(SHORT_STAGE_QUERY);
@@ -34,16 +38,17 @@ export const TileContent: FC<TileContentProps> = ({ name, media, stream, muted, 
       {stream && (
         <CallVideo
           stream={stream}
-          muted={muted}
           hidden={!showVideo}
           fit={getVideoFit(kind)}
           layout={getVideoLayout(kind, config, shortStage)}
+          isPeer={config.isPeer}
         />
       )}
       {!showVideo && (
         <Styled.PlaceholderColumn>
           <CallAvatar name={name} size={config.avatarSize} isSelf={config.selfAvatar} />
-          {config.showCameraLabel && (
+          {interrupted && <InterruptionLabel />}
+          {!interrupted && config.showCameraLabel && (
             <Styled.PlaceholderLabel variant="body2">
               <VideocamOffIcon fontSize="small" />
               {getCameraLabel(media)}

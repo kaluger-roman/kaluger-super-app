@@ -22,7 +22,7 @@ const placeCallWhileHeld = async (reason: ElsewhereReason | null) => {
   void allSettled(webSocketModel.connectWebSocket, { scope });
   void allSettled(webSocketModel.webSocketClosed, {
     scope,
-    params: { revokedToken: null, elsewhere: reason, callEnded: false },
+    params: { revokedToken: null, elsewhere: reason, callEnded: false, holderGone: false },
   });
   await vi.advanceTimersByTimeAsync(0);
 
@@ -32,7 +32,10 @@ const placeCallWhileHeld = async (reason: ElsewhereReason | null) => {
     fn: (text) => failures.push(text),
     scope,
   });
-  void allSettled(callModel.callStarted, { scope, params: { studentId: "s-1", peerName: "Анна" } });
+  void allSettled(callModel.callStarted, {
+    scope,
+    params: { studentId: "s-1", peerName: "Анна", lesson: null },
+  });
   await vi.advanceTimersByTimeAsync(0);
   watcher.unsubscribe();
   return failures;

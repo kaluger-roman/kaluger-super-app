@@ -1,15 +1,24 @@
 import { createEffect, createEvent, createStore, sample, scopeBind } from "effector";
 
-import { callModel, clearCallTransport, setCallTransport } from "@features/videoCall";
+import {
+  callModel,
+  callNotificationOpenModel,
+  callPresenceModel,
+  callResumeModel,
+  clearCallTransport,
+  setCallTransport,
+} from "@features/videoCall";
 import type { CallRole } from "@features/videoCall";
 
 import {
   buildSocketUrl,
+  isTakenElsewhere,
   parseSocketMessage,
   toControlMessage,
   toSocketClose,
 } from "./socketConnection.helpers";
 import type {
+  CurrentSocketClosed,
   SocketClosedPayload,
   SocketConnectionConfig,
   SocketOpenParams,
@@ -39,6 +48,9 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   const tokenRenewedHere = createEvent();
   // true for an automatic reconnect, false for an explicit connect.
   const openRequested = createEvent<boolean>();
+  // Open the socket again although it looks connected (it stopped answering): true to resume,
+  // false for an explicit open.
+  const reconnectRequested = createEvent<boolean>();
   const socketCreated = createEvent<WebSocket>();
   const socketReady = createEvent<WebSocket>();
   const socketWaiting = createEvent<WebSocket>();
@@ -114,20 +126,49 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
     fn: (_, ws) => ws,
   });
   sample({ clock: currentReady, target: attachTransportFx });
-  sample({ clock: currentReady, fn: () => undefined, target: ready });
   sample({
+    clock: attachTransportFx.done,
+    fn: () => config.role,
+    target: callPresenceModel.transportReady,
+  });
+  sample({ clock: currentReady, fn: () => undefined, target: ready });
+  const currentWaiting = sample({
     clock: socketWaiting,
     source: $connection,
     filter: (current, ws) => current === ws,
-    fn: (): ElsewhereReason => "call",
-    target: $elsewhere,
+  });
+  sample({ clock: currentWaiting, fn: (): ElsewhereReason => "call", target: $elsewhere });
+  sample({
+    clock: currentWaiting,
+    fn: () => config.role,
+    target: callResumeModel.transportWaiting,
+  });
+  const currentClosed = sample({
+    clock: socketClosed,
+    source: { current: $connection, registered: $isConnected },
+    filter: ({ current }, { ws }) => current === ws,
+    fn: ({ registered }, payload): CurrentSocketClosed => ({ ...payload, registered }),
   });
   sample({
-    clock: socketClosed,
-    source: { current: $connection, elsewhere: $elsewhere },
-    filter: ({ current }, { ws }) => current === ws,
-    fn: ({ elsewhere }, payload) => toSocketClose(payload, revokedCloseCodes, elsewhere),
+    clock: currentClosed,
+    source: $elsewhere,
+    fn: (elsewhere, payload) => toSocketClose(payload, revokedCloseCodes, elsewhere),
     target: closed,
+  });
+  sample({
+    clock: currentClosed,
+    filter: isTakenElsewhere,
+    fn: ({ registered }) => ({ role: config.role, refused: !registered }),
+    target: callResumeModel.transportTakenElsewhere,
+  });
+  // A tapped notification is an explicit open (R3): the dead socket is replaced without resume=1,
+  // which another device holding the connection would refuse.
+  sample({
+    clock: callResumeModel.transportStale,
+    source: callNotificationOpenModel.$pendingNotificationCallId,
+    filter: (_, role) => role === config.role,
+    fn: (pending) => pending === null,
+    target: reconnectRequested,
   });
 
   sample({ clock: ready, fn: () => true, target: $isConnected });
@@ -142,13 +183,17 @@ export const createSocketConnection = (config: SocketConnectionConfig) => {
   socketReconnectModel.attachSocketReconnect({
     config,
     openRequested,
+    reconnectRequested,
     disconnect,
     closed,
     tokenRenewed,
     tokenRenewedHere,
     $isEnabled,
+    $connection,
+    $isConnected,
     $elsewhere,
     $revokedToken,
+    $isVisible: callPresenceModel.$isVisible,
   });
 
   return {

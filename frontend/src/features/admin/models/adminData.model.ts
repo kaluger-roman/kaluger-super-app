@@ -10,13 +10,14 @@ import type {
 } from "@shared";
 
 import * as adminAuthModel from "./adminAuth.model";
+import { ADMIN_TAB } from "./adminData.constants";
 import { isBackupSettingsValid, prepareBackupSettings } from "./adminData.helpers";
 
 // Gates
 export const AdminPageGate = createGate();
 
 // Stores
-export const $tabIndex = createStore(0);
+export const $tabIndex = createStore<number>(ADMIN_TAB.overview);
 export const $overview = createStore<AdminOverviewResponse | null>(null);
 export const $backupSettings = createStore<BackupSettingsData | null>(null);
 export const $backupFiles = createStore<BackupFileData[]>([]);

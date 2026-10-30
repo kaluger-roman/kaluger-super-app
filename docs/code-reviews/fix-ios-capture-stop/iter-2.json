@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "branch": "fix-ios-capture-stop",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-10-29T22:06:30Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 38,
+    "insertions": 1299,
+    "deletions": 67
+  },
+  "summary": {
+    "raw_findings": 11,
+    "after_dedup": 9,
+    "after_score_filter": 6,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 6
+    },
+    "by_category": {
+      "hack": 3,
+      "bug": 1,
+      "claude-md": 1,
+      "logic": 1
+    },
+    "agents_failed": [],
+    "agents_retried": [
+      "type-safety (первый запуск завис на 600 с, перезапущен)"
+    ],
+    "agents_without_findings": [
+      "security"
+    ],
+    "dedup_notes": [
+      "removed-behavior (callPush.ts:43), cross-file (callPush.ts:45) и deep-logic (devicePush.model.ts:59) описывают одну проблему: поздний incoming_call на ответившем устройстве больше никто не закрывает — слиты в одну находку removed-behavior"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "Тест «исключает только устройство самого адресата» проходит при любой реализации: endpoint в БД уникален",
+      "category": "hack",
+      "file": "backend/src/services/callNotification/__tests__/callNotification.test.ts",
+      "line_start": 231,
+      "line_end": 240,
+      "snippet": "    it(\"should leave out only the recipient's own device of that endpoint\", async () => {\n      const tutorDevice = await addDevice({ userId: tutorId });\n      const studentDevice = await addDevice({ studentUserId });\n\n      await notifyCallClosed(student(), message(\"call_closed\"), {",
+      "rationale": "У pushSubscription.endpoint стоит @unique (schema.prisma:253), а findDevices выбирает только подписки ученика. Подписка преподавателя никогда не попадает в список, и фильтр по exceptEndpoint ни на что не влияет, поэтому тест не упадёт ни при какой реализации исключения. Он проверяет свойство, которого в коде нет: никакого ограничения «только адресат» в deliverToAll не реализовано, оно следует из уникальности.",
+      "fix_hint": "Удалить тест: случай «чужой или неизвестный endpoint ничего не исключает» уже по-настоящему проверяет callPush.test.ts («endpoint the student does not own»). Либо заменить его тестом, который упадёт без фильтра, например с exceptEndpoint, которого нет в БД, при двух устройствах ученика.",
+      "score": 50,
+      "verification_note": "Проверено по коду: findDevices (callNotification.ts) выбирает только подписки с studentUserId=адресат, а тестовое устройство преподавателя (userId=tutorId) в выборку не попадает, поэтому фильтр exceptEndpoint на результат не влияет и тест проходит без него, то есть вхолостую; это подтверждённый тестовый костыль без прод-вреда, поэтому 50, а не выше.",
+      "severity": "medium"
+    },
+    {
+      "id": "f2",
+      "agent": "removed-behavior",
+      "title": "Ответившее устройство потеряло закрывающий call_closed, который гасил поздно дошедший incoming_call (особенно после отклонения)",
+      "category": "bug",
+      "file": "backend/src/services/callSignaling/callPush.ts",
+      "line_start": 43,
+      "line_end": 49,
+      "snippet": "  const incoming = call.incomingPush ?? Promise.resolve(0);\n  void incoming.then(() =>\n    notifyCallClosed(calleeOf(call), toMessage(call, kind), {\n      exceptEndpoint: call.answeringEndpoint,\n    })\n  );",
+      "rationale": "Раньше call_closed уходил и на ответившее устройство после incoming_call с тем же Topic: push-сервис заменял ещё не доставленный incoming_call, а если тот всё же доходил первым, service worker закрывал тег call-<id>. Так звонящее уведомление (requireInteraction, renotify, вибрация) не оставалось на Android/десктопе. Теперь это устройство исключено, и страница закрывает уведомление сама только в момент accept и при переходе в active, а при reject лишь один раз на callTerminated. incoming_call, дошедший позже (задержка FCM, страницу свернули сразу после «Отклонить»), висит звонящим уведомлением об уже отклонённом или принятом звонке. (also flagged by: cross-file — backend/src/services/callSignaling/callPush.ts:45; deep-logic — frontend/src/features/videoCall/model/devicePush.model.ts:59, сценарий: incoming_call доставлен после «Отклонить», страница закрывает call-<id> лишь один раз на callTerminated)",
+      "fix_hint": "Вернуть защиту от позднего incoming_call для ответившего устройства. Варианты: исключать endpoint только там, где SW не может закрыть уведомление (iOS); либо в push-sw.js при incoming_call спрашивать открытые клиенты, не отвечен ли уже этот callId; либо при reject повторять closeCallNotifications с задержкой, как для accept. Добавить тест на incoming_call, дошедший после ответа. Самый узкий вариант из deep-logic: повторно закрывать call-<id> после reject через patronum delay, как повторное закрытие на active для accept.",
+      "score": 50,
+      "verification_note": "Механизм подтверждён: push-sw.js показывает incoming_call без проверки открытых окон, а exceptEndpoint в callPush.ts исключает ответившее устройство из call_closed, поэтому поздно дошедший incoming_call (он уходит на все устройства из notifyCalleeDevices) остаётся с requireInteraction и тегом call-<id>, если страница закрыла уведомление раньше; но окно гонки узкое (пуш должен прийти позже WS-приглашения и позже клика «Отклонить»), а при accept есть повторное закрытие на connected, поэтому это редкий случай, а не систематическая поломка.",
+      "severity": "medium"
+    },
+    {
+      "id": "f3",
+      "agent": "hacks",
+      "title": "Лишние приведения `as TerminatedCall` в тестах toRejectedNotifications",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/devicePush.helpers.test.ts",
+      "line_start": 80,
+      "line_end": 101,
+      "snippet": "    const declined: TerminatedCall = {\n      address,\n      signal: { type: \"call_reject\" },\n    } as TerminatedCall;",
+      "rationale": "TerminatedCall состоит ровно из { address, signal }, и литералы ему соответствуют. Каст при аннотированной переменной ничего не даёт, а у spread-вариантов (hungUp, endedElsewhere, address: null) он отключает проверку типов. Если тип TerminalSignal или TerminatedCall изменится, тестовые данные продолжат компилироваться с невалидной формой.",
+      "fix_hint": "Убрать `as TerminatedCall` и объявлять варианты через аннотацию: `const hungUp: TerminatedCall = { ...declined, signal: { type: \"call_hangup\" } }`. Контекстный тип сузит литерал без каста.",
+      "score": 50,
+      "verification_note": "Подтверждено по коду: в devicePush.helpers.test.ts каст `as TerminatedCall` на аннотированном `declined` лишний (литерал и так проходит контекстный тип из call.types.ts), а на spread-вариантах hungUp/endedElsewhere/address:null он реально отключает проверку типов тестовых данных; вреда для прода нет и явного правила против кастов в docs/conventions нет, поэтому оценка — подтверждённый, но мелкий костыль в тестах, а не 75.",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "hacks",
+      "title": "Повторное закрытие своего уведомления «при подключении» угадывает момент прихода push incoming_call вместо того, чтобы решить гонку",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/devicePush.model.ts",
+      "line_start": 41,
+      "line_end": 52,
+      "snippet": "// again once the call connects: the incoming push may land after the answer.\nconst callConnected = sample({\n  clock: callModel.$callPhase.updates,\n  filter: (phase) => phase === \"active\",\n});",
+      "rationale": "Гонка «push incoming_call пришёл после ответа» лечится второй попыткой закрыть уведомление в произвольный более поздний момент (переход в active). Если APNs доставит push после подключения (задержка в несколько секунд на iOS обычна, подключение бывает быстрее), на ответившем устройстве останется звонящее уведомление. К тому же локальный callConnected повторяет по имени существующий callModel.callConnected, хотя срабатывает и на восстановление активного звонка, а не только на подключение. Связано с находкой про поздний incoming_call после reject (та же причина: ответившее устройство больше не получает закрывающий пуш), но касается ветки accept.",
+      "fix_hint": "Закрывать уведомление по событию, а не по таймингу: в push-sw.js после showNotification для incoming_call слать открытым окнам postMessage (как сейчас для call_notification_opened), а страница, у которой этот callId уже принят или активен, закрывает уведомление по тегу. Если оставлять текущий подход, переименовать производное событие, чтобы оно не совпадало с callModel.callConnected.",
+      "score": 50,
+      "verification_note": "Код подтверждает костыль: повторное закрытие завязано на переход в phase active, а не на доставку push, и при позднем incoming_call (уже без closing push на ответившем устройстве, см. callFlow/callPush в diff) уведомление останется на экране; вероятность срабатывания в проде ограничена временем доставки APNs, поэтому не выше 50, а имя callConnected в devicePush.model.ts:43 — лишь косметическое затенение callModel.callConnected.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "claude-md",
+      "title": "Сброс $queuedRecovery по callModel.callTerminated не покрыт ни одним тестом",
+      "category": "claude-md",
+      "file": "frontend/src/features/videoCall/model/trackRecovery.model.ts",
+      "line_start": 84,
+      "line_end": 88,
+      "snippet": "sample({\n  clock: [recoverTracksFx, callModel.callTerminated],\n  fn: () => null,\n  target: $queuedRecovery,\n});",
+      "rationale": "CLAUDE.md, Testing Requirements: «All new code must have full test coverage» и «Frontend: unit tests for Effector models (stores, effects, events)». У нового стора $queuedRecovery проверены только постановка в очередь и повтор на finally (mediaRecovery.model.test.ts «should bring back a camera turned on while the microphone was being recovered»). Нет теста, где звонок завершается во время запуска с отложенным запросом, и нет теста, где во время запуска по переключению в очередь встаёт обычный запрос (localTrackEnded/возврат на страницу). Если ветку callTerminated удалить, ни один тест не упадёт.",
+      "fix_hint": "Добавить в mediaRecovery.model.test.ts тест: держать getUserMedia первого запуска, поставить в очередь второй запрос, завершить звонок, отпустить getUserMedia и проверить, что повторного запуска (getUserMedia) нет. Плюс тест на постановку в очередь запроса с replaceMuted: false во время запуска по переключению.",
+      "score": 50,
+      "verification_note": "Пробел подтверждён: в mediaRecovery.model.test.ts нет теста на завершение звонка при отложенном запросе, а ветка callTerminated в trackRecovery.model.ts:85 не покрыта поведенческим тестом (удаление её не роняет ни один тест); сценарий узкий (звонок закончился во время запуска с очередью), поэтому это подтверждённая, но не критичная проблема покрытия.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "agent": "shallow-bug",
+      "title": "Тост об ошибке устройства показывается при переключении другого устройства",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/trackRecovery.model.ts",
+      "line_start": 110,
+      "line_end": 116,
+      "snippet": "sample({\n  clock: currentCallRecovery,\n  filter: ({ params, result }) => params.replaceMuted && result.failed.length > 0,\n  fn: ({ result }) => getDeviceFailedText(result.failed),\n  target: notificationsModel.showErrorEvent,\n});",
+      "rationale": "replaceMuted=true ставится на любой mediaToggled, а recoverTracks при этом перезапрашивает все ended/muted+enabled треки, не только переключённый. Если камера включена, но завершена и браузер её не отдаёт (NotAllowedError), каждое включение или выключение микрофона показывает «Не удалось включить камеру…», хотя пользователь камеру не трогал. Аналогично muted-камера заменяется через getUserMedia при нажатии на кнопку микрофона.",
+      "fix_hint": "Передавать в TrackRecoveryRequest, какое устройство переключили (mic/camera), и для replaceMuted/тоста учитывать только его, а остальные треки восстанавливать как в обычном прогоне, без тоста failed.",
+      "score": 50,
+      "verification_note": "Код подтверждён: `replaceMuted` ставится на любой mediaToggled, `selectRecoveryTargets` берёт и `ended`-камеру, и muted+enabled, а тост `failed` фильтруется только по `params.replaceMuted`, поэтому при отказе браузера (не NotReadableError) переключение микрофона покажет «Не удалось включить камеру». Но сценарий требует постоянного отказа getUserMedia после системной остановки, а камера при этом визуально включена и реально мертва, так что тост по сути правдив, и вред ограничен раздражающим повтором на каждом переключении.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "hacks",
+      "title": "Тесты toAcceptSignal/toRejectSignal из call.helpers лежат в devicePush.helpers.test.ts",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/devicePush.helpers.test.ts",
+      "line_start": 126,
+      "line_end": 143,
+      "snippet": "  describe(\"toAcceptSignal and toRejectSignal\", () => {\n    it(\"should name the device's endpoint when it is known\", () => {\n      expect(toAcceptSignal(ENDPOINT, address)).toEqual({",
+      "rationale": "Хелперы объявлены в call.helpers.ts, и у него уже есть __tests__/call.helpers.test.ts. Их тесты положены в тест чужого модуля. При правке или переносе call.helpers их легко не найти, а devicePush.helpers.test теперь импортирует модуль, который не тестирует.",
+      "fix_hint": "Перенести describe(\"toAcceptSignal and toRejectSignal\") в __tests__/call.helpers.test.ts и убрать импорт ../call.helpers из devicePush.helpers.test.ts.",
+      "score": 25,
+      "verification_note": "Факт подтверждён: devicePush.helpers.test.ts (новый файл) тестирует toAcceptSignal/toRejectSignal из call.helpers, а call.helpers.test.ts существует, но правила \"тесты хелпера лежат в своём __tests__/<module>.test.ts\" в docs/conventions/frontend.md и frontend-testing.md и в CLAUDE.md нет, тесты проходят и вреда в проде нет, поэтому это организационная шероховатость, а не подтверждённый костыль с конкретным вредом.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "type-safety",
+      "title": "closeCallNotificationsFx без обработки ошибки, в отличие от соседнего readPushEndpoint",
+      "category": "type",
+      "file": "frontend/src/features/videoCall/model/devicePush.helpers.ts",
+      "line_start": 48,
+      "line_end": 56,
+      "snippet": "export const closeCallNotifications = async ({\n  registration,\n  callId,\n}: CallNotificationsTarget): Promise<void> => {\n  const notifications = await registration.getNotifications({",
+      "rationale": "readPushEndpoint ловит ошибки и возвращает null, а closeCallNotifications нет: если getNotifications отклонится (браузер без Notifications API в service worker, неактивная регистрация), closeCallNotificationsFx упадёт, и ни один .fail-обработчик этого не заметит. Сейчас это ничего не ломает, потому что эффект запускается только через sample, но контракт двух эффектов одного модуля расходится.",
+      "fix_hint": "Обернуть тело в try/catch, как в readPushEndpoint (закрытие уведомлений best-effort), или явно повесить sample на closeCallNotificationsFx.fail, если сбой нужно игнорировать осознанно.",
+      "score": 25,
+      "verification_note": "Факт подтверждён: closeCallNotifications (devicePush.helpers.ts:48-56) не имеет try/catch, в отличие от readPushEndpoint, но сбой возможен лишь в редких браузерах, эффект вызывается только через sample и не ломает прод, а в той же фиче многие эффекты без catch и без .fail (teardownFx, syncPeerAudioFx, sendAnswerFx), так что единого правила, которое нарушено, в конвенциях нет.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "wrapper-proxy",
+      "title": "Автоотклонение входящего во время другого звонка (incomingWhileBusy) шлёт call_reject без pushEndpoint, и закрывающий пуш всё равно приходит на это устройство",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/callSignals.model.ts",
+      "line_start": 73,
+      "line_end": 77,
+      "snippet": "sample({\n  clock: callModel.incomingWhileBusy,\n  fn: ({ callId, role }): AddressedSignal => ({ role, message: { type: \"call_reject\", callId } }),\n  target: callTransportModel.sendCallSignalFx,\n});",
+      "rationale": "Diff пропускает все call_accept/call_reject через toAcceptSignal/toRejectSignal с $pushEndpoint, но этот третий отправитель call_reject собирает сообщение вручную. Сервер ставит answeringEndpoint = undefined и шлёт call_closed «принят или отклонён на другом устройстве» на все устройства, включая то, что само отклонило вызов. Это тот же сценарий на iOS, который чинит ветка.",
+      "fix_hint": "Взять source: devicePushModel.$pushEndpoint и собрать message через toRejectSignal (или общий builder с callId), как в callEnding.model; добавить тест на pushEndpoint в автоотклонении.",
+      "score": 25,
+      "verification_note": "Факты в finding верны (строки callSignals.model.ts:73-77 не менялись в diff и шлют call_reject без pushEndpoint; сервер при таком call_reject идёт через removeCall → pushRingingEnded → pushCallClosed с exceptEndpoint=undefined и шлёт call_closed на все устройства, включая отклонившее), но сценарий узкий: incomingWhileBusy срабатывает только когда страница в звонке, а сервер всё ещё считает участника свободным, устройство должно иметь push-подписку и уже показанное уведомление о входящем, а закрывающий пуш там может быть как раз единственным способом убрать это уведомление, так что предложенный fix (исключить endpoint) может оставить зависшее уведомление; это скорее несогласованность, чем подтверждённая регрессия.",
+      "reason": "below threshold"
+    }
+  ]
+}

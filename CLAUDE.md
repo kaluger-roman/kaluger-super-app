@@ -186,7 +186,7 @@ Before creating a PR or marking a draft PR ready (`gh pr create`, `gh pr ready`,
 
 ## Offsite Backups
 
-Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab. Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
+Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluger/prod-backups/` (logs in `logs/`), with a daily restore check in a throwaway Postgres 16 container; status is shown in the admin «Бэкапы» tab, and problems open alerts in the «Алерты» tab with letters to the address from «Настройки» (`services/adminAlerts`, `services/backupAlerts`). Setup, operation, restore and disabling: `docs/ops/offsite-backups.md`. Scripts: `scripts/offsite-backup/` (cron runs installed copies from `~/.local/share/offsite-backup/`, not the dev checkout).
 
 ## Agents Panel (VS Code)
 
@@ -211,6 +211,14 @@ Prod DB dumps are pulled hourly to the home dev machine into `/home/roman-kaluge
 - PostgreSQL via Prisma ORM. One new table `call_records` (+ migration). Signaling messages are ephemeral (never persisted). (030-webrtc-video-calls)
 - TypeScript 5.x strict (backend Node 20, frontend React); bash (home/prod scripts, cron-safe) + Express, Prisma, Effector, MUI (existing); rsync 3.2.x + `rrsync` (prod), OpenSSH, flock, gzip, Docker Engine + `postgres:16-alpine` (home). No new npm dependencies. (036-offsite-backups)
 - PostgreSQL via Prisma — no schema change; new state in files: `$BACKUP_DIR/.offsite-last-pull`, `$BACKUP_DIR/.offsite-restore-check.json` (prod), `/home/roman-kaluger/prod-backups/` (home) (036-offsite-backups)
+- TypeScript 5.x (strict), Node.js 20 + React, Effector, effector-react, patronum, Material UI (styled API), axios — frontend; Express, Prisma, ws — backend. Новых зависимостей нет (038-lesson-call-button)
+- PostgreSQL через Prisma. Одна новая nullable-колонка `call_records."lessonId"` (FK на `lessons`, `ON DELETE SET NULL`) + индекс `(lessonId, startedAt)`; без бэкфилла (038-lesson-call-button)
+- TypeScript 5.x (strict), React 19 + React, Effector 23, effector-react, patronum 2.3 (`debounce`), Material UI (styled API из `@shared`), Pointer Events, ResizeObserver. Новых зависимостей нет (039-call-fullscreen)
+- N/A — состояние в памяти вкладки на время звонка; без изменений БД и API (039-call-fullscreen)
+- TypeScript 5.x (strict), Node.js 20; `frontend/public/push-sw.js` — ES5 JavaScript (как сейчас) + Frontend — React, Effector, patronum, effector-react, MUI (styled API), browser WebRTC, Push API, Service Worker. Backend — Express, Prisma, `ws`, `web-push` (уже есть). Новых npm-зависимостей нет (039-video-call-background)
+- PostgreSQL через Prisma: enum `PushChannel`, в `push_subscriptions` — `channel`, `studentUserId`, `userId` необязательный + CHECK одного владельца; в `reminder_settings` — `callNotificationsEnabled`. Состояние присутствия и ожидания — в памяти процесса (как `liveCalls`). На устройстве — два флага в `localStorage` (039-video-call-background)
+- TypeScript 5.x strict (backend Node 20, frontend React 19); bash (home/prod offsite scripts) + Express, Prisma 6, node-cron, Resend SDK 6 (backend); React, Effector, effector-react, patronum, MUI (frontend). No new npm dependencies (`fs.promises.statfs` is in Node 20) (037-admin-alerts)
+- PostgreSQL via Prisma — new tables `admin_alerts`, `admin_settings`, enums `AdminAlertSeverity`, `AdminAlertEmailStatus`, new column `backup_settings."enabledChangedAt"` (backfilled from `updatedAt`); new prod file `$BACKUP_DIR/.offsite-storage.json`, new home file `~/prod-backups/.cap-pruned` (037-admin-alerts)
 
 - TypeScript 5.x (frontend + backend) + React, Effector, MUI (frontend); Express, Prisma, web-push (backend) (008-pwa-lesson-reminders)
 - PostgreSQL через Prisma ORM — три новые таблицы: `push_subscriptions`, `reminder_settings`, `scheduled_reminders` (008-pwa-lesson-reminders)

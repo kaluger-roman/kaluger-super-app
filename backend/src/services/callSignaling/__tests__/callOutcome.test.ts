@@ -14,8 +14,16 @@ const buildCall = (status: LiveCallStatus): LiveCall => ({
   tutorUserId: "tutor-1",
   studentUserId: "student-user-1",
   studentId: "student-1",
+  lesson: null,
   status,
   startedAt: new Date(),
+  tutorName: "Анна",
+  studentName: "Иван",
+  disconnectedAt: {},
+  disconnectedTabId: {},
+  graceTimers: {},
+  pendingPeerRestart: {},
+  pushNotified: false,
 });
 
 const TUTOR = { kind: "tutor" as const, id: "tutor-1" };

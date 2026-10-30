@@ -50,8 +50,20 @@ export type {
   ReminderSettingsResponse,
   PushSubscriptionResponse,
   PushNotificationPayload,
+  WebPushDevice,
+  WebPushOptions,
+  WebPushOutcome,
+  WebPushUrgency,
 } from "./push";
 export type { AdminJwtPayload, AdminRequest, AdminLoginDto, AdminOverviewResponse } from "./admin";
+export type {
+  AdminAlertEmailDto,
+  AdminAlertDto,
+  AdminAlertsResponse,
+  AdminSettingsDto,
+  UpdateAdminSettingsDto,
+  TestEmailResponse,
+} from "./adminAlerts";
 export type {
   UpdateBackupSettingsDto,
   BackupSettingsResponse,
@@ -82,10 +94,16 @@ export type {
   CallEndReason,
   CallCancelReason,
   CallReplyTarget,
+  CallLessonSummary,
   IceServer,
   SessionDescriptionPayload,
   IceCandidatePayload,
   CallSignalingInbound,
   CallSignalingOutbound,
   CallHistoryItem,
+  PresenceState,
+  PeerPresence,
+  PeerPresencePayload,
+  CallSnapshot,
+  CallSnapshotStatus,
 } from "./call";

@@ -6,6 +6,7 @@ import { app } from "../../../index";
 import { prisma } from "../../../lib/prisma";
 import { generateAdminToken, generateToken } from "../../../utils/auth";
 import * as backupService from "../../../services/backup";
+import { dispatchAlertEmails } from "../../../services/adminAlerts";
 import {
   acquireGlobalTestLock,
   GLOBAL_TEST_LOCK,
@@ -13,27 +14,35 @@ import {
 } from "../../../__tests__/helpers";
 
 jest.mock("node-cron", () => ({ schedule: jest.fn() }));
+jest.mock("../../../services/backupAlerts/diskSpace", () => ({
+  getDiskSpace: jest.fn(async () => ({ freeBytes: 50 * 1024 ** 3, totalBytes: 100 * 1024 ** 3 })),
+}));
 
 describe("backup admin integration tests", () => {
   let adminToken: string;
   let tmpDir: string;
   const originalBackupDir = process.env.BACKUP_DIR;
   let releaseBackupSettingsLock: () => Promise<void>;
+  let releaseAdminAlertsLock: () => Promise<void>;
 
   beforeAll(async () => {
     process.env.ADMIN_EMAIL = "admin@test.com";
     process.env.ADMIN_PASSWORD = "TestAdmin123";
     adminToken = generateAdminToken({ email: "admin@test.com", isAdmin: true });
     releaseBackupSettingsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.BACKUP_SETTINGS);
+    releaseAdminAlertsLock = await acquireGlobalTestLock(GLOBAL_TEST_LOCK.ADMIN_ALERTS);
   }, GLOBAL_TEST_LOCK_TIMEOUT_MS);
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "backup-int-test-"));
     process.env.BACKUP_DIR = tmpDir;
     await prisma.backupSettings.deleteMany();
+    await prisma.adminAlert.deleteMany();
   });
 
-  afterEach(() => {
+  // Letters of an admin action go out after the response: let them finish inside the test.
+  afterEach(async () => {
+    await dispatchAlertEmails();
     process.env.BACKUP_DIR = originalBackupDir;
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true });
@@ -44,6 +53,8 @@ describe("backup admin integration tests", () => {
     delete process.env.ADMIN_EMAIL;
     delete process.env.ADMIN_PASSWORD;
     await prisma.backupSettings.deleteMany();
+    await prisma.adminAlert.deleteMany();
+    await releaseAdminAlertsLock();
     await releaseBackupSettingsLock();
   });
 
@@ -94,7 +105,12 @@ describe("backup admin integration tests", () => {
 
       expect(res.body.minRetentionDays).toBe(30);
       expect(res.body.storageLimitExceeded).toBe(false);
-      expect(res.body.offsite).toEqual({ lastSyncAt: null, restoreCheck: null });
+      expect(res.body.offsite).toEqual({
+        lastSyncAt: null,
+        restoreCheck: null,
+        syncStaleHours: 24,
+        restoreCheckStaleHours: 48,
+      });
     });
 
     it("should flag the storage limit when fresh backups exceed it", async () => {
@@ -161,6 +177,8 @@ describe("backup admin integration tests", () => {
           status: "error",
           error: "таблица lessons пуста",
         },
+        syncStaleHours: 24,
+        restoreCheckStaleHours: 48,
       });
     });
 
@@ -173,7 +191,12 @@ describe("backup admin integration tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(res.body.offsite).toEqual({ lastSyncAt: null, restoreCheck: null });
+      expect(res.body.offsite).toEqual({
+        lastSyncAt: null,
+        restoreCheck: null,
+        syncStaleHours: 24,
+        restoreCheckStaleHours: 48,
+      });
     });
 
     it("should return 401 without auth token", async () => {
@@ -194,6 +217,39 @@ describe("backup admin integration tests", () => {
   });
 
   describe("PUT /api/admin/backup/settings", () => {
+    it("should rerun the backup checks so turning backups off closes backup_overdue", async () => {
+      await prisma.backupSettings.create({
+        data: {
+          id: "backup-settings-singleton",
+          enabled: true,
+          intervalHours: 6,
+          maxStorageMb: 300,
+          lastBackupAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+          enabledChangedAt: new Date(Date.now() - 72 * 60 * 60 * 1000),
+        },
+      });
+      await prisma.adminAlert.create({
+        data: {
+          type: "backup_overdue",
+          activeType: "backup_overdue",
+          severity: "critical",
+          title: "Бэкап давно не создавался",
+          description: "x",
+          openEmailStatus: "skipped_no_email",
+        },
+      });
+
+      await request(app)
+        .put("/api/admin/backup/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ enabled: false })
+        .expect(200);
+
+      const alert = await prisma.adminAlert.findFirstOrThrow({ where: { type: "backup_overdue" } });
+      expect(alert.activeType).toBeNull();
+      expect(alert.resolvedAt).not.toBeNull();
+    });
+
     it("should update settings", async () => {
       const res = await request(app)
         .put("/api/admin/backup/settings")
@@ -287,6 +343,29 @@ describe("backup admin integration tests", () => {
         .expect(500);
 
       expect(res.body.error).toBe("Ошибка создания бэкапа");
+      const alert = await prisma.adminAlert.findUnique({ where: { activeType: "backup_failed" } });
+      expect(alert?.description).toBe("pg_dump failed");
+    });
+
+    it("should resolve an open backup_failed alert after a successful manual backup", async () => {
+      jest
+        .spyOn(backupService, "createManualBackup")
+        .mockRejectedValueOnce(new Error("pg_dump failed"))
+        .mockResolvedValueOnce({
+          name: "backup-2026-03-30.sql.gz",
+          sizeMb: 1.5,
+          createdAt: new Date("2026-03-30T12:00:00Z"),
+        });
+      const create = () =>
+        request(app).post("/api/admin/backup/create").set("Authorization", `Bearer ${adminToken}`);
+
+      await create().expect(500);
+      await create().expect(200);
+
+      const alerts = await prisma.adminAlert.findMany({ where: { type: "backup_failed" } });
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0].activeType).toBeNull();
+      expect(alerts[0].resolvedAt).not.toBeNull();
     });
 
     it("should return 401 without auth token", async () => {

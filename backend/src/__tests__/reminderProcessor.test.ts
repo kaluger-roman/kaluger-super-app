@@ -1,23 +1,19 @@
 import { faker } from "@faker-js/faker";
-import webpush from "web-push";
 import { prisma } from "../lib/prisma";
 import { processScheduledReminders } from "../services/reminderProcessor";
-import { uniqueEmail } from "./helpers";
+import { installWebPushDelivery, uniqueEmail, useVapidEnv } from "./helpers";
+import type { PushDelivery } from "./helpers";
 
-jest.mock("web-push", () => ({
-  setVapidDetails: jest.fn(),
-  sendNotification: jest.fn(),
-}));
+jest.mock("web-push", () => ({ sendNotification: jest.fn() }));
 
 describe("reminderProcessor service", () => {
   let userId: string;
   let studentId: string;
+  let delivery: PushDelivery;
+
+  useVapidEnv();
 
   beforeAll(async () => {
-    process.env.VAPID_PUBLIC_KEY = "test-public-key";
-    process.env.VAPID_PRIVATE_KEY = "test-private-key";
-    process.env.VAPID_SUBJECT = "mailto:test@test.com";
-
     const user = await prisma.user.create({
       data: {
         email: uniqueEmail(),
@@ -41,8 +37,11 @@ describe("reminderProcessor service", () => {
     await prisma.lesson.deleteMany({ where: { tutorId: userId } });
     await prisma.pushSubscription.deleteMany({ where: { userId } });
     await prisma.reminderSettings.deleteMany({ where: { userId } });
-    (webpush.sendNotification as jest.Mock).mockReset();
-    (webpush.sendNotification as jest.Mock).mockResolvedValue({});
+    delivery = installWebPushDelivery();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -100,7 +99,7 @@ describe("reminderProcessor service", () => {
 
     await processScheduledReminders({ tutorIds: [userId] });
 
-    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+    expect(delivery).toHaveBeenCalledTimes(1);
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: lesson.id },
@@ -135,7 +134,7 @@ describe("reminderProcessor service", () => {
 
     await processScheduledReminders({ tutorIds: [userId] });
 
-    expect(webpush.sendNotification).not.toHaveBeenCalled();
+    expect(delivery).not.toHaveBeenCalled();
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: lesson.id },
@@ -200,7 +199,7 @@ describe("reminderProcessor service", () => {
 
     await processScheduledReminders({ tutorIds: [userId] });
 
-    expect(webpush.sendNotification).not.toHaveBeenCalled();
+    expect(delivery).not.toHaveBeenCalled();
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: upcomingLesson.id },
@@ -250,9 +249,7 @@ describe("reminderProcessor service", () => {
       },
     });
 
-    (webpush.sendNotification as jest.Mock).mockRejectedValue(
-      new Error("Push service unavailable")
-    );
+    delivery.mockRejectedValue(new Error("Push service unavailable"));
 
     await processScheduledReminders({ tutorIds: [userId] });
 
@@ -298,7 +295,7 @@ describe("reminderProcessor service", () => {
 
     await processScheduledReminders({ tutorIds: [userId] });
 
-    expect(webpush.sendNotification).not.toHaveBeenCalled();
+    expect(delivery).not.toHaveBeenCalled();
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: lesson.id },
@@ -361,7 +358,7 @@ describe("reminderProcessor service", () => {
 
     await expect(processScheduledReminders({ tutorIds: [userId] })).resolves.not.toThrow();
 
-    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+    expect(delivery).toHaveBeenCalledTimes(1);
 
     const reminder = await prisma.scheduledReminder.findFirst({
       where: { lessonId: lesson.id },
@@ -497,9 +494,9 @@ describe("reminderProcessor service", () => {
     const recovered = await prisma.scheduledReminder.findUnique({
       where: { id: stuckReminder.id },
     });
-    // Recovered then immediately delivered (mocked sendNotification resolves)
+    // Recovered then immediately delivered (the mocked delivery resolves)
     expect(recovered!.status).toBe("SENT");
-    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+    expect(delivery).toHaveBeenCalledTimes(1);
   });
 
   it("should not recover PROCESSING claimed within the watchdog window (regression: watchdog cutoff)", async () => {
@@ -535,7 +532,7 @@ describe("reminderProcessor service", () => {
     });
     // Не должно быть тронуто — ещё в окне таймаута
     expect(after!.status).toBe("PROCESSING");
-    expect(webpush.sendNotification).not.toHaveBeenCalled();
+    expect(delivery).not.toHaveBeenCalled();
   });
 
   it("should apply per-user settings correctly when batch contains multiple users (regression: improve-hunt 2026-05-09 #3)", async () => {
@@ -638,7 +635,7 @@ describe("reminderProcessor service", () => {
 
       expect(a!.status).toBe("CANCELLED");
       expect(b!.status).toBe("SENT");
-      expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+      expect(delivery).toHaveBeenCalledTimes(1);
     } finally {
       await prisma.scheduledReminder.deleteMany({ where: { userId: otherUser.id } });
       await prisma.lesson.deleteMany({ where: { tutorId: otherUser.id } });
@@ -687,8 +684,8 @@ describe("reminderProcessor service", () => {
 
     await processScheduledReminders({ tutorIds: [userId] });
 
-    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
-    const payloadJson = (webpush.sendNotification as jest.Mock).mock.calls[0][1] as string;
+    expect(delivery).toHaveBeenCalledTimes(1);
+    const payloadJson = delivery.mock.calls[0][1] as string;
     expect(payloadJson).toContain("Тест Проспект");
 
     const reminder = await prisma.scheduledReminder.findFirst({

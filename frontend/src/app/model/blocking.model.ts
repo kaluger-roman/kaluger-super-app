@@ -2,17 +2,24 @@ import { combine, createStore, sample } from "effector";
 import { createGate } from "effector-react";
 import { debounce } from "patronum";
 
-import { callHistoryModel } from "@entities/callRecord";
+import { callHistoryModel, lessonCallsModel } from "@entities/callRecord";
 import { lessonModel } from "@entities/lesson";
 import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
 import { studentUserModel } from "@entities/studentUser";
 import { taxRatePeriodModel } from "@entities/taxRatePeriod";
-import { adminAuthModel, adminDataModel } from "@features/admin";
+import {
+  adminAlertsModel,
+  adminAuthModel,
+  adminDataModel,
+  adminSettingsModel,
+} from "@features/admin";
+import { callNotificationsModel } from "@features/callNotifications";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
 import { forgotPasswordModel } from "@features/forgotPassword";
 import { lessonCancellationModel } from "@features/lessons";
+import { sessionCleanupModel } from "@features/logoutConfirmation";
 import { resetPasswordModel } from "@features/resetPassword";
 import {
   studentEmailVerificationModel,
@@ -69,6 +76,12 @@ export const $isBlocking = combine(
     adminBackupSettings: adminDataModel.getBackupSettingsFx.pending,
     adminUpdateBackup: adminDataModel.updateBackupSettingsFx.pending,
     adminCreateBackup: adminDataModel.createBackupFx.pending,
+    adminLoadAlerts: adminAlertsModel.getAlertsFx.pending,
+    adminMarkAlertRead: adminAlertsModel.markAlertReadFx.pending,
+    adminMarkAllAlertsRead: adminAlertsModel.markAllAlertsReadFx.pending,
+    adminLoadSettings: adminSettingsModel.getAdminSettingsFx.pending,
+    adminUpdateSettings: adminSettingsModel.updateAdminSettingsFx.pending,
+    adminSendTestEmail: adminSettingsModel.sendTestEmailFx.pending,
     loadTaxRatePeriods: taxRatePeriodModel.loadPeriodsFx.pending,
     saveTaxRatePeriods: taxRatePeriodsModalModel.savePeriodsFx.pending,
     setTaxEnabled: financesModel.setTaxEnabledFx.pending,
@@ -84,6 +97,10 @@ export const $isBlocking = combine(
     tutorInvitationIssue: tutorStudentInvitationModel.issueInvitationFx.pending,
     tutorInvitationRevoke: tutorStudentInvitationModel.revokeInvitationFx.pending,
     loadCallHistory: callHistoryModel.loadCallHistoryFx.pending,
+    loadLessonCalls: lessonCallsModel.loadLessonCallsFx.pending,
+    enableCallNotifications: callNotificationsModel.enableFx.pending,
+    disableCallNotifications: callNotificationsModel.disableFx.pending,
+    logoutCleanup: sessionCleanupModel.cleanupFx.pending,
   },
   (pending) => Boolean(Object.values(pending).some(Boolean))
 );

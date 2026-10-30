@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "branch": "039-call-fullscreen",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 5,
+  "timestamp": "2026-10-26T10:43:44Z",
+  "diff_stats": {
+    "files_changed": 62,
+    "insertions": 3751,
+    "deletions": 166
+  },
+  "summary": {
+    "raw_findings": 8,
+    "after_dedup": 8,
+    "after_score_filter": 6,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 4
+    },
+    "by_category": {
+      "hack": 2,
+      "logic": 3,
+      "bug": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "Порог STACKED_BAR_MEDIA 760px подобран под группу масштаба без «Исходный размер»: при увеличении группа наезжает на «Завершить звонок» на ширине примерно 760–950px",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/ui/FullscreenControls/FullscreenControls.constants.ts",
+      "line_start": 1,
+      "line_end": 2,
+      "snippet": "// Below this width the zoom group cannot sit beside the call buttons and gets its own row.\nexport const STACKED_BAR_MEDIA = \"@media (max-width: 759.95px)\";",
+      "rationale": "Число не выведено из ширины соседей, оно угадывает её. В BottomBar сетка `minmax(0, 1fr) auto minmax(0, 1fr)`, а ZoomSlot с `justifySelf: end` (FullscreenControls.styled.ts:104,127-130) не может сжаться уже своего min-content и вылезает влево, в колонку CallControlBar. Без масштаба группа около 142px и помещается. С кнопкой «Исходный размер» (ZoomControls.tsx:50) она около 300px: это видно на скриншоте 05-full-share-zoom2-desktop. Боковая колонка при ширине W равна (W − 32 − 24 − 304) / 2, то есть около 226px на телефоне в ландшафте 812px (как в 03-full-share-controls-landscape) и около 200px на 760px. Значит, увеличенная группа ложится поверх красной кнопки «Завершить звонок» на 30–60px. Она стоит позже в DOM, поэтому нажатия в этом месте получает «Исходный размер».",
+      "fix_hint": "Не подбирать ширину вручную. Пусть раскладку решает содержимое: например, flex-wrap или container query на BottomBar, и тогда группа уходит на свой ряд, как только не помещается. Минимум — считать порог от самой широкой группы (с «Исходный размер», около 960px) и добавить @visual-скриншот ландшафта и планшета в увеличенном состоянии.",
+      "score": 75,
+      "verification_note": "ZoomSlot (justifySelf: end, колонка 3 из minmax(0,1fr) auto minmax(0,1fr)) с группой около 310px при показанной «Исходный размер» вылезает влево в колонку CallControlBar и на 760–956px перекрывает «Завершить звонок» (на 812px около 60 из 64px), перехватывая нажатия, а порог 760 задан вручную; подтверждённый костыль с влиянием на функцию в увеличенном состоянии на промежуточных ширинах.",
+      "severity": "high"
+    },
+    {
+      "id": "f2",
+      "agent": "cross-file",
+      "title": "Обычный вид плитки собеседника изменился сверх кнопки «Во весь экран»: значок «Микрофон выключен» переехал из левого верхнего угла в правый",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.tsx",
+      "line_start": 48,
+      "line_end": 56,
+      "snippet": "      {!config.bare && (\n        <Styled.TopRow>\n          {media.screenSharing && <ScreenShareLabel />}\n          <Styled.TopEnd>\n            {!config.badgeInNameRow && micBadge}",
+      "rationale": "Раньше micBadge варианта remote шёл в TopRow сразу за меткой демонстрации, у левого края (alignItems: flex-start). Теперь он внутри TopEnd с marginLeft: auto и стоит справа рядом с новой кнопкой, а TopRow выравнивается по центру. Это меняет обычный вид звонка у обоих участников, хотя FR-013 требует: «Обычный вид звонка НЕ ДОЛЖЕН меняться, кроме появления кнопки „Во весь экран“». В макетах 01/02 значка микрофона нет, так что такой перенос нигде не согласован.",
+      "fix_hint": "Оставить micBadge на прежнем месте, сразу за ScreenShareLabel в начале TopRow, а в TopEnd с marginLeft: auto положить только FullscreenToggleButton. Если перенос задуман, явно отразить его в спецификации или макете.",
+      "score": 75,
+      "verification_note": "В origin/main micBadge варианта remote стоит в TopRow сразу за меткой демонстрации у левого края, а в ветке (VideoTile.tsx:51-53) он внутри TopEnd с marginLeft: auto и уходит вправо, что противоречит FR-013 спеки («обычный вид звонка НЕ ДОЛЖЕН меняться, кроме кнопки «Во весь экран»»); касается только плитки собеседника.",
+      "severity": "high"
+    },
+    {
+      "id": "f3",
+      "agent": "shallow-bug",
+      "title": "После прокрутки колесом туда и обратно масштаб остаётся 1.0000000000000002: на «100%» видны «Исходный размер», активная «Уменьшить» и курсор grab",
+      "category": "bug",
+      "file": "frontend/src/features/videoCall/model/callZoom.helpers.ts",
+      "line_start": 43,
+      "line_end": 45,
+      "snippet": "export const clampZoom = (zoom: CallZoom, geometry: StageGeometry | null): CallZoom => {\n  const scale = clampScale(zoom.scale);\n  if (scale === ZOOM_MIN_SCALE) return ZOOM_RESET;",
+      "rationale": "Масштаб от колеса и щипка копится умножением exp(±delta·k), и при возврате на то же число щелчков ошибка округления часто оставляет его чуть выше 1. Например, deltaY=120: 3 щелчка вперёд и 3 назад дают 1.0000000000000002, на случайных последовательностях это примерно 18% случаев (deltaY 133, 175, 200, 40 тоже). До 1 зажимаются только значения ниже 1, а $isZoomed и $canZoomOut (callZoom.model.ts:27,29) сравнивают строго через `scale > ZOOM_MIN_SCALE`. В итоге на подписи «100%» остаются кнопка «Исходный размер», активная «Уменьшить», курсор grab и data-zoomed=true. Для шагов кнопок погрешность уже учтена через ZOOM_STEP_EPSILON, а здесь нет.",
+      "fix_hint": "В clampZoom считать масштаб в пределах ZOOM_STEP_EPSILON от ZOOM_MIN_SCALE (и от ZOOM_MAX_SCALE) равным границе: при `scale - ZOOM_MIN_SCALE < ZOOM_STEP_EPSILON` возвращать ZOOM_RESET. Добавить регрессионный тест: zoomedAt с factor=exp(0.24) три раза, затем с exp(-0.24) три раза, после чего ожидать ZOOM_RESET и $isZoomed=false.",
+      "score": 70,
+      "verification_note": "Дрейф подтверждён: round-trip wheel-зума на deltaY=120 (exp(±0.24) три раза вперёд и назад) даёт 1.0000000000000002, clampZoom сравнивает с ZOOM_MIN_SCALE строго и не применяет ZOOM_STEP_EPSILON, поэтому $isZoomed и $canZoomOut становятся true, а formatZoomPercent (Math.round) показывает «100%»: на 100% остаются «Исходный размер», активная «Уменьшить» и data-zoomed; видимая рассогласованность без потери функциональности на нередком пути (проверка оркестратором: 23 из 48 комбинаций дельт 40–250 и 1–6 щелчков оставляют масштаб выше 1).",
+      "severity": "medium"
+    },
+    {
+      "id": "f4",
+      "agent": "cross-file",
+      "title": "OfflineIndicator во время звонка уходит наверх, а в полноэкранном режиме верх занят панелью со «Свернуть»: на телефоне постоянная плашка закрывает кнопку выхода",
+      "category": "logic",
+      "file": "frontend/src/app/components/OfflineIndicator/OfflineIndicator.tsx",
+      "line_start": 10,
+      "line_end": 15,
+      "snippet": "  const callPhase = useUnit(callModel.$callPhase);\n  // During a call the bottom edge belongs to the call controls.\n  const vertical = callPhase === \"idle\" ? \"bottom\" : \"top\";\n\n  return (\n    <Snackbar open={!isOnline} anchorOrigin={{ vertical, horizontal: \"center\" }}>",
+      "rationale": "Вызывающий код опирается на то, что во время звонка верхний край свободен. Diff ломает это допущение: в полноэкранном режиме сверху лежит FullscreenTopBar с именем и кнопкой «Свернуть» (44px, top max(12px, safe-area)). Snackbar (z-index 1400) рисуется поверх оверлея звонка (1302). На узком экране он растягивается на всю ширину (left/right 8px), у него нет autoHide и нет кнопки закрытия, поэтому пока нет сети, «Свернуть» и имя собеседника недоступны. По той же причине тосты NotificationProvider (top-right, 4–8 с) закрывают «Свернуть», например SCREEN_SHARE_BUSY_TEXT, если нажать «Демонстрация экрана», пока собеседник показывает экран, а это ровно сценарий масштабирования.",
+      "fix_hint": "Учитывать callFullscreenModel.$isFullscreen: в режиме ставить плашку так, чтобы она не перекрывала панели (например, по центру под верхней панелью или с отступом на высоту TopBar), либо сделать её корень pointer-events: none, оставив кликабельным только Alert.",
+      "score": 50,
+      "verification_note": "OfflineIndicator.tsx не менялся, но новая FullscreenTopBar с кнопкой «Свернуть» оказывается под снэкбаром (zIndex 1400 над оверлеем 1302) без autoHide, поэтому при офлайне в полноэкранном режиме он перекрывает «Свернуть»; сценарий узкий (выход возможен Esc и двойным тапом), поэтому не выше 50.",
+      "severity": "medium"
+    },
+    {
+      "id": "f5",
+      "agent": "hacks",
+      "title": "Тест hasKeyboardFocusWithin на ложном основании подменяет :focus-visible на true и не замечает удаления проверки фокуса с клавиатуры",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/__tests__/videoCall.helpers.test.ts",
+      "line_start": 84,
+      "line_end": 90,
+      "snippet": "    // happy-dom does not know :focus-visible.\n    document.querySelectorAll(\"button\").forEach((button) => {\n      const matches = button.matches.bind(button);\n      vi.spyOn(button, \"matches\").mockImplementation((selector) =>\n        selector === \":focus-visible\" ? true : matches(selector)",
+      "rationale": "Комментарий неверен: в happy-dom 20.0.11 :focus-visible обрабатывается в node_modules/happy-dom/lib/query-selector/SelectorItem.js:340-344 как :focus. На этом же опирается FullscreenControls.test, где обычный .focus() держит панель. Из-за мока каждая кнопка «сфокусирована с клавиатуры», и тест хелпера не проверяет ветку, ради которой хелпер существует. Если убрать `isKeyboardFocus(active)` из hasKeyboardFocusWithin (videoCall.helpers.ts:56), все три проверки останутся зелёными.",
+      "fix_hint": "Убрать мок и комментарий, фокусировать кнопки настоящим .focus() вместо подмены document.activeElement. Добавить случай, где у сфокусированной кнопки внутри зоны `matches(\":focus-visible\")` возвращает false (фокус мышью), и ждать false.",
+      "score": 50,
+      "verification_note": "В happy-dom 20.0.11 :focus-visible совпадает с :focus (SelectorItem.js:340-342), а тест подменяет matches так, что любая кнопка всегда «с клавиатуры», поэтому удаление isKeyboardFocus(active) из hasKeyboardFocusWithin (videoCall.helpers.ts:56-58) оставляет тесты зелёными; тест-костыль с пробелом покрытия, вред ограничен тестами.",
+      "severity": "medium"
+    },
+    {
+      "id": "f6",
+      "agent": "removed-behavior",
+      "title": "Пустой TopEnd в плитках «self»/«selfCompact» отнимает 8px у плашки «Демонстрация экрана» в обычном режиме",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/ui/VideoTile/VideoTile.tsx",
+      "line_start": 49,
+      "line_end": 55,
+      "snippet": "<Styled.TopRow>\n  {media.screenSharing && <ScreenShareLabel />}\n  <Styled.TopEnd>\n    {!config.badgeInNameRow && micBadge}\n    {config.fullscreenToggle && <FullscreenToggleButton placement=\"tile\" />}",
+      "rationale": "Раньше в TopRow своего превью (badgeInNameRow: true, без кнопки) при собственной демонстрации была только плашка, и она занимала всю ширину ряда. Теперь в ряду всегда есть второй flex-элемент TopEnd, пустой у self/selfCompact, а `gap: 8` у TopRow работает и рядом с пустым элементом. Поэтому в PiP плашка стала уже на 8px. Заметно только на телефоне: PiP шириной 118px с inset 10, и надпись обрезается на символ раньше. Изменение чисто косметическое, но это изменение раскладки обычного экрана звонка, которое фича не задумывала.",
+      "fix_hint": "Рендерить Styled.TopEnd только когда в нём что-то есть (`(!config.badgeInNameRow && micBadge) || config.fullscreenToggle`). Другой вариант: вернуть `marginLeft: auto` на сам бейдж и кнопку без обёртки.",
+      "score": 50,
+      "verification_note": "TopRow (VideoTile.styled.ts:137-145) имеет gap 8, а TopEnd рендерится всегда, даже пустым, поэтому у self-плитки с демонстрацией появляется лишние 8px, которых в origin/main не было; эффект косметический и заметен только в узком PiP.",
+      "severity": "medium"
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "type-safety",
+      "title": "Типы и константы модели масштаба лежат в файлах callFullscreen.*, а CallZoom вынесен в корневой videoCall.types.ts: контракт callZoom разнесён по трём местам",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/model/callFullscreen.types.ts",
+      "line_start": 1,
+      "line_end": 18,
+      "snippet": "export type StageGeometry = {\n  boxWidth: number;\n  boxHeight: number;\n...\nexport type ZoomAtPayload = { factor: number; focusX: number; focusY: number };",
+      "rationale": "Исправление iter-1 f1 разложило типы не по своим моделям. В callFullscreen.types.ts только типы масштаба (StageGeometry, ZoomAtPayload, PanPayload, ContentSize, OffsetLimit) и ни одного типа полноэкранной модели; ZOOM_* лежат в callFullscreen.constants.ts. Их тип CallZoom используется только в model/, но объявлен в корневом videoCall.types.ts (строки 8–13), где лежат общие для UI и модели типы вроде CallMediaState. В папке model принято держать для каждой модели свои файлы (callSounds.model/constants/helpers/types), а callZoom.model.ts и callZoom.helpers.ts импортируют свой контракт из файлов чужой модели и из корня фичи.",
+      "fix_hint": "Создать model/callZoom.types.ts и перенести туда CallZoom и все типы масштаба из callFullscreen.types.ts (файл callFullscreen.types.ts тогда удалить), а ZOOM_* и ZOOM_RESET перенести в model/callZoom.constants.ts. Публичный реэкспорт StageGeometry в model/index.ts перенаправить на новый файл.",
+      "score": 25,
+      "verification_note": "Правила «типы в *.types.ts» и «константы/хелперы/типы в разных файлах» (docs/conventions/frontend.md:70, 77) соблюдены; расположение CallZoom в корневом videoCall.types.ts и типов масштаба в callFullscreen.types.ts — организационная неаккуратность без явного правила и без влияния на поведение, к тому же следует fix_hint из iter-1 f1.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Значок выключенного микрофона скопирован в FullscreenTopBar отдельным MicBadge, хотя метку демонстрации в той же ветке вынесли в общий ScreenShareLabel",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/ui/FullscreenControls/FullscreenControls.styled.ts",
+      "line_start": 68,
+      "line_end": 81,
+      "snippet": "export const MicBadge = styled(Box)(({ theme }) => ({\n  flexShrink: 0,\n  display: \"flex\",\n  alignItems: \"center\",\n  justifyContent: \"center\",",
+      "rationale": "MicBadge повторяет VideoTile.styled.ts StatusBadge (белая иконка в круге error.main, 24px, иконка около 0,7 размера). FullscreenTopBar.tsx:38-40 повторяет и разметку VideoTile.tsx: литерал aria-label «Микрофон выключен» с MicOffIcon. Метку «Демонстрация экрана» ветка ради того же переиспользования между плиткой и верхней панелью вынесла в компонент ScreenShareLabel, а значок микрофона остался двумя параллельными копиями. Правка подписи, цвета или размера в одной из них не дойдёт до другой.",
+      "fix_hint": "Вынести значок в общий компонент, например ui/MicOffBadge с пропсом size, по образцу ScreenShareLabel. Использовать его в VideoTile (вместо micBadge и StatusBadge) и в FullscreenTopBar, а MicBadge удалить.",
+      "score": 25,
+      "verification_note": "Дублирование подтверждено: MicBadge (FullscreenControls.styled.ts:68-81) почти повторяет StatusBadge (VideoTile.styled.ts:180-194), разметка с MicOffIcon и aria-label повторена в FullscreenTopBar.tsx и VideoTile.tsx, но конкретного поведенческого вреда нет.",
+      "reason": "below threshold"
+    }
+  ]
+}

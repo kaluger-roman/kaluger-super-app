@@ -80,3 +80,32 @@ export class CallRateLimitError extends Error {
     this.name = "CallRateLimitError";
   }
 }
+
+export class AdminAlertNotFoundError extends Error {
+  constructor(message = "Алерт не найден") {
+    super(message);
+    this.name = "AdminAlertNotFoundError";
+  }
+}
+
+export class AlertEmailNotConfiguredError extends Error {
+  constructor(message = "Сначала сохраните адрес для уведомлений") {
+    super(message);
+    this.name = "AlertEmailNotConfiguredError";
+  }
+}
+
+export class TestEmailRateLimitError extends Error {
+  constructor(message = "Тестовое письмо можно отправлять не чаще раза в минуту") {
+    super(message);
+    this.name = "TestEmailRateLimitError";
+  }
+}
+
+// The message is Resend's own error text, shown to the admin as is.
+export class AdminEmailSendError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminEmailSendError";
+  }
+}

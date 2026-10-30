@@ -1,6 +1,7 @@
 import type {
   CallSignalingInbound,
   IceCandidatePayload,
+  PresenceState,
   SessionDescriptionPayload,
 } from "../../types";
 import {
@@ -8,6 +9,9 @@ import {
   ICE_CANDIDATE_MAX_LENGTH,
   ICE_FIELD_MAX_LENGTH,
   INVITE_ID_MAX_LENGTH,
+  LESSON_ID_MAX_LENGTH,
+  PRESENCE_STATES,
+  PUSH_ENDPOINT_MAX_LENGTH,
   SDP_MAX_LENGTH,
 } from "./signaling.constants";
 import type { CallSignalType } from "./signaling.types";
@@ -62,17 +66,47 @@ export const toIceCandidate = (value: unknown): IceCandidatePayload | null => {
   };
 };
 
+const toCallInvite = (data: Record<string, unknown>): CallSignalingInbound | null => {
+  const { inviteId, targetStudentId, lessonId } = data;
+  if (!isNonEmptyString(inviteId) || inviteId.length > INVITE_ID_MAX_LENGTH) return null;
+  if (targetStudentId !== undefined && !isNonEmptyString(targetStudentId)) return null;
+  if (
+    lessonId !== undefined &&
+    !(isNonEmptyString(lessonId) && lessonId.length <= LESSON_ID_MAX_LENGTH)
+  ) {
+    return null;
+  }
+  return {
+    type: "call_invite",
+    inviteId,
+    ...(targetStudentId === undefined ? {} : { targetStudentId }),
+    ...(lessonId === undefined ? {} : { lessonId }),
+  };
+};
+
+// The endpoint only narrows the closing push, so an unusable one is dropped, not the answer.
+const toPushEndpoint = (value: unknown): { pushEndpoint?: string } =>
+  isNonEmptyString(value) && value.length <= PUSH_ENDPOINT_MAX_LENGTH
+    ? { pushEndpoint: value }
+    : {};
+
+const isPresenceState = (value: unknown): value is PresenceState =>
+  PRESENCE_STATES.some((state) => state === value);
+
+// Presence belongs to the participant, not to a call, so it carries no callId.
+const toPresenceUpdate = (data: Record<string, unknown>): CallSignalingInbound | null => {
+  const { presence, audioSuspended, videoSuspended } = data;
+  if (!isPresenceState(presence)) return null;
+  if (typeof audioSuspended !== "boolean" || typeof videoSuspended !== "boolean") return null;
+  return { type: "presence_update", presence, audioSuspended, videoSuspended };
+};
+
 export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
   if (!isCallSignalMessage(data)) return null;
 
-  if (data.type === "call_invite") {
-    const { inviteId, targetStudentId } = data;
-    if (!isNonEmptyString(inviteId) || inviteId.length > INVITE_ID_MAX_LENGTH) return null;
-    if (targetStudentId === undefined) return { type: "call_invite", inviteId };
-    return isNonEmptyString(targetStudentId)
-      ? { type: "call_invite", inviteId, targetStudentId }
-      : null;
-  }
+  if (data.type === "call_invite") return toCallInvite(data);
+  if (data.type === "presence_update") return toPresenceUpdate(data);
+  if (data.type === "call_sync") return { type: "call_sync" };
 
   if (!isNonEmptyString(data.callId)) return null;
   const { callId } = data;
@@ -101,10 +135,17 @@ export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
             cameraAvailable: data.cameraAvailable,
           }
         : null;
+    case "call_resume":
+      return typeof data.sessionRestart === "boolean"
+        ? { type: "call_resume", callId, sessionRestart: data.sessionRestart }
+        : null;
     case "call_hangup":
       return data.reason === "media_unavailable"
         ? { type: "call_hangup", callId, reason: "media_unavailable" }
         : { type: "call_hangup", callId };
+    case "call_accept":
+    case "call_reject":
+      return { type: data.type, callId, ...toPushEndpoint(data.pushEndpoint) };
     default:
       return { type: data.type, callId };
   }

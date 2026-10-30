@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "branch": "fix-ios-capture-stop",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 3,
+  "timestamp": "2026-10-29T22:25:42Z",
+  "diff_mode": "working-tree",
+  "diff_stats": {
+    "files_changed": 40,
+    "insertions": 1464,
+    "deletions": 69
+  },
+  "summary": {
+    "raw_findings": 8,
+    "after_dedup": 7,
+    "after_score_filter": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 2
+    },
+    "by_category": {
+      "logic": 1,
+      "hack": 1
+    },
+    "agents_failed": [],
+    "agents_without_findings": [
+      "shallow-bug",
+      "deep-logic",
+      "security",
+      "type-safety",
+      "cross-file",
+      "wrapper-proxy"
+    ],
+    "dedup_notes": [
+      "claude-md (devicePush.helpers.ts:43) и hacks (devicePush.helpers.ts:43) описывают один дубль isCallId/hasCallId — слиты в находку claude-md"
+    ]
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "hacks",
+      "title": "Проверки «заглушённую камеру не трогают» в тесте не могут упасть: запрос камеры в нём всё равно отклоняется",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 763,
+      "line_end": 775,
+      "snippet": "      const { session } = await activeWith(async () => createFakeStream([\"audio\"]), deviceDenied);\n      ...\n      expect(session?.cameraTrack).toBe(camera);\n      expect(camera.stop).not.toHaveBeenCalled();\n      expect(errors.calls).toEqual([]);",
+      "rationale": "Камера отдаётся через deviceDenied. Если selectRecoveryTargets по ошибке выберет заглушённую камеру при переключении микрофона, getUserMedia вернёт NotAllowedError, recoverTracks сделает `continue`, cameraTrack останется прежним и stop не вызовется. Первые два expect проходят при любой реализации, а тост не появится, потому что failed требует toggled.includes(\"camera\"). Свою половину названия («leave the muted camera alone») тест не проверяет.",
+      "fix_hint": "Добавить `expect(gumCalls()).toBe(calls)` (calls считать до toggleTwice), как в соседнем «should leave a muted camera the user just turned off alone»: так видно, что камеру даже не запрашивали. Либо разделить тест на «не запрашивает камеру» с разрешающим cameraStream и «молчит об отказе» с deviceDenied.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Тест новый в этом diff; мутация, при которой заглушённая камера выбирается целью при переключении микрофона, тестом не ловится (deviceDenied скрывает запрос, тоста нет из-за условия toggled.includes(\"camera\")); реальный пробел в покрытии, прод-бага в текущем коде нет."
+    },
+    {
+      "id": "f2",
+      "agent": "removed-behavior",
+      "title": "Пропала дедупликация запросов восстановления во время прогона: пачка cameBack/ended теперь даёт повторный прогон и второй тост «занято»",
+      "category": "logic",
+      "file": "frontend/src/features/videoCall/model/trackRecovery.model.ts",
+      "line_start": 79,
+      "line_end": 83,
+      "snippet": "sample({\n  clock: recoverTracksFx.finally,\n  source: $queuedRecovery,\n  filter: isRecoveryRequest,\n  target: recoverTracksFx,",
+      "rationale": "Удалённый `source: { address, pending: recoverTracksFx.pending }` + `toRecoveredCallId` гасил любой запрос, пришедший во время прогона: одна пачка триггеров давала один getUserMedia и один тост. Теперь каждый запрос без toggled (cameBack, localTrackEnded) ставится в $queuedRecovery и после finally повторяется. При возврате на страницу на iOS приходят cameBack и `ended` дорожек (или `ended` обеих дорожек, два события localTrackEnded), а устройство держит, например, телефонный звонок: повтор снова выбирает те же ended-дорожки, снова получает NotReadableError и второй раз показывает MIC_BUSY_TEXT / MIC_AND_CAMERA_BUSY_TEXT. Тест «should name both devices once» этот путь не ловит: там readyState ставится напрямую и триггер всего один.",
+      "fix_hint": "Ставить в очередь только то, что прогон мог пропустить: запросы с непустым toggled или с дорожкой, которая закончилась уже после выбора целей; либо в повторе не запрашивать и не объявлять заново устройства, которые предыдущий прогон уже признал busy. Регрессионный тест: cameBack вместе с двумя endTrackBySystem при занятых устройствах даёт ровно один тост.",
+      "score": 50,
+      "severity": "medium",
+      "verification_note": "Подтверждено по коду: до diff запрос при занятом прогоне отбрасывался (toRecoveredCallId возвращал null при pending), теперь cameBack и localTrackEnded без toggled ставятся в $queuedRecovery и повторяются после finally; busy-дорожки остаются ended, повтор снова получает NotReadableError и второй раз вызывает showErrorEvent (без дедупликации), но это повтор сообщения, а не потеря функциональности."
+    }
+  ],
+  "filtered_out": [
+    {
+      "agent": "claude-md",
+      "title": "Новый isCallId в devicePush.helpers.ts дословно повторяет существующий hasCallId из call.helpers.ts",
+      "category": "convention",
+      "file": "frontend/src/features/videoCall/model/devicePush.helpers.ts",
+      "line_start": 43,
+      "line_end": 43,
+      "snippet": "export const isCallId = (callId: string | null): callId is string => callId !== null;",
+      "rationale": "В call.helpers.ts:45 уже есть `hasCallId` с тем же типом и телом, его используют negotiation.model.ts и до этого diff использовал trackRecovery.model.ts (импорт убран). Новый guard дублирует общий хелпер той же папки (frontend.md:331, frontend.md:142-146). (also flagged by: hacks)",
+      "fix_hint": "Удалить isCallId из devicePush.helpers.ts, в devicePush.model.ts взять hasCallId из ./call.helpers, тест isCallId убрать или перенести в тест hasCallId.",
+      "score": 25,
+      "verification_note": "Дубль подтверждён, но правило frontend.md:331 про выделение функций, а «Не дублировать» в frontend.md:146 относится к разбору ошибок axios; явного нарушения конвенции нет, это reuse-замечание.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "readShownCallId дословно копирует readOpenedCallId, отличается только константа типа",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/devicePush.helpers.ts",
+      "line_start": 45,
+      "line_end": 49,
+      "snippet": "export const readShownCallId = (data: unknown): string | null => {\n  if (typeof data !== \"object\" || data === null) return null;\n  if (!(\"type\" in data) || data.type !== CALL_NOTIFICATION_SHOWN_MESSAGE) return null;\n  return \"callId\" in data && typeof data.callId === \"string\" && data.callId ? data.callId : null;\n};",
+      "rationale": "callNotificationOpen.helpers.ts:16-20 readOpenedCallId разбирает то же сообщение service worker'а `{ type, callId }` тем же кодом, отличие только в CALL_NOTIFICATION_OPENED_MESSAGE. Валидация сообщений SW теперь живёт в двух местах.",
+      "fix_hint": "Оставить в callNotificationOpen.helpers.ts один парсер `readServiceWorkerCallId(type, data)` и сделать через него readOpenedCallId и readShownCallId.",
+      "score": 25,
+      "verification_note": "Тела действительно идентичны, но оба парсера корректны и правила на такой случай нет: дублирование без конкретного вреда.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Какое устройство переключили, восстанавливается по ключам патча после того, как mediaToggled слил оба эффекта в одно событие",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/trackRecovery.helpers.ts",
+      "line_start": 122,
+      "line_end": 127,
+      "snippet": "export const toToggledDevices = (patch: MediaPatch | null): CallDevice[] => {\n  const toggled: CallDevice[] = [];\n  if (patch && \"micOn\" in patch) toggled.push(\"mic\");\n  if (patch && \"cameraOn\" in patch) toggled.push(\"camera\");\n  return toggled;\n};",
+      "rationale": "Устройство однозначно известно в clock'е (toggleMicFx.done / toggleCameraFx.done), но mediaToggled отдаёт только Partial<CallMediaState>, и trackRecovery восстанавливает его по форме объекта. При изменении патча тумблера замена заглушённого трека молча перестанет работать.",
+      "fix_hint": "Передавать устройство явно: mediaToggled несёт `{ device, patch }`, или два clock'а forCurrentCall(toggleMicFx.done) → [\"mic\"] и forCurrentCall(toggleCameraFx.done) → [\"camera\"].",
+      "score": 25,
+      "verification_note": "toggleMicFx возвращает только { micOn }, toggleCameraFx только { cameraOn[, cameraAvailable] }, поэтому устройство определяется верно; это хрупкость на будущее, а не баг.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "Два settleMicrotasks подряд в тесте без объяснения: магическое число тиков",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/__tests__/mediaRecovery.model.test.ts",
+      "line_start": 753,
+      "line_end": 755,
+      "snippet": "      releaseMic();\n      await settleMicrotasks();\n      await settleMicrotasks();",
+      "rationale": "settleMicrotasks это setImmediate (callFlow.ts:15); второй вызов либо лишний, либо маскирует скрытый макротаск в цепочке «finally → повтор из $queuedRecovery → getUserMedia → replaceTrack».",
+      "fix_hint": "Убрать второй settle, если тест проходит без него; иначе ждать наблюдаемое условие (vi.waitFor) вместо фиксированного числа тиков.",
+      "score": 25,
+      "verification_note": "Цепочка восстановления состоит только из промисов, один setImmediate её дожидается: второй вызов избыточен, но не маскирует ожидание и не делает тест вакуумным.",
+      "reason": "below threshold"
+    },
+    {
+      "agent": "hacks",
+      "title": "$answeredHereCallId экспортируется, но нигде вне модели не используется",
+      "category": "hack",
+      "file": "frontend/src/features/videoCall/model/devicePush.model.ts",
+      "line_start": 24,
+      "line_end": 24,
+      "snippet": "export const $answeredHereCallId = createStore<string | null>(null);",
+      "rationale": "git grep находит $answeredHereCallId только внутри devicePush.model.ts: его не читают ни другие модели, ни тесты. Экспорт расширяет публичную поверхность модели внутренним состоянием.",
+      "fix_hint": "Убрать export, как у readPushEndpointFx и closeCallNotificationsFx в том же файле.",
+      "score": 25,
+      "verification_note": "Используется только в devicePush.model.ts, index.ts его не реэкспортирует; лишний export без вреда и без правила в конвенциях.",
+      "reason": "below threshold"
+    }
+  ]
+}

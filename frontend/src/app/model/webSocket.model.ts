@@ -2,21 +2,20 @@ import { createEffect, createEvent, sample } from "effector";
 
 import { lessonModel } from "@entities/lesson";
 import { changeEmailModel, changePasswordModel } from "@features";
-import { getTutorToken } from "@shared";
+import { callNotificationOpenModel } from "@features/videoCall";
+import { expireTutorSession, getTutorToken } from "@shared";
 
 import * as appInitModel from "./appInit.model";
 import * as socketConnectionModel from "./socketConnection.model";
 import { WS_RECONNECT_DELAY_MS, WS_REVOKED_CLOSE_CODES } from "./webSocket.constants";
-import {
-  dispatchTutorMessage,
-  followStoredTutorToken,
-  resumeTutorSession,
-} from "./webSocket.helpers";
+import { dispatchTutorMessage, resumeTutorSession } from "./webSocket.helpers";
 import type { LessonStatusUpdate } from "./webSocket.types";
 
 export const handleLessonStatusUpdate = createEvent<LessonStatusUpdate>();
 // The tutor token in localStorage was changed by another tab of this browser.
 export const tokenStorageChanged = createEvent();
+// Another tab of this browser logged the tutor out.
+export const tutorSessionEndedElsewhere = createEvent();
 
 const connection = socketConnectionModel.createSocketConnection({
   path: "/ws",
@@ -25,12 +24,15 @@ const connection = socketConnectionModel.createSocketConnection({
   dispatch: (data) => dispatchTutorMessage(data, handleLessonStatusUpdate),
   reconnectDelayMs: WS_RECONNECT_DELAY_MS,
   resumed: appInitModel.appResumed,
+  online: appInitModel.wentOnline,
+  openedForCall: callNotificationOpenModel.notificationOpenedInApp,
   logLabel: "WebSocket",
   revokedCloseCodes: WS_REVOKED_CLOSE_CODES,
   canResume: resumeTutorSession,
 });
 
-const followStoredTokenFx = createEffect(followStoredTutorToken);
+const hasTutorTokenFx = createEffect((): boolean => getTutorToken() !== null);
+export const expireSessionFx = createEffect(expireTutorSession);
 
 export const connectWebSocket = connection.connect;
 export const disconnectWebSocket = connection.disconnect;
@@ -50,14 +52,21 @@ sample({
   source: connection.$isEnabled,
   filter: Boolean,
   fn: () => undefined,
-  target: followStoredTokenFx,
+  target: hasTutorTokenFx,
 });
 sample({
-  clock: followStoredTokenFx.doneData,
+  clock: hasTutorTokenFx.doneData,
   filter: Boolean,
   fn: () => undefined,
   target: connection.tokenRenewed,
 });
+sample({
+  clock: hasTutorTokenFx.doneData,
+  filter: (hasToken) => !hasToken,
+  fn: () => undefined,
+  target: tutorSessionEndedElsewhere,
+});
+sample({ clock: tutorSessionEndedElsewhere, target: expireSessionFx });
 sample({
   clock: [changePasswordModel.persistTokenFx.done, changeEmailModel.persistTokenFx.done],
   fn: () => undefined,

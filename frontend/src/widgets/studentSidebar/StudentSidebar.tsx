@@ -6,6 +6,7 @@ import { useUnit } from "effector-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { studentUserModel } from "@entities";
+import { sessionCleanupModel } from "@features";
 
 import { STUDENT_SIDEBAR_ITEMS } from "./StudentSidebar.constants";
 import { getInitials } from "./StudentSidebar.helpers";
@@ -16,6 +17,7 @@ export const StudentSidebar: FC<StudentSidebarProps> = ({ drawerWidth, open, onC
   const navigate = useNavigate();
   const location = useLocation();
   const session = useUnit(studentUserModel.$studentSession);
+  const logout = useUnit(sessionCleanupModel.studentLogoutRequested);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -23,7 +25,7 @@ export const StudentSidebar: FC<StudentSidebarProps> = ({ drawerWidth, open, onC
   };
 
   const handleLogout = () => {
-    studentUserModel.studentLoggedOut();
+    logout();
   };
 
   return (

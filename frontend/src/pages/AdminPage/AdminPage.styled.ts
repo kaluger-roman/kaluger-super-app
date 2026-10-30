@@ -22,12 +22,20 @@ export const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: "24px",
   borderRadius: "16px",
   border: `1px solid ${theme.palette.divider}`,
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px",
+  },
 }));
 
-export const StyledTab = styled(Tab)({
+export const StyledTab = styled(Tab)(({ theme }) => ({
   textTransform: "none",
   fontWeight: 600,
-});
+  [theme.breakpoints.down("sm")]: {
+    minWidth: 0,
+    paddingLeft: "12px",
+    paddingRight: "12px",
+  },
+}));
 
 export const StyledTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: "24px",

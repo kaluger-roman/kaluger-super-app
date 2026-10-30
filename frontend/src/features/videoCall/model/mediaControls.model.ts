@@ -82,7 +82,8 @@ sample({
   target: toggleCameraFx,
 });
 
-const mediaToggled = sample({
+// A mic or camera toggle of the current call is applied to the tracks (null: nothing changed).
+export const mediaToggled = sample({
   clock: [
     currentCallModel.forCurrentCall(toggleMicFx.done, ({ params }) => params.callId),
     currentCallModel.forCurrentCall(toggleCameraFx.done, ({ params }) => params.callId),

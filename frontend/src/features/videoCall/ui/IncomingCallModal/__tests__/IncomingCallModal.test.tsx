@@ -11,11 +11,21 @@ import { callModel } from "../../../model";
 import { installTransport, resetCallFlow } from "../../../model/__tests__/callFlow";
 import { IncomingCallModal } from "../IncomingCallModal";
 
-const renderIncoming = () => {
+const LESSON = {
+  id: "lesson-1",
+  subject: "PHYSICS" as const,
+  startTime: "2026-10-23T15:00:00",
+  endTime: "2026-10-23T16:00:00",
+};
+
+const renderIncoming = (lesson: typeof LESSON | null = null) => {
   const scope = fork({
     values: [
       [callModel.$callPhase, "incoming"],
-      [callModel.$incomingCall, { callId: "call-1", callerName: "Анна Петрова", role: "tutor" }],
+      [
+        callModel.$incomingCall,
+        { callId: "call-1", callerName: "Анна Петрова", role: "tutor", lesson },
+      ],
     ],
   });
   render(
@@ -40,6 +50,18 @@ describe("IncomingCallModal", () => {
     renderIncoming();
     expect(screen.getByText("Анна Петрова")).toBeInTheDocument();
     expect(screen.getByText("Входящий вызов")).toBeInTheDocument();
+  });
+
+  it("should show the lesson of a lesson call", () => {
+    renderIncoming(LESSON);
+    expect(screen.getByText("Звонок по уроку")).toBeInTheDocument();
+    expect(screen.getByText("Физика")).toBeInTheDocument();
+    expect(screen.getByText(/15:00\s*[—–-]\s*16:00/)).toBeInTheDocument();
+  });
+
+  it("should not show a lesson block for a call without a lesson", () => {
+    renderIncoming();
+    expect(screen.queryByText("Звонок по уроку")).not.toBeInTheDocument();
   });
 
   it("should leave the incoming phase when the call is rejected", async () => {

@@ -4,12 +4,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OUTGOING_REVEAL_DELAY_MS } from "../call.constants";
 import * as callModel from "../call.model";
-import * as callRequestModel from "../callRequest.model";
+import * as callEntryModel from "../callEntry.model";
 import * as callScreenModel from "../callScreen.model";
 // The whole call wiring, as in the app: with a transport installed the invite goes out and the
 // call stays outgoing, whatever other test files loaded before.
 import "../index";
 import { installTransport, resetCallFlow } from "./callFlow";
+
+const LESSON = {
+  id: "lesson-1",
+  subject: "MATHEMATICS" as const,
+  startTime: "2026-10-23T15:00:00.000Z",
+  endTime: "2026-10-23T16:00:00.000Z",
+};
 
 // patronum `delay` keeps the scope busy until its timer fires, so units are launched
 // fire-and-forget and the clock is driven explicitly.
@@ -19,7 +26,9 @@ const launch = async (run: () => unknown) => {
 };
 
 const startCall = (scope: Scope) =>
-  launch(() => allSettled(callModel.callStarted, { scope, params: { peerName: "Анна" } }));
+  launch(() =>
+    allSettled(callModel.callStarted, { scope, params: { peerName: "Анна", lesson: LESSON } })
+  );
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -38,10 +47,16 @@ describe("features/videoCall/model callScreen", () => {
     createWatch({ unit: callModel.callStarted, fn: (params) => started.push(params), scope });
 
     await launch(() =>
-      allSettled(callRequestModel.callRequested, { scope, params: { peerName: "Анна" } })
+      allSettled(callEntryModel.startRequested, {
+        scope,
+        params: { peerName: "Анна", lesson: LESSON },
+      })
     );
     await launch(() =>
-      allSettled(callRequestModel.callRequested, { scope, params: { peerName: "Анна" } })
+      allSettled(callEntryModel.startRequested, {
+        scope,
+        params: { peerName: "Анна", lesson: LESSON },
+      })
     );
 
     expect(started).toHaveLength(1);
@@ -70,7 +85,7 @@ describe("features/videoCall/model callScreen", () => {
     const scope = fork();
     await startCall(scope);
     await launch(() =>
-      allSettled(callModel.callFailed, { scope, params: "Репетитор сейчас не в сети" })
+      allSettled(callModel.callFailed, { scope, params: "Преподаватель сейчас не в сети" })
     );
 
     await vi.advanceTimersByTimeAsync(OUTGOING_REVEAL_DELAY_MS);

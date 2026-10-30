@@ -9,7 +9,12 @@ import { WebSocketManager } from "./lib/websocket";
 import { setWebSocketManager } from "./lib/wsManager";
 import { processRecurringLessons } from "./services/recurringLessons";
 import { updateLessonStatuses } from "./services/lessonStatusUpdater";
-import { processScheduledReminders, reconcileReceivedAmounts, runBackupJob } from "./services";
+import {
+  processScheduledReminders,
+  reconcileReceivedAmounts,
+  runBackupJobWithAlerts,
+  runScheduledAlertChecks,
+} from "./services";
 import { getFrontendUrl } from "./utils";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
@@ -30,6 +35,7 @@ import { testRouter } from "./routes/testSupport";
 import { studentAuthRouter } from "./routes/studentAuth";
 import { studentInvitationsRouter } from "./routes/studentInvitations";
 import { studentCabinetRouter } from "./routes/studentCabinet";
+import { studentPushRouter } from "./routes/studentPush";
 import { callRecordsRouter, studentCallRecordsRouter } from "./routes/callRecords";
 
 const app = express();
@@ -64,6 +70,7 @@ app.use("/api/tax-periods", taxPeriodsRouter);
 app.use("/api/student-auth", studentAuthRouter);
 app.use("/api/student-invitations", studentInvitationsRouter);
 app.use("/api/student-cabinet", studentCabinetRouter);
+app.use("/api/student-push", studentPushRouter);
 app.use("/api/calls", callRecordsRouter);
 app.use("/api/student", studentCallRecordsRouter);
 
@@ -191,9 +198,21 @@ if (shouldStartServer) {
       "0 * * * *",
       async () => {
         try {
-          await runBackupJob();
+          await runBackupJobWithAlerts();
         } catch (error) {
           console.error("Error in database backup cron job:", error);
+        }
+      },
+      { timezone: CRON_TIMEZONE }
+    );
+
+    cron.schedule(
+      "*/15 * * * *",
+      async () => {
+        try {
+          await runScheduledAlertChecks();
+        } catch (error) {
+          console.error("Error in admin alert checks cron job:", error);
         }
       },
       { timezone: CRON_TIMEZONE }
@@ -204,6 +223,7 @@ if (shouldStartServer) {
     console.log("- Lesson status updates: Every minute");
     console.log("- Reminder processing: Every minute");
     console.log("- Database backup: Checked every hour");
+    console.log("- Admin alert checks: Every 15 minutes");
   });
 }
 

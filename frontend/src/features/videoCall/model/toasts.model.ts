@@ -4,13 +4,16 @@ import { notificationsModel } from "@shared";
 
 import {
   BUSY_TEXT,
+  CALL_ALREADY_ENDED_TEXT,
+  CALL_ENDED_TEXT,
   MEDIA_DENIED_TEXT,
   NO_ANSWER_TEXT,
   REJECTED_TEXT,
-  TRANSPORT_LOST_TEXT,
 } from "./call.constants";
 import { isPeerHangup, toCanceledText, toPeerEndedText, toUnavailableText } from "./call.helpers";
 import * as callModel from "./call.model";
+import * as callNotificationOpenModel from "./callNotificationOpen.model";
+import * as callResumeModel from "./callResume.model";
 
 sample({
   clock: callModel.unavailableReceived,
@@ -49,12 +52,6 @@ sample({
 });
 
 sample({
-  clock: callModel.callConnectionLost,
-  fn: () => TRANSPORT_LOST_TEXT,
-  target: notificationsModel.showErrorEvent,
-});
-
-sample({
   clock: [callModel.callErrorReceived, callModel.callFailed],
   target: notificationsModel.showErrorEvent,
 });
@@ -71,4 +68,16 @@ sample({
   filter: (reason) => !isPeerHangup(reason),
   fn: toPeerEndedText,
   target: notificationsModel.showErrorEvent,
+});
+
+sample({
+  clock: callResumeModel.returnedToEndedCall,
+  fn: () => CALL_ENDED_TEXT,
+  target: notificationsModel.showInfoEvent,
+});
+
+sample({
+  clock: callNotificationOpenModel.staleCallNotificationOpened,
+  fn: () => CALL_ALREADY_ENDED_TEXT,
+  target: notificationsModel.showInfoEvent,
 });
