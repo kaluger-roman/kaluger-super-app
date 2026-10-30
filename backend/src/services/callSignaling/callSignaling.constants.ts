@@ -8,6 +8,8 @@ export const CALL_RECONNECT_GRACE_MS = 180_000;
 export const DEFAULT_STUN_URL = "stun:stun.l.google.com:19302";
 // Long enough for a lesson-length call: coturn re-checks credentials on allocation refresh.
 export const DEFAULT_TURN_TTL_SECONDS = 4 * 60 * 60;
+export const TURN_NOT_CONFIGURED_WARNING =
+  "TURN_URL или TURN_SECRET не задан — видеозвонки работают только через STUN, релей недоступен (docs/ops/turn-relay.md)";
 
 export const INVITE_RATE_LIMIT = 10;
 export const INVITE_RATE_WINDOW_MS = 60 * 1000;

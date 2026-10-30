@@ -14,12 +14,14 @@ import {
   reconcileReceivedAmounts,
   runBackupJobWithAlerts,
   runScheduledAlertChecks,
+  warnIfTurnNotConfigured,
 } from "./services";
 import { getFrontendUrl } from "./utils";
 import { validateRequiredEnv } from "./utils/validateEnv";
 
 if (process.env.NODE_ENV !== "test") {
   validateRequiredEnv();
+  warnIfTurnNotConfigured();
 }
 
 import { authRouter } from "./routes/auth";

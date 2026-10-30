@@ -1,4 +1,4 @@
-import { findPublicUrlProblem, getFrontendUrl } from "../frontendUrl";
+import { findPublicUrlProblem, getFrontendUrl, isPublicProductionServer } from "../frontendUrl";
 
 describe("getFrontendUrl", () => {
   const snapshot = process.env.FRONTEND_URL;
@@ -31,5 +31,31 @@ describe("findPublicUrlProblem", () => {
     ["tutor.kaluger.ru", "is not an absolute URL"],
   ])("rejects %s", (url, problem) => {
     expect(findPublicUrlProblem(url)).toBe(problem);
+  });
+});
+
+describe("isPublicProductionServer", () => {
+  const snapshot = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...snapshot };
+  });
+
+  it("is true in production with a public FRONTEND_URL", () => {
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "https://tutor.kaluger.ru";
+    expect(isPublicProductionServer()).toBe(true);
+  });
+
+  it("is false in production on localhost (the QA stack)", () => {
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "http://localhost:3000";
+    expect(isPublicProductionServer()).toBe(false);
+  });
+
+  it("is false outside production", () => {
+    process.env.NODE_ENV = "development";
+    process.env.FRONTEND_URL = "https://tutor.kaluger.ru";
+    expect(isPublicProductionServer()).toBe(false);
   });
 });
