@@ -1,6 +1,6 @@
 import { combine, createEffect, createEvent, createStore, sample } from "effector";
 
-import { isAddressedSignal, toTerminalSignal } from "./call.helpers";
+import { isAddressedSignal, isCallAddress, toAcceptSignal, toTerminalSignal } from "./call.helpers";
 import * as callModel from "./call.model";
 import type { AddressedSignal, CallAddress, CallSignalTarget, ResumeRequest } from "./call.types";
 import * as callEntryModel from "./callEntry.model";
@@ -29,6 +29,7 @@ import type {
   SnapshotContext,
   TakenElsewhere,
 } from "./callResume.types";
+import * as devicePushModel from "./devicePush.model";
 import type { CallRole, CallSnapshot } from "./signaling.types";
 import { sendOverTransport } from "./transport.helpers";
 
@@ -120,7 +121,12 @@ sample({
   target: callModel.callAcceptedReceived,
 });
 // All come from one snapshot: one sample each, or an empty one would overwrite the other.
-sample({ clock: decided.map(toUnsentAccept), filter: isAddressedSignal, target: resendSignalFx });
+sample({
+  clock: sample({ clock: decided.map(toUnsentAccept), filter: isCallAddress }),
+  source: devicePushModel.$pushEndpoint,
+  fn: toAcceptSignal,
+  target: resendSignalFx,
+});
 sample({ clock: decided.map(toEndedSignal), filter: isAddressedSignal, target: resendSignalFx });
 sample({ clock: decided.map(toInviteCancel), filter: isAddressedSignal, target: resendSignalFx });
 sample({

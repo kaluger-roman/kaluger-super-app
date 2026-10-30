@@ -4,6 +4,7 @@ import { NO_TRANSPORT_TEXT } from "./call.constants";
 import {
   isAddressedSignal,
   isCallAddress,
+  toAcceptSignal,
   toCallerRole,
   toInviteMessage,
   toTerminalSignal,
@@ -14,6 +15,7 @@ import * as callPresenceModel from "./callPresence.model";
 import { toStaleAcceptSync } from "./callSync.helpers";
 import * as callSyncModel from "./callSync.model";
 import * as callTransportModel from "./callTransport.model";
+import * as devicePushModel from "./devicePush.model";
 import type { CallRole } from "./signaling.types";
 import { sendOverTransport } from "./transport.helpers";
 import { isScreenShareSupported, stopSession } from "./webrtc.helpers";
@@ -51,10 +53,13 @@ sample({
 sample({ clock: checkScreenShareSupportFx.doneData, target: callModel.screenShareSupportChecked });
 
 sample({
-  clock: callModel.acceptCall,
-  source: callModel.$callAddress,
-  filter: isCallAddress,
-  fn: ({ callId, role }): AddressedSignal => ({ role, message: { type: "call_accept", callId } }),
+  clock: sample({
+    clock: callModel.acceptCall,
+    source: callModel.$callAddress,
+    filter: isCallAddress,
+  }),
+  source: devicePushModel.$pushEndpoint,
+  fn: toAcceptSignal,
   target: callTransportModel.sendCallSignalFx,
 });
 

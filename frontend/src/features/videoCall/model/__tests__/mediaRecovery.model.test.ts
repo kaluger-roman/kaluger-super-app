@@ -4,6 +4,7 @@ import { notificationsModel } from "@shared";
 
 import {
   CAMERA_BUSY_TEXT,
+  CAMERA_FAILED_TEXT,
   CONNECTION_FAILED_TEXT,
   MIC_AND_CAMERA_BUSY_TEXT,
   MIC_BUSY_TEXT,
@@ -28,6 +29,7 @@ import {
   createFakeAdapter,
   createFakeStream,
   endTrackBySystem,
+  setTrackMutedBySystem,
   triggerConnectionState,
   triggerIceState,
 } from "./fakeWebrtc";
@@ -455,6 +457,10 @@ const deviceBusy = async (): Promise<FakeStream> => {
   throw Object.assign(new Error("busy"), { name: "NotReadableError" });
 };
 
+const deviceDenied = async (): Promise<FakeStream> => {
+  throw Object.assign(new Error("denied"), { name: "NotAllowedError" });
+};
+
 describe("features/videoCall/model track recovery (FR-007)", () => {
   let sent: CallSignalingInbound[];
   let adapter: FakeAdapter;
@@ -599,6 +605,21 @@ describe("features/videoCall/model track recovery (FR-007)", () => {
     expect(errors.calls).toEqual([MIC_AND_CAMERA_BUSY_TEXT]);
   });
 
+  it("should name busy devices once when they end together with the return to the page (regression)", async () => {
+    const { session, audio } = await activeWith(deviceBusy, deviceBusy);
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    callPresenceModel.visibilityChanged(false);
+    callPresenceModel.visibilityChanged(true);
+    endTrackBySystem(audio);
+    endTrackBySystem(session?.cameraTrack as unknown as FakeTrack);
+    await settleMicrotasks();
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toEqual([MIC_AND_CAMERA_BUSY_TEXT]);
+  });
+
   it("should leave tracks that still run alone", async () => {
     await activeWith(async () => createFakeStream(["audio"]));
     const calls = vi.mocked(adapter.getUserMedia).mock.calls.length;
@@ -608,5 +629,225 @@ describe("features/videoCall/model track recovery (FR-007)", () => {
     await settleMicrotasks();
 
     expect(vi.mocked(adapter.getUserMedia).mock.calls.length).toBe(calls);
+  });
+
+  describe("a track the system muted without ending it (iOS stop recording)", () => {
+    const toggleTwice = async (toggle: () => void) => {
+      toggle();
+      await settleMicrotasks();
+      toggle();
+      await settleMicrotasks();
+    };
+
+    const gumCalls = () => vi.mocked(adapter.getUserMedia).mock.calls.length;
+
+    it("should get the camera again when the user turns it back on (regression)", async () => {
+      const { session, pc } = await activeWith(async () => createFakeStream(["audio"]));
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      setTrackMutedBySystem(camera, true);
+      await settleMicrotasks();
+      expect(readStore(callPresenceModel.$localTrackMutes).cameraMuted).toBe(true);
+
+      await toggleTwice(callModel.toggleCamera);
+
+      const fresh = session?.cameraTrack;
+      expect(fresh).toBeDefined();
+      expect(fresh).not.toBe(camera);
+      expect(fresh?.readyState).toBe("live");
+      expect(session?.localStream?.getVideoTracks()).toEqual([fresh]);
+      expect(camera.stop).toHaveBeenCalled();
+      expect(pc.getSenders().some((sender) => sender.track === fresh)).toBe(true);
+      expect(fresh?.enabled).toBe(true);
+      expect(readStore(callModel.$selfMediaState).cameraOn).toBe(true);
+      expect(readStore(callPresenceModel.$localTrackMutes).cameraMuted).toBe(false);
+    });
+
+    it("should get the microphone again when the user turns it back on (regression)", async () => {
+      const { session, audio, pc } = await activeWith(async () => createFakeStream(["audio"]));
+      setTrackMutedBySystem(audio, true);
+      await settleMicrotasks();
+      expect(readStore(callPresenceModel.$localTrackMutes).micMuted).toBe(true);
+
+      await toggleTwice(callModel.toggleMic);
+
+      const fresh = session?.localStream?.getAudioTracks()[0];
+      expect(fresh).toBeDefined();
+      expect(fresh).not.toBe(audio);
+      expect(fresh?.readyState).toBe("live");
+      expect(audio.stop).toHaveBeenCalled();
+      expect(pc.getSenders().some((sender) => sender.track === fresh)).toBe(true);
+      expect(fresh?.enabled).toBe(true);
+      expect(readStore(callModel.$selfMediaState).micOn).toBe(true);
+      expect(readStore(callPresenceModel.$localTrackMutes).micMuted).toBe(false);
+    });
+
+    it("should leave a muted camera the user just turned off alone", async () => {
+      const { session } = await activeWith(async () => createFakeStream(["audio"]));
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      setTrackMutedBySystem(camera, true);
+      const calls = gumCalls();
+
+      callModel.toggleCamera();
+      await settleMicrotasks();
+
+      expect(gumCalls()).toBe(calls);
+      expect(session?.cameraTrack).toBe(camera);
+      expect(camera.stop).not.toHaveBeenCalled();
+    });
+
+    it("should not replace a muted camera on the return to the page", async () => {
+      const { session } = await activeWith(async () => createFakeStream(["audio"]));
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      setTrackMutedBySystem(camera, true);
+      const calls = gumCalls();
+
+      callPresenceModel.visibilityChanged(false);
+      callPresenceModel.visibilityChanged(true);
+      await settleMicrotasks();
+
+      expect(gumCalls()).toBe(calls);
+      expect(session?.cameraTrack).toBe(camera);
+      expect(camera.stop).not.toHaveBeenCalled();
+    });
+
+    it("should keep a camera toggle made while the fresh camera was being swapped in", async () => {
+      const { session, pc } = await activeWith(async () => createFakeStream(["audio"]));
+      const cameraTrack = session?.cameraTrack;
+      const camera = cameraTrack as unknown as FakeTrack;
+      const sender = pc.getSenders().find((candidate) => candidate.track === cameraTrack);
+      let releaseSwap: () => void = () => undefined;
+      const swapped = new Promise<void>((resolve) => {
+        releaseSwap = resolve;
+      });
+      sender?.replaceTrack.mockImplementationOnce(async (next) => {
+        await swapped;
+        sender.track = next;
+      });
+      setTrackMutedBySystem(camera, true);
+      callModel.toggleCamera();
+      await settleMicrotasks();
+      callModel.toggleCamera();
+      await settleMicrotasks();
+
+      callModel.toggleCamera();
+      await settleMicrotasks();
+      releaseSwap();
+      await settleMicrotasks();
+
+      const fresh = session?.cameraTrack;
+      expect(fresh).not.toBe(camera);
+      expect(readStore(callModel.$selfMediaState).cameraOn).toBe(false);
+      expect(fresh?.enabled).toBe(false);
+    });
+
+    it("should bring back a camera turned on while the microphone was being recovered", async () => {
+      let releaseMic: () => void = () => undefined;
+      let micHeld = false;
+      const { session, audio } = await activeWith(async () => {
+        if (!micHeld) return createFakeStream(["audio"]);
+        await new Promise<void>((resolve) => {
+          releaseMic = resolve;
+        });
+        return createFakeStream(["audio"]);
+      });
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      callModel.toggleCamera();
+      await settleMicrotasks();
+      callModel.toggleMic();
+      await settleMicrotasks();
+      setTrackMutedBySystem(camera, true);
+      setTrackMutedBySystem(audio, true);
+      micHeld = true;
+
+      callModel.toggleMic();
+      await settleMicrotasks();
+      callModel.toggleCamera();
+      await settleMicrotasks();
+      expect(session?.cameraTrack).toBe(camera);
+
+      releaseMic();
+      await settleMicrotasks();
+      await settleMicrotasks();
+
+      expect(session?.localStream?.getAudioTracks()[0]).not.toBe(audio);
+      expect(session?.cameraTrack).not.toBe(camera);
+      expect(session?.cameraTrack?.readyState).toBe("live");
+      expect(session?.cameraTrack?.enabled).toBe(true);
+    });
+
+    it("should leave the muted camera alone and stay silent about it when the microphone is toggled", async () => {
+      const { session } = await activeWith(async () => createFakeStream(["audio"]), deviceDenied);
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      setTrackMutedBySystem(camera, true);
+      const errors = collectEvents(notificationsModel.showErrorEvent);
+      const calls = gumCalls();
+
+      await toggleTwice(callModel.toggleMic);
+      errors.unwatch();
+
+      expect(gumCalls()).toBe(calls);
+      expect(session?.cameraTrack).toBe(camera);
+      expect(camera.stop).not.toHaveBeenCalled();
+      expect(errors.calls).toEqual([]);
+    });
+
+    it("should keep the shared screen on the connection and send the fresh camera after the share", async () => {
+      const { session, pc } = await activeWith(async () => createFakeStream(["audio"]));
+      const camera = session?.cameraTrack as unknown as FakeTrack;
+      callModel.toggleScreenShare();
+      await settleMicrotasks();
+      const screen = session?.screenStream?.getVideoTracks()[0];
+      expect(screen).toBeDefined();
+      setTrackMutedBySystem(camera, true);
+
+      await toggleTwice(callModel.toggleCamera);
+
+      const fresh = session?.cameraTrack;
+      expect(fresh).not.toBe(camera);
+      expect(fresh?.readyState).toBe("live");
+      expect(camera.stop).toHaveBeenCalled();
+      expect(screen?.readyState).toBe("live");
+      expect(pc.getSenders().some((sender) => sender.track === screen)).toBe(true);
+      expect(pc.getSenders().some((sender) => sender.track === fresh)).toBe(false);
+
+      callModel.toggleScreenShare();
+      await settleMicrotasks();
+
+      expect(readStore(callModel.$selfMediaState).screenSharing).toBe(false);
+      expect(pc.getSenders().some((sender) => sender.track === fresh)).toBe(true);
+    });
+  });
+
+  it("should say the camera could not be turned on when the user turns on a camera the browser refuses (regression)", async () => {
+    const { session } = await activeWith(async () => createFakeStream(["audio"]), deviceDenied);
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+
+    endTrackBySystem(session?.cameraTrack as unknown as FakeTrack);
+    await settleMicrotasks();
+    callModel.toggleCamera();
+    await settleMicrotasks();
+    expect(errors.calls).toEqual([]);
+
+    callModel.toggleCamera();
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toEqual([CAMERA_FAILED_TEXT]);
+    expect(readStore(callModel.$callPhase)).toBe("active");
+    expect(sent.some((message) => message.type === "call_hangup")).toBe(false);
+  });
+
+  it("should stay silent when the browser refuses a stopped camera on the return to the page", async () => {
+    const { session } = await activeWith(async () => createFakeStream(["audio"]), deviceDenied);
+    const errors = collectEvents(notificationsModel.showErrorEvent);
+    (session?.cameraTrack as unknown as FakeTrack).readyState = "ended";
+
+    callPresenceModel.visibilityChanged(false);
+    callPresenceModel.visibilityChanged(true);
+    await settleMicrotasks();
+    errors.unwatch();
+
+    expect(errors.calls).toEqual([]);
+    expect(readStore(callModel.$callPhase)).toBe("active");
   });
 });

@@ -12,6 +12,7 @@ import { LOCAL_GRACE_TIMEOUT_MS, RINGING_GRACE_TIMEOUT_MS } from "../callResume.
 import * as callResumeModel from "../callResume.model";
 import * as callScreenModel from "../callScreen.model";
 import * as callTransportModel from "../callTransport.model";
+import * as devicePushModel from "../devicePush.model";
 import "../index";
 import * as peerConnectionModel from "../peerConnection.model";
 import * as peerViewModel from "../peerView.model";
@@ -440,6 +441,29 @@ describe("features/videoCall/model/callResume.model — lost signals while away"
 
     expect(sent).toContainEqual({ type: "call_accept", callId: "c-1" });
     expect(scope.getState(callModel.$callPhase)).toBe("connecting");
+  });
+
+  it("should name this device in an answer sent again", async () => {
+    const scope = fork({
+      values: [
+        [callModel.$callPhase, "connecting"],
+        [callModel.$callId, "c-1"],
+        [callModel.$callRole, "tutor"],
+        [callPresenceModel.$isVisible, true],
+        [devicePushModel.$pushEndpoint, "https://push.example.com/own-device"],
+      ],
+    });
+
+    await fire(scope, callResumeModel.callStateReceived, {
+      role: "tutor",
+      call: { ...SNAPSHOT, status: "ringing", direction: "incoming", connectedAt: null },
+    });
+
+    expect(sent).toContainEqual({
+      type: "call_accept",
+      callId: "c-1",
+      pushEndpoint: "https://push.example.com/own-device",
+    });
   });
 
   it("should tell the peer the own media state again after a resume", async () => {

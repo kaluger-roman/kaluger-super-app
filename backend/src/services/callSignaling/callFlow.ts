@@ -172,9 +172,10 @@ const handleInvite = async (
 const handleRingingAnswer = async (
   call: LiveCall,
   sender: CallParticipant,
-  type: "call_accept" | "call_reject"
+  { type, pushEndpoint }: Extract<CallSignalingInbound, { type: "call_accept" | "call_reject" }>
 ): Promise<void> => {
   if (sender.kind === call.callerKind || call.status !== "ringing") return;
+  call.answeringEndpoint = pushEndpoint;
   if (type === "call_accept") {
     callRegistry.markAccepted(call.callId);
     pushCallClosed(call, "call_closed");
@@ -242,7 +243,7 @@ const handleSignal = async (sender: CallParticipant, data: CallSignalingInbound)
   switch (data.type) {
     case "call_accept":
     case "call_reject":
-      await handleRingingAnswer(call, sender, data.type);
+      await handleRingingAnswer(call, sender, data);
       return;
     case "call_cancel":
       await handleCancel(call, sender);

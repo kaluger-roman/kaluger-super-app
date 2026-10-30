@@ -1,14 +1,17 @@
 import { createEvent, sample } from "effector";
 
+import { toRejectSignal } from "./call.helpers";
 import * as callModel from "./call.model";
 import type { TerminalSignal, TerminatedCall } from "./call.types";
+import * as devicePushModel from "./devicePush.model";
 
 // The signal the own side owes the peer when the call ends here; null when it ended elsewhere.
 const callEnding = createEvent<TerminalSignal | null>();
 
 sample({
   clock: callModel.rejectCall,
-  fn: (): TerminalSignal => ({ type: "call_reject" }),
+  source: devicePushModel.$pushEndpoint,
+  fn: toRejectSignal,
   target: callEnding,
 });
 sample({

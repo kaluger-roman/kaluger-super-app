@@ -69,8 +69,8 @@ export type IceCandidatePayload = {
 
 export type CallSignalingInbound =
   | { type: "call_invite"; inviteId: string; targetStudentId?: string; lessonId?: string }
-  | { type: "call_accept"; callId: string }
-  | { type: "call_reject"; callId: string }
+  | { type: "call_accept"; callId: string; pushEndpoint?: string }
+  | { type: "call_reject"; callId: string; pushEndpoint?: string }
   | { type: "call_cancel"; callId: string }
   | { type: "call_hangup"; callId: string; reason?: "media_unavailable" }
   | { type: "webrtc_offer"; callId: string; sdp: SessionDescriptionPayload }

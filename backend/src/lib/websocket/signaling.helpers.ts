@@ -11,6 +11,7 @@ import {
   INVITE_ID_MAX_LENGTH,
   LESSON_ID_MAX_LENGTH,
   PRESENCE_STATES,
+  PUSH_ENDPOINT_MAX_LENGTH,
   SDP_MAX_LENGTH,
 } from "./signaling.constants";
 import type { CallSignalType } from "./signaling.types";
@@ -83,6 +84,12 @@ const toCallInvite = (data: Record<string, unknown>): CallSignalingInbound | nul
   };
 };
 
+// The endpoint only narrows the closing push, so an unusable one is dropped, not the answer.
+const toPushEndpoint = (value: unknown): { pushEndpoint?: string } =>
+  isNonEmptyString(value) && value.length <= PUSH_ENDPOINT_MAX_LENGTH
+    ? { pushEndpoint: value }
+    : {};
+
 const isPresenceState = (value: unknown): value is PresenceState =>
   PRESENCE_STATES.some((state) => state === value);
 
@@ -136,6 +143,9 @@ export const parseCallSignal = (data: unknown): CallSignalingInbound | null => {
       return data.reason === "media_unavailable"
         ? { type: "call_hangup", callId, reason: "media_unavailable" }
         : { type: "call_hangup", callId };
+    case "call_accept":
+    case "call_reject":
+      return { type: data.type, callId, ...toPushEndpoint(data.pushEndpoint) };
     default:
       return { type: data.type, callId };
   }

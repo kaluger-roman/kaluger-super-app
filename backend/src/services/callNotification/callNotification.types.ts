@@ -16,6 +16,10 @@ export type CallNotificationMessage = {
   recipientKind: CallerKindValue;
 };
 
+export type CallClosedOptions = {
+  exceptEndpoint?: string;
+};
+
 export type DeliveryOutcome = WebPushOutcome;
 
 // One way to reach a device (Web Push now; APNs VoIP / FCM of the native shell later, FR-028).

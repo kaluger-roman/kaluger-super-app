@@ -119,6 +119,28 @@ describe("push-sw.js — showing pushes", () => {
     sw.shown.forEach((notification) => expect(notification.close).toHaveBeenCalled());
   });
 
+  it("should tell the open app windows an incoming call notification is shown", async () => {
+    const appWindow = createWindow();
+    sw.windows.push(appWindow);
+
+    await sw.push(callPush("incoming_call", "/dashboard?call=c-1"));
+
+    expect(appWindow.postMessage).toHaveBeenCalledWith({
+      type: "call_notification_shown",
+      callId: "c-1",
+    });
+  });
+
+  it("should not tell the app windows about other pushes", async () => {
+    const appWindow = createWindow();
+    sw.windows.push(appWindow);
+
+    await sw.push(callPush("missed_call", "/call/history"));
+    await sw.push(callPush("call_closed", "/dashboard"));
+
+    expect(appWindow.postMessage).not.toHaveBeenCalled();
+  });
+
   it("should keep showing lesson reminders as before", async () => {
     await sw.push({
       title: "Урок через 30 минут",
