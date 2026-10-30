@@ -18,7 +18,7 @@ import {
   selectBackupsToDelete,
   stripPrismaParams,
 } from "./backup.helpers";
-import type { BackupFileInfo } from "./backup.types";
+import type { BackupFileInfo, BackupJobOutcome } from "./backup.types";
 
 const execAsync = promisify(exec);
 
@@ -57,9 +57,10 @@ export const updateBackupSettings = async (data: {
   maxStorageMb?: number;
 }) => {
   const settings = await getBackupSettings();
+  const isEnabledSwitched = data.enabled !== undefined && data.enabled !== settings.enabled;
   return prisma.backupSettings.update({
     where: { id: settings.id },
-    data,
+    data: isEnabledSwitched ? { ...data, enabledChangedAt: new Date() } : data,
   });
 };
 
@@ -174,10 +175,10 @@ export const createManualBackup = async (): Promise<{
 // flag the next tick would start a parallel pg_dump and double the load.
 let backupRunning = false;
 
-export const runBackupJob = async (): Promise<void> => {
+export const runBackupJob = async (): Promise<BackupJobOutcome> => {
   if (backupRunning) {
     console.warn("runBackupJob: previous backup still running, skipping this tick");
-    return;
+    return { status: "skipped" };
   }
 
   backupRunning = true;
@@ -185,7 +186,7 @@ export const runBackupJob = async (): Promise<void> => {
     const settings = await getBackupSettings();
 
     if (!settings.enabled) {
-      return;
+      return { status: "skipped" };
     }
 
     if (settings.lastBackupAt) {
@@ -193,7 +194,7 @@ export const runBackupJob = async (): Promise<void> => {
         (Date.now() - settings.lastBackupAt.getTime()) / (1000 * 60 * 60);
 
       if (hoursSinceLastBackup < settings.intervalHours) {
-        return;
+        return { status: "skipped" };
       }
     }
 
@@ -214,6 +215,8 @@ export const runBackupJob = async (): Promise<void> => {
     if (deletedCount > 0) {
       console.log(`Deleted ${deletedCount} old backup(s)`);
     }
+
+    return { status: "created", fileName: path.basename(filePath) };
   } catch (error) {
     const err = error as Error;
     console.error("Backup job failed:", {

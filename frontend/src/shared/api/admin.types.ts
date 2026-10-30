@@ -31,6 +31,9 @@ export type RestoreCheckResult =
 export type BackupOffsiteStatus = {
   lastSyncAt: string | null;
   restoreCheck: RestoreCheckResult | null;
+  // Optional: a backend deployed before the frontend does not send them yet.
+  syncStaleHours?: number;
+  restoreCheckStaleHours?: number;
 };
 
 export type BackupSettingsFullResponse = {
@@ -41,4 +44,43 @@ export type BackupSettingsFullResponse = {
   minRetentionDays?: number;
   storageLimitExceeded?: boolean;
   offsite?: BackupOffsiteStatus;
+};
+
+export type AdminAlertSeverity = "critical" | "warning";
+
+export type AdminAlertEmailStatus =
+  "pending" | "sent" | "failed" | "skipped_no_email" | "skipped_disabled";
+
+export type AdminAlertEmail = {
+  status: AdminAlertEmailStatus;
+  attempts: number;
+  lastError: string | null;
+};
+
+export type AdminAlert = {
+  id: string;
+  type: string;
+  severity: AdminAlertSeverity;
+  title: string;
+  description: string;
+  openedAt: string;
+  lastSeenAt: string;
+  occurrences: number;
+  resolvedAt: string | null;
+  readAt: string | null;
+  openEmail: AdminAlertEmail;
+  resolveEmail: AdminAlertEmail | null;
+};
+
+export type AdminSettings = {
+  alertEmail: string | null;
+  alertEmailEnabled: boolean;
+};
+
+export type AdminAlertsResponse = {
+  alerts: AdminAlert[];
+};
+
+export type TestEmailResponse = {
+  sentTo: string;
 };

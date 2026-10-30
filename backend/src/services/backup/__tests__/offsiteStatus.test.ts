@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { getOffsiteStatus } from "../offsiteStatus";
+import { getOffsiteStatus, readOffsiteStorage } from "../offsiteStatus";
 
 describe("getOffsiteStatus", () => {
   let tmpDir: string;
@@ -18,7 +18,12 @@ describe("getOffsiteStatus", () => {
   });
 
   it("should return nulls when no status files exist", () => {
-    expect(getOffsiteStatus()).toEqual({ lastSyncAt: null, restoreCheck: null });
+    expect(getOffsiteStatus()).toEqual({
+      lastSyncAt: null,
+      restoreCheck: null,
+      syncStaleHours: 24,
+      restoreCheckStaleHours: 48,
+    });
   });
 
   it("should return the last pull time from the stamp file", () => {
@@ -37,7 +42,7 @@ describe("getOffsiteStatus", () => {
     fs.mkdirSync(path.join(tmpDir, ".offsite-last-pull"));
     fs.mkdirSync(path.join(tmpDir, ".offsite-restore-check.json"));
 
-    expect(getOffsiteStatus()).toEqual({ lastSyncAt: null, restoreCheck: null });
+    expect(getOffsiteStatus()).toMatchObject({ lastSyncAt: null, restoreCheck: null });
   });
 
   it("should return the restore check result from the JSON file", () => {
@@ -63,5 +68,33 @@ describe("getOffsiteStatus", () => {
     fs.writeFileSync(path.join(tmpDir, ".offsite-restore-check.json"), '{"checkedAt":');
 
     expect(getOffsiteStatus().restoreCheck).toBeNull();
+  });
+
+  describe("readOffsiteStorage", () => {
+    it("should return null when the home machine has not reported yet", () => {
+      expect(readOffsiteStorage()).toBeNull();
+    });
+
+    it("should return the parsed storage report", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, ".offsite-storage.json"),
+        '{"reportedAt":"2026-10-29T10:17:03Z","freeBytes":1610612736,"totalBytes":250059350016,"backupsBytes":209715200,"capBytes":21474836480,"capPruned":false}\n'
+      );
+
+      expect(readOffsiteStorage()).toEqual({
+        reportedAt: "2026-10-29T10:17:03Z",
+        freeBytes: 1610612736,
+        totalBytes: 250059350016,
+        backupsBytes: 209715200,
+        capBytes: 21474836480,
+        capPruned: false,
+      });
+    });
+
+    it("should return null for a malformed report", () => {
+      fs.writeFileSync(path.join(tmpDir, ".offsite-storage.json"), '{"reportedAt":1}');
+
+      expect(readOffsiteStorage()).toBeNull();
+    });
   });
 });

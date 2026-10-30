@@ -26,6 +26,7 @@ export {
   capitalizeFirst,
 } from "./lib.helpers";
 export { extractAxiosError } from "./error.helpers";
+export { pluralize } from "./plural.helpers";
 export { setNavigate, navigate } from "./navigation.helpers";
 export {
   getLessonDisplayName,

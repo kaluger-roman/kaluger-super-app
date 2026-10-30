@@ -4,10 +4,13 @@ import { createEvent } from "effector";
 import { API_BASE_URL } from "../config";
 import { ADMIN_TOKEN_KEY } from "./admin.constants";
 import type {
+  AdminAlertsResponse,
   AdminOverviewResponse,
+  AdminSettings,
   BackupSettingsData,
   BackupFileData,
   BackupSettingsFullResponse,
+  TestEmailResponse,
 } from "./admin.types";
 
 export const adminTokenInvalidated = createEvent();
@@ -65,6 +68,36 @@ export const adminApiMethods = {
 
   createBackup: async (): Promise<BackupFileData> => {
     const response = await adminApi.post("/admin/backup/create");
+    return response.data;
+  },
+
+  getAlerts: async (): Promise<AdminAlertsResponse> => {
+    const response = await adminApi.get("/admin/alerts");
+    return response.data;
+  },
+
+  markAlertRead: async (id: string): Promise<AdminAlertsResponse> => {
+    const response = await adminApi.post(`/admin/alerts/${encodeURIComponent(id)}/read`);
+    return response.data;
+  },
+
+  markAllAlertsRead: async (): Promise<AdminAlertsResponse> => {
+    const response = await adminApi.post("/admin/alerts/read-all");
+    return response.data;
+  },
+
+  getAdminSettings: async (): Promise<AdminSettings> => {
+    const response = await adminApi.get("/admin/settings");
+    return response.data;
+  },
+
+  updateAdminSettings: async (data: AdminSettings): Promise<AdminSettings> => {
+    const response = await adminApi.put("/admin/settings", data);
+    return response.data;
+  },
+
+  sendTestEmail: async (): Promise<TestEmailResponse> => {
+    const response = await adminApi.post("/admin/settings/test-email");
     return response.data;
   },
 };

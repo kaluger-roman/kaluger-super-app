@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import type { AdminRequest, UpdateBackupSettingsDto } from "../../types";
-import { updateBackupSettings } from "../../services";
+import { updateBackupSettingsWithAlerts } from "../../services";
 import { validateUpdateBackupSettingsDto } from "./validators";
 
 export const updateSettings = async (req: AdminRequest, res: Response) => {
@@ -16,7 +16,7 @@ export const updateSettings = async (req: AdminRequest, res: Response) => {
       return res.status(400).json({ error: errors[0] });
     }
 
-    const settings = await updateBackupSettings({
+    const settings = await updateBackupSettingsWithAlerts({
       enabled,
       intervalHours,
       maxStorageMb,

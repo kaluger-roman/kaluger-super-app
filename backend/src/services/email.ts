@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { recordTestMail } from "../lib/testMailbox";
+import { AdminEmailSendError } from "../utils";
 
 const isTestEnv = process.env.NODE_ENV === "test";
 
@@ -121,4 +122,31 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
       </div>
     `,
   });
+};
+
+// Unlike the user letters above, Resend API errors are checked: the SDK
+// returns them in `error` instead of throwing, and alert letters must know.
+export const sendAdminEmail = async ({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<void> => {
+  if (isTestEnv) {
+    recordTestMail({ to, subject, html });
+    return;
+  }
+
+  let result: Awaited<ReturnType<Resend["emails"]["send"]>>;
+  try {
+    result = await resend!.emails.send({ from: process.env.EMAIL_FROM || "", to, subject, html });
+  } catch (error) {
+    throw new AdminEmailSendError(error instanceof Error ? error.message : String(error));
+  }
+  if (result.error) {
+    throw new AdminEmailSendError(result.error.message);
+  }
 };

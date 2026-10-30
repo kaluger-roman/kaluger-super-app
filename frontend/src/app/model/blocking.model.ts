@@ -8,7 +8,12 @@ import { notificationsModel } from "@entities/notifications";
 import { studentModel } from "@entities/student";
 import { studentUserModel } from "@entities/studentUser";
 import { taxRatePeriodModel } from "@entities/taxRatePeriod";
-import { adminAuthModel, adminDataModel } from "@features/admin";
+import {
+  adminAlertsModel,
+  adminAuthModel,
+  adminDataModel,
+  adminSettingsModel,
+} from "@features/admin";
 import { callNotificationsModel } from "@features/callNotifications";
 import { changeEmailModel } from "@features/changeEmail";
 import { changePasswordModel } from "@features/changePassword";
@@ -71,6 +76,12 @@ export const $isBlocking = combine(
     adminBackupSettings: adminDataModel.getBackupSettingsFx.pending,
     adminUpdateBackup: adminDataModel.updateBackupSettingsFx.pending,
     adminCreateBackup: adminDataModel.createBackupFx.pending,
+    adminLoadAlerts: adminAlertsModel.getAlertsFx.pending,
+    adminMarkAlertRead: adminAlertsModel.markAlertReadFx.pending,
+    adminMarkAllAlertsRead: adminAlertsModel.markAllAlertsReadFx.pending,
+    adminLoadSettings: adminSettingsModel.getAdminSettingsFx.pending,
+    adminUpdateSettings: adminSettingsModel.updateAdminSettingsFx.pending,
+    adminSendTestEmail: adminSettingsModel.sendTestEmailFx.pending,
     loadTaxRatePeriods: taxRatePeriodModel.loadPeriodsFx.pending,
     saveTaxRatePeriods: taxRatePeriodsModalModel.savePeriodsFx.pending,
     setTaxEnabled: financesModel.setTaxEnabledFx.pending,

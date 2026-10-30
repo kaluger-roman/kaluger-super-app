@@ -21,7 +21,20 @@ export const STALE_TMP_MAX_AGE_MS = DAY_MS;
 
 export const OFFSITE_LAST_PULL_FILE = ".offsite-last-pull";
 export const RESTORE_CHECK_FILE = ".offsite-restore-check.json";
+export const OFFSITE_STORAGE_FILE = ".offsite-storage.json";
+export const OFFSITE_STORAGE_KEYS: readonly string[] = [
+  "reportedAt",
+  "freeBytes",
+  "totalBytes",
+  "backupsBytes",
+  "capBytes",
+  "capPruned",
+];
 export const ISO_UTC_SECONDS_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+// Shared by the «Бэкапы» tab warnings and the offsite alerts (FR-011).
+export const OFFSITE_STALE_HOURS = 24;
+export const RESTORE_CHECK_STALE_HOURS = 48;
 
 export const RESTORE_CHECK_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   no_copy: "в резервном хранилище нет целых копий",

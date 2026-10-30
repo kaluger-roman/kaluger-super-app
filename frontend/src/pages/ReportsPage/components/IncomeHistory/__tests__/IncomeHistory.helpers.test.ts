@@ -6,16 +6,16 @@ import { formatAppliedPeriod, formatPaymentsCount } from "../IncomeHistory.helpe
 
 describe("formatPaymentsCount", () => {
   it.each([
-    [1, "1 оплата"],
-    [2, "2 оплаты"],
-    [4, "4 оплаты"],
-    [5, "5 оплат"],
-    [11, "11 оплат"],
-    [12, "12 оплат"],
-    [14, "14 оплат"],
-    [21, "21 оплата"],
-    [22, "22 оплаты"],
-    [0, "0 оплат"],
+    [1, "1\u00a0оплата"],
+    [2, "2\u00a0оплаты"],
+    [4, "4\u00a0оплаты"],
+    [5, "5\u00a0оплат"],
+    [11, "11\u00a0оплат"],
+    [12, "12\u00a0оплат"],
+    [14, "14\u00a0оплат"],
+    [21, "21\u00a0оплата"],
+    [22, "22\u00a0оплаты"],
+    [0, "0\u00a0оплат"],
   ])("should format %i as «%s»", (count, expected) => {
     expect(formatPaymentsCount(count)).toBe(expected);
   });

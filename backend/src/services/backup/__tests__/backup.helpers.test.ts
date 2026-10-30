@@ -2,6 +2,7 @@ import {
   isStorageLimitExceeded,
   parseBackupTimestamp,
   parseLastPull,
+  parseOffsiteStorage,
   parseRestoreCheck,
   selectBackupsToDelete,
   stripPrismaParams,
@@ -230,6 +231,59 @@ describe("backup.helpers", () => {
       expect(parseRestoreCheck("[]")).toBeNull();
       expect(parseRestoreCheck("null")).toBeNull();
       expect(parseRestoreCheck("")).toBeNull();
+    });
+  });
+
+  describe("parseOffsiteStorage", () => {
+    const report = {
+      reportedAt: "2026-10-29T10:17:03Z",
+      freeBytes: 1610612736,
+      totalBytes: 250059350016,
+      backupsBytes: 209715200,
+      capBytes: 21474836480,
+      capPruned: false,
+    };
+    const withField = (key: string, value: unknown) => JSON.stringify({ ...report, [key]: value });
+
+    it("should parse a valid report", () => {
+      expect(parseOffsiteStorage(JSON.stringify(report))).toEqual(report);
+      expect(parseOffsiteStorage(withField("capPruned", true))).toEqual({
+        ...report,
+        capPruned: true,
+      });
+    });
+
+    it("should accept zero free space and an empty storage", () => {
+      expect(parseOffsiteStorage(withField("freeBytes", 0))?.freeBytes).toBe(0);
+      expect(parseOffsiteStorage(withField("backupsBytes", 0))?.backupsBytes).toBe(0);
+    });
+
+    it("should reject a report with a missing field", () => {
+      const { capBytes: _capBytes, ...missing } = report;
+      expect(parseOffsiteStorage(JSON.stringify(missing))).toBeNull();
+    });
+
+    it("should reject a report with an extra field", () => {
+      expect(parseOffsiteStorage(withField("extra", 1))).toBeNull();
+    });
+
+    it.each([
+      ["a number as a string", "freeBytes", "1610612736"],
+      ["a negative number", "backupsBytes", -1],
+      ["a float", "capBytes", 1.5],
+      ["an unsafe integer", "totalBytes", Number.MAX_SAFE_INTEGER + 2],
+      ["zero total size", "totalBytes", 0],
+      ["a non-boolean flag", "capPruned", 1],
+      ["a time with milliseconds", "reportedAt", "2026-10-29T10:17:03.000Z"],
+      ["an impossible date", "reportedAt", "2026-02-30T10:17:03Z"],
+    ])("should reject %s", (_name, key, value) => {
+      expect(parseOffsiteStorage(withField(key, value))).toBeNull();
+    });
+
+    it("should reject invalid JSON, arrays and null", () => {
+      expect(parseOffsiteStorage("{broken")).toBeNull();
+      expect(parseOffsiteStorage("[]")).toBeNull();
+      expect(parseOffsiteStorage("null")).toBeNull();
     });
   });
 

@@ -11,6 +11,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -18,6 +19,8 @@ import { join } from "node:path";
 
 import {
   DAY_MS,
+  DF_AVAIL,
+  DF_SIZE,
   NOW,
   SCRIPTS_DIR,
   backupName,
@@ -97,7 +100,10 @@ test("does not copy temp files, dot-files or foreign files", () => {
   const res = runPull();
 
   assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(readdirSync(fx.home).sort(), [".lock", ".verified", backup, "logs"].sort());
+  assert.deepEqual(
+    readdirSync(fx.home).sort(),
+    [".cap-pruned", ".lock", ".verified", backup, "logs"].sort()
+  );
 });
 
 test("keeps home copies of files deleted on prod and pulls only new files on the next run", () => {
@@ -213,7 +219,10 @@ test("does not descend into directories named like backups", () => {
   const res = runPull();
 
   assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(readdirSync(fx.home).sort(), [".lock", ".verified", good, "logs"].sort());
+  assert.deepEqual(
+    readdirSync(fx.home).sort(),
+    [".cap-pruned", ".lock", ".verified", good, "logs"].sort()
+  );
 });
 
 test("removes a pulled name stamped more than a day ahead", () => {
@@ -353,7 +362,8 @@ test("rotates the log once it grows over the limit", () => {
   runPull();
   const before = pullLog();
 
-  runPull({ OFFSITE_LOG_MAX_BYTES: "10" });
+  // Just under the first run's log: rotates once, not on every line.
+  runPull({ OFFSITE_LOG_MAX_BYTES: String(Buffer.byteLength(before) - 1) });
 
   assert.equal(readFileSync(join(fx.home, "logs", "pull.log.1"), "utf8").startsWith(before), true);
   assert.ok(pullLog().length < before.length + 200);
@@ -387,3 +397,192 @@ test(
     assert.equal(existsSync(join(fx.prod, ".offsite-last-pull")), true);
   }
 );
+
+const storagePath = () => join(fx.prod, ".offsite-storage.json");
+const readStorage = () => JSON.parse(readFileSync(storagePath(), "utf8"));
+const capPrunedFile = () => join(fx.home, ".cap-pruned");
+const homeBytes = () =>
+  homeBackups().reduce((sum, name) => sum + statSync(join(fx.home, name)).size, 0);
+const sshCalls = () => readFileSync(fx.env.SSH_STUB_LOG, "utf8");
+
+test("reports the home disk space and the retained total to prod after a pull", () => {
+  writeProd(daysAgo(2));
+  writeProd(daysAgo(1));
+
+  const res = runPull();
+
+  assert.equal(res.status, 0, res.stderr);
+  const { reportedAt, ...report } = readStorage();
+  assert.ok(Math.abs(Date.parse(reportedAt) - Date.now()) < 60_000);
+  const backups = homeBytes();
+  assert.ok(backups > 0);
+  assert.deepEqual(report, {
+    freeBytes: DF_AVAIL,
+    totalBytes: DF_SIZE,
+    backupsBytes: backups,
+    capBytes: 21474836480,
+    capPruned: false,
+  });
+  assert.equal(readFileSync(fx.env.DF_STUB_LOG, "utf8"), `-B1 --output=avail,size ${fx.home}\n`);
+  assert.match(
+    sshCalls(),
+    new RegExp(
+      `-i ${fx.env.OFFSITE_SSH_KEY} -o IdentitiesOnly=yes -o BatchMode=yes .*root@prod\\.test report-storage ${DF_AVAIL} ${DF_SIZE} ${backups} 21474836480 0\\n`
+    )
+  );
+  assert.match(
+    pullLog(),
+    new RegExp(
+      `INFO reported storage: free ${DF_AVAIL}, total ${DF_SIZE}, backups ${backups}, cap pruned 0\\n$`
+    )
+  );
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "0\n");
+});
+
+test("reports an empty home with no copies and keeps no cap flag when nothing changed", () => {
+  const res = runPull();
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(readStorage().backupsBytes, 0);
+  assert.equal(readStorage().capPruned, false);
+  assert.equal(existsSync(capPrunedFile()), false);
+});
+
+test("keeps capPruned true until a new copy arrives without a cap deletion", () => {
+  const big = gzip(Buffer.alloc(4096, 1).toString("hex"));
+  writeHome(daysAgo(3), big);
+  writeHome(daysAgo(2), big);
+  writeHome(daysAgo(1), big);
+  const cap = String(big.length * 2);
+
+  const capped = runPull({ OFFSITE_MAX_BYTES: cap });
+  assert.equal(capped.status, 0, capped.stderr);
+  assert.equal(homeBackups().length, 2);
+  assert.deepEqual(
+    { ...readStorage(), reportedAt: "x" },
+    {
+      reportedAt: "x",
+      freeBytes: DF_AVAIL,
+      totalBytes: DF_SIZE,
+      backupsBytes: big.length * 2,
+      capBytes: big.length * 2,
+      capPruned: true,
+    }
+  );
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "1\n");
+  assert.match(pullLog(), /INFO reported storage: .*, cap pruned 1\n$/);
+
+  const idle = runPull({ OFFSITE_MAX_BYTES: cap });
+  assert.equal(idle.status, 0, idle.stderr);
+  assert.match(pullLog(), /done: pulled 0, corrupt 0, deleted 0/);
+  assert.equal(readStorage().capPruned, true);
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "1\n");
+
+  writeProd(daysAgo(0.5));
+  const fresh = runPull({ OFFSITE_MAX_BYTES: String(big.length * 10) });
+  assert.equal(fresh.status, 0, fresh.stderr);
+  assert.equal(homeBackups().length, 3);
+  assert.equal(readStorage().capPruned, false);
+  assert.equal(readStorage().backupsBytes, homeBytes());
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "0\n");
+});
+
+test("reports storage after a run that fails on a corrupt copy, which does not reset the cap flag", () => {
+  writeFileSync(capPrunedFile(), "1\n");
+  const good = writeHome(daysAgo(2));
+  const bad = writeProd(daysAgo(1), "not gzip at all");
+
+  const res = runPull();
+
+  assert.equal(res.status, 1);
+  assert.deepEqual(homeBackups(), [good]);
+  assert.match(pullLog(), new RegExp(`ERROR corrupt archive removed: ${bad}`));
+  assert.equal(readStorage().capPruned, true);
+  assert.equal(readStorage().backupsBytes, homeBytes());
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "1\n");
+});
+
+test("a storage report that does not reach prod is logged and the pull still succeeds", () => {
+  const name = writeProd(daysAgo(1));
+
+  const res = runPull({ SSH_STUB_FAIL_PATTERN: "report-storage" });
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(homeBackups(), [name]);
+  assert.match(readFileSync(join(fx.prod, ".offsite-last-pull"), "utf8"), /^\d{4}-.+Z\n$/);
+  assert.match(
+    pullLog(),
+    /ERROR could not report storage to prod \(exit 255\): ssh: connect to host: Connection timed out/
+  );
+  assert.doesNotMatch(pullLog(), /reported storage/);
+  assert.equal(existsSync(storagePath()), false);
+  assert.equal(readFileSync(capPrunedFile(), "utf8"), "0\n");
+});
+
+test("a storage report refused by the prod wrapper is logged and the pull still succeeds", () => {
+  writeFileSync(storagePath(), '{"previous":true}\n');
+  writeProd(daysAgo(1));
+
+  const res = runPull({ DF_STUB_AVAIL: "1234567890123456" });
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(
+    pullLog(),
+    /ERROR could not report storage to prod \(exit 1\): offsite-backup-ssh: invalid report: bad number/
+  );
+  assert.equal(readFileSync(storagePath(), "utf8"), '{"previous":true}\n');
+});
+
+test("a df failure is logged, sends no report and does not fail the pull", () => {
+  writeProd(daysAgo(1));
+
+  const res = runPull({ DF_STUB_EXIT: "1" });
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(
+    pullLog(),
+    /ERROR could not report storage to prod \(exit 1\): df: df: cannot read table of mounted file systems/
+  );
+  assert.doesNotMatch(sshCalls(), /report-storage/);
+  assert.equal(existsSync(storagePath()), false);
+});
+
+test("unexpected df output is logged and sends no report", () => {
+  writeProd(daysAgo(1));
+
+  const res = runPull({ DF_STUB_AVAIL: "-" });
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(
+    pullLog(),
+    /ERROR could not report storage to prod \(exit 1\): unexpected df output: /
+  );
+  assert.doesNotMatch(sshCalls(), /report-storage/);
+  assert.equal(existsSync(storagePath()), false);
+});
+
+for (const [label, env] of [
+  ["prod is unreachable", { SSH_STUB_EXIT: "255" }],
+  ["rsync fails midway", null],
+]) {
+  test(`sends no storage report when ${label}`, () => {
+    let runEnv = env;
+    if (!runEnv) {
+      const bin = join(fx.root, "failing-rsync");
+      mkdirSync(bin);
+      writeFileSync(join(bin, "rsync"), '#!/usr/bin/env bash\n/usr/bin/rsync "$@"\nexit 23\n');
+      chmodSync(join(bin, "rsync"), 0o755);
+      runEnv = { PATH: `${bin}:${fx.env.PATH}` };
+    }
+    writeProd(daysAgo(1));
+
+    const res = runPull(runEnv);
+
+    assert.equal(res.status, 1);
+    assert.equal(existsSync(storagePath()), false);
+    assert.doesNotMatch(sshCalls(), /report-storage/);
+    assert.equal(existsSync(fx.env.DF_STUB_LOG), false);
+    assert.equal(existsSync(capPrunedFile()), false);
+    assert.doesNotMatch(pullLog(), /storage/);
+  });
+}

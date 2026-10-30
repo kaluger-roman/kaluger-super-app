@@ -31,4 +31,11 @@ export type {
   BackupOffsiteStatus,
   RestoreCheckCounts,
   RestoreCheckResult,
+  AdminAlert,
+  AdminAlertEmail,
+  AdminAlertEmailStatus,
+  AdminAlertSeverity,
+  AdminAlertsResponse,
+  AdminSettings,
+  TestEmailResponse,
 } from "./admin.types";

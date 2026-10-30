@@ -5,10 +5,16 @@ import { useGate, useUnit } from "effector-react";
 import { useNavigate } from "react-router-dom";
 
 import { userModel } from "@entities";
-import { AdminLogin, adminAuthModel, adminDataModel } from "@features/admin";
+import { ADMIN_TAB, AdminLogin, adminAuthModel, adminDataModel } from "@features/admin";
 
 import * as Styled from "./AdminPage.styled";
-import { OverviewSection, BackupSection } from "./components";
+import {
+  AlertsSection,
+  AlertsTabLabel,
+  BackupSection,
+  OverviewSection,
+  SettingsSection,
+} from "./components";
 
 export const AdminPage: FC = () => {
   const isAuthenticated = useUnit(adminAuthModel.$isAdminAuthenticated);
@@ -56,13 +62,23 @@ export const AdminPage: FC = () => {
       </Styled.StyledHeader>
 
       <Styled.StyledPaper>
-        <Styled.StyledTabs value={tabIndex} onChange={(_, value) => actions.changeTab(value)}>
+        <Styled.StyledTabs
+          value={tabIndex}
+          onChange={(_, value) => actions.changeTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Styled.StyledTab label="Обзор" />
           <Styled.StyledTab label="Бэкапы" />
+          <Styled.StyledTab label={<AlertsTabLabel />} />
+          <Styled.StyledTab label="Настройки" />
         </Styled.StyledTabs>
 
-        {tabIndex === 0 && <OverviewSection />}
-        {tabIndex === 1 && <BackupSection />}
+        {tabIndex === ADMIN_TAB.overview && <OverviewSection />}
+        {tabIndex === ADMIN_TAB.backups && <BackupSection />}
+        {tabIndex === ADMIN_TAB.alerts && <AlertsSection />}
+        {tabIndex === ADMIN_TAB.settings && <SettingsSection />}
       </Styled.StyledPaper>
     </Styled.StyledContainer>
   );

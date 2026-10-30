@@ -4,6 +4,7 @@ export type TestMailEntry = {
   verificationCode?: string;
   resetUrl?: string;
   resetToken?: string;
+  html?: string;
   sentAt: Date;
 };
 
