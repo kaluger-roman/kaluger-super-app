@@ -54,6 +54,7 @@ beforeEach(() => {
   mkdirSync(join(repo, "backend"));
   mkdirSync(bin);
   copyFileSync(join(REPO_ROOT, "scripts", "dev-stack.sh"), join(repo, "scripts", "dev-stack.sh"));
+  copyFileSync(join(REPO_ROOT, "scripts", "prisma-client.mjs"), join(repo, "scripts", "prisma-client.mjs"));
   copyFileSync(join(REPO_ROOT, "docker-compose.dev.yml"), join(repo, "docker-compose.dev.yml"));
   writeFileSync(join(bin, "npm"), FAKE_NPM);
   chmodSync(join(bin, "npm"), 0o755);
@@ -162,6 +163,43 @@ test("test-backend hands jest the branch's test database in a variable .env.test
   const branchTestDb = "postgresql://dev:dev@localhost:15433/tutor_app_test?schema=public";
   assert.equal(vars.TEST_DATABASE_URL, branchTestDb);
   assert.equal(vars.DATABASE_URL, branchTestDb);
+});
+
+// The worktree layout: backend/node_modules is a symlink to the main checkout's, whose client
+// is generated from mainSchema.
+const shareMainClient = (mainSchema) => {
+  const mainBackend = join(root, "main", "backend");
+  mkdirSync(join(mainBackend, "prisma"), { recursive: true });
+  mkdirSync(join(mainBackend, "node_modules", ".prisma", "client"), { recursive: true });
+  writeFileSync(join(mainBackend, "prisma", "schema.prisma"), mainSchema);
+  writeFileSync(join(mainBackend, "node_modules", ".prisma", "client", "schema.prisma"), mainSchema);
+  symlinkSync(join(mainBackend, "node_modules"), join(repo, "backend", "node_modules"));
+};
+
+for (const command of ["run-backend", "run-backend-e2e", "test-backend"]) {
+  test(`${command} stops before the backend when the shared Prisma client has another schema`, () => {
+    shareMainClient("model User {\n  id String @id\n}\n");
+    mkdirSync(join(repo, "backend", "prisma"));
+    writeFileSync(join(repo, "backend", "prisma", "schema.prisma"), "model User {\n  id String @id\n  name String?\n}\n");
+
+    const res = run(command);
+
+    assert.notEqual(res.status, 0);
+    assert.match(res.stderr, /npm ci && npx prisma generate/);
+    assert.equal(existsSync(env.NPM_ARGS), false);
+  });
+}
+
+test("test-backend runs jest when the shared Prisma client matches the branch's schema", () => {
+  const schema = "model User {\n  id String @id\n}\n";
+  shareMainClient(schema);
+  mkdirSync(join(repo, "backend", "prisma"));
+  writeFileSync(join(repo, "backend", "prisma", "schema.prisma"), schema);
+
+  const res = run("test-backend");
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(readFileSync(env.NPM_ARGS, "utf8").trim(), "test --");
 });
 
 const installPgClient = (major) => {
