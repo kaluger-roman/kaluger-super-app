@@ -148,6 +148,22 @@ test(
   }
 );
 
+test("test-backend hands jest the branch's test database in a variable .env.test cannot override", () => {
+  writeFileSync(
+    join(repo, "backend", ".env.test"),
+    "DATABASE_URL=postgresql://me@localhost:5432/tutor_test\n"
+  );
+
+  const res = run("test-backend");
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(readFileSync(env.NPM_ARGS, "utf8").trim(), "test --");
+  const vars = npmEnv();
+  const branchTestDb = "postgresql://dev:dev@localhost:15433/tutor_app_test?schema=public";
+  assert.equal(vars.TEST_DATABASE_URL, branchTestDb);
+  assert.equal(vars.DATABASE_URL, branchTestDb);
+});
+
 const installPgClient = (major) => {
   const binDir = join(env.DEV_STACK_PG_LIB_DIR, major, "bin");
   mkdirSync(binDir, { recursive: true });

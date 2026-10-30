@@ -6,9 +6,11 @@ import dotenv from "dotenv";
 // setup.ts was too late: imports are hoisted above the dotenv call, so requiring the Prisma client
 // first pulled DATABASE_URL from backend/.env and every local run hit the dev database.
 // `override` lets .env.test win over backend/.env and the shell; CI has no file and keeps its env.
+// TEST_DATABASE_URL wins over .env.test: `dev-stack.sh test-backend` puts the branch's test DB there.
 const TEST_ENV_PATH = path.resolve(__dirname, "..", "..", ".env.test");
 
 if (fs.existsSync(TEST_ENV_PATH)) dotenv.config({ path: TEST_ENV_PATH, override: true });
+if (process.env.TEST_DATABASE_URL) process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret";
 process.env.ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "test-admin-jwt-secret";
