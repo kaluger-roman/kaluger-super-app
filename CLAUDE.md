@@ -145,11 +145,12 @@ The pre-commit hook (`.githooks/pre-commit`) runs `prettier --write`, `eslint --
 Every task that gets its own branch or worktree opens a draft PR right away, before any real work, so the work and the Claude Code session behind it can always be found again:
 
 ```bash
-node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"]
+node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"] [--closes <N>[,<N>...]]
 ```
 
+- Task works on a GitHub issue (the user named `#N` or an issue link, or the task came from one): always pass `--closes <N>`. The body gets a `Closes #N` line per issue, and GitHub closes the issue when the PR is merged. Forgotten at the start: rerun with `--closes` — it adds the missing lines to the existing PR body. Only for issues the PR fully resolves; a partial fix mentions the issue as `Refs #N` instead.
 - Run it right after `EnterWorktree` / creating the branch. For `/speckit.specify` and `/auto-feature` — right after the `NNN-name` feature branch is created. No commits needed: if the branch has none on top of `main`, the script adds an empty start commit (same tree, index and working tree untouched), pushes over HTTPS and opens the draft.
-- The PR body gets a "Сессии Claude Code" section: local session id, `cd <launch dir> && claude --resume <id>` (sessions are listed per launch directory, so a worktree session is invisible from the repo root), web link. Keep that section when rewriting the PR description at the end.
+- The PR body gets a "Сессии Claude Code" section: local session id, `cd <launch dir> && claude --resume <id>` (sessions are listed per launch directory, so a worktree session is invisible from the repo root), web link. Keep that section and the `Closes #N` lines when rewriting the PR description at the end.
 - Continuing a task in another session (or after a resume): run the script again — it comments the new session on the existing PR, or does nothing if the session is already recorded.
 - Finishing: commit, push, `/changelog` + `/news`, rewrite title/body with `gh pr edit`, then `gh pr ready`. The PR already exists, so no `gh pr create` / `/commit-commands:commit-push-pr` for such a branch.
 - Skip only for read-only tasks that create no branch.

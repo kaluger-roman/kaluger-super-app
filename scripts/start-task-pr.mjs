@@ -3,7 +3,7 @@
 // and the Claude Code session that did it can always be found again.
 //
 // Usage:
-//   node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"] [--base main]
+//   node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"] [--closes 12,34] [--base main]
 //
 // What it does:
 //   - no open PR for the branch yet: fetches <base>, adds an EMPTY commit if the
@@ -12,6 +12,11 @@
 //     pushes the branch and opens a draft PR whose body records the session;
 //   - open PR already exists: comments the current session on it unless it is
 //     already mentioned there (a task continued in another session stays traceable).
+//
+// --closes takes issue numbers (`12`, `#12` or an issue URL; comma/space separated)
+// and puts a `Closes #N` line per issue into the body, so GitHub closes them when
+// the PR is merged into the default branch. On an existing PR the missing lines
+// are added to its body.
 //
 // Session info comes from Claude Code env: CLAUDE_CODE_SESSION_ID (local id for
 // `claude --resume`) and CLAUDE_CODE_BRIDGE_SESSION_ID (web session, optional).
@@ -91,19 +96,56 @@ export const sessionLine = (session, date) => {
   return `- ${date}: \`${session.id}\` — \`cd ${session.resumeCwd} && claude --resume ${session.id}\`${web}`;
 };
 
-export const buildBody = ({ summary, session, date }) =>
+export const parseIssues = (value) => {
+  const issues = String(value ?? "")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((token) => {
+      const match = token.match(/^#?(\d+)$/) || token.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)\/?$/);
+      if (!match) throw new Error(`--closes: not an issue number: ${token}`);
+      return match[1];
+    });
+  if (issues.length === 0) throw new Error("--closes needs at least one issue number");
+  return [...new Set(issues)];
+};
+
+const closesLine = (issue) => `Closes #${issue}`;
+
+// Any of GitHub's closing keywords already linking the issue counts.
+export const isLinked = (body, issue) =>
+  new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s*:?\\s+#${issue}\\b`, "i").test(body);
+
+export const buildBody = ({ summary, closes = [], session, date }) =>
   [
     "Черновик: PR открыт при старте задачи, чтобы работу и сессию можно было найти. Описание дописывается перед переводом в ready.",
     summary ? `\n${summary}` : null,
+    closes.length ? `\n${closes.map(closesLine).join("\n")}` : null,
     session ? `\n${SESSIONS_HEADING}\n\n${sessionLine(session, date)}` : null,
   ]
     .filter(Boolean)
     .join("\n");
 
+export const addClosesToBody = (body, issues) => {
+  const missing = issues.filter((issue) => !isLinked(body, issue));
+  if (missing.length === 0) return { body, added: [] };
+  const lines = missing.map(closesLine).join("\n");
+  const at = body.indexOf(SESSIONS_HEADING);
+  const before = (at === -1 ? body : body.slice(0, at)).trimEnd();
+  const after = at === -1 ? "" : `\n\n${body.slice(at)}`;
+  const next = `${before ? `${before}\n\n` : ""}${lines}${after}`;
+  return { body: next, added: missing };
+};
+
 const main = () => {
   const args = parseArgs(process.argv.slice(2));
   if (!args.title) fail("--title is required");
   const base = args.base || "main";
+  let closes;
+  try {
+    closes = "closes" in args ? parseIssues(args.closes) : [];
+  } catch (err) {
+    fail(err.message);
+  }
 
   const branch = git("branch", "--show-current");
   if (!branch) fail("detached HEAD — check out a task branch first");
@@ -114,12 +156,23 @@ const main = () => {
 
   const [existing] = JSON.parse(gh(["pr", "list", "--head", branch, "--state", "open", "--json", "number,url", "--limit", "1"]) || "[]");
   if (existing) {
-    if (!session) return { action: "exists", url: existing.url };
-    const view = JSON.parse(gh(["pr", "view", String(existing.number), "--json", "body,comments"]));
+    if (!session && closes.length === 0) return { action: "exists", url: existing.url };
+    const number = String(existing.number);
+    const view = JSON.parse(gh(["pr", "view", number, "--json", "body,comments"]));
+    const result = { action: "exists", url: existing.url };
+
+    const { body, added } = addClosesToBody(view.body || "", closes);
+    if (added.length) {
+      gh(["pr", "edit", number, "--body-file", "-"], body);
+      result.closesAdded = added;
+    }
+
     const texts = [view.body || "", ...(view.comments || []).map((c) => c.body || "")];
-    if (texts.some((t) => t.includes(session.id))) return { action: "exists", url: existing.url };
-    gh(["pr", "comment", String(existing.number), "--body-file", "-"], `Продолжение в сессии:\n\n${sessionLine(session, date)}`);
-    return { action: "session-added", url: existing.url };
+    if (session && !texts.some((t) => t.includes(session.id))) {
+      gh(["pr", "comment", number, "--body-file", "-"], `Продолжение в сессии:\n\n${sessionLine(session, date)}`);
+      result.action = "session-added";
+    }
+    return result;
   }
 
   const remote = process.env.START_TASK_PR_REMOTE_URL || toHttpsRemote(git("remote", "get-url", "origin"));
@@ -136,11 +189,11 @@ const main = () => {
   gitAuth("push", "--quiet", remote, `HEAD:refs/heads/${branch}`);
   const url = gh(
     ["pr", "create", "--draft", "--base", base, "--head", branch, "--title", args.title, "--body-file", "-"],
-    buildBody({ summary: args.summary, session, date })
+    buildBody({ summary: args.summary, closes, session, date })
   )
     .split("\n")
     .pop();
-  return { action: "created", url, branch, emptyCommit: commit };
+  return { action: "created", url, branch, emptyCommit: commit, closes };
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
