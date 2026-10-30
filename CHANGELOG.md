@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - `scripts/dev-stack.sh test-backend` гоняет jest на тестовой базе ветки (`tutor_app_test` в Docker-Postgres слота), даже если в worktree есть `backend/.env.test`. Раньше `loadTestEnv.ts` загружал `.env.test` с `override` и подменял `DATABASE_URL` ветки на общую `tutor_test`, и ветки со сменой схемы падали на отсутствующих таблицах. Теперь `test-backend` передаёт базу ветки ещё и в `TEST_DATABASE_URL`, который `loadTestEnv.ts` ставит поверх `.env.test`; обычный `npm test` и CI не изменились (#114, #169)
+- Ошибки Resend при отправке писем подтверждения email, смены email, подтверждения в кабинете ученика и сброса пароля больше не теряются: SDK возвращает ошибку API (неверный ключ, неподтверждённый домен, лимит) в поле `error`, а не исключением, и такие письма считались отправленными. Теперь все письма идут через общий `sendViaResend`, который бросает `EmailSendError` (бывший `AdminEmailSendError`); ошибка попадает в лог, повторная отправка кода и смена email отвечают ошибкой, регистрация и сброс пароля по-прежнему отвечают нейтрально (#151, 8eb0d37)
 
 ### Changed
 - Пороги предупреждений вкладки «Бэкапы» о резервном хранилище (24 ч) и проверке восстановления (48 ч) приходят с бэкенда (`offsite.syncStaleHours`, `offsite.restoreCheckStaleHours`) и совпадают с порогами алертов (19ff849)
