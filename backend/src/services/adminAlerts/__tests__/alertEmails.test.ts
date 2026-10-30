@@ -6,7 +6,7 @@ import {
   GLOBAL_TEST_LOCK_TIMEOUT_MS,
   waitFor,
 } from "../../../__tests__/helpers";
-import { AdminEmailSendError } from "../../../utils";
+import { EmailSendError } from "../../../utils";
 import * as emailModule from "../../email";
 import type { AdminAlertDefinition } from "../adminAlerts.types";
 import { dispatchAlertEmails } from "../alertEmails";
@@ -76,7 +76,7 @@ describe("dispatchAlertEmails", () => {
   });
 
   it("should store a Resend error and retry on the next dispatch", async () => {
-    sendSpy.mockRejectedValueOnce(new AdminEmailSendError("Invalid API key"));
+    sendSpy.mockRejectedValueOnce(new EmailSendError("Invalid API key"));
     const alert = await raiseAlert(DEFINITION, { description: "x" }, NOW);
 
     await dispatchAlertEmails();
@@ -97,7 +97,7 @@ describe("dispatchAlertEmails", () => {
   });
 
   it("should stop after 5 failed attempts", async () => {
-    sendSpy.mockRejectedValue(new AdminEmailSendError("Resend: 503 Service Unavailable"));
+    sendSpy.mockRejectedValue(new EmailSendError("Resend: 503 Service Unavailable"));
     const alert = await raiseAlert(DEFINITION, { description: "x" }, NOW);
 
     for (let run = 0; run < 7; run += 1) {
@@ -142,7 +142,7 @@ describe("dispatchAlertEmails", () => {
   });
 
   it("should hold the resolve letter while the open letter still retries", async () => {
-    sendSpy.mockRejectedValueOnce(new AdminEmailSendError("timeout"));
+    sendSpy.mockRejectedValueOnce(new EmailSendError("timeout"));
     const alert = await raiseAlert(DEFINITION, { description: "x" }, NOW);
     await resolveAlert(DEFINITION, new Date(NOW.getTime() + 1000));
 

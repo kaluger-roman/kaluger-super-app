@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { recordTestMail } from "../lib/testMailbox";
-import { AdminEmailSendError } from "../utils";
+import { EmailSendError } from "../utils";
 
 const isTestEnv = process.env.NODE_ENV === "test";
 
@@ -9,6 +9,22 @@ const resend = isTestEnv ? null : new Resend(process.env.RESEND_API_KEY);
 const extractResetToken = (resetUrl: string): string | undefined => {
   const match = resetUrl.match(/[?&]token=([^&]+)/);
   return match ? decodeURIComponent(match[1]) : undefined;
+};
+
+type ResendLetter = { to: string; subject: string; html: string };
+
+// The SDK returns API errors (bad key, unverified domain, rate limit) in
+// `error` instead of throwing, so an unchecked send reports success.
+const sendViaResend = async ({ to, subject, html }: ResendLetter): Promise<void> => {
+  let result: Awaited<ReturnType<Resend["emails"]["send"]>>;
+  try {
+    result = await resend!.emails.send({ from: process.env.EMAIL_FROM || "", to, subject, html });
+  } catch (error) {
+    throw new EmailSendError(error instanceof Error ? error.message : String(error));
+  }
+  if (result.error) {
+    throw new EmailSendError(result.error.message);
+  }
 };
 
 export const sendVerificationEmail = async (email: string, code: string): Promise<void> => {
@@ -20,8 +36,7 @@ export const sendVerificationEmail = async (email: string, code: string): Promis
     });
     return;
   }
-  await resend!.emails.send({
-    from: process.env.EMAIL_FROM || "",
+  await sendViaResend({
     to: email,
     subject: "Подтверждение email",
     html: `
@@ -47,8 +62,7 @@ export const sendEmailChangeVerification = async (email: string, code: string): 
     });
     return;
   }
-  await resend!.emails.send({
-    from: process.env.EMAIL_FROM || "",
+  await sendViaResend({
     to: email,
     subject: "Подтверждение смены email",
     html: `
@@ -74,8 +88,7 @@ export const sendStudentVerificationEmail = async (email: string, code: string):
     });
     return;
   }
-  await resend!.emails.send({
-    from: process.env.EMAIL_FROM || "",
+  await sendViaResend({
     to: email,
     subject: "Подтверждение email — Личный кабинет ученика",
     html: `
@@ -102,8 +115,7 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
     });
     return;
   }
-  await resend!.emails.send({
-    from: process.env.EMAIL_FROM || "",
+  await sendViaResend({
     to: email,
     subject: "Восстановление пароля",
     html: `
@@ -124,29 +136,10 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
   });
 };
 
-// Unlike the user letters above, Resend API errors are checked: the SDK
-// returns them in `error` instead of throwing, and alert letters must know.
-export const sendAdminEmail = async ({
-  to,
-  subject,
-  html,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<void> => {
+export const sendAdminEmail = async (letter: ResendLetter): Promise<void> => {
   if (isTestEnv) {
-    recordTestMail({ to, subject, html });
+    recordTestMail(letter);
     return;
   }
-
-  let result: Awaited<ReturnType<Resend["emails"]["send"]>>;
-  try {
-    result = await resend!.emails.send({ from: process.env.EMAIL_FROM || "", to, subject, html });
-  } catch (error) {
-    throw new AdminEmailSendError(error instanceof Error ? error.message : String(error));
-  }
-  if (result.error) {
-    throw new AdminEmailSendError(result.error.message);
-  }
+  await sendViaResend(letter);
 };
