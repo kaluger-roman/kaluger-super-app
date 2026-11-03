@@ -1,7 +1,7 @@
 // Unit tests for scripts/prisma-client.mjs. Run: node --test scripts/__tests__/
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -39,7 +39,7 @@ const ensure = (backendDir, generate = (dir) => generated.push(dir)) =>
   ensurePrismaClient({ backendDir, generate, log: (line) => logs.push(line) });
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "prisma-client-"));
+  root = realpathSync(mkdtempSync(join(tmpdir(), "prisma-client-")));
   generated = [];
   logs = [];
 });

@@ -97,26 +97,35 @@ test("planChecks with --full checks everything with npm tests", () => {
 test("runChecks runs the checks at the same time and reports each result", async () => {
   const logDir = mkdtempSync(join(tmpdir(), "check-test-"));
   try {
-    const sleep = (ms, code) => ({
+    // Each child waits for the other to start. This proves overlap without a fragile
+    // sub-second wall-clock threshold on a busy Mac/CI runner.
+    const rendezvous = (name, peer, code) => ({
       cmd: process.execPath,
-      args: ["-e", `console.log("out"); setTimeout(() => process.exit(${code}), ${ms})`],
+      args: ["-e", `
+        const fs = require("node:fs");
+        fs.writeFileSync(process.argv[1], "started");
+        const deadline = Date.now() + 10000;
+        const timer = setInterval(() => {
+          if (fs.existsSync(process.argv[2])) {
+            console.log("observed concurrent peer"); clearInterval(timer); process.exit(${code});
+          } else if (Date.now() > deadline) {
+            console.error("peer never started"); clearInterval(timer); process.exit(99);
+          }
+        }, 20);
+      `, join(logDir, name), join(logDir, peer)],
       cwd: ".",
     });
-    const started = Date.now();
     const results = await runChecks(
       [
-        { name: "a:ok", ...sleep(400, 0) },
-        { name: "b:fails", ...sleep(400, 2) },
+        { name: "a:ok", ...rendezvous("a.started", "b.started", 0) },
+        { name: "b:fails", ...rendezvous("b.started", "a.started", 2) },
       ],
       { root: process.cwd(), logDir }
     );
-    const elapsed = Date.now() - started;
-
-    assert.ok(elapsed < 750, `took ${elapsed} ms, so the checks did not run in parallel`);
     const byName = Object.fromEntries(results.map((result) => [result.name, result]));
     assert.equal(byName["a:ok"].ok, true);
     assert.equal(byName["b:fails"].ok, false);
-    assert.match(readFileSync(byName["b:fails"].log, "utf8"), /out/);
+    for (const result of results) assert.match(readFileSync(result.log, "utf8"), /observed concurrent peer/);
   } finally {
     rmSync(logDir, { recursive: true, force: true });
   }

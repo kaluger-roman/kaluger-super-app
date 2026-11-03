@@ -57,6 +57,7 @@ beforeEach(() => {
   mkdirSync(join(repo, "backend"));
   mkdirSync(bin);
   copyFileSync(join(REPO_ROOT, "scripts", "dev-stack.sh"), join(repo, "scripts", "dev-stack.sh"));
+  copyFileSync(join(REPO_ROOT, "scripts", "stack-context.mjs"), join(repo, "scripts", "stack-context.mjs"));
   copyFileSync(join(REPO_ROOT, "scripts", "prisma-client.mjs"), join(repo, "scripts", "prisma-client.mjs"));
   copyFileSync(join(REPO_ROOT, "docker-compose.dev.yml"), join(repo, "docker-compose.dev.yml"));
   for (const [name, script] of [
@@ -207,7 +208,7 @@ test("test-backend starts the branch's stopped database and migrates it before j
   assert.match(res.stderr, new RegExp(`localhost:${port}\\) is not running; starting it`));
   const docker = calls(env.DOCKER_CALLS);
   assert.equal(docker.length, 1);
-  assert.match(docker[0], new RegExp(`^compose -p dev-feature-x -f \\S+/docker-compose\\.dev\\.yml up -d --wait DEV_DB_PORT=${port}$`));
+  assert.match(docker[0], new RegExp(`^compose -p dev-repo-[a-f0-9]{12} -f \\S+/docker-compose\\.dev\\.yml up -d --wait DEV_DB_PORT=${port}$`));
   assert.deepEqual(calls(env.NPX_CALLS), [
     `prisma migrate deploy ${branchDb(port, "tutor_app")}`,
     `prisma migrate deploy ${branchDb(port, "tutor_app_test")}`,

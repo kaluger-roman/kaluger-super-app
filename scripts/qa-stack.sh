@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Isolated QA Docker stack manager for /qa-roam and /manual-qa.
+# Isolated QA Docker stack manager for local browser QA.
 #
-# One throwaway stack (web + backend + postgres) per git branch, namespaced by a
-# `qa-<branch>` compose project so several branches/worktrees run in parallel
+# One throwaway stack (web + backend + postgres) per checkout, namespaced by a
+# `qa-<checkout>-<hash>` compose project so several branches/worktrees run in parallel
 # without fighting over ports or the database. Only the web container publishes a
 # port, and it's ephemeral — `up` prints the assigned URL as JSON.
 #
@@ -13,7 +13,6 @@
 #   exec-backend C Run shell command C inside the backend container (data prep, Prisma).
 #   psql SQL       Run SQL inside the db container (psql -c).
 #   down           Stop the current branch's stack and delete its volume + env file.
-#   down-all       Stop every qa-* stack on this machine.
 #
 # Examples:
 #   bash scripts/qa-stack.sh up
@@ -35,16 +34,14 @@ QA_ADMIN_HASH='$2b$10$SKdFeBdDQLpI1F7HL4Lscux5U28ZAj204ttlXRDppFKEBAfbPzZy6'
 QA_ADMIN_EMAIL='admin@qa.local'
 QA_ADMIN_PASSWORD='QaAdmin!2026'
 
-sanitize() {
-  echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##'
-}
+STACK_ID="$(cd "$REPO_ROOT" && node "$SCRIPT_DIR/stack-context.mjs" id)"
 
 current_branch() {
-  git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached"
+  git -C "$REPO_ROOT" symbolic-ref --short -q HEAD || echo "detached"
 }
 
 project_name() {
-  echo "qa-$(sanitize "$(current_branch)")"
+  echo "qa-$STACK_ID"
 }
 
 env_file_for() {
@@ -55,6 +52,7 @@ ensure_env_file() {
   local proj="$1" ef
   ef="$(env_file_for "$proj")"
   mkdir -p "$QA_DIR"
+  umask 077
   if [ -f "$ef" ]; then
     echo "$ef"
     return
@@ -159,16 +157,6 @@ cmd_down() {
   echo "down: $proj"
 }
 
-cmd_down_all() {
-  docker compose ls --all --format json 2>/dev/null \
-    | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{(JSON.parse(s)||[]).forEach(p=>{if(p.Name&&p.Name.indexOf("qa-")===0)console.log(p.Name)})}catch{}})' \
-    | while read -r name; do
-        docker compose -p "$name" -f "$COMPOSE_FILE" down -v --remove-orphans || true
-        echo "down: $name"
-      done
-  rm -f "$QA_DIR"/*.env 2>/dev/null || true
-}
-
 usage() {
   sed -nE 's/^# ?//; 1,30{/^Isolated|^One |^Commands:|^  [a-z]|^Examples:|^  bash/p}' "${BASH_SOURCE[0]}"
 }
@@ -180,6 +168,6 @@ case "${1:-help}" in
   exec-backend) shift; cmd_exec_backend "$*" ;;
   psql) shift; cmd_psql "$*" ;;
   down) cmd_down ;;
-  down-all) cmd_down_all ;;
-  *) usage ;;
+  help|--help|-h) usage ;;
+  *) usage >&2; exit 1 ;;
 esac

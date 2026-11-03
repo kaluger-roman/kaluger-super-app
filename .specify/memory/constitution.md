@@ -151,7 +151,7 @@ codebase. All code changes — whether manual or AI-generated — MUST comply.
 - MAJOR version: principle removed or redefined in backward-incompatible way
 - MINOR version: new principle added or existing materially expanded
 - PATCH version: clarifications, wording, typo fixes
-- The `CLAUDE.md` file and `docs/conventions/*.md` files are the runtime
+- The `AGENTS.md` file and `docs/conventions/*.md` files are the runtime
   implementation of these principles and MUST stay in sync
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-20 | **Last Amended**: 2026-02-20
+**Version**: 1.0.1 | **Ratified**: 2026-02-20 | **Last Amended**: 2026-11-03

@@ -22,7 +22,7 @@ get_current_branch() {
 
     # Then check git if available
     if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
-        git rev-parse --abbrev-ref HEAD
+        git rev-parse --abbrev-ref HEAD | sed 's|^codex/||'
         return
     fi
 
@@ -89,6 +89,11 @@ find_feature_dir_by_prefix() {
     local repo_root="$1"
     local branch_name="$2"
     local specs_dir="$repo_root/specs"
+
+    if [[ -d "$specs_dir/$branch_name" ]]; then
+        echo "$specs_dir/$branch_name"
+        return
+    fi
 
     # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
     if [[ ! "$branch_name" =~ ^([0-9]{3})- ]]; then

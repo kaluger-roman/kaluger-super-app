@@ -1,94 +1,99 @@
-# Per-branch dev-окружение (`scripts/dev-stack.sh`)
+# Dev-стек на Mac
 
-Параллельная разработка нескольких веток (worktree) без драки за порты 3000/3001 и без общей БД
-с разными схемами миграций. Каждая ветка получает **стабильный слот портов** и **свой Docker
-Postgres** с двумя базами; dev-серверы при этом остаются **на хосте** (быстрый HMR, symlink
-`node_modules` из основного репозитория продолжает работать).
+`bash scripts/dev-stack.sh` запускается из любого checkout проекта. PostgreSQL 16
+работает в Docker Desktop; backend/frontend — на Mac с hot reload. Нативные Node.js
+зависимости установлены отдельно в каждом checkout через `scripts/setup-local.sh`.
 
-```
-ветка A (idx 1): front http://localhost:3010 → api http://localhost:3011 → postgres :15433 (tutor_app + tutor_app_test)
-ветка B (idx 2): front http://localhost:3020 → api http://localhost:3021 → postgres :15434 (tutor_app + tutor_app_test)
-main:            классические 3000/3001 и личный локальный Postgres — скрипт для main отказывается работать
-```
+## Изоляция
 
-Слоты: `idx` на ветку из реестра `<git-common-dir>/dev-stack-ports.json` (общий для всех worktree,
-не в репозитории); порты `web = 3000 + idx*10`, `api = 3001 + idx*10`, `db = 15432 + idx`. Слот
-переживает перезапуски — на ветку всегда можно зайти снаружи по её постоянному порту. `down`
-освобождает слот.
+Имя проекта: `dev-<checkout>-<hash абсолютного пути>`. Идентификатор не зависит от
+имени ветки: `main`, несколько detached worktree Codex и ветки с похожими именами
+не делят контейнеры. При переименовании ветки в том же checkout БД сохраняется;
+новый путь checkout создаёт новое окружение.
+
+Слот портов хранится в `<git-common-dir>/local-stack-ports.json`, общем для worktree
+одного клона. Выделение слота блокируется атомарно, поэтому параллельные запуски не
+получают одинаковый слот. Порты: web `3000 + slot*10`, API `3001 + slot*10`,
+Postgres `15432 + slot`. Первый checkout обычно получает 3010/3011/15433.
+Реестр не удаляйте при работающих стеках. Отдельные клоны имеют отдельные реестры:
+для параллельной работы используйте worktree одного клона, а не несколько clone.
+
+DB-порт опубликован только на `127.0.0.1`, dev-серверы тоже слушают loopback.
+Для доступа с телефона/другой машины потребуется отдельная настройка, включая
+secure context для камеры и push. SSH-туннелей и внешних адресов в базовой схеме нет.
 
 ## Команды
 
 ```bash
-bash scripts/dev-stack.sh up               # postgres ветки + prisma migrate deploy в обе БД → JSON с портами
-bash scripts/dev-stack.sh ports            # JSON с портами ветки (аллоцирует слот, если новый)
-bash scripts/dev-stack.sh run-backend      # backend dev-сервер (nodemon) на api-порту ветки, dev-БД
-bash scripts/dev-stack.sh run-frontend     # CRA dev-сервер на web-порту ветки, REACT_APP_API_URL → api ветки
-bash scripts/dev-stack.sh run-backend-e2e  # backend с NODE_ENV=test E2E=1 на ТЕСТОВОЙ БД ветки (для e2e)
-bash scripts/dev-stack.sh test-backend --testPathPatterns=students   # jest против тестовой БД ветки (поднимет её сам)
-bash scripts/dev-stack.sh e2e -- e2e/students/create-student.spec.ts # playwright на портах ветки
-bash scripts/dev-stack.sh migrate          # накатить миграции в обе БД ветки
-bash scripts/dev-stack.sh psql "select email from users limit 5;"    # SQL в dev-БД (--test — в тестовую)
-bash scripts/dev-stack.sh status           # docker compose ps
-bash scripts/dev-stack.sh down             # снести postgres ветки + том, освободить слот
-bash scripts/dev-stack.sh down-all         # снести все dev-* стеки
+bash scripts/dev-stack.sh up            # Postgres + миграции обеих БД → JSON с URL
+bash scripts/dev-stack.sh ports         # стабильные URL/порты текущего checkout
+bash scripts/dev-stack.sh run-backend   # API с локальным .env и dev-БД
+bash scripts/dev-stack.sh run-frontend  # CRA/HMR, API и WebSocket текущего checkout
+bash scripts/dev-stack.sh seed          # демо-данные dev-БД; печатает доступы
+bash scripts/dev-stack.sh status
+bash scripts/dev-stack.sh migrate       # применить committed migrations в обе БД
+bash scripts/dev-stack.sh psql 'select email from users limit 5;'
+bash scripts/dev-stack.sh psql --test 'select count(*) from users;'
+bash scripts/dev-stack.sh exec-backend npx prisma migrate dev --name my_change
+bash scripts/dev-stack.sh exec-backend npx prisma studio
+bash scripts/dev-stack.sh down          # остановить контейнер; СОХРАНИТЬ данные/слот
+bash scripts/dev-stack.sh reset --yes   # удалить обе БД только этого checkout и слот
 ```
 
-`up` печатает JSON:
+`down` не останавливает процессы Node в других терминалах — завершите их Ctrl-C.
+`reset --yes` необратимо удаляет локальные данные; не нужен для обычного рестарта.
+Глобальной команды `down-all` нет: каждая задача управляет своим checkout.
+Новый слот после reset может иметь другие порты, поэтому перезапустите серверы.
 
-```json
-{"project":"dev-031-max-messenger","branch":"031-max-messenger","webUrl":"http://localhost:3010","apiUrl":"http://localhost:3011","dbPort":15433,"databaseUrl":"postgresql://dev:dev@localhost:15433/tutor_app?schema=public","testDatabaseUrl":"postgresql://dev:dev@localhost:15433/tutor_app_test?schema=public"}
+## Env и базы
+
+`backend/.env` хранит локальные JWT, VAPID и необязательные ключи интеграций.
+Setup не переписывает существующий `.env`. Backend сам `.env` не загружает;
+обёртки используют `dotenv-cli` и задают сверху PORT, HOST, FRONTEND_URL и DATABASE_URL.
+Значение DATABASE_URL из сгенерированного `.env` — намеренно нерабочий fallback:
+используйте wrapper, чтобы команда Prisma не попала в общую/чужую БД.
+
+- `tutor_app` — разработка и demo seed.
+- `tutor_app_test` — Jest/E2E, может очищаться тестами.
+- `up`/`migrate` применяют миграции в обе БД; `test-backend` сам стартует контейнер,
+  если он не отвечает, и применяет миграции тестовой базы.
+- `TEST_DATABASE_URL` в wrapper имеет приоритет над `backend/.env.test`.
+- Prisma-клиент сверяется со схемой перед backend-командами. Каждый checkout
+  владеет своим `node_modules`, поэтому генерация не меняет соседнюю ветку.
+- Dev admin после setup: `admin@dev.local` / `DevAdmin!2026` — только локальный стенд.
+
+## Jest и Playwright
+
+```bash
+bash scripts/dev-stack.sh test-backend --testPathPatterns=students
+# В отдельном терминале вместо обычного backend:
+bash scripts/dev-stack.sh run-backend-e2e
+# В другом терминале:
+bash scripts/dev-stack.sh e2e e2e/students/create-student.spec.ts
 ```
 
-## Как это работает
+Dev и E2E backend используют один API-порт: не запускайте их одновременно в одном
+checkout. Playwright запускает frontend сам либо использует уже запущенный на порту
+checkout. Wrapper выставляет `E2E_BASE_URL`, `E2E_API_URL`, `REACT_APP_API_URL`, `PORT`.
+E2E backend использует только тестовую БД, тестовые JWT/VAPID и admin
+`admin@e2e.local` / `E2eAdmin!2026`, не загружая личный `.env`.
 
-- **Личный `backend/.env` не трогается.** Обёртки `run-*`/`test-backend`/`e2e` экспортируют
-  `PORT`, `DATABASE_URL`, `FRONTEND_URL` (CORS), `REACT_APP_API_URL` поверх. Сам backend `.env`
-  не читает, поэтому `run-backend` запускает его через `dotenv-cli` (`dotenv -e .env`): секреты
-  (JWT, Resend, VAPID) берутся из твоего `.env`, а порты/БД — из слота ветки, потому что dotenv не
-  перекрывает уже выставленные переменные.
-- **`run-backend-e2e` от `.env` не зависит.** Он выставляет фиксированные тестовые секреты и
-  тестового админа: `admin@e2e.local` / `E2eAdmin!2026` (хеш — `E2E_ADMIN_PASSWORD_HASH` в
-  `scripts/dev-stack.sh`). Ими пользуются `e2e/admin/*` и тестовый роут `/api/__test__/admin/token`.
-  Там же тестовая пара VAPID (`E2E_VAPID_*`): `e2e/students/video-call-push.spec.ts` проверяет
-  push о звонке через приёмник бэкенда `/api/__test__/push-sink/:key` и без ключей падает в
-  `beforeAll`. Бэкенд e2e, запущенный вручную, нужно стартовать с `VAPID_PUBLIC_KEY`,
-  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (пара — `npx web-push generate-vapid-keys`).
-- **`pg_dump` на хосте должен быть не старше Postgres стенда (16).** Бэкап (`e2e/admin/create-backup`)
-  зовёт `pg_dump` с хоста; на Ubuntu 22.04 из apt ставится 14, и он отказывается работать с сервером
-  16 (`server version mismatch`). Нужен `postgresql-client-16` из репозитория PGDG. Обёртка
-  `pg_dump` в Debian/Ubuntu выбирает версию локального кластера, а не новейшую, поэтому
-  `run-backend`, `run-backend-e2e` и `test-backend` сами ставят в `PATH`
-  `/usr/lib/postgresql/<версия образа>/bin`, если он есть.
-- **Prisma-клиент сверяется со схемой.** Worktree подключают `backend/node_modules` симлинком на
-  основную копию, поэтому сгенерированный клиент у всех общий, и `prisma generate` в одной ветке
-  переписывает его для остальных. `run-backend`, `run-backend-e2e`, `test-backend` (и
-  `npm run check`) перед стартом сравнивают `node_modules/.prisma/client/schema.prisma` с
-  `backend/prisma/schema.prisma` (`scripts/prisma-client.mjs`, разница в выравнивании не в счёт).
-  Если клиент отстал, а схема ветки совпадает со схемой основной копии, он перегенерируется сам;
-  если ветка меняет схему, команда останавливается с подсказкой поставить свой `npm ci` в
-  `backend/` вместо симлинка.
-- **WebSocket в dev** выводится из `REACT_APP_API_URL` (`resolveWsUrl` в
-  `frontend/src/shared/config/index.ts`) — realtime ветки ходит в бэк своей же ветки.
-- **Playwright** читает `E2E_BASE_URL`/`PORT` (`frontend/playwright.config.ts`), API-хелперы e2e —
-  `E2E_API_URL`; всё выставляет команда `e2e`. Бэк для e2e поднимай отдельно: `run-backend-e2e`.
-- **Тестовая БД** (`tutor_app_test`) создаётся при первом старте тома
-  (`scripts/dev-db-init.sql`) и мигрируется вместе с dev-БД на `up`/`migrate`.
-- **`test-backend` сам готовит БД ветки.** Если Postgres ветки не отвечает, он делает то же, что
-  `up` (контейнер + миграции в обе БД), а если стек уже работает, докатывает в `tutor_app_test`
-  новые миграции ветки (`npm run db:migrate` мигрирует только личную БД из `backend/.env`). Не
-  поднялся Docker — команда останавливается до jest с подсказкой: `up` руками или
-  `npm run check -- --backend-tests npm`.
-- **`--backend-tests npm` идёт в общую тестовую БД** из `backend/.env.test` (`tutor_test`), её
-  никто не мигрирует сам. `npm run check` в этом режиме сверяет её с `prisma/migrations`
-  (`prisma migrate status`) и в конце печатает предупреждение со списком недостающих миграций и
-  командой `(cd backend && npm run db:migrate:test)`. Сам он её не мигрирует: миграции фичевой
-  ветки попали бы в базу, на которой гоняет тесты `main`.
-- Docker Desktop должен быть запущен. Контейнер лёгкий (только postgres) — несколько веток
-  параллельно живут спокойно.
+Проверки бэкапов вызывают `pg_dump` с Mac. Нужен PostgreSQL client 16, например
+`brew install libpq@16`; wrapper выбирает Homebrew-клиент или `DEV_STACK_PG_BIN`.
+Для других тестов этот клиент не нужен. В CI/Linux поддержан `/usr/lib/postgresql/16/bin`.
 
-## Связь с QA-стеком
+`npm run check` по умолчанию использует этот же test-wrapper, включая `main`.
+`--backend-tests npm` — явное исключение для отдельно настроенной тестовой БД/CI;
+оно не мигрирует внешнюю БД автоматически.
 
-`scripts/qa-stack.sh` (см. `docs/qa-docker.md`) — другое: это **прод-сборка** (nginx + собранный
-backend) для прогонов `/qa-roam` и `/manual-qa`, с эфемерным портом и одноразовой БД. dev-stack —
-для разработки: hot reload, jest, e2e, скриншоты макетов в `/auto-feature`. Общий у них паттерн —
-неймспейсинг по ветке (`qa-<branch>` / `dev-<branch>`).
+## Диагностика
+
+- Docker недоступен → `open -a Docker`, дождаться `docker info`, повторить `up`.
+- Порт занят → проверить процесс через `lsof -nP -iTCP:<port> -sTCP:LISTEN`;
+  не завершать чужие процессы автоматически. Остановить свой старый сервер.
+- Ошибка миграции → проверить логи и `prisma migrate status` через `exec-backend`;
+  не запускать reset наугад.
+- Ошибка lock реестра → убедиться, что другой setup уже завершился; только после
+  этого удалить оставшийся `.lock`-каталог. Повреждённый реестр вызывает ошибку,
+  а не молчаливое переиспользование занятых портов.
+- Production-build QA использует другой [стек](qa-docker.md), `qa-<checkout>-<hash>`.

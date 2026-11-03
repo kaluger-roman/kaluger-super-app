@@ -1,5 +1,10 @@
 # Offsite backups (prod -> home)
 
+> Infrastructure status, 2026-11-03: the former VPS is unavailable. This runbook
+> describes the previous deployment. `home` is a future production candidate,
+> not the current development host. Development runs locally on macOS. Do not
+> execute recovery, cron installation or remote changes as part of local setup.
+
 Prod (`45.133.234.3`, `tutor.kaluger.ru`) dumps its database on its own; the
 home dev machine (`home`, Tailscale `100.67.75.106`) pulls every dump over a
 restricted SSH key, reports its disk space back to prod and once a day proves

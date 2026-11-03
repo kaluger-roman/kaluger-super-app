@@ -37,7 +37,8 @@ yarn-error.log*
 # Landing
 /landing/.next
 /landing/out
-.claude/worktrees/
+.worktrees/
+AGENTS.override.md
 
 # Playwright
 /frontend/playwright-report
@@ -52,6 +53,3 @@ yarn-error.log*
 
 # QA-report screenshots: храним локально для ревью, но в репозиторий не пушим.
 docs/**/screenshots/
-
-# VS Code agents extension packages (scripts/vscode-agents)
-/scripts/vscode-agents/*.vsix

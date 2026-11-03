@@ -1,98 +1,49 @@
-# Изолированные QA-стеки (Docker) для /qa-roam и /manual-qa
+# Локальный QA-стек Docker
 
-`/qa-roam` и `/manual-qa` поднимают приложение для проверок в **отдельном Docker-стеке на ветку**,
-а не в общих dev-серверах на портах 3000/3001. Это даёт две вещи:
+Для проверки production-сборки на Mac используйте `scripts/qa-stack.sh`.
+Он собирает frontend (nginx), backend и отдельный PostgreSQL. `home` и прежний VPS
+не используются. Это локальный QA, а не публикация приложения.
 
-1. **Параллельность.** Несколько `/qa-roam` / `/manual-qa` на разных ветках (worktree) идут
-   одновременно — у каждого свой контейнерный Postgres и свой эфемерный порт, они не дерутся за
-   3000/3001 и не затирают данные друг друга.
-2. **Чистоту.** Личная локальная БД разработчика (`tutor_app` на `localhost:5432`) вообще не
-   используется — стек поднимает свою свежую БД и сносит её целиком после прогона.
-
-## Архитектура
-
-```
-Браузер Playwright (на хосте)
-   │  http://localhost:<эфемерный порт>
-   ▼
-[web]  nginx  — отдаёт прод-сборку фронта; проксирует /api и /ws на backend:3001
-[backend] node — prisma migrate deploy → node dist/index.js   (порт 3001, не опубликован)
-[db]   postgres — свежая БД, не опубликована, том удаляется на `down`
+```text
+Браузер на Mac → http://localhost:<порт> → nginx → backend → PostgreSQL
 ```
 
-Изоляция держится на имени compose-проекта `qa-<branch>`: контейнеры, сеть и том БД
-неймспейсятся проектом. Публикуется **только** порт `web` — Docker выдаёт свободный эфемерный
-порт, скрипт читает его обратно.
+Имя `qa-<checkout>-<hash пути>` изолирует контейнеры, сети и тома для main, веток и
+detached Codex worktree. Только nginx публикует случайный свободный порт на
+`127.0.0.1`; backend/БД остаются в сети Docker.
 
-Файлы: `docker-compose.qa.yml`, `backend/Dockerfile.qa`, `frontend/Dockerfile.qa`,
-`frontend/nginx.qa.conf`, оркестратор `scripts/qa-stack.sh`.
-
-## Предпосылки
-
-- **Docker Desktop запущен** (`docker info` отвечает). Если нет — `open -a Docker` и подождать.
-- Первая сборка образов — ~2–4 мин (`npm ci` + прод-сборка CRA внутри). Дальше слой-кэш Docker
-  переиспользуется между ветками (одинаковый `package-lock`), пересборка — секунды-десятки секунд.
-- RAM ≈ 210 МБ на стек → несколько стеков спокойно живут параллельно.
-
-## Команды `scripts/qa-stack.sh`
+## Запуск
 
 ```bash
-bash scripts/qa-stack.sh up            # собрать+поднять стек ветки, дождаться готовности → JSON c url
-bash scripts/qa-stack.sh port          # {project,url} текущей ветки
-bash scripts/qa-stack.sh status        # docker compose ps
-bash scripts/qa-stack.sh exec-backend 'npm run db:seed'         # команда внутри backend-контейнера
-bash scripts/qa-stack.sh psql "select email from users limit 5;" # SQL внутри db-контейнера
-bash scripts/qa-stack.sh down          # снести стек ветки + том + env-файл
-bash scripts/qa-stack.sh down-all      # снести все qa-* стеки на машине
+open -a Docker
+bash scripts/qa-stack.sh up
+bash scripts/qa-stack.sh port
+bash scripts/qa-stack.sh status
+bash scripts/qa-stack.sh exec-backend 'npm run db:seed'
+bash scripts/qa-stack.sh psql 'select email from users limit 5;'
+bash scripts/qa-stack.sh down
 ```
 
-`up` печатает JSON, например:
-```json
-{"project":"qa-028-forgot-password","branch":"028-forgot-password","url":"http://localhost:54312","adminEmail":"admin@qa.local","adminPassword":"QaAdmin!2026","envFile":".qa/qa-028-forgot-password.env"}
-```
-`url` — base URL для Playwright. Стек по умолчанию **остаётся поднятым** после прогона (можно
-зайти руками и доглядеть); снести — `down` или флаг `--teardown` у скилла.
+`up` печатает JSON с URL, тестовым админом и путём env. Первый запуск требует
+скачивания образов и npm-пакетов; последующие используют Docker build cache.
+Образы собираются для архитектуры Mac без обязательного `linux/amd64`/эмуляции.
 
-### Доступы и данные
+База изначально пустая, миграции применяются при старте. Demo seed выполняется
+в контейнере и выводит доступы. Тестовый админ: `admin@qa.local` / `QaAdmin!2026`.
+Resend настроен фиктивным ключом: реальная доставка писем не работает. Коды для
+локальных проверок можно читать из БД. Не подставляйте продовые ключи/данные.
 
-- БД стека **пустая** (накатаны только миграции). Данные создаём через UI, API под залогиненным
-  пользователем, `exec-backend`-вставки или `exec-backend 'npm run db:seed'` (в изолированной БД
-  это безопасно, в отличие от старого запрета сидить личную БД). Сид печатает JSON с доступами
-  созданных аккаунтов; состав набора — `backend/src/services/devSeed`.
-- Все обращения к БД идут **внутрь контейнера** через `exec-backend`/`psql` — на хосте `npx tsx`
-  смотрел бы в личную БД.
-- Тестовый админ стека: `admin@qa.local` / `QaAdmin!2026`. RESEND заглушён (письма не уходят) —
-  коды верификации читать прямо из БД. VAPID-ключи валидные (push-подписка работает).
+Стек остаётся работать после проверки, чтобы пользователь мог открыть URL.
+`down` удаляет **весь QA-том с тестовыми данными** и `.qa/<project>.env`.
+В отличие от dev `down`, здесь данные одноразовые. Общего `down-all` нет.
 
-## Бюджет для /qa-roam
+## Проверка и отчёт
 
-`/qa-roam --budget <N%>` снимает потолок «2–3 роута»: агент крутит всё новые сценарии, пока прогон
-не съест N% реального 5-часового окна подписки. Только проценты, абсолютных токен-бюджетов нет.
+Используйте доступный браузерный инструмент либо Playwright проекта. Проверяйте
+фактические пользовательские сценарии, негативные случаи, адаптивность и realtime.
+Фиксируйте ветку/commit, URL, шаги и результат; не объявляйте непроверенное успешным.
+Постоянные сценарии оформляйте в E2E по `docs/conventions/e2e-testing.md`.
 
-```bash
-node scripts/qa-budget.mjs start --budget 20%   # на старте прогона: baseline
-node scripts/qa-budget.mjs check                # после каждого сценария: verdict
-```
-
-- Источник — настоящие лимиты подписки: Claude Code передаёт статуслайну
-  `rate_limits.five_hour.used_percentage` / `resets_at`, statusline-скрипт дампит stdin в
-  `/tmp/statusline-debug.json` (переопределяется env `QA_STATUSLINE_DUMP` / флагом `--source`).
-  **Требование:** первая строка statusline-скрипта должна писать дамп — `echo "$input" > /tmp/statusline-debug.json`.
-- `start` запоминает baseline-процент и `resets_at` в `.qa/qa-budget.json` (свой на worktree);
-  `check` печатает `spentPct` / `budgetPct` / `remainingPct` / `verdict` (`continue` | `stop`).
-  Сброс окна посреди прогона учитывается: накопленный расход переносится, baseline обнуляется.
-- Защита от мусорных данных: нет дампа / нет `rate_limits` / дамп старше 15 минут → `verdict: stop`
-  с причиной в `reason` (exit-код всегда 0, вызывающий читает JSON).
-
-Оговорка: `used_percentage` — целые проценты (бюджеты <5% грубые), и значение обновляется после
-ответов API — стоп срабатывает с небольшим запасом (не перерасходует).
-
-## Escape hatch и edge-cases
-
-- `--host` у `/qa-roam` и `/manual-qa` → старое поведение: целиться в уже запущенные dev-серверы на
-  `localhost:3000`, Docker не поднимать.
-- `/manual-qa http://...` → прямой base URL (стек не поднимать).
-- Realtime (WebSocket) работает: фронт берёт same-origin `ws://<host>/ws`, nginx проксирует на
-  backend (см. `frontend/src/shared/config/index.ts` → `resolveWsUrl`).
-- Фоновые cron-задачи бэкенда (бэкап и т.п.) внутри контейнера безвредны для QA — если что-то
-  падает по расписанию, это лог, не блокер.
+Для исследовательского QA заранее ограничьте область, число сценариев или время.
+Приватный statusline/процент лимита Claude больше не используется. Подробный
+процесс и места исторических отчётов — в [workflow Codex](codex-workflow.md).

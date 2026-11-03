@@ -6,21 +6,23 @@ Playwright + Chromium. Папка является `testDir` в `frontend/playwr
 
 ## Запуск
 
+Из корня репозитория, после `scripts/setup-local.sh` и установки Chromium:
+
 ```bash
-# Все функциональные тесты (без drafts и visual) — ночной прогон
-npm run test:e2e -- --grep-invert "@draft|@visual"
-
-# Конкретная область
-npm run test:e2e -- --grep "@auth"
-
-# Visual regression (отдельная стратегия — см. ниже)
-npm run test:e2e -- --grep "@visual"
-
-# UI-режим
-npm run test:e2e:ui
+bash scripts/dev-stack.sh up
+# Отдельный терминал; остановить обычный backend этого checkout:
+bash scripts/dev-stack.sh run-backend-e2e
+# Основной терминал:
+bash scripts/dev-stack.sh e2e --grep-invert '@draft|@visual'
+bash scripts/dev-stack.sh e2e --grep '@auth'
+bash scripts/dev-stack.sh e2e --grep '@visual'
+bash scripts/dev-stack.sh e2e --ui
 ```
 
-E2e **не блокируют PR**. Полный сьют гоняется ночным CI; регрессии правятся отдельным PR.
+Wrapper передаёт порты/API и тестовую БД текущего checkout. Подробнее:
+[`docs/dev-stack.md`](../../docs/dev-stack.md). В текущем GitHub Actions CI
+Playwright не запускается: затронутые пользовательские сценарии проверяются локально.
+Ночной E2E workflow пока не настроен.
 
 ## Структура папки
 
@@ -47,12 +49,12 @@ frontend/e2e/
 
 Каждый `test.describe` обязан иметь **минимум один area-тег** (`@auth`, `@students`, …) и **минимум один level-тег** (`@regression`, `@visual` или `@draft`). Это проверяет `npm run lint`: без тегов, без area- или level-тега и с тегом не из таблицы ниже линт падает.
 
-| Тег                                                                                                       | Когда применять                                                                                          |
-| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `@regression`                                                                                             | Функциональный e2e на user journey. Прогон полным сьютом ночью.                                          |
-| `@visual`                                                                                                 | Скриншот-регрессии. Только сравнение экранов, без функциональных assertions.                             |
-| `@draft`                                                                                                  | Черновик от `/e2e-check` — исключается из обычных прогонов. После доработки заменяется на `@regression`. |
-| `@auth` / `@students` / `@lessons` / `@profile` / `@reports` / `@admin` / `@dashboard` / `@news` / `@pwa` | Область приложения.                                                                                      |
+| Тег                                                                                                       | Когда применять                                                                                     |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `@regression`                                                                                             | Функциональный e2e на user journey. Прогон локально через dev-stack.                                |
+| `@visual`                                                                                                 | Скриншот-регрессии. Только сравнение экранов, без функциональных assertions.                        |
+| `@draft`                                                                                                  | Черновик E2E-аудита — исключается из обычных прогонов. После доработки заменяется на `@regression`. |
+| `@auth` / `@students` / `@lessons` / `@profile` / `@reports` / `@admin` / `@dashboard` / `@news` / `@pwa` | Область приложения.                                                                                 |
 
 Пример:
 

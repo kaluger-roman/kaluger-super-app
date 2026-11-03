@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-03
+
+### Infrastructure
+- Replace Claude-specific orchestration with focused Codex instructions and local macOS development workflows.
+- Preserve all 25 former commands as project Codex skills and add a dedicated issue-creation workflow with deduplication and priority scoring.
+- Isolate dev/QA Docker stacks by checkout, including detached worktrees; preserve dev data on shutdown and serialize port allocation.
+- Add reproducible local setup, independent dependencies, local env generation and macOS script CI.
+- Record the former VPS outage and keep production recovery separate from local development.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).

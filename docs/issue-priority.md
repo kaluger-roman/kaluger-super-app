@@ -1,12 +1,12 @@
 # Issue priority (criticality 0–100)
 
-Every open GitHub issue carries a criticality score, so work can be taken in priority order (the VS Code agents panel lists the top ones). The score is the sum of four criteria; it measures how bad the problem is, not how hard the fix is.
+Every open GitHub issue carries a criticality score, so work can be taken in priority order. The score is the sum of four criteria; it measures how bad the problem is, not how hard the fix is.
 
-Scoring is done by a Haiku subagent through `/score-issues` (right after an issue is filed, and in bulk for issues without a score); the result is written by `scripts/issue-priority.mjs`.
+Use the project skill [$score-issues](../.agents/skills/score-issues/SKILL.md) right after an issue is filed, or in bulk for issues without a score. It selects evidence-based scores without requiring a particular model; `scripts/issue-priority.mjs` validates and writes the result. [$create-issue](../.agents/skills/create-issue/SKILL.md) includes duplicate checking and scoring. Draft/assessment-only requests do not write to GitHub.
 
 ## Context for scoring
 
-Tutor management app in production at `tutor.kaluger.ru`: a small number of real users (tutors and their students), real money and tax figures in reports, video calls between tutor and student. Everything else — CI, tests, dev stack on `home`, Claude Code hooks, skills and scripts — is development infrastructure used by AI agents and one developer.
+Tutor management app (production currently unavailable as of 2026-11-03; previous URL `tutor.kaluger.ru`): a small number of real users (tutors and their students), real money and tax figures in reports, video calls between tutor and student. Everything else — CI, tests, local macOS dev stacks, Codex instructions, Git hooks and scripts — is development infrastructure used by AI agents and one developer.
 
 ## Criteria
 
@@ -68,7 +68,7 @@ The score is a block at the top of the issue body plus the band label. The block
 <!-- /priority -->
 ```
 
-Never edit the block by hand — rescore with `/score-issues <N>` (for example when new details change the picture).
+Never edit the block by hand — rescore with `$score-issues <N>` (for example when new details change the picture).
 
 ## Script
 
