@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,6 +75,75 @@ test("corrupt registry fails closed without overwriting existing data", () => {
     writeFileSync(path, content);
     assert.throws(() => allocateSlot(context));
     assert.equal(readFileSync(path, "utf8"), content);
+  }
+});
+
+test("a legacy slot blocks allocation without creating a local registry", () => {
+  const context = stackContext(repo);
+  const legacy = join(context.common, "dev-stack-ports.json");
+  const content = '{"legacy-branch":1}\n';
+  writeFileSync(legacy, content);
+
+  assert.throws(() => allocateSlot(context), /dev-stack-ports\.json/);
+  assert.equal(readFileSync(legacy, "utf8"), content);
+  assert.equal(existsSync(join(context.common, "local-stack-ports.json")), false);
+});
+
+test("an existing local slot cannot bypass a legacy registry and both registries stay unchanged", () => {
+  const context = stackContext(repo);
+  const legacy = join(context.common, "dev-stack-ports.json");
+  const registry = join(context.common, "local-stack-ports.json");
+  const legacyContent = '{ "legacy-branch": 1 }\n';
+  const localContent = `${JSON.stringify({ [context.id]: 1, other: 2 })}\n`;
+  writeFileSync(legacy, legacyContent);
+  writeFileSync(registry, localContent);
+
+  assert.throws(() => allocateSlot(context), /dev-stack-ports\.json/);
+  assert.equal(readFileSync(legacy, "utf8"), legacyContent);
+  assert.equal(readFileSync(registry, "utf8"), localContent);
+});
+
+test("invalid legacy registries fail closed with migration instructions and preserve both registries", () => {
+  const context = stackContext(repo);
+  const legacy = join(context.common, "dev-stack-ports.json");
+  const registry = join(context.common, "local-stack-ports.json");
+  const localContent = '{"other":2}\n';
+  writeFileSync(registry, localContent);
+  for (const content of ["broken", "null", "[]", "1", '"text"']) {
+    writeFileSync(legacy, content);
+    assert.throws(() => allocateSlot(context), (error) => {
+      assert.ok(error.message.includes(legacy));
+      assert.match(error.message, /Остановите/);
+      assert.match(error.message, /архивируйте/);
+      return true;
+    });
+    assert.equal(readFileSync(legacy, "utf8"), content);
+    assert.equal(readFileSync(registry, "utf8"), localContent);
+  }
+});
+
+test("an empty legacy object permits stable local allocation without changing the legacy registry", () => {
+  const context = stackContext(repo);
+  const legacy = join(context.common, "dev-stack-ports.json");
+  const content = "{ }\n";
+  writeFileSync(legacy, content);
+
+  assert.equal(allocateSlot(context), 1);
+  assert.equal(allocateSlot(context), 1);
+  assert.equal(readFileSync(legacy, "utf8"), content);
+});
+
+test("release removes only the local slot even when a legacy registry blocks allocation", () => {
+  const context = stackContext(repo);
+  const legacy = join(context.common, "dev-stack-ports.json");
+  const registry = join(context.common, "local-stack-ports.json");
+  for (const content of ['{"legacy-branch":1}', "broken"]) {
+    writeFileSync(legacy, content);
+    writeFileSync(registry, JSON.stringify({ [context.id]: 1, other: 2 }));
+
+    assert.equal(allocateSlot(context, true), undefined);
+    assert.deepEqual(JSON.parse(readFileSync(registry, "utf8")), { other: 2 });
+    assert.equal(readFileSync(legacy, "utf8"), content);
   }
 });
 

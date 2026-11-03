@@ -1,6 +1,6 @@
 ---
 name: code-review-local
-description: "Review Super App branch and uncommitted changes for substantiated defects and produce the existing local JSON review report."
+description: "Review Super App branch and uncommitted changes with nine independent subagent perspectives and separate scoring, producing a local JSON report."
 ---
 
 # Local code review
@@ -19,7 +19,7 @@ Review actual call paths for logic, missing/deleted behavior, type/contract mism
 auth/tenant isolation, money/time correctness, races, leaked state, stale wrappers,
 false-positive tests and explicit convention violations. Read surrounding code and
 existing guards/tests before confirming a finding. Distinguish pre-existing bugs.
-No fixed reviewer count, model name or speculative stylistic findings.
+Use the independent reviewer protocol below; no speculative stylistic findings.
 
 For each candidate record title, category, repo-relative file, tight current line
 range, snippet, rationale/trigger/consequence, fix hint, and verification note.
@@ -39,3 +39,16 @@ counts, empty findings for a genuinely clean diff, and state incomplete coverage
 
 Return the report link and important findings with file/line. `--silent` returns only
 the report path. No commit, issue, PR comment or code changes in review-only mode.
+
+## Independent reviewers and scoring
+
+Follow `docs/subagents.md`: dispatch its nine reviewer roles as separate subagents,
+concurrently up to the runtime limit, queueing the remainder. Use maximum supported
+reasoning effort and the configured Codex model. Each gets the same scoped diff,
+checkout and applicable conventions, without other reviewers' conclusions.
+Require structured role/status/findings/coverage results. Read-only workers do not
+fix or publish. Deduplicate candidates by root cause, then dispatch independent
+scorer agents (not the candidate's author) to verify evidence and assign the score
+below. Batch scorers within the slot limit; the parent adjudicates disagreements.
+Record reviewer/scorer statuses and failed/unavailable coverage in the JSON report.
+Do not substitute a single-agent sequential review without reporting the limitation.

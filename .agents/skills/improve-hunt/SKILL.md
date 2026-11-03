@@ -33,3 +33,14 @@ For selected fixes follow [auto-bug-fix](../auto-bug-fix/SKILL.md) for defects o
 implement the bounded improvement with tests. Review and verify affected behavior;
 stop additional review rounds when no new relevant findings remain. Do not merge,
 deploy or change unrelated product behavior.
+
+## Parallel investigation
+
+Use subagents according to `docs/subagents.md`: separate workers for UX, design,
+security, backend performance, frontend performance, accessibility, DX/code quality,
+maintainability/observability, and workarounds. Scope to the user's area; explicitly
+omit inapplicable roles. Run independent workers concurrently within available slots,
+queueing the rest, with maximum supported reasoning effort. Each returns at most
+five candidates with evidence and benefit. The parent validates/deduplicates and
+handles report/issues/selected fixes; workers do not edit or publish. Failed or
+unexamined areas remain explicit coverage gaps.

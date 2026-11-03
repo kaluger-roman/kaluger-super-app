@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-04
+
+### Fixed
+- Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
+
+### Infrastructure
+- Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
+
 ## 2026-11-03
 
 ### Infrastructure

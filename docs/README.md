@@ -7,6 +7,7 @@
 - [Подготовка Mac](local-development.md) — инструменты, зависимости, worktree, env.
 - [Работа с Codex](codex-workflow.md) — задачи, спецификации, review, QA, PR.
 - [Навыки Codex](skills.md) — все перенесённые команды, создание issues, changelog и news.
+- [Сабагенты](subagents.md) — независимые reviewer-роли, параллельные аудиты и этапы разработки.
 - [Dev-стек](dev-stack.md) — HMR, отдельные базы и порты.
 - [QA Docker](qa-docker.md) — проверка production-сборки в одноразовом окружении.
 - [Frontend](conventions/frontend.md), [backend](conventions/backend.md),

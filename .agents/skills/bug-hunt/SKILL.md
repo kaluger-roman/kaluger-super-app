@@ -33,3 +33,14 @@ For selected fixes follow [auto-bug-fix](../auto-bug-fix/SKILL.md) for defects o
 implement the bounded improvement with tests. Review and verify affected behavior;
 stop additional review rounds when no new relevant findings remain. Do not merge,
 deploy or change unrelated product behavior.
+
+## Parallel investigation
+
+Use subagents according to `docs/subagents.md`: separate workers for Effector/model,
+React/UI, backend services/controllers, auth/security, realtime/cron, data/Prisma/
+migrations, and hidden bugs/false-positive tests. For a bounded request scope each
+role to that area and explicitly omit inapplicable roles. Run independent workers
+concurrently within available slots, queueing the rest, with maximum supported
+reasoning effort. Each returns at most five evidenced candidates and coverage.
+The parent validates, deduplicates and handles the chosen report/issues/fix mode;
+workers do not edit code or file issues. Record failed/unexamined areas honestly.

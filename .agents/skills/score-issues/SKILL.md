@@ -22,8 +22,7 @@ an assessment/draft only, return proposed scores without updating GitHub.
 Assign integer values for impact (0–40), reach (0–25), urgency (0–20), workaround
 (0–15), with a short Russian explanation based on evidence. Do not confuse review
 confidence with issue criticality, or assume the unavailable production is serving
-traffic. Preserve unknowns instead of inventing affected-user counts. No named model
-or mandatory subagent is required. Process bounded batches for large inventories.
+traffic. Preserve unknowns instead of inventing affected-user counts. Use independent batch scorers as specified below, without a model-name dependency.
 
 The maintained writer is the only way to update the priority block:
 
@@ -37,3 +36,15 @@ label while preserving the rest of the issue. Read back body/labels after writin
 If one update fails, preserve its proposed score, continue independent issues, and
 report partial completion. Do not fix or close issues. Return links sorted by score,
 with the four components, band and explanation; list any unscored remainder.
+
+## Independent batch scorers
+
+Follow `docs/subagents.md`. Materialize issue data in temporary JSON batches of up
+to eight issues, excluding old generated priority blocks but preserving meaningful
+evidence and comments. Dispatch independent scoring subagents concurrently within
+available slots, queueing the rest. Each reads the rubric and its batch, returns
+JSON with number/impact/reach/urgency/workaround/why, and makes no GitHub writes.
+The parent checks exact issue coverage, integer ranges and nonempty explanations
+before invoking the maintained writer. Retry a malformed batch once; if still invalid,
+report its issues unscored. Model defaults are inherited; scoring need not use max
+reasoning. Do not replace batch scoring with serial parent-only assessment silently.

@@ -36,3 +36,16 @@ not a past status flag. If several candidates exist, resolve the target before e
 Finish with delivered behavior, spec/report links, checks, remaining decisions and
 actual Git/PR status. Report incomplete work honestly. Small fixes do not need this
 pipeline; do not activate it merely because a task touches frontend and backend.
+
+## Delegated phases
+
+Use `docs/subagents.md`. The parent orchestrates progress and separately delegates
+specification, UI mockups when applicable, clarify→plan→tasks, implementation, and
+browser QA to specialized workers with the relevant skill/conventions. These phases
+remain dependency-ordered; independent research/implementation scopes may run in
+parallel when they do not edit the same files. Analysis/coding workers use maximum
+supported reasoning effort; browser QA need not. Dispatch the nine code-review roles
+and independent scorers directly, without a wrapper agent occupying a waiting slot.
+Review/QA workers report only; the parent confirms and fixes in-scope findings.
+Do not recursively invoke auto-feature inside a worker or let workers commit/publish.
+Verify each phase artifact before advancing; record failures and remaining work.

@@ -180,6 +180,26 @@ test("test-backend hands jest the branch's test database in a variable .env.test
 const calls = (path) => (existsSync(path) ? readFileSync(path, "utf8").trim().split("\n") : []);
 const branchDb = (port, name) => `DATABASE_URL=postgresql://dev:dev@localhost:${port}/${name}?schema=public`;
 
+test("test-backend rejects a legacy registry before calling docker, npx, or npm even with a local slot", () => {
+  const initial = run("ports");
+  assert.equal(initial.status, 0, initial.stderr);
+  const registry = join(repo, ".git", "local-stack-ports.json");
+  const legacy = join(repo, ".git", "dev-stack-ports.json");
+  const localContent = readFileSync(registry, "utf8");
+  const legacyContent = '{"legacy-branch":1}\n';
+  writeFileSync(legacy, legacyContent);
+
+  const res = run("test-backend");
+
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /dev-stack-ports\.json/);
+  assert.deepEqual(calls(env.DOCKER_CALLS), []);
+  assert.deepEqual(calls(env.NPX_CALLS), []);
+  assert.equal(existsSync(env.NPM_ARGS), false);
+  assert.equal(readFileSync(registry, "utf8"), localContent);
+  assert.equal(readFileSync(legacy, "utf8"), legacyContent);
+});
+
 const listen = () =>
   new Promise((resolve) => {
     const server = createServer();

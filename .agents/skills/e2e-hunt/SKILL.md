@@ -20,3 +20,14 @@ Write `docs/e2e-coverage/YYYY-MM-DD-e2e-hunt.md` with a unique suffix, area/jour
 matrix, coverage status, prioritized gaps, suggested tests and known uncertainty.
 Use the existing area/level tags in proposals. This is an inventory, not proof that
 tests pass. Do not modify tests, file issues or fix features unless requested.
+
+## Parallel area inventory
+
+Follow `docs/subagents.md`. For whole-app requests dispatch separate explorer agents
+for auth, students, lessons, profile/finance, reports, admin, dashboard/news, and
+PWA/realtime. A request for one area uses only its worker. Run independent explorers
+concurrently within available slots and queue the rest, with maximum supported
+reasoning effort. Workers read real journeys and assertions and return a structured
+journey/test matrix, gaps, evidence and limitations. The parent reconciles cross-area
+flows, deduplicates journeys and writes the final prioritized report. Workers do not
+edit tests or publish issues; missing/failed areas are not counted as covered.

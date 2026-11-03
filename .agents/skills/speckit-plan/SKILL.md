@@ -27,3 +27,13 @@ URLs and isolated databases. Recheck the design against requirements/constitutio
 Name unresolved decisions instead of silently accepting conflicts. End with a plan
 and relevant artifacts; task generation and implementation are separate steps.
 Do not regenerate AGENTS.md from feature plans or introduce obsolete Claude tooling.
+
+## Parallel research
+
+Follow `docs/subagents.md`: extract consequential unknowns and dispatch independent
+research subagents per unknown/technology/integration, concurrently within available
+slots and with maximum supported reasoning effort. Supply feature context and raw
+source paths; require evidence plus decision/rationale/alternatives and remaining
+uncertainty. Workers do not edit the shared plan. The parent reconciles results into
+research.md and the plan; if there are no meaningful unknowns, skip research rather
+than manufacturing tasks. Report unavailable/failed research explicitly.

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "finding-resolution",
+  "source_report": "iter-1.json",
+  "finding_id": "f1",
+  "status": "resolved",
+  "timestamp": "2026-11-03T22:35:48.719940+00:00",
+  "change": "allocateSlot refuses a populated or invalid legacy dev-stack-ports.json before allocating or returning a local slot. Missing/empty legacy maps remain supported. Legacy/local bytes are preserved on rejection; local release remains possible.",
+  "files": [
+    "scripts/stack-context.mjs",
+    "scripts/__tests__/stack-context.test.mjs",
+    "scripts/__tests__/dev-stack.test.mjs",
+    "docs/dev-stack.md"
+  ],
+  "verification": {
+    "regression_red": "Implementation worker observed 4 failing regression tests before runtime change; 2 compatibility cases already passed.",
+    "regression_green": "All 6 legacy regression cases pass after the final diagnostic change; independently repeated by verify_fix_design.",
+    "full_scripts": {
+      "command": "npm run test:scripts",
+      "passed": 102,
+      "failed": 0,
+      "skipped": 142,
+      "total": 244,
+      "note": "Run with local TCP access; Linux-only tests skipped on macOS."
+    },
+    "checks": {
+      "command": "npm run check",
+      "passed": 5,
+      "failed": 0
+    },
+    "instructions": "All 26 skills pass bundled format validation; documentation links resolve.",
+    "other": [
+      "git diff --check",
+      "bash -n scripts/dev-stack.sh scripts/qa-stack.sh scripts/setup-local.sh"
+    ]
+  },
+  "independent_verification": {
+    "agent": "verify_fix_design",
+    "result": "No confirmed defects in the scoped fix; final 6 regression cases passed.",
+    "scope": "Review of allocator/wrapper/tests and migration documentation, not a new nine-role whole-branch review."
+  },
+  "limitations": [
+    "No live legacy Docker stack or real database was used; wrapper coverage uses isolated fixtures and command stubs.",
+    "The legacy allocator does not participate in the new lock. Migration requires stopping old servers/stacks, archiving the legacy registry only afterwards, and not restarting the old wrapper. CLI and documentation state this boundary.",
+    "Original iter-1.json is preserved as historical review evidence."
+  ]
+}

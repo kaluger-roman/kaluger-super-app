@@ -28,3 +28,15 @@ For long/resumable fixes keep a compact `docs/bug-reports/<slug>-progress.md` wi
 root cause, reproduction, changed files, checks, report links, open findings and next
 step. Read it and current diff on resume. No full feature-spec/mockup pipeline is
 required. Finish with root cause, result, verification, limitations and actual Git state.
+
+## Delegated phases
+
+Use `docs/subagents.md`. Delegate diagnosis/root cause to an investigation worker,
+then the scoped fix/regression test to an implementation worker after validating
+the diagnosis. Give each the relevant evidence and conventions, with maximum
+supported reasoning effort. Delegate browser QA separately when relevant; QA need
+not use max effort. The parent directly dispatches the nine code-review roles and
+independent scorers rather than nesting an idle review orchestrator. Review/QA
+workers do not fix; the parent validates and repairs their confirmed findings.
+Keep dependent stages ordered, independent checks concurrent within the slot limit,
+and progress resumable. Workers do not recursively invoke auto-bug-fix or publish.

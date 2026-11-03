@@ -8,6 +8,19 @@ import { fileURLToPath } from "node:url";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex").slice(0, 12);
 
+const ensureLegacyRegistryEmpty = (common) => {
+  const registry = join(common, "dev-stack-ports.json");
+  let slots;
+  try {
+    slots = JSON.parse(readFileSync(registry, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+  }
+  if (!slots || Array.isArray(slots) || typeof slots !== "object" || Object.keys(slots).length > 0) {
+    throw new Error(`Найден непустой или некорректный старый реестр портов: ${registry}. Остановите старые Node.js dev-серверы и все старые Compose-проекты dev-* через прежний checkout; используйте Compose без -v для сохранения данных. Затем архивируйте этот реестр вне Git-каталога или удалите его. Не перезапускайте прежний scripts/dev-stack.sh.`);
+  }
+};
+
 export const stackContext = (cwd = process.cwd()) => {
   const git = (...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
   const root = realpathSync(git("rev-parse", "--show-toplevel"));
@@ -18,6 +31,8 @@ export const stackContext = (cwd = process.cwd()) => {
 
 // mkdir is atomic on macOS/Linux. Never discard a corrupt registry or steal a live lock.
 export const allocateSlot = ({ common, id }, release = false) => {
+  // The old allocator cannot see local slots, so reserving its slots cannot isolate both versions.
+  if (!release) ensureLegacyRegistryEmpty(common);
   const registry = join(common, "local-stack-ports.json");
   const lock = `${registry}.lock`;
   const deadline = Date.now() + 10000;

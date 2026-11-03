@@ -59,6 +59,12 @@ the root package provides development tooling, not npm workspaces.
   verification so another chat can continue. Do not append generated histories here.
 - Review the final diff for correctness, authorization boundaries, regressions,
   migration compatibility, tests and consistency with the conventions.
+- Preserve subagent workflows; read `docs/subagents.md` for dispatch and role maps.
+  `code-review-local` uses nine independent reviewer roles plus independent scoring;
+  hunts, bulk issue scoring, auto-feature/auto-bug-fix and planning research delegate
+  their defined stages. Run independent tasks concurrently up to the runtime limit,
+  queue the remainder, and report unavailable coverage. Use maximum supported
+  reasoning effort for analysis/coding/review; inherit the configured Codex model.
 
 ## Git and external actions
 
