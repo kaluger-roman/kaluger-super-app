@@ -1,0 +1,80 @@
+# Linux production host. Always use the fixed project name super-app-production.
+# Private runtime files live in .production/ and must never be committed.
+name: super-app-production
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - path: .production/db.env
+        format: raw
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U postgres -d tutor_app"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+    stop_grace_period: 60s
+    logging: *logging
+
+  backend:
+    build:
+      context: backend
+      dockerfile: ../infra/production/backend.Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: .production/backend.env
+        format: raw
+    volumes:
+      - ./.production/backups:/app/backups
+    networks: [data, app]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:3001/health]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+    stop_grace_period: 30s
+    logging: *logging
+
+  web:
+    build:
+      context: frontend
+      dockerfile: ../infra/production/frontend.Dockerfile
+    restart: unless-stopped
+    environment:
+      TRUSTED_PROXY_IP: ${PROD_PROXY_IP:-127.0.0.1}
+    ports:
+      - "127.0.0.1:${PROD_PORT:-8080}:80"
+      - "${PROD_LAN_IP:?set PROD_LAN_IP}:${PROD_PORT:-8080}:80"
+      - "${PROD_TAILSCALE_IP:?set PROD_TAILSCALE_IP}:${PROD_PORT:-8080}:80"
+    networks: [app]
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/health]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+    logging: *logging
+
+networks:
+  data:
+    internal: true
+  app:
+
+volumes:
+  db-data:

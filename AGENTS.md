@@ -9,7 +9,8 @@ the root package provides development tooling, not npm workspaces.
 - Respond in Russian. Code comments and engineering conventions are English; UI
   and error messages are Russian. Match the language of existing specs.
 - Inspect `git status`, the current checkout and relevant code before editing.
-  Preserve unrelated changes. Work locally on this Mac; no SSH or sshfs to `home`.
+  Preserve unrelated changes. Development runs locally on this Mac. Never use
+  SSH/sshfs to `home` for coding, builds of dev branches or tests; it is production.
 - Read the applicable nested `AGENTS.md` and convention files before code changes:
   frontend → `docs/conventions/frontend.md`, backend → `docs/conventions/backend.md`,
   tests → the corresponding `*-testing.md`, E2E → `docs/conventions/e2e-testing.md`.
@@ -98,11 +99,14 @@ the root package provides development tooling, not npm workspaces.
   diagnosis. These are the user's workflow checkpoints, not optional defaults.
   Already recorded approvals remain valid unless the reviewed artifact changes.
 
-## Infrastructure boundary (2026-11-03)
+## Infrastructure boundary (2026-11-04)
 
 Development runs on this Mac: checkout, worktrees, Docker, servers and browsers.
-The former VPS is unavailable. `home` is the former dev machine, holds backups,
-and is only a **future** production candidate. Do not connect to it, restore/copy
-backups, modify deployment, or describe it as live production for routine dev tasks.
-`docs/ops/` and the existing deploy workflow describe the previous deployment.
-Production migration is a separate task. Never use real production data for tests.
+The former VPS is unavailable. `home` is the production recovery host, restored
+from offsite backups, with private LAN/Tailscale access only. See
+`docs/ops/home-production.md`. Production operations (SSH, restore, deployment)
+require an explicit operational request; the owner authorized the initial migration
+on 2026-11-04. Routine development never connects to or changes production.
+The existing deploy workflow and older ops runbooks describe the lost VPS, not
+this Docker stack. Public DNS, TURN and offsite migration are separate stages.
+Never use real production data for tests or delete recovery copies in dev cleanup.

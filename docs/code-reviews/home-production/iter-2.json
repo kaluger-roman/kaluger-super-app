@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "branch": "codex/home-production",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 2,
+  "timestamp": "2026-11-04T20:28:12.203123+00:00",
+  "diff_mode": "working-tree",
+  "snapshot": {
+    "base_sha": "670c194792c6c0e6dd09b820949250686e5632ba",
+    "head": "0d15cae17a10e8ac349c7017773ddcc946b02a69",
+    "file_hashes": {
+      ".gitignore": "82cd98e0a987af2fa988983d63084f728eb35676b063169fbd90f662ff3173be",
+      "AGENTS.md": "153e531b1793f27f42511cbb3143d2281e6927260a4edbff56bb7639d3067472",
+      "CHANGELOG.md": "921ba89079837f884ec53c3e33590f1609c4df6b0c09439260c30c95c804cb4d",
+      "README.md": "2763456f515936004a0fa5b2bf2657772f8b234866d25517bfd32a66f20e57b3",
+      "docs/README.md": "1439dce7121f3bf9674ef53f0ce16f011d4e5666e3000f9d3742e8283034f06f",
+      "docs/ops/offsite-backups.md": "3497d33f3be4147731fd95370ff2af2531cb14df558ce1d01fde8050577e764b",
+      "docs/ops/turn-relay.md": "fa60b283afd5d095f0a372e96e78febaf5e27ecb49877486b8bb50182133d114",
+      "scripts/__tests__/compose-db-healthcheck.test.mjs": "e8a21800731130e2ba9a9cf4c4366d4b5cefcd9cddfe49afb80c0ee1b4ee1f62",
+      "docker-compose.production.yml": "a34a1200730a5397db99710b9ce79a6890726ae0c99d4663617bf7ab1012d0a4",
+      "docs/ops/home-production.md": "e791cfb6b870bdaa1134fb6d1dcae819b9837a20c671054ad92694160031b2fd",
+      "frontend/nginx.production.conf": "1049b2446d0387e9c804e1b177347e30c3bce1a0537f339afcb84d65815e8b7b",
+      "infra/production/backend.Dockerfile": "b02e7ed44a1d3be7419a5d8328b43af2362410f5200ca0330379dc76ce884646",
+      "infra/production/frontend.Dockerfile": "c5cac6deb8c595714e6c461f923ae6df2529bdaa6e2721b315d2ede006bca5b8",
+      "specs/041-home-production/plan.md": "c7abdb04faa662698e7c8f78117d9541d051a2171ab2b659e6dec63f8d978f20",
+      "specs/041-home-production/spec.md": "6c259ea6e250ffeff15067605ee7a6b596e4f54f843c8c45e7167492c8d86f6b",
+      "specs/041-home-production/tasks.md": "5dfe3f104c254c496ea2bfae86a51e590d3c5782afca4314d19aa9208b5e120f"
+    }
+  },
+  "diff_stats": {
+    "files_changed": 16,
+    "insertions": 439,
+    "deletions": 20
+  },
+  "summary": {
+    "raw_findings": 0,
+    "after_dedup": 0,
+    "after_score_filter": 0,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "by_category": {},
+    "agents_failed": [],
+    "scorers_failed": []
+  },
+  "findings": [],
+  "filtered_out": [],
+  "coverage": {
+    "complete": true,
+    "reviewers": [
+      {
+        "role": "claude-md",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "shallow-bug",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "deep-logic",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "security",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "type-safety",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "removed-behavior",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "cross-file",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "wrapper-proxy",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      },
+      {
+        "role": "hacks",
+        "status": "completed",
+        "note": "Независимый повторный проход полного финального snapshot, maximum reasoning effort."
+      }
+    ],
+    "scorers": []
+  },
+  "remediation": {
+    "previous_iteration": 1,
+    "resolved_findings": [
+      "f1"
+    ],
+    "verification": "Исправлена условная цепочка pg_dump/gzip/mv; девять независимых ролей повторно проверили финальный diff."
+  }
+}

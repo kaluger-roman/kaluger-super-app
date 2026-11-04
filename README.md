@@ -36,5 +36,6 @@ bash scripts/dev-stack.sh run-frontend
 [Работа с Codex](docs/codex-workflow.md) · [Навыки](docs/skills.md) ·
 [Карта документации](docs/README.md).
 
-На 03.11.2026 разработка перенесена на Mac. Прежний VPS недоступен;
-`home` пока не является новым продом. Восстановление и перенос продакшена — отдельная задача.
+На 04.11.2026 разработка перенесена на Mac. Прежний VPS потерян;
+production восстановлен на `home` с приватным LAN/Tailscale-доступом;
+разработка остаётся на Mac. Запуск и ограничения: [production на home](docs/ops/home-production.md).
