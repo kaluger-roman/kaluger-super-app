@@ -17,6 +17,7 @@ npm ci --prefix scripts/codex-panel --ignore-scripts
 npm --prefix scripts/codex-panel run build
 codex plugin marketplace add "$PWD" --json
 codex plugin add super-app-agents@super-app-local --json
+open -a /Applications/ChatGPT.app 'codex://plugins/super-app-agents@super-app-local/app/super_app_home'
 ```
 
 Список marketplace находится в `.agents/plugins/marketplace.json`; его локальный
@@ -32,6 +33,9 @@ codex://plugins/super-app-agents@super-app-local/app/super_app_home
 Новая установка может потребовать обновления списка плагинов или перезапуска
 Codex, чтобы уже открытый чат увидел новые MCP-инструменты. Установка CLI сама
 по себе не подтверждает, что интерфейс Desktop уже подключился к серверу.
+Кнопка «Попробовать» на странице плагина выбирает его для чата; сама панель
+открывается через global entrypoint или приведённую ссылку. Версия 0.1.2
+проверена в Desktop: загрузка HTML, соединение виджета и отображение issues.
 
 ## Работа с issues
 
