@@ -3,7 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: Fill this template for substantial work; see `docs/codex-workflow.md`. Omit sections that do not apply.
 
 ## Summary
 
@@ -39,12 +39,12 @@
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── plan.md              # This file (implementation plan)
+├── research.md          # Phase 0 output (planning)
+├── data-model.md        # Phase 1 output (planning)
+├── quickstart.md        # Phase 1 output (planning)
+├── contracts/           # Phase 1 output (planning)
+└── tasks.md             # Phase 2 output (task planning)
 ```
 
 ### Source Code (repository root)

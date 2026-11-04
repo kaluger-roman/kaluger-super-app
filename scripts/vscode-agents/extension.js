@@ -1,9 +1,10 @@
-// "Агенты Super App": live and recent Claude Code sessions of the project in a VS Code side panel —
+// "Агенты Super App": live and recent Codex sessions of the project in a VS Code side panel —
 // what each one is doing, who is waiting for you, a live feed, and a jump to the session's terminal.
 // Data logic lives in lib.js; this file is the VS Code UI only.
 const vscode = require("vscode");
-const fs = require("fs");
+const { execFileSync } = require("node:child_process");
 const path = require("path");
+const { proxySocketPath } = require("./rpc.cjs");
 const {
   STATE,
   NEEDS_YOU,
@@ -17,10 +18,23 @@ const {
   IssueBoard,
   issueBand,
   issueTakeCommand,
+  shellQuote,
+  resumeCommand,
 } = require("./lib");
 
 const cfg = () => vscode.workspace.getConfiguration("superAgents");
-const PROJECTS = path.join(process.env.HOME || "/root", ".claude", "projects");
+const roots = () => {
+  const configured = cfg().get("roots") || [];
+  const base = configured.length ? configured : (vscode.workspace.workspaceFolders || []).map(folder => folder.uri.fsPath);
+  const all = new Set(base);
+  for (const cwd of base) {
+    try {
+      const output = execFileSync("git", ["worktree", "list", "--porcelain"], { cwd, encoding: "utf8", timeout: 3000 });
+      for (const line of output.split("\n")) if (line.startsWith("worktree ")) all.add(line.slice(9));
+    } catch { /* A non-Git workspace still has its configured root. */ }
+  }
+  return [...all];
+};
 const hm = (ms) => new Date(ms).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 const idOf = (a) => (typeof a === "string" ? a : a?.data?.id);
 
@@ -97,7 +111,7 @@ const sessionKids = (s, live) => {
     kids.push(
       new Node(`worktree ${tr.worktree}`, {
         icon: "git-branch",
-        tooltip: `~/kaluger-super-app/.claude/worktrees/${tr.worktree}`,
+        tooltip: tr.cwd,
       })
     );
   if (tr?.pr)
@@ -128,14 +142,14 @@ const sessionNode = (s, live) => {
     .join(" · ");
   const tooltip = [
     title,
-    live ? stateLabel(s) : "не запущена",
+    live ? stateLabel(s) : "сохранённая история",
     tr?.title !== title ? tr?.title : null,
     tr?.worktree ? `worktree: ${tr.worktree}` : null,
     tr?.mode ? `режим: ${tr.mode}` : null,
     live
       ? `${s.live.kind === "background" ? "фоновая" : "в терминале"}, запущена ${s.live.startedAt ? hm(s.live.startedAt) : "?"}`
       : null,
-    `claude -r ${s.id}`,
+    `codex resume ${s.id}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -193,8 +207,8 @@ const issueNodes = (board, byIssue) => {
     rows.push(
       new Node(`без оценки: ${board.unscored}`, {
         icon: "question",
-        description: "/score-issues",
-        tooltip: "Оценить их: /score-issues в сессии Claude (Haiku по docs/issue-priority.md)",
+        description: "$score-issues",
+        tooltip: "Оценить их: $score-issues в Codex (по docs/issue-priority.md)",
       })
     );
   return rows;
@@ -258,8 +272,11 @@ const feedEvent = (e) => {
     return `<div class="ev user">${t}<div class="bubble">${esc(e.text)}</div></div>`;
   if (e.kind === "text")
     return `<div class="ev text">${t}<div class="body">${md(e.text)}</div></div>`;
-  if (e.kind === "turn")
-    return `<div class="ev turn">— ход завершён за ${Math.round((e.ms || 0) / 1000)} с —</div>`;
+  if (e.kind === "turn") {
+    const label = e.status === "failed" ? "ход завершился с ошибкой" : e.status === "interrupted" ? "ход прерван" : "ход завершён";
+    const duration = e.ms == null ? "" : ` за ${Math.round(e.ms / 1000)} с`;
+    return `<div class="ev turn ${e.error ? "err" : ""}">— ${label}${duration} —${e.result ? `<div class="errtxt">${esc(e.result)}</div>` : ""}</div>`;
+  }
   if (e.kind === "error") return `<div class="ev err">${t}${esc(e.text)}</div>`;
   const mark = e.error
     ? '<span class="bad">✗</span>'
@@ -270,7 +287,7 @@ const feedEvent = (e) => {
     e.detail && e.detail !== e.text
       ? `<details><summary>команда</summary><pre>${esc(e.detail)}</pre></details>`
       : "";
-  const error = e.error ? `<div class="errtxt">${esc(e.error)}</div>` : "";
+  const error = e.error ? `<div class="errtxt">${esc(e.result || e.error)}</div>` : "";
   return `<div class="ev tool ${e.done ? "" : "pending"}">${t}${mark} <b>${esc(e.name)}</b> ${esc(e.text)}${detail}${error}</div>`;
 };
 
@@ -333,7 +350,7 @@ class FeedView {
       : "";
     const main = s.live
       ? '<button class="ok" data-cmd="goto">Перейти в диалог</button>'
-      : '<button class="ok" data-cmd="resume">Продолжить (claude -r)</button>';
+      : '<button class="ok" data-cmd="resume">Продолжить (codex resume)</button>';
     const body = tr ? tr.feed.map(feedEvent).join("") : '<p class="meta">Транскрипт не найден.</p>';
     p.panel.webview.html = `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
@@ -341,7 +358,7 @@ class FeedView {
 <div class="top"><h2>${esc(title)}</h2>
   <div class="meta"><span class="${stCls}">${esc(stateLabel(s))}</span>${meta}</div>
   ${subsHtml}
-  <div class="btns">${main}<button data-cmd="copyResume">Копировать claude -r</button></div>
+  <div class="btns">${main}<button data-cmd="copyResume">Копировать codex resume</button></div>
 </div>
 ${body}
 <div id="end"></div>
@@ -357,10 +374,11 @@ ${body}
 
 const activate = (ctx) => {
   const store = new Store({
-    projectsDir: PROJECTS,
     settings: () => ({
-      roots: cfg().get("roots"),
-      claudePath: cfg().get("claudePath"),
+      roots: roots(),
+      codexPath: cfg().get("codexPath"),
+      rpcArgs: cfg().get("rpcArgs"),
+      historyFallback: cfg().get("historyFallback"),
       recentDays: cfg().get("recentDays"),
     }),
   });
@@ -369,9 +387,9 @@ const activate = (ctx) => {
     const warn =
       store.agentsOk === false
         ? [
-            new Node("`claude agents --json` не ответил", {
+            new Node(store.error || "Codex app-server не ответил", {
               icon: "warning",
-              tooltip: `Проверь superAgents.claudePath: ${cfg().get("claudePath")}`,
+              tooltip: "Проверь superAgents.codexPath и superAgents.rpcArgs",
             }),
           ]
         : [];
@@ -390,28 +408,18 @@ const activate = (ctx) => {
     t.sendText(text);
     return t;
   };
-  const launchCwd = (s) => s.live?.cwd || s.tr?.firstCwd || cfg().get("roots")[0];
-  const ppid = (pid) => {
-    try {
-      return +fs.readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1].split(" ")[1];
-    } catch {
-      return 0;
-    }
+  const launchCwd = (s) => s.live?.cwd || s.tr?.firstCwd || roots()[0];
+  // Sessions started by this panel retain their terminals. Codex shared threads
+  // use resume/attach semantics; macOS has no Linux /proc process tree.
+  const sessionTerminals = new Map();
+  const findTerminal = async (id) => {
+    const terminal = sessionTerminals.get(id);
+    return vscode.window.terminals.includes(terminal) ? terminal : null;
   };
-  // An interactive session runs in the terminal whose shell is the parent of `claude`
-  const findTerminal = async (pid) => {
-    const parent = ppid(pid);
-    for (const t of vscode.window.terminals) {
-      const tp = await t.processId;
-      if (tp && (tp === parent || tp === pid)) return t;
-    }
-    return null;
-  };
-
   const copyResume = (id) => {
     const s = store.session(id);
     vscode.env.clipboard
-      .writeText(`cd ${launchCwd(s)} && claude -r ${id}`)
+      .writeText(`cd ${shellQuote(launchCwd(s))} && ${resumeCommand(id, cfg().get("codexPath"))}`)
       .then(() => vscode.window.showInformationMessage("Скопировано"));
   };
   const resume = async (id) => {
@@ -423,27 +431,20 @@ const activate = (ctx) => {
       );
       if (go !== "Всё равно открыть") return;
     }
-    terminal(one(displayName(s), 40), launchCwd(s), `claude -r ${id}`);
+    sessionTerminals.set(id, terminal(one(displayName(s), 40), launchCwd(s), resumeCommand(id, cfg().get("codexPath"))));
   };
   let feed;
   const goto = async (id) => {
+    const existing = await findTerminal(id);
+    if (existing) return existing.show();
+    // Opening a running shared thread attaches a TUI; no new prompt is sent.
     const s = store.session(id);
     if (!s.live) return resume(id);
-    if (s.live.kind === "background" || !s.live.pid) {
-      const name = `attach ${one(displayName(s), 30)}`;
-      const t = vscode.window.terminals.find((x) => x.name === name);
-      if (t) return t.show();
-      return terminal(name, launchCwd(s), `claude attach ${id}`);
-    }
-    const t = await findTerminal(s.live.pid);
-    if (t) return t.show();
-    const b = await vscode.window.showInformationMessage(
-      `Терминал сессии «${one(displayName(s), 40)}» не в этом окне VS Code (pid ${s.live.pid}).`,
-      "Лента",
-      "Копировать claude -r"
-    );
-    if (b === "Лента") feed.show(id);
-    if (b === "Копировать claude -r") copyResume(id);
+    const args = cfg().get("rpcArgs") || ["app-server", "proxy"];
+    const socketPath = proxySocketPath(args);
+    const endpoint = socketPath ? `unix://${socketPath}` : "unix://";
+    const command = `${resumeCommand(id, cfg().get("codexPath"))} --remote ${shellQuote(endpoint)}`;
+    sessionTerminals.set(id, terminal(one(displayName(s), 40), launchCwd(s), command));
   };
   feed = new FeedView(store, (m) => {
     if (m.cmd === "goto") goto(m.id);
@@ -467,8 +468,8 @@ const activate = (ctx) => {
       const need = NEEDS_YOU.has(st);
       const finished = was === "busy" && st === "idle";
       if (!need && !(finished && mode === "all")) continue;
-      if (vscode.window.state.focused && s.live.pid) {
-        const t = await findTerminal(s.live.pid);
+      if (vscode.window.state.focused && s.id) {
+        const t = await findTerminal(s.id);
         if (t && vscode.window.activeTerminal === t) continue;
       }
       const name = one(displayName(s), 50);
@@ -496,10 +497,10 @@ const activate = (ctx) => {
     const busy = count((st) => st === "busy");
     const need = count((st) => NEEDS_YOU.has(st));
     const idle = count((st) => st === "idle");
-    bar.text = `$(hubot) ${busy}${need ? ` $(warning) ${need}` : ""}${idle ? ` $(bell) ${idle}` : ""}`;
+    bar.text = `${store.agentsOk === false ? "$(warning) " : ""}$(hubot) ${busy}${need ? ` $(warning) ${need}` : ""}${idle ? ` $(bell) ${idle}` : ""}`;
     bar.tooltip = ls.length
       ? `Агенты Super App\n${ls.map((s) => `${STATE[stateOf(s)][0]} — ${one(displayName(s), 50)}`).join("\n")}\n\nКлик: перейти к сессии`
-      : "Агенты Super App: живых сессий нет";
+      : (store.error || "Агенты Super App: живых сессий нет");
     bar.backgroundColor = need
       ? new vscode.ThemeColor("statusBarItem.warningBackground")
       : undefined;
@@ -513,7 +514,7 @@ const activate = (ctx) => {
   };
   let timer = setInterval(tick, cfg().get("pollSeconds") * 1000);
 
-  // Prioritized open issues: `gh` over ssh every few minutes, no model tokens
+  // Prioritized open issues: local `gh` every few minutes, no model tokens
   const board = new IssueBoard({
     settings: () => ({ command: cfg().get("issuesCommand"), limit: cfg().get("issuesLimit") }),
   });
@@ -533,7 +534,7 @@ const activate = (ctx) => {
   let issuesTimer = setInterval(refreshIssues, issuesEvery());
   const takeIssue = (mode) => (n) => {
     const i = n?.data?.issue;
-    if (i) terminal(`#${i.number}`, cfg().get("roots")[0], issueTakeCommand(i, mode));
+    if (i) terminal(`#${i.number}`, roots()[0], issueTakeCommand(i, mode, cfg().get("codexPath")));
   };
 
   const pick = async () => {
@@ -560,10 +561,12 @@ const activate = (ctx) => {
     vscode.window.registerTreeDataProvider("superAgents.recent", recentView),
     issuesTree,
     bar,
-    { dispose: () => clearInterval(timer) },
+    { dispose: () => { clearInterval(timer); store.dispose(); } },
     { dispose: () => clearInterval(issuesTimer) },
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (!e.affectsConfiguration("superAgents")) return;
+      store.dispose();
+      store.client = null;
       clearInterval(timer);
       timer = setInterval(tick, cfg().get("pollSeconds") * 1000);
       tick();
@@ -578,7 +581,7 @@ const activate = (ctx) => {
     vscode.commands.registerCommand("superAgents.takeIssueFeature", takeIssue("feature")),
     vscode.commands.registerCommand("superAgents.continueIssue", (n) => goto(idOf(n))),
     vscode.commands.registerCommand("superAgents.newSession", () =>
-      terminal("claude", cfg().get("roots")[0], "claude")
+      terminal("codex", roots()[0], `${shellQuote(cfg().get("codexPath"))} --worktree`)
     ),
     vscode.commands.registerCommand("superAgents.pick", pick),
     vscode.commands.registerCommand("superAgents.goto", (a) => goto(idOf(a))),

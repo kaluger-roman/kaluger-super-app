@@ -1,32 +1,77 @@
-# Агенты Super App (VS Code extension)
+# Агенты Super App — Codex
 
-A VS Code side panel for watching the Claude Code sessions that work on this project: what each one is doing right now, which ones wait for you, a live feed of their actions, and a one-click jump into the session's terminal. UI text is Russian.
+Панель VS Code сохранена как отдельный инструмент проекта. Данные сессий теперь
+приходят из [Codex app-server](https://learn.chatgpt.com/docs/app-server), issues —
+из локального `gh`. Чтение не запускает model turns и не расходует токены модели.
 
-- «Сейчас»: live sessions from `claude agents --json` started under `superAgents.roots` (default `/root/super-app`). States: работает / ждёт ввода (finished its turn) / нужен ты (permission prompt, `AskUserQuestion`, blocked background session); the ones that need you are on top and expanded. Inside: the current action (tool and its description), the last prompt, the last answer, running subagents, worktree, the last mentioned PR.
-- Clicking a live session focuses its VS Code terminal (the terminal whose shell is the parent of the `claude` process). A background session opens via `claude attach <id>`. A terminal in another VS Code window: the panel offers the feed or copies `claude -r`.
-- Feed (list icon): the last ~150 transcript events — prompts, answers, tool calls with ✓/✗ and the error text, turn ends; updates live.
-- «Недавние»: finished sessions of the last `superAgents.recentDays` days; ▶ runs `claude -r <id>` in a new terminal.
-- «Приоритетные issue»: the `superAgents.issuesLimit` (8) open issues with the highest criticality score (`docs/issue-priority.md`), as `72 · #105 title` with the band icon; click opens the issue in the browser; ▶ starts a new Claude session on it, the bug and sparkle buttons start it as `/auto-bug-fix --new …` or `/auto-feature --new …`. When a live or recent session already works on the issue (its first prompt that names an issue links `…/issues/N` or says `issue #N` / `ишью #N`), the row shows that session's state and a single «Продолжить работу» button that jumps to it (or resumes it); the three start buttons move to the right-click menu. A trailing row counts issues without a score (`/score-issues` scores them). Refreshed every `superAgents.issuesRefreshMinutes` (10) minutes by `superAgents.issuesCommand` (by default `gh issue list` over `ssh home`); a failed refresh keeps the last list and shows the error.
-- Status bar: `$(hubot)` working, `$(warning)` need you, `$(bell)` waiting for input; click to pick a session to jump to («Агенты Super App: Перейти к сессии…»).
-- Notifications (`superAgents.notifications`): `all` — finished a turn and needs you, `attention` — needs you only, `off`. Skipped when you are already looking at that session's terminal.
+## Сохранённые функции
 
-Data: `claude agents --json` every `superAgents.pollSeconds` seconds plus the local transcripts in `~/.claude/projects/` (read incrementally), and the issue list command. No model tokens are spent.
+- «Сейчас»: живые сессии, текущая операция, последний запрос/ответ, сабагенты,
+  worktree и последний упомянутый PR. Сначала показываются запросы разрешений/ответа.
+- «Недавние»: история за `recentDays`, продолжение через `codex resume`.
+- Лента последних 150 событий: запросы, ответы, команды, ошибки и завершение хода.
+- «Приоритетные issue»: оценка 0–100, топ по критичности, число неоценённых issues,
+  связь issue → сессия, переход/продолжение вместо повторного запуска.
+- Три действия для issue: обычная задача, `$auto-bug-fix --new`, `$auto-feature --new`.
+  Новые задачи стартуют через `codex --worktree`, без общих node_modules/баз.
+- Status bar, переход к терминалу, копирование команды продолжения, уведомления
+  `all` / `attention` / `off`; открытый терминал не дублируется.
+- Ошибка загрузки issues сохраняет последнюю успешную выборку и показывает ошибку.
 
-The PR shown for a session is a heuristic: the last PR link, or the first `PR #N` of the latest answer.
+Все 14 идентификаторов команд `superAgents.*` и три view ID сохранены.
+`superAgents.claudePath` заменён на `superAgents.codexPath`; остальные прежние
+настройки сохранили назначение. Пустой `roots` означает папки текущего workspace
+и worktrees, полученные из локального `git worktree list`.
 
-## Files
+## Подключение и границы
 
-- `lib.js` — transcript parsing, session state, polling; no `vscode` import, tested by `scripts/__tests__/vscode-agents-lib.test.mjs`.
-- `extension.js` — tree views, feed webview, status bar, notifications, terminal jump.
+По умолчанию `superAgents.rpcArgs` содержит `app-server proxy`: адаптер подключается
+по WebSocket к Unix-сокету **уже работающего общего daemon**. CLI proxy передаёт
+сырые байты, а Unix listener требует HTTP Upgrade и WebSocket frames, поэтому
+JSONL через proxy здесь не используется. Путь по умолчанию —
+`$CODEX_HOME/app-server-control/app-server-control.sock` либо
+`~/.codex/app-server-control/app-server-control.sock`.
+Для нестандартного socket задайте `superAgents.rpcArgs`:
 
-## Build and install
+```json
+["app-server", "proxy", "--sock", "/absolute/path/to/app-server-control.sock"]
+```
 
-Run on the machine where VS Code Server runs the sessions (the server, not `home`):
+Также поддерживается `--sock=/absolute/path.sock`; другие параметры proxy
+отклоняются с ошибкой. Остальные команды `rpcArgs` используют JSONL по stdio.
+
+Панель видит живые статусы только того сервера, к которому подключена. Отдельный
+app-server не знает о живых потоках другого процесса приложения. Если общий socket
+недоступен, `historyFallback` читает локальную историю через отдельный stdio
+app-server, показывает предупреждение и **не объявляет эти сессии живыми**.
+Не запускайте/перезапускайте daemon автоматически ради мониторинга: это отдельная
+операция среды. Наличие desktop app само по себе не доказывает доступность socket.
+
+Панель только читает историю и состояние: не отвечает на запросы разрешений,
+не запускает/останавливает чужие turns, не читает приватные SQLite/transcript-схемы.
+При недоступности API отображается ошибка. Учитываются `legacy` и `paginated`
+истории. Отображаются только потоки выбранных roots; содержимое остаётся локальным.
+
+## Установка на Mac
+
+Нужны Node из `.nvmrc`, локальные Codex CLI, `gh` с авторизацией, VS Code.
+Проверьте `codex --version`, `codex app-server --help`. Если `codex` не виден в PATH
+VS Code, задайте абсолютный `superAgents.codexPath` (путь не коммитить).
 
 ```bash
 cd scripts/vscode-agents
-npx -y @vscode/vsce package --allow-missing-repository
-code --install-extension super-agents-<version>.vsix   # from a VS Code terminal
+npm ci
+npx --yes @vscode/vsce package --allow-missing-repository
+code --install-extension super-agents-0.4.2.vsix
 ```
 
-Outside a VS Code terminal use the server binary: `~/.vscode-server/cli/servers/Stable-<commit>/server/bin/code-server --install-extension …`. Then run «Developer: Reload Window».
+Либо VS Code → Extensions → Install from VSIX. Перезапустите extension host.
+`issuesCommand` по умолчанию локальная read-only команда `gh issue list`, без SSH.
+Она является доверенной пользовательской настройкой shell; текст issue никогда
+не используется как исполняемый код. Промпты запуска и пути корректно экранируются.
+
+Проверка: `node --test scripts/__tests__/vscode-agents-lib.test.mjs
+scripts/__tests__/codex-rpc.test.mjs` из корня проекта. Unit/integration fixtures
+проверяют WebSocket handshake на временном Unix-сокете, stdio fallback, cleanup,
+статусы, pagination, ошибки, shell quoting и сохранение списка issues;
+живой UI VS Code требует отдельной проверки после установки.

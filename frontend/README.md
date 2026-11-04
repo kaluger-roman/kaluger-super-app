@@ -1,60 +1,26 @@
-# Getting Started with Create React App
+# Frontend Kaluger Tutor
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React + TypeScript + Effector + Material UI; сборка CRA/Craco.
+Feature-Sliced Design: pages → features → entities → shared.
 
-## Available Scripts
+Установка и запуск выполняются из корня репозитория по
+[локальной инструкции](../docs/local-development.md). Сервер запускается через
+`bash scripts/dev-stack.sh run-frontend`, чтобы API, WebSocket и порты совпадали
+с текущим checkout. Не полагайтесь на стандартный порт CRA 3000.
 
-In the project directory, you can run:
+Из `frontend/`:
 
-### `npm start`
+```bash
+npm test                 # Vitest, однократный прогон
+npm test -- path         # выбранные тесты
+npm run lint
+npx tsc --noEmit
+npm run format:check
+npm run build
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+[Конвенции](../docs/conventions/frontend.md) ·
+[Unit/component tests](../docs/conventions/frontend-testing.md) · [E2E](e2e/README.md).
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-## Path Aliases
-
-Project configured TypeScript path aliases for convenient imports from `src`:
-
-- `@app/*`
-- `@pages/*`
-- `@features/*`
-- `@entities/*`
-- `@shared/*`
-- `@components/*`
-- `@widgets/*`
-
-Use them like `import { X } from "@entities/student"` or `import { api } from "@shared/api"` instead of long relative paths.
+Алиасы: `@app`, `@pages`, `@features`, `@entities`, `@shared`, `@components`, `@widgets`.
+Импортируйте публичные barrel API, например `import { X } from "@entities/student"`.

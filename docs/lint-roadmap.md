@@ -1,3 +1,6 @@
+> Historical lint rollout. Current workflow: `AGENTS.md` and `docs/local-development.md`.
+> Old Claude/worktree examples below document past implementation decisions.
+
 # Lint Adoption Roadmap
 
 Goal: move as many `CLAUDE.md` / `docs/conventions/*` rules as possible from "checked by review" to "caught by the linter, reliably".

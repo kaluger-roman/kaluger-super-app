@@ -1,392 +1,194 @@
-// Fixture-based test for scripts/start-task-pr.mjs. Run: node --test scripts/__tests__/
-// Real git (temp repo + bare "origin"), fake `gh` on PATH that logs its calls.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync, renameSync, symlinkSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { toHttpsRemote, parseIssues, isLinked, addClosesToBody } from "../start-task-pr.mjs";
+import { toHttpsRemote, parseIssues, isLinked, addClosesToBody, parseArgs } from "../start-task-pr.mjs";
 
 const SCRIPT = join(dirname(dirname(fileURLToPath(import.meta.url))), "start-task-pr.mjs");
-const SESSION_ID = "11111111-2222-3333-4444-555555555555";
-
+const SESSION = "11111111-2222-3333-4444-555555555555";
 const FAKE_GH = `#!/usr/bin/env node
-const fs = require("fs");
+const fs = require('node:fs');
 const args = process.argv.slice(2);
-const stdin = args.includes("-") ? fs.readFileSync(0, "utf8") : null;
-fs.appendFileSync(process.env.FAKE_GH_LOG, JSON.stringify({ args, stdin }) + "\\n");
-const [a, b] = args;
-if (a === "pr" && b === "list") process.stdout.write(process.env.FAKE_GH_PR_LIST || "[]");
-if (a === "pr" && b === "view") process.stdout.write(process.env.FAKE_GH_PR_VIEW || '{"body":"","comments":[]}');
-if (a === "pr" && b === "create") process.stdout.write("https://github.com/o/r/pull/99\\n");
+const stdin = args.includes('-') ? fs.readFileSync(0, 'utf8') : null;
+fs.appendFileSync(process.env.FAKE_GH_LOG, JSON.stringify({args,stdin})+'\\n');
+if (process.env.FAKE_GH_FAIL) { process.stderr.write('gh authentication failed'); process.exit(1); }
+if (args[0] === 'pr' && args[1] === 'list') process.stdout.write(process.env.FAKE_GH_LIST || '[]');
+if (args[0] === 'pr' && args[1] === 'view') process.stdout.write(args.includes('baseRefName,headRefOid,headRefName,isCrossRepository') ? process.env.FAKE_GH_REFS : process.env.FAKE_GH_VIEW || '{"body":"","comments":[]}');
+if (args[0] === 'pr' && args[1] === 'create') process.stdout.write('https://github.com/o/r/pull/99\\n');
+if (args[0] === 'repo' && args[1] === 'view') process.stdout.write(JSON.stringify({url:'https://github.com/o/r',defaultBranchRef:{name:'main'}}));
+if (args[0] === 'api') {
+  const branch = decodeURIComponent(args.at(-1).split('/heads/')[1]);
+  const sha = require('node:child_process').execFileSync('git', ['rev-parse', 'refs/heads/'+branch], {cwd:process.env.START_TASK_PR_REMOTE_URL,encoding:'utf8'}).trim();
+  process.stdout.write(JSON.stringify({ref:'refs/heads/'+branch,object:{type:'commit',sha}}));
+}
 `;
-
-let root;
-let work;
-let origin;
-let env;
-
-const sh = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
-const ghCalls = () =>
-  existsSync(env.FAKE_GH_LOG)
-    ? readFileSync(env.FAKE_GH_LOG, "utf8").trim().split("\n").map((l) => JSON.parse(l))
-    : [];
-const ghCall = (sub) => ghCalls().find((c) => c.args[1] === sub);
-const runScript = (...args) => spawnSync("node", [SCRIPT, ...args], { cwd: work, env, encoding: "utf8" });
+let root, work, origin, env;
+const git = (cwd, ...args) => execFileSync("git", args, { cwd, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd: work, env, encoding: "utf8" });
+const calls = () => existsSync(env.FAKE_GH_LOG) ? readFileSync(env.FAKE_GH_LOG, "utf8").trim().split("\n").map(JSON.parse) : [];
+const call = (action) => calls().find((entry) => entry.args[1] === action);
+const commitFile = (file, content) => { writeFileSync(join(work, file), content); git(work, "add", file); git(work, "commit", "-qm", file); };
+const openPR = () => { env.FAKE_GH_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]'; };
+const advanceOrigin = (file = "upstream.txt") => {
+  git(work, "checkout", "-q", "main");
+  commitFile(file, "upstream\n");
+  git(work, "push", "-q", "origin", "main");
+  const sha = git(work, "rev-parse", "HEAD");
+  git(work, "reset", "--hard", "-q", "HEAD~1");
+  git(work, "checkout", "-q", "codex/task");
+  return sha;
+};
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "start-task-pr-"));
-  origin = join(root, "origin.git");
-  work = join(root, "work");
-  sh(root, "init", "--quiet", "--bare", "-b", "main", origin);
-  sh(root, "init", "--quiet", "-b", "main", work);
-  sh(work, "config", "user.email", "t@example.com");
-  sh(work, "config", "user.name", "T");
-  writeFileSync(join(work, "a.txt"), "a\n");
-  sh(work, "add", ".");
-  sh(work, "commit", "--quiet", "-m", "init");
-  sh(work, "remote", "add", "origin", origin);
-  sh(work, "push", "--quiet", "origin", "main");
-  sh(work, "checkout", "--quiet", "-b", "fix-thing");
-
-  const bin = join(root, "bin");
-  mkdirSync(bin);
-  writeFileSync(join(bin, "gh"), FAKE_GH);
-  chmodSync(join(bin, "gh"), 0o755);
-
-  const config = join(root, "claude");
-  mkdirSync(join(config, "projects", "-launch-dir"), { recursive: true });
-  writeFileSync(
-    join(config, "projects", "-launch-dir", `${SESSION_ID}.jsonl`),
-    `{"type":"system"}\n{"cwd":"/launch/dir","sessionId":"${SESSION_ID}"}\n`
-  );
-
-  env = {
-    ...process.env,
-    PATH: `${bin}:${process.env.PATH}`,
-    FAKE_GH_LOG: join(root, "gh.log"),
-    CLAUDE_CONFIG_DIR: config,
-    CLAUDE_CODE_SESSION_ID: SESSION_ID,
-    CLAUDE_CODE_BRIDGE_SESSION_ID: "session_web123",
-    START_TASK_PR_REMOTE_URL: origin,
-  };
-  delete env.FAKE_GH_PR_LIST;
-  delete env.FAKE_GH_PR_VIEW;
+  root = mkdtempSync(join(tmpdir(), "codex-pr-")); work = join(root, "work"); origin = join(root, "origin.git");
+  env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1", GIT_AUTHOR_NAME: "Test", GIT_AUTHOR_EMAIL: "test@example.com", GIT_COMMITTER_NAME: "Test", GIT_COMMITTER_EMAIL: "test@example.com", CODEX_HOME: join(root, "codex"), CODEX_THREAD_ID: SESSION, START_TASK_PR_REMOTE_URL: origin, FAKE_GH_LOG: join(root, "gh.log") };
+  for (const key of ["FAKE_GH_LIST", "FAKE_GH_VIEW", "FAKE_GH_FAIL", "CODEX_SESSION_ID", "GH_REPO", "GH_HOST"]) delete env[key];
+  git(root, "init", "--bare", "-q", "-b", "main", origin);
+  git(root, "init", "-q", "-b", "main", work);
+  commitFile("a.txt", "a\n");
+  git(work, "remote", "add", "origin", "https://github.com/o/r.git"); git(work, "config", `url.${origin}.insteadOf`, "https://github.com/o/r.git");
+  git(work, "push", "-q", "origin", "main"); git(work, "checkout", "-q", "-b", "codex/task");
+  mkdirSync(join(root, "bin")); writeFileSync(join(root, "bin", "gh"), FAKE_GH); chmodSync(join(root, "bin", "gh"), 0o755);
+  env.PATH = `${join(root, "bin")}:${process.env.PATH}`;
+  const sessions = join(env.CODEX_HOME, "sessions", "2026", "11", "04"); mkdirSync(sessions, { recursive: true });
+  writeFileSync(join(sessions, `rollout-2026-11-04-${SESSION}.jsonl`), `${JSON.stringify({ type: "session_meta", payload: { id: SESSION, cwd: "/private/launch folder" } })}\n{invalid unread transcript\n`);
 });
-
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-test("new branch without commits: empty commit, push, draft PR with session", () => {
-  const res = runScript("--title", "Fix the thing", "--summary", "Уроки не удаляются.");
-  assert.equal(res.status, 0, res.stderr);
-  const out = JSON.parse(res.stdout);
-  assert.equal(out.action, "created");
-  assert.equal(out.url, "https://github.com/o/r/pull/99");
-
-  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "1");
-  assert.equal(sh(work, "diff", "--name-only", "main", "HEAD"), "");
-  assert.match(sh(work, "log", "-1", "--format=%B"), /^chore: start "Fix the thing"\n\nClaude-Session-Id: 11111111-/);
-  assert.equal(sh(origin, "rev-parse", "refs/heads/fix-thing"), sh(work, "rev-parse", "HEAD"));
-
-  const create = ghCall("create");
-  assert.deepEqual(create.args.slice(0, 9), [
-    "pr",
-    "create",
-    "--draft",
-    "--base",
-    "main",
-    "--head",
-    "fix-thing",
-    "--title",
-    "Fix the thing",
-  ]);
-  assert.match(create.stdin, /Уроки не удаляются\./);
-  assert.match(create.stdin, /## Сессии Claude Code/);
-  assert.match(create.stdin, new RegExp(`cd /launch/dir && claude --resume ${SESSION_ID}`));
-  assert.match(create.stdin, /web: https:\/\/claude\.ai\/code\/session_web123/);
+test("new task makes an empty draft, pushes and links Codex without leaking resume cwd", () => {
+  const result = run("--title", "Fix the thing", "--summary", "Уроки не удаляются.");
+  assert.equal(result.status, 0, result.stderr);
+  const json = JSON.parse(result.stdout);
+  assert.equal(json.action, "created"); assert.equal(json.behindBase, 0); assert.ok(json.emptyCommit);
+  assert.equal(git(work, "diff", "--name-only", "main", "HEAD"), "");
+  assert.equal(git(origin, "rev-parse", "refs/heads/codex/task"), git(work, "rev-parse", "HEAD"));
+  assert.match(git(work, "log", "-1", "--format=%B"), /Codex-Session-Id: 11111111-/);
+  assert.deepEqual(call("create").args.slice(0, 9), ["pr", "create", "--draft", "--base", "main", "--head", "codex/task", "--title", "Fix the thing"]);
+  assert.match(call("create").stdin, /Уроки не удаляются/); assert.match(call("create").stdin, /codex resume 11111111-/);
+  assert.doesNotMatch(call("create").stdin, /private|launch folder|claude/i);
+  const metadata = JSON.parse(readFileSync(join(work, ".git", "codex-task-sessions.json"), "utf8"));
+  assert.equal(metadata[0].resumeCwd, "/private/launch folder");
 });
 
-// Only node and git on PATH: CI runners have a real gh in /usr/bin.
-const pathWithoutGh = () => {
-  const sysBin = join(root, "sysbin");
-  mkdirSync(sysBin);
-  symlinkSync(execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(), join(sysBin, "git"));
-  return `${dirname(process.execPath)}:${sysBin}`;
-};
-
-test("gh only in ~/.local/bin (PATH of a non-interactive ssh shell) is still found", () => {
-  const home = join(root, "home");
-  mkdirSync(join(home, ".local", "bin"), { recursive: true });
-  renameSync(join(root, "bin", "gh"), join(home, ".local", "bin", "gh"));
-  env.HOME = home;
-  env.PATH = pathWithoutGh();
-  const res = runScript("--title", "Fix the thing");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(JSON.parse(res.stdout).action, "created");
+test("session flags override env and deprecated web alias stays private", () => {
+  const result = run("--title", "T", "--session-id", "explicit-id", "--resume-cwd", "/another private/path", "--web-session-id", "old-web-id");
+  assert.equal(result.status, 0, result.stderr); assert.match(result.stderr, /устарел/);
+  assert.match(call("create").stdin, /explicit-id/); assert.doesNotMatch(call("create").stdin, /another private|old-web-id|11111111/);
+  const metadata = JSON.parse(readFileSync(join(work, ".git", "codex-task-sessions.json"), "utf8"));
+  assert.equal(metadata[0].webSessionId, "old-web-id");
 });
 
-test("no gh anywhere: clear error before any push, no spawnSync ENOENT", () => {
-  env.HOME = join(root, "home");
-  env.PATH = pathWithoutGh();
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 1);
-  assert.match(res.stderr, /GitHub CLI \(gh\) не найден ни в PATH, ни в .*home\/\.local\/bin/);
-  assert.match(res.stderr, /export PATH=/);
-  assert.doesNotMatch(res.stderr, /ENOENT/);
-  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "0");
-  assert.equal(sh(origin, "branch", "--list", "fix-thing"), "");
+test("missing session and empty flag remain compatible and do not swallow title", () => {
+  delete env.CODEX_THREAD_ID;
+  const result = run("--session-id", "--title", "T");
+  assert.equal(result.status, 0, result.stderr); assert.match(result.stderr, /сессия Codex не найдена/);
+  assert.doesNotMatch(call("create").stdin, /Сессии Codex/);
 });
 
-test("session passed by flags (run via ssh, no session env or transcript here): recorded in the PR", () => {
-  delete env.CLAUDE_CODE_SESSION_ID;
-  delete env.CLAUDE_CODE_BRIDGE_SESSION_ID;
-  env.CLAUDE_CONFIG_DIR = join(root, "empty-claude");
-  const id = "99999999-8888-7777-6666-555555555555";
-  const res = runScript("--title", "T", "--session-id", id, "--resume-cwd", "/root/super-app", "--web-session-id", "session_ssh");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(res.stderr, "");
-  const body = ghCall("create").stdin;
-  assert.match(body, /## Сессии Claude Code/);
-  assert.match(body, new RegExp(`\`${id}\` — \`cd /root/super-app && claude --resume ${id}\` · web: https://claude\\.ai/code/session_ssh`));
-  assert.match(sh(work, "log", "-1", "--format=%B"), new RegExp(`Claude-Session-Id: ${id}`));
+test("unknown metadata warns but keeps a safe public session command", () => {
+  const result = run("--title", "T", "--session-id", "unknown");
+  assert.equal(result.status, 0, result.stderr); assert.match(result.stderr, /папка запуска.*не найдена/);
+  assert.match(call("create").stdin, /codex resume unknown/); assert.ok(!call("create").stdin.includes(work));
 });
 
-test("session flags win over the env", () => {
-  const id = "99999999-8888-7777-6666-555555555555";
-  const res = runScript("--title", "T", "--session-id", id, "--resume-cwd", "/other/dir");
-  assert.equal(res.status, 0, res.stderr);
-  const body = ghCall("create").stdin;
-  assert.match(body, new RegExp(`cd /other/dir && claude --resume ${id}`));
-  assert.doesNotMatch(body, new RegExp(SESSION_ID));
-  assert.match(body, /web: https:\/\/claude\.ai\/code\/session_web123/);
+test("staged and unstaged changes are not absorbed by the empty commit", () => {
+  writeFileSync(join(work, "b.txt"), "staged\n"); git(work, "add", "b.txt"); writeFileSync(join(work, "a.txt"), "unstaged\n");
+  const before = git(work, "status", "--porcelain"); const result = run("--title", "T");
+  assert.equal(result.status, 0, result.stderr); assert.equal(git(work, "status", "--porcelain"), before);
+  assert.equal(git(work, "diff", "--name-only", "main", "HEAD"), "");
 });
 
-test("--session-id without --resume-cwd and no transcript here: warns that the resume dir is a guess", () => {
-  delete env.CLAUDE_CODE_SESSION_ID;
-  env.CLAUDE_CONFIG_DIR = join(root, "empty-claude");
-  const id = "99999999-8888-7777-6666-555555555555";
-  const res = runScript("--title", "T", "--session-id", id);
-  assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stderr, new RegExp(`warning: папка запуска сессии ${id} не найдена.*--resume-cwd`));
-  assert.match(ghCall("create").stdin, new RegExp(`cd ${work} && claude --resume ${id}`));
+test("stale clean branch fast-forwards before creating the empty commit", () => {
+  const upstream = advanceOrigin(); const result = run("--title", "T");
+  assert.equal(result.status, 0, result.stderr); assert.equal(JSON.parse(result.stdout).fastForwarded, 1);
+  assert.equal(git(work, "rev-parse", "HEAD~1"), upstream);
 });
 
-test("empty session flag value does not swallow the next flag", () => {
-  delete env.CLAUDE_CODE_SESSION_ID;
-  const res = runScript("--session-id", "--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(ghCall("create").args[8], "T");
-  assert.match(res.stderr, /сессия Claude Code не найдена/);
+for (const conflict of ["staged", "untracked"]) test(`stale branch with ${conflict} changes preserves files and reports behindBase`, () => {
+  advanceOrigin("b.txt"); writeFileSync(join(work, "b.txt"), "local\n");
+  if (conflict === "staged") git(work, "add", "b.txt");
+  const result = run("--title", "T"); assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).behindBase, 1); assert.match(result.stderr, /behind origin\/main/);
+  assert.equal(readFileSync(join(work, "b.txt"), "utf8"), "local\n");
 });
 
-test("staged changes are not swallowed into the empty commit", () => {
-  writeFileSync(join(work, "b.txt"), "b\n");
-  sh(work, "add", "b.txt");
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(sh(work, "diff", "--name-only", "main", "HEAD"), "");
-  assert.equal(sh(work, "diff", "--cached", "--name-only"), "b.txt");
+test("own commits require changelog before push and use no extra commit after it is supplied", () => {
+  commitFile("feature.txt", "feature\n");
+  const blocked = run("--title", "T"); assert.equal(blocked.status, 1); assert.match(blocked.stderr, /CHANGELOG/);
+  assert.equal(call("create"), undefined); assert.equal(git(origin, "branch", "--list", "codex/task"), "");
+  commitFile("CHANGELOG.md", "- Feature implemented.\n"); const head = git(work, "rev-parse", "HEAD");
+  const result = run("--title", "T"); assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).emptyCommit, null); assert.equal(git(work, "rev-parse", "HEAD"), head);
 });
 
-test("branch already ahead of base: no extra commit", () => {
-  writeFileSync(join(work, "c.txt"), "c\n");
-  sh(work, "add", "c.txt");
-  sh(work, "commit", "--quiet", "-m", "real work");
-  const head = sh(work, "rev-parse", "HEAD");
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(JSON.parse(res.stdout).emptyCommit, null);
-  assert.equal(sh(work, "rev-parse", "HEAD"), head);
-  assert.equal(sh(origin, "rev-parse", "refs/heads/fix-thing"), head);
+test("diverged branch preserves commits and reports the rebase hint", () => {
+  advanceOrigin(); commitFile("CHANGELOG.md", "- Task change.\n"); const head = git(work, "rev-parse", "HEAD");
+  const result = run("--title", "T"); assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).behindBase, 1); assert.equal(git(work, "rev-parse", "HEAD"), head); assert.match(result.stderr, /git rebase/);
 });
 
-// origin/main moves one commit ahead while local main stays behind, as in a main checkout nobody pulled.
-const advanceOrigin = (file = "m.txt") => {
-  sh(work, "checkout", "--quiet", "main");
-  writeFileSync(join(work, file), "m\n");
-  sh(work, "add", file);
-  sh(work, "commit", "--quiet", "-m", "upstream");
-  sh(work, "push", "--quiet", "origin", "main");
-  sh(work, "reset", "--quiet", "--hard", "HEAD~1");
-  sh(work, "checkout", "--quiet", "fix-thing");
-  return sh(origin, "rev-parse", "main");
-};
-
-test("branch up to date with base: no fast-forward, no warning", () => {
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(res.stderr, "");
-  const out = JSON.parse(res.stdout);
-  assert.equal(out.fastForwarded, 0);
-  assert.equal(out.behindBase, 0);
+test("custom base is used for fetch, comparison and PR creation", () => {
+  git(work, "push", "-q", "origin", "main:release");
+  const result = run("--title", "T", "--base", "release"); assert.equal(result.status, 0, result.stderr);
+  assert.equal(call("create").args[4], "release"); assert.equal(git(work, "rev-list", "--count", "origin/release..HEAD"), "1");
 });
 
-test("branch cut from a stale local main: fast-forwarded to origin/main before the empty commit", () => {
-  const upstream = advanceOrigin();
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(res.stderr, "");
-  const out = JSON.parse(res.stdout);
-  assert.equal(out.fastForwarded, 1);
-  assert.equal(out.behindBase, 0);
-  assert.equal(sh(work, "rev-parse", "HEAD~1"), upstream);
-  assert.equal(sh(work, "diff", "--name-only", upstream, "HEAD"), "");
-  assert.equal(readFileSync(join(work, "m.txt"), "utf8"), "m\n");
-  assert.equal(sh(origin, "rev-parse", "refs/heads/fix-thing"), sh(work, "rev-parse", "HEAD"));
+test("existing PR comments a new session and deduplicates closing keywords", () => {
+  openPR(); env.FAKE_GH_VIEW = JSON.stringify({ body: "Intro\n\nFixes #12\n\n## Сессии Codex\n\n- old", comments: [] });
+  const result = run("--title", "T", "--closes", "12,34,034"); assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), { action: "session-added", url: "https://github.com/o/r/pull/7", closesAdded: ["34"] });
+  assert.match(call("edit").stdin, /Fixes #12\n\nCloses #34\n\n## Сессии Codex/);
+  assert.equal(call("create"), undefined); assert.equal(git(work, "rev-list", "--count", "main..HEAD"), "0");
 });
 
-test("stale branch with staged changes: not fast-forwarded, warns and reports behindBase", () => {
-  advanceOrigin();
-  writeFileSync(join(work, "b.txt"), "b\n");
-  sh(work, "add", "b.txt");
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stderr, /fix-thing is 1 commit\(s\) behind origin\/main; update it with `git merge --ff-only origin\/main`/);
-  const out = JSON.parse(res.stdout);
-  assert.equal(out.fastForwarded, 0);
-  assert.equal(out.behindBase, 1);
-  assert.equal(sh(work, "rev-list", "--count", "HEAD..origin/main"), "1");
-  assert.equal(sh(work, "diff", "--cached", "--name-only"), "b.txt");
+test("existing session in body or comments makes repeated invocation idempotent", () => {
+  openPR(); env.FAKE_GH_VIEW = JSON.stringify({ body: "Closes #12", comments: [{ body: SESSION }] });
+  const result = run("--title", "T", "--closes", "12"); assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).action, "exists"); assert.equal(call("edit"), undefined); assert.equal(call("comment"), undefined);
 });
 
-test("stale branch with an untracked file in the way of the fast-forward: warns instead of failing", () => {
-  advanceOrigin("n.txt");
-  writeFileSync(join(work, "n.txt"), "local\n");
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stderr, /behind origin\/main/);
-  assert.equal(JSON.parse(res.stdout).behindBase, 1);
-  assert.equal(readFileSync(join(work, "n.txt"), "utf8"), "local\n");
+test("new draft adds one Closes line per parsed issue", () => {
+  const result = run("--title", "T", "--closes", "#12,34 https://github.com/o/r/issues/56 12");
+  assert.equal(result.status, 0, result.stderr); assert.match(call("create").stdin, /Closes #12\nCloses #34\nCloses #56\n\n## Сессии Codex/);
 });
 
-test("branch with own commits behind base: left as is, warns with a rebase hint", () => {
-  advanceOrigin();
-  writeFileSync(join(work, "c.txt"), "c\n");
-  sh(work, "add", "c.txt");
-  sh(work, "commit", "--quiet", "-m", "real work");
-  const head = sh(work, "rev-parse", "HEAD");
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stderr, /behind origin\/main; update it with `git rebase origin\/main`/);
-  const out = JSON.parse(res.stdout);
-  assert.equal(out.emptyCommit, null);
-  assert.equal(out.behindBase, 1);
-  assert.equal(sh(work, "rev-parse", "HEAD"), head);
+test("--ready checks the published head and changelog before modifying the PR", () => {
+  openPR(); env.FAKE_GH_REFS = JSON.stringify({ baseRefName: "main", headRefOid: git(work, "rev-parse", "HEAD"), isCrossRepository: false });
+  let result = run("--title", "T", "--ready"); assert.equal(result.status, 1); assert.equal(call("ready"), undefined);
+  commitFile("CHANGELOG.md", "- Complete task.\n"); env.FAKE_GH_REFS = JSON.stringify({ baseRefName: "main", headRefOid: git(work, "rev-parse", "HEAD"), isCrossRepository: false });
+  result = run("--title", "T", "--ready"); assert.equal(result.status, 0, result.stderr); assert.equal(JSON.parse(result.stdout).action, "ready"); assert.ok(call("ready"));
 });
 
-test("open PR from another session: comments this session, no commit or new PR", () => {
-  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
-  env.FAKE_GH_PR_VIEW = '{"body":"started in `aaaa`","comments":[]}';
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(JSON.parse(res.stdout), { action: "session-added", url: "https://github.com/o/r/pull/7" });
-  const comment = ghCall("comment");
-  assert.equal(comment.args[2], "7");
-  assert.match(comment.stdin, new RegExp(SESSION_ID));
-  assert.equal(ghCall("create"), undefined);
-  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "0");
+test("--ready refuses a stale published head even when it has changelog", () => {
+  openPR(); commitFile("CHANGELOG.md", "- Complete task.\n");
+  env.FAKE_GH_REFS = JSON.stringify({ baseRefName: "main", headRefOid: git(work, "rev-parse", "HEAD"), isCrossRepository: false });
+  commitFile("new.txt", "later work\n"); const result = run("--title", "T", "--ready");
+  assert.equal(result.status, 1); assert.match(result.stderr, /HEAD PR не совпадает/); assert.equal(call("ready"), undefined);
 });
 
-test("open PR already mentioning this session: no-op", () => {
-  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
-  env.FAKE_GH_PR_VIEW = JSON.stringify({ body: "x", comments: [{ body: `Продолжение: ${SESSION_ID}` }] });
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.equal(JSON.parse(res.stdout).action, "exists");
-  assert.equal(ghCall("comment"), undefined);
+test("invalid args, forbidden branches and authentication failures cause no push", () => {
+  for (const args of [[], ["--title", "T", "--closes", "abc"], ["--title", "T", "--closes"], ["--title", "T", "--unknown"]]) assert.equal(run(...args).status, 1);
+  assert.equal(calls().length, 0); env.FAKE_GH_FAIL = "1"; assert.equal(run("--title", "T").status, 1);
+  assert.equal(git(origin, "branch", "--list", "codex/task"), ""); delete env.FAKE_GH_FAIL;
+  git(work, "checkout", "-q", "main"); assert.match(run("--title", "T").stderr, /refusing/);
+  git(work, "checkout", "-q", "--detach"); assert.match(run("--title", "T").stderr, /detached HEAD/);
 });
 
-test("without a Claude session: PR body has no sessions section, stderr warns how to pass it", () => {
-  delete env.CLAUDE_CODE_SESSION_ID;
-  const res = runScript("--title", "T");
-  assert.equal(res.status, 0, res.stderr);
-  assert.match(
-    res.stderr,
-    /warning: сессия Claude Code не найдена \(нет --session-id и CLAUDE_CODE_SESSION_ID\), раздела «Сессии Claude Code» в PR не будет; .*--session-id, --resume-cwd и --web-session-id/
-  );
-  assert.doesNotMatch(ghCall("create").stdin, /Сессии Claude Code/);
-  assert.equal(sh(work, "log", "-1", "--format=%B"), 'chore: start "T"');
+test("ambient GH_REPO cannot redirect startup publication or existing-PR updates", () => {
+  env.GH_REPO = "other/repository";
+  const result = run("--title", "T"); assert.equal(result.status, 1); assert.match(result.stderr, /GH_REPO.*origin/); assert.equal(calls().length, 0);
+  env.GH_REPO = "https://github.com/o/r";
+  assert.equal(run("--title", "T").status, 0);
+  assert.deepEqual(call("create").args.slice(-2), ["--repo", "github.com/o/r"]);
 });
 
-test("refuses to run on main and without --title", () => {
-  assert.notEqual(runScript().status, 0);
-  sh(work, "checkout", "--quiet", "main");
-  const res = runScript("--title", "T");
-  assert.notEqual(res.status, 0);
-  assert.match(res.stderr, /refusing/);
-  assert.equal(ghCalls().length, 0);
-});
-
-test("--closes: draft PR body links each issue with a Closes line before the sessions section", () => {
-  const res = runScript("--title", "T", "--summary", "S.", "--closes", "#12, 34 https://github.com/o/r/issues/56 12");
-  assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(JSON.parse(res.stdout).closes, ["12", "34", "56"]);
-  const body = ghCall("create").stdin;
-  assert.match(body, /S\.\n\nCloses #12\nCloses #34\nCloses #56\n\n## Сессии Claude Code/);
-});
-
-test("--closes with a bad or missing value fails before any git or gh call", () => {
-  for (const value of [["abc"], ["#12x"], []]) {
-    const res = runScript("--title", "T", "--closes", ...value);
-    assert.notEqual(res.status, 0);
-    assert.match(res.stderr, /--closes/);
-  }
-  assert.equal(ghCalls().length, 0);
-  assert.equal(sh(work, "rev-list", "--count", "main..HEAD"), "0");
-});
-
-test("--closes on an open PR: adds only the missing lines to its body and records the session", () => {
-  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
-  env.FAKE_GH_PR_VIEW = JSON.stringify({ body: "Intro\n\nFixes #12\n\n## Сессии Claude Code\n\n- old", comments: [] });
-  const res = runScript("--title", "T", "--closes", "12,34");
-  assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(JSON.parse(res.stdout), {
-    action: "session-added",
-    url: "https://github.com/o/r/pull/7",
-    closesAdded: ["34"],
-  });
-  const edit = ghCall("edit");
-  assert.deepEqual(edit.args, ["pr", "edit", "7", "--body-file", "-"]);
-  assert.equal(edit.stdin, "Intro\n\nFixes #12\n\nCloses #34\n\n## Сессии Claude Code\n\n- old");
-  assert.ok(ghCall("comment"));
-  assert.equal(ghCall("create"), undefined);
-});
-
-test("--closes on an open PR that already links the issues, no Claude session: no-op", () => {
-  delete env.CLAUDE_CODE_SESSION_ID;
-  env.FAKE_GH_PR_LIST = '[{"number":7,"url":"https://github.com/o/r/pull/7"}]';
-  env.FAKE_GH_PR_VIEW = JSON.stringify({ body: "closes #12", comments: [] });
-  const res = runScript("--title", "T", "--closes", "12");
-  assert.equal(res.status, 0, res.stderr);
-  assert.deepEqual(JSON.parse(res.stdout), { action: "exists", url: "https://github.com/o/r/pull/7" });
-  assert.equal(ghCall("edit"), undefined);
-  assert.equal(ghCall("comment"), undefined);
-});
-
-test("parseIssues, isLinked and addClosesToBody", () => {
-  assert.deepEqual(parseIssues("1,#2 3"), ["1", "2", "3"]);
-  assert.throws(() => parseIssues("https://github.com/o/r/pull/5"), /not an issue number/);
-  assert.throws(() => parseIssues(" , "), /at least one/);
-
-  assert.ok(isLinked("Resolves: #5", "5"));
-  assert.ok(isLinked("fixed #5.", "5"));
-  assert.ok(!isLinked("Closes #50", "5"));
-  assert.ok(!isLinked("see #5", "5"));
-
-  assert.deepEqual(addClosesToBody("", ["5"]), { body: "Closes #5", added: ["5"] });
-  assert.deepEqual(addClosesToBody("Text\n", ["5", "6"]), { body: "Text\n\nCloses #5\nCloses #6", added: ["5", "6"] });
-  assert.deepEqual(addClosesToBody("## Сессии Claude Code\n\n- x", ["5"]), {
-    body: "Closes #5\n\n## Сессии Claude Code\n\n- x",
-    added: ["5"],
-  });
-  assert.deepEqual(addClosesToBody("Closes #5", ["5"]), { body: "Closes #5", added: [] });
-});
-
-test("toHttpsRemote converts GitHub SSH URLs and leaves others alone", () => {
-  assert.equal(toHttpsRemote("git@github.com:o/r.git"), "https://github.com/o/r.git");
-  assert.equal(toHttpsRemote("ssh://git@github.com/o/r.git"), "https://github.com/o/r.git");
-  assert.equal(toHttpsRemote("https://github.com/o/r.git"), "https://github.com/o/r.git");
-  assert.equal(toHttpsRemote("/tmp/origin.git"), "/tmp/origin.git");
+test("issue and argument helpers preserve deduplication and HTTPS transport", () => {
+  assert.deepEqual(parseIssues("1,#2 002"), ["1", "2"]); assert.throws(() => parseIssues("0")); assert.throws(() => parseIssues(" , "));
+  assert.ok(isLinked("Resolves: #5", "5")); assert.ok(!isLinked("Closes #50", "5")); assert.ok(!isLinked("see #5", "5"));
+  assert.deepEqual(addClosesToBody("", ["5", "5"]), { body: "Closes #5", added: ["5"] });
+  assert.equal(toHttpsRemote("git@github.com:o/r.git"), "https://github.com/o/r.git"); assert.equal(toHttpsRemote("ssh://git@github.com/o/r.git"), "https://github.com/o/r.git");
+  assert.deepEqual(parseArgs(["--session-id", "--title", "T"]), { "session-id": "", title: "T" });
 });

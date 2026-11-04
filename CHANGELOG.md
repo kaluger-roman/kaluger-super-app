@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-11-04
+
+### Fixed
+- Version Codex panel resources by release and show the loaded UI version, preventing updates from reusing older panel HTML.
+- Show separate plain-task, auto-bug-fix and auto-feature actions on each issue in the Codex panel.
+- Connect the agents panel to the shared Codex daemon using WebSocket over its Unix socket, preserving stdio history fallback when live monitoring is unavailable.
+- Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
+
+### Infrastructure
+- Add a local Codex plugin with an interactive issues and sessions panel, alongside the VS Code extension.
+- Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
+- Restore detailed command procedures, mandatory checkpoints, resumable JSON state, QA/review contracts, hunt limits and Spec Kit validation without simplifying the original workflow.
+- Restore local task-start PR automation, executable changelog guards, Codex quota-based QA budgets and managed agent-context generation.
+- Restore the VS Code agents and priority-issues panel with a Codex app-server adapter, safe local commands and explicit live-status availability.
+
+## 2026-11-03
+
+### Infrastructure
+- Replace Claude-specific orchestration with focused Codex instructions and local macOS development workflows.
+- Preserve all 25 former commands as project Codex skills and add a dedicated issue-creation workflow with deduplication and priority scoring.
+- Isolate dev/QA Docker stacks by checkout, including detached worktrees; preserve dev data on shutdown and serialize port allocation.
+- Add reproducible local setup, independent dependencies, local env generation and macOS script CI.
+- Record the former VPS outage and keep production recovery separate from local development.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).

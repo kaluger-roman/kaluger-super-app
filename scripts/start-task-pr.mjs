@@ -1,260 +1,208 @@
 #!/usr/bin/env node
-// Opens a draft PR for the current branch at the START of a task, so the work
-// and the Claude Code session that did it can always be found again.
-//
-// Usage:
-//   node scripts/start-task-pr.mjs --title "<short task title>" [--summary "<1-3 sentences>"] [--closes 12,34] [--base main]
-//     [--session-id <id> --resume-cwd <launch dir> --web-session-id <bridge id>]
-//
-// What it does:
-//   - no open PR for the branch yet: fetches <base>; a branch with no commits of its
-//     own that lags behind origin/<base> (cut from a stale local main) and has no
-//     tracked changes is fast-forwarded to it, otherwise a lag is reported as a
-//     warning on stderr and `behindBase` in the JSON; adds an EMPTY commit if the
-//     branch has none on top of <base> (GitHub refuses a PR without commits; the
-//     commit carries the same tree, so index and working tree are untouched),
-//     pushes the branch and opens a draft PR whose body records the session;
-//   - open PR already exists: comments the current session on it unless it is
-//     already mentioned there (a task continued in another session stays traceable).
-//
-// --closes takes issue numbers (`12`, `#12` or an issue URL; comma/space separated)
-// and puts a `Closes #N` line per issue into the body, so GitHub closes them when
-// the PR is merged into the default branch. On an existing PR the missing lines
-// are added to its body.
-//
-// Session info comes from Claude Code env: CLAUDE_CODE_SESSION_ID (local id for
-// `claude --resume`) and CLAUDE_CODE_BRIDGE_SESSION_ID (web session, optional).
-// The resume directory is the session's launch cwd, read from its transcript in
-// $CLAUDE_CONFIG_DIR/projects (default ~/.claude/projects) — `claude --resume`
-// only lists sessions launched from the current directory.
-// Run on another machine than the session (e.g. via `ssh home`), neither the env nor
-// the transcript is there: pass --session-id, --resume-cwd and --web-session-id
-// (they win over the env). Without a session id the PR gets no sessions section
-// and a warning goes to stderr.
-//
-// Push and fetch go over HTTPS with gh as the credential helper (SSH has no key
-// in this environment); set START_TASK_PR_REMOTE_URL to override the remote.
-//
-// Output: JSON on stdout ({ action, url, ... }); errors on stderr, exit code 1.
-
+// Explicitly requested task publication: opens an idempotent draft and records
+// the Codex session. An empty start commit preserves both index and worktree.
+// --title --summary --closes --base --session-id --resume-cwd --web-session-id
+// remain compatible. --ready finalizes an existing PR after the changelog gate.
+// All Git/GitHub work happens locally, with gh credentials for GitHub HTTPS.
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readSync, readdirSync, readFileSync, realpathSync, writeFileSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkChangelog, checkGhPublication, repositoryIdentity } from "./changelog-gate.mjs";
 
-const SESSIONS_HEADING = "## Сессии Claude Code";
+const SESSIONS_HEADING = "## Сессии Codex";
+const LOCAL_BIN = join(homedir(), ".local", "bin");
+const RUN_ENV = { ...process.env, PATH: [process.env.PATH, LOCAL_BIN, "/opt/homebrew/bin", "/usr/local/bin"].join(delimiter) };
+const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { env: RUN_ENV, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
+const git = (...args) => run("git", args);
+const gitAuth = (...args) => run("git", ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential", ...args]);
+let targetRepository;
+const gh = (args, input) => {
+  const argv = args[0] === "pr" && targetRepository ? [...args, "--repo", targetRepository] : args;
+  try { return run("gh", argv, input == null ? {} : { input }); }
+  catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    throw new Error(`GitHub CLI (gh) не найден в PATH или стандартных локальных каталогах. Установите gh и выполните gh auth login.`);
+  }
+};
+const warn = (message) => process.stderr.write(`start-task-pr: warning: ${message}\n`);
 
-const parseArgs = (argv) => {
+export const parseArgs = (argv) => {
   const args = {};
+  const flags = ["title", "summary", "closes", "base", "session-id", "resume-cwd", "web-session-id"];
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i].startsWith("--")) {
-      // A flag without a value (e.g. an empty `--session-id $VAR` re-split by a remote shell)
-      // must not swallow the next flag.
-      const value = argv[i + 1];
-      const missing = value === undefined || value.startsWith("--");
-      args[argv[i].slice(2)] = missing ? "" : value;
-      if (!missing) i += 1;
-    }
+    if (argv[i] === "--ready") { args.ready = true; continue; }
+    const name = argv[i].slice(2);
+    if (!argv[i].startsWith("--") || !flags.includes(name)) throw new Error(`unknown argument: ${argv[i]}`);
+    const value = argv[i + 1];
+    const missing = value === undefined || value.startsWith("--");
+    args[name] = missing ? "" : value;
+    if (!missing) i += 1;
   }
   return args;
 };
-
-// gh (also the git credential helper below) is installed in ~/.local/bin on the dev machine,
-// which non-interactive ssh shells leave off PATH.
-const LOCAL_BIN = join(homedir(), ".local", "bin");
-const RUN_ENV = { ...process.env, PATH: [process.env.PATH, LOCAL_BIN].join(delimiter) };
-
-const run = (cmd, args, opts = {}) =>
-  execFileSync(cmd, args, { env: RUN_ENV, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
-
-const git = (...args) => run("git", args);
-const gitAuth = (...args) => run("git", ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential", ...args]);
-const gh = (args, input) => {
-  try {
-    return run("gh", args, input == null ? {} : { input });
-  } catch (err) {
-    if (err.code !== "ENOENT") throw err;
-    throw new Error(
-      `GitHub CLI (gh) не найден ни в PATH, ни в ${LOCAL_BIN}. Установите его (https://cli.github.com) или добавьте папку с gh в PATH: export PATH=<папка с gh>:$PATH`
-    );
-  }
-};
-
-const fail = (message) => {
-  process.stderr.write(`start-task-pr: ${message}\n`);
-  process.exit(1);
-};
-
-const warn = (message) => process.stderr.write(`start-task-pr: warning: ${message}\n`);
 
 export const toHttpsRemote = (url) => {
   const ssh = url.match(/^git@github\.com:(.+?)(?:\.git)?$/) || url.match(/^ssh:\/\/git@github\.com\/(.+?)(?:\.git)?$/);
   return ssh ? `https://github.com/${ssh[1]}.git` : url;
 };
 
-const findLaunchCwd = (sessionId) => {
-  const projectsDir = join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "projects");
-  if (!existsSync(projectsDir)) return null;
-  for (const dir of readdirSync(projectsDir)) {
-    const transcript = join(projectsDir, dir, `${sessionId}.jsonl`);
-    if (!existsSync(transcript)) continue;
-    const match = readFileSync(transcript, "utf8").match(/"cwd":"((?:[^"\\]|\\.)*)"/);
-    if (match) return JSON.parse(`"${match[1]}"`);
-  }
-  return null;
+// Read only the first metadata line of a matching rollout, never conversation
+// contents. Codex rollout format is best effort; explicit flags are definitive.
+const findLaunchCwd = (id) => {
+  const home = process.env.CODEX_HOME || join(homedir(), ".codex");
+  const visit = (directory, depth = 0) => {
+    if (depth > 4 || !existsSync(directory)) return null;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) { const found = visit(path, depth + 1); if (found) return found; }
+      if (!entry.isFile() || !entry.name.endsWith(`${id}.jsonl`)) continue;
+      let descriptor;
+      try {
+        descriptor = openSync(path, "r");
+        const buffer = Buffer.alloc(16384);
+        const size = readSync(descriptor, buffer, 0, buffer.length, 0);
+        const meta = JSON.parse(buffer.subarray(0, size).toString("utf8").split("\n")[0]);
+        if (meta.type === "session_meta" && meta.payload?.id === id && typeof meta.payload.cwd === "string") return meta.payload.cwd;
+      } catch { /* Unknown/missing metadata is reported by sessionWarning. */ }
+      finally { if (descriptor !== undefined) closeSync(descriptor); }
+    }
+    return null;
+  };
+  try { return visit(join(home, "sessions")) || visit(join(home, "archived_sessions")); }
+  catch { return null; }
 };
 
 export const readSession = (args = {}) => {
-  const id = args["session-id"] || process.env.CLAUDE_CODE_SESSION_ID;
+  const id = args["session-id"] || process.env.CODEX_THREAD_ID || process.env.CODEX_SESSION_ID;
   if (!id) return null;
-  const bridge = args["web-session-id"] || process.env.CLAUDE_CODE_BRIDGE_SESSION_ID;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error("--session-id содержит недопустимые символы");
   const launchCwd = args["resume-cwd"] || findLaunchCwd(id);
-  return {
-    id,
-    resumeCwd: launchCwd || process.cwd(),
-    resumeCwdGuessed: !launchCwd,
-    webUrl: bridge ? `https://claude.ai/code/${bridge}` : null,
-  };
+  return { id, resumeCwd: resolve(launchCwd || process.cwd()), resumeCwdGuessed: !launchCwd,
+    webSessionId: args["web-session-id"] || null };
 };
 
-const SSH_HINT = "при запуске не на машине сессии (например, через ssh) передайте --session-id, --resume-cwd и --web-session-id из её окружения";
-
 export const sessionWarning = (session) => {
-  if (!session) return `сессия Claude Code не найдена (нет --session-id и CLAUDE_CODE_SESSION_ID), раздела «Сессии Claude Code» в PR не будет; ${SSH_HINT}`;
-  if (session.resumeCwdGuessed)
-    return `папка запуска сессии ${session.id} не найдена (нет --resume-cwd и транскрипта сессии на этой машине), в команду resume подставлен текущий каталог ${session.resumeCwd}; ${SSH_HINT}`;
+  if (!session) return "сессия Codex не найдена (нет --session-id и CODEX_THREAD_ID); передайте --session-id и --resume-cwd, чтобы сохранить связь с чатом";
+  if (session.resumeCwdGuessed) return `папка запуска сессии ${session.id} не найдена; локально сохранён текущий каталог. Передайте --resume-cwd для точного возобновления`;
   return null;
 };
 
-export const sessionLine = (session, date) => {
-  const web = session.webUrl ? ` · web: ${session.webUrl}` : "";
-  return `- ${date}: \`${session.id}\` — \`cd ${session.resumeCwd} && claude --resume ${session.id}\`${web}`;
+export const sessionLine = (session, date) => `- ${date}: \`${session.id}\` — \`codex resume ${session.id}\``;
+
+const saveSession = (session, branch, url) => {
+  if (!session) return;
+  const path = resolve(git("rev-parse", "--git-path", "codex-task-sessions.json"));
+  let sessions = [];
+  if (existsSync(path)) {
+    sessions = JSON.parse(readFileSync(path, "utf8"));
+    if (!Array.isArray(sessions)) throw new Error("локальный реестр сессий повреждён");
+  }
+  const entry = { ...session, branch, url, updatedAt: new Date().toISOString() };
+  const index = sessions.findIndex((item) => item.id === session.id && item.branch === branch);
+  if (index === -1) sessions.push(entry); else sessions[index] = entry;
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(sessions, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(path, 0o600);
 };
 
 export const parseIssues = (value) => {
-  const issues = String(value ?? "")
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map((token) => {
-      const match = token.match(/^#?(\d+)$/) || token.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)\/?$/);
-      if (!match) throw new Error(`--closes: not an issue number: ${token}`);
-      return match[1];
-    });
-  if (issues.length === 0) throw new Error("--closes needs at least one issue number");
+  const issues = String(value ?? "").split(/[\s,]+/).filter(Boolean).map((token) => {
+    const match = token.match(/^#?(\d+)$/) || token.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)\/?$/);
+    if (!match || Number(match[1]) < 1) throw new Error(`--closes: not an issue number: ${token}`);
+    return BigInt(match[1]).toString();
+  });
+  if (!issues.length) throw new Error("--closes needs at least one issue number");
   return [...new Set(issues)];
 };
-
 const closesLine = (issue) => `Closes #${issue}`;
-
-// Any of GitHub's closing keywords already linking the issue counts.
-export const isLinked = (body, issue) =>
-  new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s*:?\\s+#${issue}\\b`, "i").test(body);
-
-export const buildBody = ({ summary, closes = [], session, date }) =>
-  [
-    "Черновик: PR открыт при старте задачи, чтобы работу и сессию можно было найти. Описание дописывается перед переводом в ready.",
-    summary ? `\n${summary}` : null,
-    closes.length ? `\n${closes.map(closesLine).join("\n")}` : null,
-    session ? `\n${SESSIONS_HEADING}\n\n${sessionLine(session, date)}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+export const isLinked = (body, issue) => new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s*:?\\s+#${issue}\\b`, "i").test(body);
+export const buildBody = ({ summary, closes = [], session, date }) => [
+  "Черновик: PR открыт при старте задачи. Описание, результаты проверок и changelog обновляются перед переводом в ready.",
+  summary ? `\n${summary}` : null,
+  closes.length ? `\n${closes.map(closesLine).join("\n")}` : null,
+  session ? `\n${SESSIONS_HEADING}\n\n${sessionLine(session, date)}` : null,
+].filter(Boolean).join("\n");
 
 export const addClosesToBody = (body, issues) => {
-  const missing = issues.filter((issue) => !isLinked(body, issue));
-  if (missing.length === 0) return { body, added: [] };
-  const lines = missing.map(closesLine).join("\n");
+  const missing = [...new Set(issues)].filter((issue) => !isLinked(body, issue));
+  if (!missing.length) return { body, added: [] };
   const at = body.indexOf(SESSIONS_HEADING);
   const before = (at === -1 ? body : body.slice(0, at)).trimEnd();
   const after = at === -1 ? "" : `\n\n${body.slice(at)}`;
-  const next = `${before ? `${before}\n\n` : ""}${lines}${after}`;
-  return { body: next, added: missing };
+  return { body: `${before ? `${before}\n\n` : ""}${missing.map(closesLine).join("\n")}${after}`, added: missing };
 };
 
-const main = () => {
+export const main = () => {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.title) fail("--title is required");
+  if (!args.title) throw new Error("--title is required");
   const base = args.base || "main";
-  let closes;
-  try {
-    closes = "closes" in args ? parseIssues(args.closes) : [];
-  } catch (err) {
-    fail(err.message);
-  }
-
+  const closes = "closes" in args ? parseIssues(args.closes) : [];
+  git("check-ref-format", `refs/heads/${base}`);
   const branch = git("branch", "--show-current");
-  if (!branch) fail("detached HEAD — check out a task branch first");
-  if (branch === base || branch === "main" || branch === "master") fail(`refusing to open a PR from ${branch}`);
-
+  if (!branch) throw new Error("detached HEAD — check out a task branch first");
+  if ([base, "main", "master"].includes(branch)) throw new Error(`refusing to open a PR from ${branch}`);
+  const originRepository = repositoryIdentity(git("config", "--get", "remote.origin.url"));
+  targetRepository = originRepository.fullName;
+  if (process.env.GH_REPO && repositoryIdentity(process.env.GH_REPO, process.env.GH_HOST || originRepository.host).fullName !== targetRepository) throw new Error("GH_REPO не совпадает с origin текущей задачи");
   const session = readSession(args);
   const warning = sessionWarning(session);
   if (warning) warn(warning);
+  if (args["web-session-id"]) warn("--web-session-id устарел: значение сохранено только локально; публичная ссылка Codex не выводится без подтверждённого URL");
   const date = new Date().toISOString().slice(0, 10);
-
   const [existing] = JSON.parse(gh(["pr", "list", "--head", branch, "--state", "open", "--json", "number,url", "--limit", "1"]) || "[]");
+  if (args.ready && !existing) throw new Error("--ready требует существующий PR; сначала откройте черновик");
   if (existing) {
-    if (!session && closes.length === 0) return { action: "exists", url: existing.url };
     const number = String(existing.number);
-    const view = JSON.parse(gh(["pr", "view", number, "--json", "body,comments"]));
+    if (args.ready) {
+      const result = checkGhPublication(["pr", "ready", number], process.cwd(), (argv) => gh(argv));
+      if (!result.allowed) throw new Error(result.reason);
+      if (git("rev-parse", "HEAD") !== result.head) throw new Error("Опубликованный HEAD PR не совпадает с локальным: сначала опубликуйте проверенный коммит");
+    }
     const result = { action: "exists", url: existing.url };
-
-    const { body, added } = addClosesToBody(view.body || "", closes);
-    if (added.length) {
-      gh(["pr", "edit", number, "--body-file", "-"], body);
-      result.closesAdded = added;
+    if (session || closes.length) {
+      const view = JSON.parse(gh(["pr", "view", number, "--json", "body,comments"]));
+      const { body, added } = addClosesToBody(view.body || "", closes);
+      if (added.length) { gh(["pr", "edit", number, "--body-file", "-"], body); result.closesAdded = added; }
+      const texts = [view.body || "", ...(view.comments || []).map((comment) => comment.body || "")];
+      if (session && !texts.some((text) => text.includes(session.id))) {
+        gh(["pr", "comment", number, "--body-file", "-"], `Продолжение в сессии Codex:\n\n${sessionLine(session, date)}`);
+        result.action = "session-added";
+      }
     }
-
-    const texts = [view.body || "", ...(view.comments || []).map((c) => c.body || "")];
-    if (session && !texts.some((t) => t.includes(session.id))) {
-      gh(["pr", "comment", number, "--body-file", "-"], `Продолжение в сессии:\n\n${sessionLine(session, date)}`);
-      result.action = "session-added";
-    }
+    if (args.ready) { gh(["pr", "ready", number]); result.action = "ready"; }
+    saveSession(session, branch, existing.url);
     return result;
   }
-
   const remote = process.env.START_TASK_PR_REMOTE_URL || toHttpsRemote(git("remote", "get-url", "origin"));
+  // Only GitHub HTTPS or local fixture repositories; never resurrect home/SSH.
+  if (!/^https:\/\/github\.com\//.test(remote) && !/^(\/|\.\/|\.\.\/)/.test(remote)) throw new Error("origin должен быть GitHub HTTPS или локальным репозиторием");
   gitAuth("fetch", "--quiet", remote, `refs/heads/${base}:refs/remotes/origin/${base}`);
-
   const ahead = Number(git("rev-list", "--count", `origin/${base}..HEAD`));
   let behind = Number(git("rev-list", "--count", `HEAD..origin/${base}`));
   let fastForwarded = 0;
-  // A branch cut from a stale local main would start the task on old code.
   if (ahead === 0 && behind > 0 && git("status", "--porcelain", "--untracked-files=no") === "") {
-    try {
-      git("merge", "--ff-only", "--quiet", `origin/${base}`);
-      fastForwarded = behind;
-      behind = 0;
-    } catch {
-      // e.g. an untracked file in the way: fall through to the warning
-    }
+    try { git("merge", "--ff-only", "--quiet", `origin/${base}`); fastForwarded = behind; behind = 0; }
+    catch { /* Untracked conflicts leave the checkout untouched and report lag. */ }
   }
-  if (behind > 0) {
-    const fix = ahead === 0 ? `git merge --ff-only origin/${base}` : `git rebase origin/${base}`;
-    warn(`${branch} is ${behind} commit(s) behind origin/${base}; update it with \`${fix}\``);
-  }
-
+  if (behind > 0) warn(`${branch} is ${behind} commit(s) behind origin/${base}; update it with \`${ahead === 0 ? "git merge --ff-only" : "git rebase"} origin/${base}\``);
+  const gate = checkChangelog({ base: `origin/${base}`, allowEmptyDraft: true });
+  if (!gate.allowed) throw new Error(gate.reason);
   let commit = null;
   if (ahead === 0) {
-    const trailers = session ? `\n\nClaude-Session-Id: ${session.id}` : "";
+    const trailers = session ? `\n\nCodex-Session-Id: ${session.id}` : "";
     const head = git("rev-parse", "HEAD");
     commit = run("git", ["commit-tree", "HEAD^{tree}", "-p", head, "-F", "-"], { input: `chore: start "${args.title}"${trailers}\n` });
     git("update-ref", "-m", "start-task-pr: empty start commit", "HEAD", commit, head);
   }
-
   gitAuth("push", "--quiet", remote, `HEAD:refs/heads/${branch}`);
-  const url = gh(
-    ["pr", "create", "--draft", "--base", base, "--head", branch, "--title", args.title, "--body-file", "-"],
-    buildBody({ summary: args.summary, closes, session, date })
-  )
-    .split("\n")
-    .pop();
+  const url = gh(["pr", "create", "--draft", "--base", base, "--head", branch, "--title", args.title, "--body-file", "-"], buildBody({ summary: args.summary, closes, session, date })).split("\n").pop();
+  saveSession(session, branch, url);
   return { action: "created", url, branch, emptyCommit: commit, closes, fastForwarded, behindBase: behind };
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  try {
-    process.stdout.write(`${JSON.stringify(main(), null, 2)}\n`);
-  } catch (err) {
-    fail(`${err.message}${err.stderr ? `\n${err.stderr}` : ""}`);
-  }
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { process.stdout.write(`${JSON.stringify(main(), null, 2)}\n`); }
+  catch (error) { process.stderr.write(`start-task-pr: ${error.message}${error.stderr ? `\n${error.stderr}` : ""}\n`); process.exitCode = 1; }
 }

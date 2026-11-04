@@ -1,0 +1,436 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "manual-qa findings.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "branch": {
+      "type": "string"
+    },
+    "feature_id": {
+      "type": "string"
+    },
+    "spec_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "base_url": {
+      "type": "string"
+    },
+    "run_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "autofix_enabled": {
+      "type": "boolean"
+    },
+    "report_path": {
+      "type": "string"
+    },
+    "readiness": {
+      "enum": [
+        "green",
+        "yellow",
+        "red"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "warn"
+                ]
+              },
+              "finding_ids": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "priority",
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "untested": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "priority",
+              "reason"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "total",
+        "passed",
+        "failed",
+        "warned",
+        "scenarios",
+        "untested"
+      ],
+      "additionalProperties": true
+    },
+    "recheck_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "finding_title": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "fixed",
+              "still_reproduces"
+            ]
+          },
+          "screenshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "finding_title",
+          "status",
+          "screenshot",
+          "note"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "by_severity": {
+          "type": "object",
+          "properties": {
+            "critical": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ],
+          "additionalProperties": true
+        },
+        "by_category": {
+          "type": "object",
+          "properties": {
+            "spec-mismatch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "bug": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ux": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "improvement": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "spec-mismatch",
+            "bug",
+            "ux",
+            "improvement"
+          ],
+          "additionalProperties": true
+        },
+        "unambiguous_fix_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "total_findings",
+        "by_severity",
+        "by_category",
+        "unambiguous_fix_count"
+      ],
+      "additionalProperties": true
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "spec-mismatch",
+              "bug",
+              "ux",
+              "improvement"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "scenario_id": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_hint": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "unambiguous_fix": {
+            "type": "boolean"
+          },
+          "autofix_status": {
+            "enum": [
+              "fixed",
+              "failed",
+              "skipped",
+              "disabled"
+            ]
+          },
+          "autofix_files_modified": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "autofix_tests_added": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "autofix_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "console_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "network_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fix_suggestion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "severity",
+          "scenario_id",
+          "steps",
+          "screenshots",
+          "expected",
+          "actual",
+          "unambiguous_fix",
+          "autofix_status",
+          "fix_suggestion"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "branch",
+    "feature_id",
+    "spec_path",
+    "base_url",
+    "run_at",
+    "autofix_enabled",
+    "report_path",
+    "readiness",
+    "coverage",
+    "recheck_results",
+    "summary",
+    "findings"
+  ],
+  "additionalProperties": true,
+  "description": "Schema for newly produced reports. Legacy v1 reports remain unchanged: enrich missing steps from the linked Markdown in memory, and mark absent reviewer/scorer coverage as unknown rather than clean."
+}

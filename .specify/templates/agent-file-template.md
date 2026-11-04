@@ -1,28 +1,29 @@
-# [PROJECT NAME] Development Guidelines
+<!-- SPECIFY:GENERATED:START -->
+## Spec Kit feature context
 
-Auto-generated from all feature plans. Last updated: [DATE]
+Project: [PROJECT NAME]. Last updated: [DATE].
+Source: `[PLAN PATH]` (`[FEATURE]`). This generated planning context supplements
+human instructions outside this block; it does not change their authority.
 
-## Active Technologies
+### Active Technologies
 
 [EXTRACTED FROM ALL PLAN.MD FILES]
 
-## Project Structure
+### Project Structure
 
 ```text
 [ACTUAL STRUCTURE FROM PLANS]
 ```
 
-## Commands
+### Commands
 
 [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES]
 
-## Code Style
+### Code Style
 
 [LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE]
 
-## Recent Changes
+### Recent Changes
 
 [LAST 3 FEATURES AND WHAT THEY ADDED]
-
-<!-- MANUAL ADDITIONS START -->
-<!-- MANUAL ADDITIONS END -->
+<!-- SPECIFY:GENERATED:END -->

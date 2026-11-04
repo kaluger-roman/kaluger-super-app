@@ -63,9 +63,9 @@ test("without --number takes the next number after the fetched branches and spec
 
   assert.equal(result.status, 0, result.stderr);
   const out = JSON.parse(result.stdout);
-  assert.equal(out.BRANCH_NAME, "042-new-thing");
+  assert.equal(out.BRANCH_NAME, "codex/042-new-thing");
   assert.equal(out.FEATURE_NUM, "042");
-  assert.equal(currentBranch(), "042-new-thing");
+  assert.equal(currentBranch(), "codex/042-new-thing");
   assert.ok(existsSync(join(clone, "specs", "042-new-thing", "spec.md")));
 });
 
@@ -73,5 +73,12 @@ test("--number skips the lookup", () => {
   const result = run(["--json", "--short-name", "new-thing", "--number", "7", "Новая штука"]);
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).BRANCH_NAME, "007-new-thing");
+  assert.equal(JSON.parse(result.stdout).BRANCH_NAME, "codex/007-new-thing");
+});
+
+
+test("default short-name generation works in macOS Bash 3.2 with short acronyms", () => {
+  const result = run(["--json", "--number", "8", "Add AI helper"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).BRANCH_NAME, "codex/008-ai-helper");
 });

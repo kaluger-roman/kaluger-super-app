@@ -1,15 +1,35 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "frontend:dev",
-			"type": "shell",
-			"command": "cd frontend && npm start",
-			"group": "build",
-			"isBackground": true,
-			"problemMatcher": [
-				"$tsc"
-			]
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "setup",
+      "type": "shell",
+      "command": "bash scripts/setup-local.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "db:up",
+      "type": "shell",
+      "command": "bash scripts/dev-stack.sh up",
+      "problemMatcher": []
+    },
+    {
+      "label": "backend:dev",
+      "type": "shell",
+      "command": "bash scripts/dev-stack.sh run-backend",
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend:dev",
+      "type": "shell",
+      "command": "bash scripts/dev-stack.sh run-frontend",
+      "problemMatcher": []
+    },
+    {
+      "label": "check",
+      "type": "shell",
+      "command": "npm run check",
+      "problemMatcher": []
+    }
+  ]
 }

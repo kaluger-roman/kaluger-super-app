@@ -1,0 +1,20 @@
+{
+  "name": "super-app-local",
+  "interface": {
+    "displayName": "Super App local tools"
+  },
+  "plugins": [
+    {
+      "name": "super-app-agents",
+      "source": {
+        "source": "local",
+        "path": "./scripts/codex-panel/dist/super-app-agents"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

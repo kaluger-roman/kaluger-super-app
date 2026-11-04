@@ -1,172 +1,196 @@
 #!/usr/bin/env node
-// Percent-of-subscription budget probe for /qa-roam --budget N%.
-//
-// Reads the real 5-hour rate-limit usage that Claude Code passes to the status
-// line (rate_limits.five_hour.used_percentage / resets_at). The statusline
-// script must dump its stdin JSON to a file (default /tmp/statusline-debug.json);
-// the dump is rewritten on every statusline render, so it is fresh while a
-// session is active.
-//
-// Usage:
-//   node scripts/qa-budget.mjs start --budget 20%   # at run start: baseline + state file
-//   node scripts/qa-budget.mjs check                # after each scenario: verdict
-//
-// Flags:
-//   --budget <N%>    (start only) percent of the 5h window this run may consume.
-//   --source <path>  statusline dump (default: $QA_STATUSLINE_DUMP or /tmp/statusline-debug.json).
-//   --state <path>   run state file (default: <repo>/.qa/qa-budget.json).
-//
-// A window reset mid-run is handled: spend accumulated in the previous window
-// (up to the last check) is carried over, and the baseline restarts at 0.
-//
-// Output: JSON on stdout, one-liner on stderr. Exit code is always 0 — the
-// caller reads `verdict` ("continue" | "stop"); any error state is a "stop".
-
-import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+// Account-wide Codex percentage budget, measured from real rate-limit readings.
+// start --budget N% | check; both accept --source, --state, --refresh,
+// --limit-id and --window primary|secondary. A source is a private JSON envelope:
+// { capturedAt: ISO timestamp, usage: <get_usage_limits/account/rateLimits/read result> }.
+// Refresh before every scenario check. Null/unavailable is never zero. Exit 0
+// preserves the old JSON protocol; callers MUST inspect verdict and stop on stop.
+import { readFileSync, writeFileSync, mkdirSync, renameSync, chmodSync, realpathSync, existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { RpcClient } from "./codex-rpc.cjs";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const STALE_DUMP_MS = 15 * 60 * 1000;
+export const STALE_SOURCE_MS = 15 * 60 * 1000;
+const FUTURE_TOLERANCE_MS = 30 * 1000;
+const percentage = (value) => Number.isFinite(value) && value >= 0 && value <= 100;
+const integer = (value) => Number.isSafeInteger(value) && value > 0;
 
-const parseArgs = (argv) => {
+export const parseArgs = (argv) => {
   const args = { _: [] };
   for (let i = 0; i < argv.length; i += 1) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      args[a.slice(2)] = argv[i + 1];
-      i += 1;
-    } else {
-      args._.push(a);
-    }
+    const arg = argv[i];
+    if (arg === "--refresh") args.refresh = true;
+    else if (arg.startsWith("--")) {
+      if (!["--budget", "--source", "--state", "--limit-id", "--window"].includes(arg)) throw new Error(`unknown flag ${arg}`);
+      const value = argv[++i];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} needs a value`);
+      args[arg.slice(2)] = value;
+    } else args._.push(arg);
   }
   return args;
 };
 
-const emit = (result) => {
-  const fmt = (n) => (n == null ? "?" : `${Math.round(n * 10) / 10}%`);
-  process.stderr.write(
-    `qa-budget: spent ${fmt(result.spentPct)} / budget ${fmt(result.budgetPct)}` +
-      ` (5h window at ${fmt(result.fiveHourUsedPct)}) — ${result.verdict} [${result.reason}]\n`
-  );
-  process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+// Accept the MCP text/content wrapper as well as the app-server JSON result.
+export const unwrapUsage = (value) => {
+  if (value?.isError) throw new Error("Codex usage tool returned an error");
+  if (value?.structuredContent) return unwrapUsage(value.structuredContent);
+  if (Array.isArray(value?.content)) {
+    const text = value.content.find((item) => item.type === "text")?.text;
+    if (!text) throw new Error("Codex usage tool returned no JSON");
+    return unwrapUsage(JSON.parse(text));
+  }
+  return value;
 };
 
-const stop = (reason, extra = {}) =>
-  emit({ verdict: "stop", reason, spentPct: null, budgetPct: null, fiveHourUsedPct: null, ...extra });
-
-const readDump = (sourcePath) => {
-  let raw;
-  let mtimeMs;
-  try {
-    raw = readFileSync(sourcePath, "utf8");
-    mtimeMs = statSync(sourcePath).mtimeMs;
-  } catch {
-    return { error: `statusline dump not found at ${sourcePath} — the statusline script must write its stdin JSON there` };
+export const normalizeReading = (envelope, options = {}, now = Date.now()) => {
+  const capturedAt = Date.parse(envelope?.capturedAt);
+  if (!Number.isFinite(capturedAt)) throw new Error("source capturedAt is missing or invalid; refresh real Codex usage");
+  const ageMs = now - capturedAt;
+  if (ageMs > STALE_SOURCE_MS) throw new Error("Codex usage source is stale; refresh before checking the budget");
+  if (ageMs < -FUTURE_TOLERANCE_MS) throw new Error("Codex usage source is dated in the future");
+  const usage = unwrapUsage(envelope.usage);
+  const buckets = usage?.rateLimitsByLimitId;
+  const limitId = options.limitId || (buckets?.codex ? "codex" : null) || usage?.rateLimits?.limitId;
+  if (!limitId) throw new Error("Codex limit ID is unavailable or ambiguous; select --limit-id");
+  // A present multi-bucket map is authoritative; never fall back to a different bucket.
+  const bucket = buckets != null ? buckets[limitId] : usage?.rateLimits;
+  if (!bucket || (bucket.limitId != null && bucket.limitId !== limitId)) throw new Error(`Codex usage limit ${limitId} is unavailable`);
+  const window = options.window || "primary";
+  if (!["primary", "secondary"].includes(window)) throw new Error("--window must be primary or secondary");
+  const reading = bucket[window];
+  if (!percentage(reading?.usedPercent) || !integer(reading?.windowDurationMins) || !integer(reading?.resetsAt)) {
+    throw new Error(`Codex ${limitId}.${window} usage, duration or reset time is unavailable or invalid`);
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { error: `statusline dump at ${sourcePath} is not valid JSON` };
+  if (reading.resetsAt * 1000 <= capturedAt || reading.resetsAt * 1000 <= now) throw new Error("Codex window has already reset; refresh real usage");
+  if (usage.ordinaryUsageAllowed === false || bucket.spendControlReached === true || bucket.rateLimitReachedType != null) {
+    throw new Error("Codex account usage is unavailable because its limit or spend control is reached");
   }
-  const fiveHour = parsed?.rate_limits?.five_hour;
-  if (
-    !fiveHour ||
-    typeof fiveHour.used_percentage !== "number" ||
-    typeof fiveHour.resets_at !== "number"
-  ) {
-    return { error: "rate_limits.five_hour is missing from the statusline dump (appears only for Pro/Max after the first API response)" };
-  }
-  const ageMs = Date.now() - mtimeMs;
-  return { usedPct: fiveHour.used_percentage, resetsAt: fiveHour.resets_at, ageMs };
+  return {
+    usedPct: reading.usedPercent, resetsAt: reading.resetsAt,
+    windowDurationMins: reading.windowDurationMins, window, limitId,
+    accountId: usage.accountId ?? null, capturedAt, ageMs,
+  };
 };
 
-const main = () => {
-  const args = parseArgs(process.argv.slice(2));
-  const command = args._[0];
-  const sourcePath = args.source || process.env.QA_STATUSLINE_DUMP || "/tmp/statusline-debug.json";
-  const statePath = args.state || join(REPO_ROOT, ".qa", "qa-budget.json");
+const writePrivate = (path, value) => {
+  mkdirSync(dirname(path), { recursive: true });
+  const temporary = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  renameSync(temporary, path);
+  chmodSync(path, 0o600);
+};
 
-  if (command !== "start" && command !== "check") {
-    stop(`unknown command "${command || ""}" — use: start --budget <N%> | check`);
-    return;
+export const refreshUsage = async (sourcePath, Client = RpcClient) => {
+  let lastError;
+  // The standalone server only reads account usage; it starts no agent turn.
+  for (const args of [["app-server", "proxy"], ["app-server", "--listen", "stdio://"]]) {
+    const client = new Client({ args });
+    try {
+      await client.connect();
+      const usage = await client.request("account/rateLimits/read", {});
+      const envelope = { capturedAt: new Date().toISOString(), usage };
+      writePrivate(sourcePath, envelope);
+      return envelope;
+    } catch (error) { lastError = error; }
+    finally { client.close(); }
   }
+  throw new Error(`cannot refresh Codex usage: ${lastError.message}; save a fresh get_usage_limits result in --source`);
+};
 
-  const dump = readDump(sourcePath);
-  if (dump.error) {
-    stop(dump.error);
-    return;
-  }
-  const dumpAgeSeconds = Math.round(dump.ageMs / 1000);
-  if (dump.ageMs > STALE_DUMP_MS) {
-    stop(`statusline dump is stale (${dumpAgeSeconds}s old) — cannot trust the reading`, {
-      dumpAgeSeconds,
-    });
-    return;
-  }
+const publicReading = (reading) => ({
+  accountShared: true,
+  windowUsedPct: reading.usedPct,
+  fiveHourUsedPct: reading.windowDurationMins === 300 ? reading.usedPct : null,
+  windowDurationMins: reading.windowDurationMins,
+  window: reading.window,
+  limitId: reading.limitId,
+  resetsAt: new Date(reading.resetsAt * 1000).toISOString(),
+  dumpAgeSeconds: Math.round(Math.max(0, reading.ageMs) / 1000),
+});
 
-  if (command === "start") {
-    const m = String(args.budget ?? "").trim().match(/^([0-9]+(?:\.[0-9]+)?)%$/);
-    if (!m) {
-      stop(`--budget must be a percent like "20%" (got "${args.budget ?? ""}")`);
-      return;
+export const validateState = (state) => {
+  if (state?.version !== 1 || !percentage(state.budgetPct) || state.budgetPct === 0 ||
+    !percentage(state.baselinePct) || !percentage(state.lastPct) || state.lastPct < state.baselinePct ||
+    !Number.isFinite(state.accumulatedPct) || state.accumulatedPct < 0 ||
+    !integer(state.resetsAt) || !integer(state.windowDurationMins) ||
+    !Number.isFinite(state.lastCapturedAt) || typeof state.limitId !== "string" ||
+    !["primary", "secondary"].includes(state.window)) throw new Error("budget state is invalid; start a new explicitly budgeted run");
+};
+
+export const checkBudget = (state, reading) => {
+  validateState(state);
+  if (state.stopped) return { verdict: "stop", reason: state.stopReason, spentPct: state.spentPct ?? null, observedSpentPct: state.observedSpentPct };
+  if (reading.limitId !== state.limitId || reading.window !== state.window || reading.windowDurationMins !== state.windowDurationMins || reading.accountId !== state.accountId) {
+    throw new Error("Codex account or usage window changed during the run");
+  }
+  if (reading.capturedAt <= state.lastCapturedAt) throw new Error("source was not refreshed after the previous budget check");
+  if (reading.resetsAt < state.resetsAt) throw new Error("Codex reset timestamp regressed");
+  if (reading.resetsAt === state.resetsAt && reading.usedPct < state.lastPct) throw new Error("Codex usage regressed without a window reset");
+  if (reading.resetsAt !== state.resetsAt) {
+    const observedSpentPct = state.accumulatedPct + state.lastPct - state.baselinePct + reading.usedPct;
+    // Unobserved usage just before a reset cannot be reconstructed. Preserve the
+    // lower bound, but never present it as the full spend or continue on a guess.
+    const singleWindow = reading.resetsAt - state.resetsAt === state.windowDurationMins * 60 && reading.capturedAt >= state.resetsAt * 1000;
+    if (state.lastPct !== 100 || !singleWindow) {
+      state.stopped = true;
+      state.stopReason = "window rolled over with unobserved usage; total spend is unknown";
+      state.observedSpentPct = observedSpentPct;
+      state.spentPct = null;
+      return { verdict: "stop", reason: state.stopReason, spentPct: null, observedSpentPct };
     }
-    const budgetPct = parseFloat(m[1]);
-    const state = {
-      budgetPct,
-      baselinePct: dump.usedPct,
-      resetsAt: dump.resetsAt,
-      lastPct: dump.usedPct,
-      accumulatedPct: 0,
-      startedAt: new Date().toISOString(),
-    };
-    mkdirSync(dirname(statePath), { recursive: true });
-    writeFileSync(statePath, JSON.stringify(state, null, 2));
-    emit({
-      verdict: "continue",
-      reason: "budget run started",
-      budgetPct,
-      spentPct: 0,
-      remainingPct: budgetPct,
-      fiveHourUsedPct: dump.usedPct,
-      resetsAt: new Date(dump.resetsAt * 1000).toISOString(),
-      dumpAgeSeconds,
-      statePath,
-    });
-    return;
-  }
-
-  let state;
-  try {
-    state = JSON.parse(readFileSync(statePath, "utf8"));
-  } catch {
-    stop(`state file not found at ${statePath} — run "start --budget <N%>" first`);
-    return;
-  }
-
-  if (dump.resetsAt !== state.resetsAt) {
-    state.accumulatedPct += Math.max(0, state.lastPct - state.baselinePct);
+    state.accumulatedPct += state.lastPct - state.baselinePct;
     state.baselinePct = 0;
-    state.resetsAt = dump.resetsAt;
+    state.resetsAt = reading.resetsAt;
   }
-  const windowSpentPct = Math.max(0, dump.usedPct - state.baselinePct);
-  const spentPct = state.accumulatedPct + windowSpentPct;
-  state.lastPct = dump.usedPct;
-  writeFileSync(statePath, JSON.stringify(state, null, 2));
-
+  const spentPct = state.accumulatedPct + reading.usedPct - state.baselinePct;
+  state.lastPct = reading.usedPct;
+  state.lastCapturedAt = reading.capturedAt;
+  state.spentPct = spentPct;
   const over = spentPct >= state.budgetPct;
-  emit({
-    verdict: over ? "stop" : "continue",
-    reason: over ? "budget reached" : "within budget",
-    budgetPct: state.budgetPct,
-    spentPct,
-    remainingPct: Math.max(0, state.budgetPct - spentPct),
-    fiveHourUsedPct: dump.usedPct,
-    resetsAt: new Date(dump.resetsAt * 1000).toISOString(),
-    dumpAgeSeconds,
-    statePath,
-  });
+  if (over) { state.stopped = true; state.stopReason = "budget reached"; }
+  return { verdict: over ? "stop" : "continue", reason: over ? "budget reached" : "within budget", spentPct, remainingPct: Math.max(0, state.budgetPct - spentPct) };
 };
 
-main();
+export const main = async (argv = process.argv.slice(2)) => {
+  const args = parseArgs(argv);
+  const [command] = args._;
+  if (!["start", "check"].includes(command) || args._.length !== 1) throw new Error("use: start --budget <N%> | check");
+  if (command === "check" && args.budget != null) throw new Error("--budget is only accepted by start");
+  const statePath = resolve(args.state || join(REPO_ROOT, ".qa", "qa-budget.json"));
+  let state;
+  if (command === "check") {
+    try { state = JSON.parse(readFileSync(statePath, "utf8")); }
+    catch { throw new Error("state file is missing or invalid; run start --budget <N%> first"); }
+    validateState(state);
+  }
+  if (process.env.QA_STATUSLINE_DUMP && !args.source && !process.env.QA_CODEX_USAGE_SOURCE && !state?.sourcePath) {
+    process.stderr.write("qa-budget: QA_STATUSLINE_DUMP is deprecated; it must now contain a fresh Codex { capturedAt, usage } envelope, not Claude statusline data\n");
+  }
+  const sourcePath = resolve(args.source || process.env.QA_CODEX_USAGE_SOURCE || state?.sourcePath || process.env.QA_STATUSLINE_DUMP || join(REPO_ROOT, ".qa", "codex-usage.json"));
+  if (sourcePath === statePath) throw new Error("--source and --state must be different files");
+  const envelope = args.refresh ? await refreshUsage(sourcePath) : JSON.parse(readFileSync(sourcePath, "utf8"));
+  const reading = normalizeReading(envelope, { limitId: args["limit-id"] || state?.limitId, window: args.window || state?.window });
+  if (command === "start") {
+    const match = String(args.budget ?? "").match(/^(\d+(?:\.\d+)?)%$/);
+    const budgetPct = match ? Number(match[1]) : NaN;
+    if (!percentage(budgetPct) || budgetPct === 0) throw new Error("--budget must be a percent greater than 0 and at most 100, such as 20%");
+    state = { version: 1, budgetPct, baselinePct: reading.usedPct, lastPct: reading.usedPct, accumulatedPct: 0,
+      resetsAt: reading.resetsAt, windowDurationMins: reading.windowDurationMins, window: reading.window,
+      limitId: reading.limitId, accountId: reading.accountId, lastCapturedAt: reading.capturedAt,
+      startedAt: new Date().toISOString(), sourcePath };
+    writePrivate(statePath, state);
+    return { verdict: "continue", reason: "budget run started", budgetPct, spentPct: 0, remainingPct: budgetPct, ...publicReading(reading), statePath };
+  }
+  const result = checkBudget(state, reading);
+  writePrivate(statePath, state);
+  return { ...result, budgetPct: state.budgetPct, ...publicReading(reading), statePath };
+};
+
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  let result;
+  try { result = await main(); }
+  catch (error) { result = { verdict: "stop", reason: error.message, spentPct: null, budgetPct: null, fiveHourUsedPct: null }; }
+  process.stderr.write(`qa-budget: ${result.verdict} [${result.reason}] (${result.spentPct ?? "?"}% / ${result.budgetPct ?? "?"}%)\n`);
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}

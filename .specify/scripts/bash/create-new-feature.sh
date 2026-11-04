@@ -110,7 +110,7 @@ get_highest_from_branches() {
     if [ -n "$branches" ]; then
         while IFS= read -r branch; do
             # Clean branch name: remove leading markers and remote prefixes
-            clean_branch=$(echo "$branch" | sed 's/^[* ]*//; s|^remotes/[^/]*/||')
+            clean_branch=$(echo "$branch" | sed 's/^[* ]*//; s|^remotes/[^/]*/||; s|^codex/||')
             
             # Extract feature number if branch matches pattern ###-*
             if echo "$clean_branch" | grep -q '^[0-9]\{3\}-'; then
@@ -198,7 +198,7 @@ generate_branch_name() {
         if ! echo "$word" | grep -qiE "$stop_words"; then
             if [ ${#word} -ge 3 ]; then
                 meaningful_words+=("$word")
-            elif echo "$description" | grep -q "\b${word^^}\b"; then
+            elif echo "$description" | grep -q "\b$(printf '%s' "$word" | tr '[:lower:]' '[:upper:]')\b"; then
                 # Keep short words if they appear as uppercase in original (likely acronyms)
                 meaningful_words+=("$word")
             fi
@@ -253,7 +253,7 @@ BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
 
 # GitHub enforces a 244-byte limit on branch names
 # Validate and truncate if necessary
-MAX_BRANCH_LENGTH=244
+MAX_BRANCH_LENGTH=238  # Reserve 6 bytes for codex/
 if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
     # Calculate how much we need to trim from suffix
     # Account for: feature number (3) + hyphen (1) = 4 chars
@@ -272,13 +272,16 @@ if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
     >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
 fi
 
+SPEC_NAME="$BRANCH_NAME"
+BRANCH_NAME="codex/$SPEC_NAME"
+
 if [ "$HAS_GIT" = true ]; then
     git checkout -b "$BRANCH_NAME"
 else
     >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi
 
-FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
+FEATURE_DIR="$SPECS_DIR/$SPEC_NAME"
 mkdir -p "$FEATURE_DIR"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
@@ -286,7 +289,7 @@ SPEC_FILE="$FEATURE_DIR/spec.md"
 if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
 
 # Set the SPECIFY_FEATURE environment variable for the current session
-export SPECIFY_FEATURE="$BRANCH_NAME"
+export SPECIFY_FEATURE="$SPEC_NAME"
 
 if $JSON_MODE; then
     printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$BRANCH_NAME" "$SPEC_FILE" "$FEATURE_NUM"
@@ -294,5 +297,5 @@ else
     echo "BRANCH_NAME: $BRANCH_NAME"
     echo "SPEC_FILE: $SPEC_FILE"
     echo "FEATURE_NUM: $FEATURE_NUM"
-    echo "SPECIFY_FEATURE environment variable set to: $BRANCH_NAME"
+    echo "For later commands, export SPECIFY_FEATURE=$SPEC_NAME"
 fi

@@ -7,9 +7,8 @@
 // that tree's own .githooks/<hook>: every branch uses its own hook version, and branches
 // without .githooks/ are left alone.
 //
-// core.hooksPath is deliberately not pointed at .githooks/: when Claude Code creates a
-// worktree it rewrites a relative hooksPath to the main checkout's absolute path, which would
-// make every worktree run the main checkout's copy.
+// The shared dispatcher resolves the hook from the current checkout, so each
+// worktree runs its own version without changing global Git configuration.
 
 import { execFileSync } from "node:child_process";
 import {

@@ -3,7 +3,7 @@
 //
 // Usage: node scripts/prisma-client.mjs   (exit 0 when the client is usable, 1 otherwise)
 //
-// Worktrees symlink backend/node_modules from the main checkout, so they all share one client in
+// Legacy worktrees may symlink backend/node_modules; those checkouts share one client in
 // node_modules/.prisma/client, and `prisma generate` in any of them rewrites it for all. A client
 // left behind by another branch makes tsc and hundreds of backend tests fail as if this branch
 // broke them. Before backend checks:
@@ -81,6 +81,6 @@ export const ensurePrismaClient = ({ backendDir, generate = runGenerate, log = c
   }
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exit(ensurePrismaClient({ backendDir: join(REPO_ROOT, "backend") }) ? 0 : 1);
 }

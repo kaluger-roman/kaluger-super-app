@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "type": "workflow-compatibility-audit",
+  "date": "2026-11-04",
+  "legacy_base": "97585332f38b7b9ac5e14aee730f28d84c4fbb4f",
+  "working_tree_base": "ff692b11ef6916ad040591be6820ea200020dfb3",
+  "scope": "Restored procedures, parameters, orchestration state, hooks/PR tools, quota budget, context generator, and VS Code agents panel; independent compatibility audit, not a new nine-role whole-branch review.",
+  "independent_reviews": [
+    {
+      "role": "20 skills and context generator parity",
+      "status": "completed",
+      "checks": [
+        "All original procedures compared",
+        "report mode and fix selection checkpoints",
+        "SpecKit exact feature identity",
+        "9 context generator tests"
+      ]
+    },
+    {
+      "role": "Five orchestration/QA/review skills parity",
+      "status": "completed",
+      "checks": [
+        "Mandatory checkpoints and state resume",
+        "Legacy schema compatibility and normalization",
+        "Review and QA rounds, subagents, convergence",
+        "QA cursor and screenshot evidence preservation"
+      ]
+    },
+    {
+      "role": "Independent skill forward testing",
+      "status": "completed",
+      "synthetic": true,
+      "positive_schema_fixtures": 11,
+      "negative_schema_fixtures_rejected": 2,
+      "checks": [
+        "Awaiting approval with stale legacy worktree",
+        "Mandatory original-bug recheck failure",
+        "Review worker failure and scorer timeout",
+        "All 25 public command parameters",
+        "105 local reference links"
+      ]
+    },
+    {
+      "role": "Executable tooling and panel review",
+      "status": "completed",
+      "checks": [
+        "UI feed invalidation via VS Code stub",
+        "Declined and failed operations shown accurately",
+        "PR target/head/base/parameter correctness"
+      ],
+      "final_targeted_tests": {
+        "passed": 43,
+        "failed": 0
+      }
+    }
+  ],
+  "resolved_findings": [
+    {
+      "area": "hunt report mode",
+      "resolution": "Explicit stop before publication in --report; scope alone does not approve unknown fixes; literal label shell quoting."
+    },
+    {
+      "area": "SpecKit identity",
+      "resolution": "Explicit SPECIFY_FEATURE never uses numeric fallback; ambiguous prefix fails, callers propagate failure, quoted local paths survive eval."
+    },
+    {
+      "area": "legacy state",
+      "resolution": "Schemas accept legacy untested entries; lossless normalization preserves original state and unknown fields."
+    },
+    {
+      "area": "QA continuation",
+      "resolution": "Persist cursor and per-finding dispositions with pending rechecks; shared unique report/screenshot stem."
+    },
+    {
+      "area": "panel live feed",
+      "resolution": "Content version updates within one timestamp; declined/interrupted/failed outcomes never render success."
+    },
+    {
+      "area": "PR publication guard",
+      "resolution": "Arity-aware last-value parsing, effective repository/environment scoping, actual published head/base, matching wrapper argv, flags between pr/action and subshell restoration; independently rechecked."
+    }
+  ],
+  "observed_integration": {
+    "codex_cli": "0.166.0-alpha.5.1",
+    "hooks_feature": true,
+    "hooks_list": {
+      "errors": 0,
+      "warnings": 0,
+      "enabled": true,
+      "trust_status": "untrusted"
+    },
+    "panel_history_api": {
+      "success": true,
+      "visible_project_sessions": 1,
+      "feed_events": 150,
+      "mode": "history-only; no shared daemon socket available"
+    },
+    "quota_budget": {
+      "source": "real Codex account/rateLimits/read",
+      "window_duration_mins": 10080,
+      "budget_percent": 1,
+      "verdict": "stop",
+      "account_shared": true,
+      "observed_budget_reached": true
+    },
+    "vsix_packaged": "super-agents-0.4.0.vsix"
+  },
+  "limitations": [
+    "Hook must be reviewed/trusted through Codex /hooks; trust was not bypassed or changed.",
+    "Shared daemon live monitoring and real VS Code UI were not run; history API, UI stubs and VSIX packaging were verified.",
+    "Quota is shared account consumption, not per-task accounting; unknown rollover stops.",
+    "No real feature pipeline, browser QA, GitHub issue creation, production or home access was run for this tooling migration.",
+    "GitHub branch protection settings were not changed."
+  ],
+  "verification": {
+    "scripts": {
+      "command": "npm run test:scripts",
+      "node": "20.19.5",
+      "total": 332,
+      "passed": 190,
+      "failed": 0,
+      "skipped": 142,
+      "skip_reason": "Linux-only offsite tests on macOS"
+    },
+    "app_checks": {
+      "command": "npm run check",
+      "passed": 5,
+      "failed": 0,
+      "scope": "frontend prettier/eslint/tsc and backend eslint/tsc; no app source behavior changed in this restoration"
+    },
+    "skill_validation": {
+      "skills": 26,
+      "failed": 0
+    },
+    "shell_syntax": "passed with macOS Bash 3.2",
+    "git_diff_check": "passed",
+    "ci": "Run after publication; not represented by these local results"
+  }
+}

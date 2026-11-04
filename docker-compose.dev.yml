@@ -1,6 +1,6 @@
-# Per-branch dev database for parallel branch/worktree development.
+# Per-checkout dev database for parallel branch/worktree development.
 # Always launched via scripts/dev-stack.sh, which sets the project name
-# (`-p dev-<branch>`) and exports DEV_DB_PORT. Only Postgres runs in Docker —
+# (`-p dev-<checkout>-<hash>`) and exports DEV_DB_PORT. Only Postgres runs in Docker —
 # dev servers stay on the host (fast HMR) on per-branch ports.
 # The init script creates the second database (tutor_app_test) on first boot.
 
@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: tutor_app
     ports:
-      - "${DEV_DB_PORT:?set by scripts/dev-stack.sh}:5432"
+      - "127.0.0.1:${DEV_DB_PORT:?set by scripts/dev-stack.sh}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./scripts/dev-db-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro

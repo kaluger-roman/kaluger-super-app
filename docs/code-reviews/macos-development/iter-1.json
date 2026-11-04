@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "branch": "codex/macos-development",
+  "base_ref": "origin/main",
+  "base_commit": "97585332f38b7b9ac5e14aee730f28d84c4fbb4f",
+  "head_commit": "43ac26e06150ea15a7ba753fb0e91a800fa2b5fb",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-11-03T22:25:06.703895+00:00",
+  "diff_stats": {
+    "files_changed": 129,
+    "insertions": 2119,
+    "deletions": 10220,
+    "scope": "Committed merge-base→HEAD + tracked worktree changes + untracked docs/subagents.md; excludes this generated report. Git index untouched."
+  },
+  "summary": {
+    "raw_findings": 4,
+    "after_dedup": 4,
+    "after_score_filter": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_category": {
+      "database-isolation": 1
+    },
+    "reviewers_completed": 9,
+    "reviewers_failed": 0,
+    "scorer_tasks_completed": 1
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "security",
+      "category": "database-isolation",
+      "title": "[P2] Учитывайте legacy-слоты при смене реестра портов",
+      "file": "scripts/stack-context.mjs",
+      "line_start": 21,
+      "line_end": 21,
+      "snippet": "const registry = join(common, \"local-stack-ports.json\");",
+      "rationale": "При обновлении существующего клона с работающим старым dev-<branch> стеком новый реестр игнорирует dev-stack-ports.json и повторно выдаёт занятый слот 1. test-backend проверяет только доступность TCP, затем запускает migrate deploy и Jest в tutor_app_test на этом порту, то есть в БД старого окружения. Свежий checkout на Mac без legacy-стеков не затронут.",
+      "fix_hint": "Учитывать выделенные legacy-слоты либо блокировать переход с понятной диагностикой до остановки старых стеков; перед миграциями проверять принадлежность контейнера ожидаемому Compose-проекту.",
+      "score": 75,
+      "severity": "medium",
+      "priority": "P2",
+      "verification_note": "Автор находки воспроизвёл коллизию реальным allocateSlot и безопасным stub-прогоном немодифицированного test-backend: npx migrate deploy и npm test направлены на localhost:15433/tutor_app_test, Docker своего проекта не вызывался. Родитель и независимый scorer отдельно подтвердили выделение slot=1 при legacy registry={legacy-branch:1}. Реальные БД не затрагивались. Проверка TCP без ownership существовала раньше; повторная выдача занятых legacy-слотов введена этим diff.",
+      "scorer": "review_deep",
+      "scorer_decision": "confirm"
+    }
+  ],
+  "filtered_out": [
+    {
+      "id": "filtered-stdin",
+      "category": "module-entrypoint",
+      "title": "Импорт экспортированных helpers через Node stdin падает на realpathSync(argv[1])",
+      "file": "scripts/stack-context.mjs",
+      "line_start": 55,
+      "line_end": 55,
+      "snippet": "if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {",
+      "rationale": "node --input-type=module - задаёт argv[1]=\"-\", поэтому импорт module бросает ENOENT. Родитель наблюдал исключение; -e import работает. Аналогичные guards есть в prisma-client.mjs:84 и check.mjs:258.",
+      "fix_hint": "Обрабатывать несуществующий argv[1] в entrypoint guard при последующей правке.",
+      "score": 25,
+      "severity": "low",
+      "verification_note": "Независимый scorer подтвердил причину, но не нашёл штатных callers, импортирующих эти модули через stdin.",
+      "exclusion_reason": "Ниже порога: новый технический edge case воспроизводится, но практическая регрессия поддерживаемого workflow не подтверждена."
+    },
+    {
+      "id": "filtered-apostrophe",
+      "category": "pre-existing",
+      "title": "Апостроф в пути ломает eval get_feature_paths",
+      "file": ".specify/scripts/bash/common.sh",
+      "score": 0,
+      "severity": "low",
+      "exclusion_reason": "Существовало в origin/main; не введено миграцией. Неэкранированное формирование shell-присваиваний не менялось."
+    },
+    {
+      "id": "filtered-branch-marker",
+      "category": "pre-existing",
+      "title": "Маркер + в git branch -a мешает обнаружению номера другой worktree-ветки",
+      "file": ".specify/scripts/bash/create-new-feature.sh",
+      "score": 0,
+      "severity": "low",
+      "exclusion_reason": "Существовало в origin/main: очистка маркеров не обрабатывала + до и после изменения. Не новая регрессия."
+    }
+  ],
+  "unverified": [],
+  "reviewers": [
+    {
+      "role": "conventions",
+      "agent": "review_conventions",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "shallow",
+      "agent": "review_shallow",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "deep-logic",
+      "agent": "review_deep",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "security",
+      "agent": "review_security",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "type-contracts",
+      "agent": "review_contracts",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "removed-behavior",
+      "agent": "review_removed",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    },
+    {
+      "role": "cross-file-callers",
+      "agent": "review_integration",
+      "status": "completed",
+      "reasoning_effort_setting": "inherited"
+    },
+    {
+      "role": "wrapper-proxy",
+      "agent": "review_stacks",
+      "status": "completed",
+      "reasoning_effort_setting": "inherited"
+    },
+    {
+      "role": "hacks-workarounds",
+      "agent": "review_hacks",
+      "status": "completed",
+      "reasoning_effort_setting": "max"
+    }
+  ],
+  "scorers": [
+    {
+      "agent": "review_deep",
+      "status": "completed",
+      "candidates": [
+        "f1",
+        "filtered-stdin"
+      ],
+      "author_of_scored_findings": false
+    }
+  ],
+  "verification": [
+    "GitHub PR #205: all 12 CI checks SUCCESS, including Linux/macOS scripts and frontend/backend/landing checks.",
+    "Prior publication verification: npm run test:scripts 96 passed, 142 Linux-only skipped on macOS, 0 failed; npm run check 5/5 passed.",
+    "Independent targeted script tests: integration 28/28; deep-logic 8/8; hacks 26/26; stack/security 7/7. Sets overlap; counts are not summed.",
+    "Parent verified actual dotenv-cli preserves DATABASE_URL, PORT, HOST, FRONTEND_URL wrapper overrides using a temporary env fixture.",
+    "Wrapper worker verified exec-backend preserves argv containing spaces/literal dollar/backticks in a checkout path containing spaces, with no DB access.",
+    "All 26 SKILL.md validated; delegation docs local links resolve; git diff --check passes."
+  ],
+  "coverage": {
+    "review_protocol": "Nine independent reviewer tasks, scheduled in waves within three worker slots; independent scorer for candidates. Two reviewers reused their independent scoped review sessions with inherited settings; seven new reviewer sessions explicitly requested max effort.",
+    "workflow_updates": "Eight skills and shared docs now restore delegation as requested. Lost-delegation text conflicts were fixed during this turn and re-read by conventions/callers reviewers. These are uncommitted local instruction changes, not runtime defect fixes.",
+    "limitations": [
+      "No fresh full npm ci in a new checkout, Docker rebuild, live migration, browser QA, or fault injection during registry writes in this review.",
+      "Legacy collision confirmed with allocator/stub commands and call tracing; actual legacy DB was not used.",
+      "Archived Claude prose reviewed for key invariants, not formal line-by-line equivalence.",
+      "Future auto-feature/hunt/scoring pipelines were not all executed end to end; dispatch policy validated statically and current review exercised nine roles/scoring."
+    ]
+  }
+}

@@ -1,5 +1,10 @@
 # TURN relay for video calls (coturn on prod)
 
+> Infrastructure status, 2026-11-03: the former VPS is unavailable. This runbook
+> describes the previous deployment. `home` is a future production candidate,
+> not the current development host. Development runs locally on macOS. Do not
+> execute recovery, cron installation or remote changes as part of local setup.
+
 Video calls (`specs/030-webrtc-video-calls/`) connect peer to peer. When both
 sides sit behind strict NAT, a corporate firewall or a mobile carrier that
 blocks UDP, the direct path fails and the call needs a TURN relay: coturn on

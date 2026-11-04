@@ -1,34 +1,13 @@
 ---
-description: "Write backend tests following project conventions"
-tools:
-  [
-    "runCommands",
-    "runTasks",
-    "edit",
-    "runNotebooks",
-    "search",
-    "new",
-    "cweijan.vscode-postgresql-client2/dbclient-getDatabases",
-    "cweijan.vscode-postgresql-client2/dbclient-getTables",
-    "cweijan.vscode-postgresql-client2/dbclient-executeQuery",
-    "prisma.prisma-insider/prisma-migrate-status",
-    "prisma.prisma-insider/prisma-migrate-dev",
-    "prisma.prisma-insider/prisma-migrate-reset",
-    "prisma.prisma-insider/prisma-studio",
-    "prisma.prisma-insider/prisma-platform-login",
-    "prisma.prisma-insider/prisma-postgres-create-database",
-    "extensions",
-    "todos",
-    "runSubagent",
-    "usages",
-    "vscodeAPI",
-    "problems",
-    "changes",
-    "testFailure",
-    "openSimpleBrowser",
-    "fetch",
-    "githubRepo",
-  ]
+description: "Write backend tests following all project conventions"
 ---
 
-Read and follow ALL conventions from `docs/conventions/backend-testing.md` before writing any tests.
+Read `AGENTS.md`, `backend/AGENTS.md`, and ALL conventions from
+`docs/conventions/backend-testing.md` before making changes. Use the repository Codex
+skill `.agents/skills/test-backend/SKILL.md` for the implementation workflow.
+
+This compatibility profile does not select a proprietary model or editor-extension
+tool. Use the configured Codex model and maximum supported reasoning effort when
+delegated, following `docs/subagents.md` and the assigned file boundaries. Work on
+this Mac with the current worktree and its isolated dev/test databases. The
+orchestrator owns task-start/publication; do not recursively run its orchestration.

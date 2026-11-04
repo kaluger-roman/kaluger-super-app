@@ -10,7 +10,7 @@ for pkg in frontend backend; do
   printf '%s\n' "$staged" | grep -q "^$pkg/" || continue
   if [ ! -d "$pkg/node_modules" ]; then
     echo "pre-commit: $pkg/node_modules is missing — run npm install in $pkg/" >&2
-    echo "pre-commit: in a worktree, symlink it from the main checkout instead" >&2
+    echo "pre-commit: in a new worktree, run bash scripts/setup-local.sh (use independent dependencies)" >&2
     exit 1
   fi
   # A node_modules symlinked from the main checkout lags behind until that checkout reinstalls,

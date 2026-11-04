@@ -1,0 +1,473 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "auto-feature state.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "branch": {
+      "type": "string"
+    },
+    "worktree_path": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "current_phase": {
+      "type": "string"
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "in_progress",
+              "awaiting_approval",
+              "completed",
+              "blocked",
+              "cancelled",
+              "skipped"
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          },
+          "user_approved": {
+            "type": "boolean"
+          },
+          "user_revisions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "review_iterations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "iter": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "json_path": {
+            "type": "string"
+          },
+          "findings_before": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "findings_applied": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "convergence_signature": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed_fixes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "exit_reason": {
+            "enum": [
+              "clean",
+              "convergence",
+              "cap",
+              "continue",
+              "incomplete"
+            ]
+          }
+        },
+        "required": [
+          "iter",
+          "json_path"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "qa_iterations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "iter": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "context_path": {
+            "type": "string"
+          },
+          "json_path": {
+            "type": "string"
+          },
+          "findings_new": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fixed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "open": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejected": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recheck_still_reproduces": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "untested": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "iter",
+          "context_path",
+          "json_path"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "qa_covered_scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "remaining_qa_findings": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "integer",
+                  "string"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              "screenshot": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fix_suggestion": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "open",
+                  "rejected"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "status",
+              "reason"
+            ],
+            "additionalProperties": true
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "title",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        ],
+        "description": "Schema v1 compatibility: legacy untested scenario entries may occur here; import preserves originals and normalizes them into remaining_qa_untested before continuing."
+      }
+    },
+    "qa_exit_reason": {
+      "enum": [
+        "clean",
+        "exhausted",
+        "cap",
+        "skipped"
+      ]
+    },
+    "convergence_detected": {
+      "type": "boolean"
+    },
+    "pr_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "commit": {
+      "type": "string"
+    },
+    "ci": {
+      "type": [
+        "object",
+        "array",
+        "string"
+      ]
+    },
+    "legacy_import": {
+      "type": "object",
+      "properties": {
+        "source_path": {
+          "type": "string"
+        },
+        "imported_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "source_path",
+        "imported_at"
+      ],
+      "additionalProperties": true
+    },
+    "pending_checkpoint": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "phase": {
+              "type": "string"
+            },
+            "artifacts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "phase",
+            "artifacts",
+            "options"
+          ],
+          "additionalProperties": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "progress_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "blocked",
+              "cancelled",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "feature_description": {
+      "type": "string"
+    },
+    "feature_slug": {
+      "type": "string"
+    },
+    "remaining_qa_untested": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "qa_pending_recheck": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "finding_title",
+          "steps",
+          "expected"
+        ],
+        "properties": {
+          "finding_title": {
+            "type": "string"
+          },
+          "scenario_id": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "branch",
+    "worktree_path",
+    "started_at",
+    "updated_at",
+    "current_phase",
+    "phases",
+    "feature_description",
+    "feature_slug"
+  ],
+  "additionalProperties": true
+}

@@ -7,8 +7,8 @@
 //   node scripts/issue-priority.mjs top [--limit 10]         # open issues by score, highest first
 //
 // `set` writes the score block at the top of the issue body (replacing an earlier one) and the
-// band label (P0-critical … P4-trivial), removing other band labels. Scores are chosen by a Haiku
-// subagent through /score-issues; this script only validates and writes them.
+// band label (P0-critical … P4-trivial), removing other band labels. Scores are chosen with the
+// project's score-issues skill and docs/issue-priority.md; this script validates and writes them.
 //
 // Output: JSON on stdout; errors on stderr, exit code 1. Needs an authenticated `gh`.
 
@@ -29,7 +29,7 @@ export const BANDS = [
 const BAND_LABELS = new Set(BANDS.map((b) => b.label));
 
 const BLOCK_RE = /<!-- priority -->[\s\S]*?<!-- \/priority -->\n*/;
-// Also read by scripts/vscode-agents/lib.js (parseIssueScore) — keep the two in sync
+// Keep compatible with priority blocks already present in GitHub issues.
 const SCORE_RE = /Критичность:\s*\**\s*(\d{1,3})\s*\/\s*100/;
 
 export const bandOf = (score) => BANDS.find((b) => score >= b.min);
