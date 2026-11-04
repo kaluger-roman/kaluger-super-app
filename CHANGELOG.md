@@ -9,6 +9,7 @@
 - Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
 
 ### Infrastructure
+- Add an isolated PostgreSQL 16 production recovery stack for home, private LAN/Tailscale access, compatible backup tools and a recovery runbook while keeping development on macOS.
 - Add a local Codex plugin with an interactive issues and sessions panel, alongside the VS Code extension.
 - Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
 - Restore detailed command procedures, mandatory checkpoints, resumable JSON state, QA/review contracts, hunt limits and Spec Kit validation without simplifying the original workflow.

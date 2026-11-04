@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "branch": "codex/home-production",
+  "base_ref": "origin/main",
+  "threshold": 50,
+  "iteration": 1,
+  "timestamp": "2026-11-04T20:11:36.680774+00:00",
+  "diff_mode": "working-tree",
+  "snapshot": {
+    "base_sha": "670c194792c6c0e6dd09b820949250686e5632ba",
+    "head": "0d15cae17a10e8ac349c7017773ddcc946b02a69",
+    "file_hashes": {
+      ".gitignore": "82cd98e0a987af2fa988983d63084f728eb35676b063169fbd90f662ff3173be",
+      "AGENTS.md": "153e531b1793f27f42511cbb3143d2281e6927260a4edbff56bb7639d3067472",
+      "README.md": "d5143e2089cce1bba74d7983a1b20ad7bc0b8bfdf71e3cade3485e6614a19427",
+      "docs/README.md": "1439dce7121f3bf9674ef53f0ce16f011d4e5666e3000f9d3742e8283034f06f",
+      "docs/ops/offsite-backups.md": "3497d33f3be4147731fd95370ff2af2531cb14df558ce1d01fde8050577e764b",
+      "docs/ops/turn-relay.md": "fa60b283afd5d095f0a372e96e78febaf5e27ecb49877486b8bb50182133d114",
+      "scripts/__tests__/compose-db-healthcheck.test.mjs": "e8a21800731130e2ba9a9cf4c4366d4b5cefcd9cddfe49afb80c0ee1b4ee1f62",
+      "docker-compose.production.yml": "a34a1200730a5397db99710b9ce79a6890726ae0c99d4663617bf7ab1012d0a4",
+      "docs/ops/home-production.md": "943fad12af4d66fb1dd59d19c7b842f86f29b3f007bfef458519ca62db37b344",
+      "frontend/nginx.production.conf": "1049b2446d0387e9c804e1b177347e30c3bce1a0537f339afcb84d65815e8b7b",
+      "infra/production/backend.Dockerfile": "b02e7ed44a1d3be7419a5d8328b43af2362410f5200ca0330379dc76ce884646",
+      "infra/production/frontend.Dockerfile": "c5cac6deb8c595714e6c461f923ae6df2529bdaa6e2721b315d2ede006bca5b8",
+      "specs/041-home-production/plan.md": "c7abdb04faa662698e7c8f78117d9541d051a2171ab2b659e6dec63f8d978f20",
+      "specs/041-home-production/spec.md": "e36a490541e0c96a4745605d81cfb20bddc82980e7fcf8b6f67011cabd848f53",
+      "specs/041-home-production/tasks.md": "783b4becc3bc62d77694f4a181c57d0d8dd7e3d4e5622eecda49382b36c6f51f"
+    }
+  },
+  "diff_stats": {
+    "files_changed": 15,
+    "insertions": 400,
+    "deletions": 19
+  },
+  "summary": {
+    "raw_findings": 2,
+    "after_dedup": 1,
+    "after_score_filter": 1,
+    "by_severity": {
+      "critical": 1,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "by_category": {
+      "logic": 1
+    },
+    "agents_failed": [],
+    "scorers_failed": []
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "agent": "deep-logic",
+      "title": "Не переименовывать бэкап после ошибки pg_dump",
+      "category": "logic",
+      "file": "docs/ops/home-production.md",
+      "line_start": 113,
+      "line_end": 115,
+      "snippet": "set -o pipefail\ndc exec -T db pg_dump -U postgres -d tutor_app | gzip > \"$BACKUP_FILE.tmp\"\ngzip -t \"$BACKUP_FILE.tmp\" && mv \"$BACKUP_FILE.tmp\" \"$BACKUP_FILE\"",
+      "rationale": "pipefail меняет статус pipeline, но без условной цепочки не останавливает следующую команду: gzip -t допускает сжатый пустой/неполный SQL. Также обнаружено shallow-bug.",
+      "fix_hint": "Связать pipeline с проверкой и mv через &&.",
+      "score": 100,
+      "verification_note": "Независимые scorer подтвердили: gzip-контейнер может быть корректным при ошибке pg_dump; ошибка не препятствует mv.",
+      "severity": "critical",
+      "sources": [
+        "shallow-bug",
+        "deep-logic"
+      ],
+      "candidate_ids": [
+        "c1",
+        "c2"
+      ]
+    }
+  ],
+  "filtered_out": [],
+  "coverage": {
+    "complete": true,
+    "reviewers": [
+      {
+        "role": "claude-md",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "shallow-bug",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "deep-logic",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "security",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "type-safety",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "removed-behavior",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "cross-file",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "wrapper-proxy",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      },
+      {
+        "role": "hacks",
+        "status": "completed",
+        "note": "Независимый read-only reviewer, maximum reasoning effort."
+      }
+    ],
+    "scorers": [
+      {
+        "finding_id": "c1",
+        "status": "completed",
+        "score": 75,
+        "verification_note": "pipefail без errexit/условной цепочки не препятствует mv повреждённого SQL-дампа."
+      },
+      {
+        "finding_id": "c2",
+        "status": "completed",
+        "score": 100,
+        "verification_note": "Последующая команда выполняется после неуспешного pipeline и проверяет только сжатие."
+      }
+    ]
+  }
+}
