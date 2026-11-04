@@ -11,6 +11,7 @@ import { createPanelServer, PANEL_URI } from '../src/server.mjs';
 import { buildPlugin } from '../build.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const release = JSON.parse(await readFile(join(root, 'super-app-agents/plugin.json'), 'utf8')).version;
 
 test('MCP discovery advertises independent global/thread entrypoints and a locked-down UI resource', async t => {
   const calls = [];
@@ -25,11 +26,16 @@ test('MCP discovery advertises independent global/thread entrypoints and a locke
   assert.equal(tools.length, 5);
   assert.deepEqual(tools.find(tool => tool.name === 'super_app_home')._meta['openai/ui'].entrypoints, [{ type: 'global' }]);
   assert.deepEqual(tools.find(tool => tool.name === 'super_app_panel')._meta['openai/ui'].entrypoints, [{ type: 'thread' }]);
+  // A release must publish a fresh resource key instead of reusing cached HTML.
+  const releaseUri = `ui://super-app-agents/panel-v${release}`;
+  for (const name of ['super_app_home', 'super_app_panel']) assert.equal(tools.find(tool => tool.name === name)._meta.ui.resourceUri, releaseUri);
   assert.ok(tools.every(tool => tool.annotations.readOnlyHint && !tool.annotations.destructiveHint));
   assert.equal((await client.callTool({ name: 'super_app_panel', arguments: {} })).isError, undefined);
   const { resources } = await client.listResources();
   assert.equal(resources[0].uri, PANEL_URI);
   const { contents } = await client.readResource({ uri: PANEL_URI });
+  assert.equal(contents[0].uri, releaseUri);
+  await assert.rejects(client.readResource({ uri: 'ui://super-app-agents/panel-v1' }), /not found/i);
   assert.equal(contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.deepEqual(contents[0]._meta.ui.csp, { connectDomains: [], resourceDomains: [] });
   assert.equal(contents[0]._meta['openai/ui'].preferredDisplayMode, 'fullscreen');

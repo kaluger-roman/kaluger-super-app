@@ -7,8 +7,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
 import { PanelData, REPOSITORY } from './data.mjs';
+import { VERSION } from './version.mjs';
 
-export const PANEL_URI = 'ui://super-app-agents/panel-v1';
+// Hosts cache UI resources by URI independently from the installed plugin version.
+export const PANEL_URI = `ui://super-app-agents/panel-v${VERSION}`;
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const result = data => ({ content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: data });
 const handled = callback => async args => {
@@ -18,7 +20,7 @@ const handled = callback => async args => {
 
 export const createPanelServer = ({ data, html, icon }) => {
   const icons = [{ src: `data:image/svg+xml,${encodeURIComponent(icon)}`, mimeType: 'image/svg+xml' }];
-  const server = new McpServer({ name: 'super-app-agents', title: 'Агенты Super App', version: '0.1.3', icons });
+  const server = new McpServer({ name: 'super-app-agents', title: 'Агенты Super App', version: VERSION, icons });
   registerAppResource(server, 'super-app-panel', PANEL_URI, { title: 'Агенты Super App' }, async () => ({
     contents: [{
       uri: PANEL_URI, mimeType: RESOURCE_MIME_TYPE, text: html,

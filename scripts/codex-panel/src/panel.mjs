@@ -1,8 +1,9 @@
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import { OpenAIExtensions } from '@openai/mcp-extensions/app';
 import { openIssueDraft, safeGithubUrl } from './bridge.mjs';
+import { VERSION } from './version.mjs';
 
-const app = new App({ name: 'Super App agents', version: '0.1.3' }, { availableDisplayModes: ['inline', 'fullscreen'] });
+const app = new App({ name: 'Super App agents', version: VERSION }, { availableDisplayModes: ['inline', 'fullscreen'] });
 const extensions = new OpenAIExtensions(app);
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -75,7 +76,7 @@ const render = data => {
   if (!data?.issues || !data?.sessions) return;
   state = data;
   $('#summary').textContent = `${data.repository} · ${data.issues.total} открытых issues · ${data.sessions.items.filter(session => session.live).length} живых CLI-сессий`;
-  $('#connection').textContent = `${connected ? 'Подключено' : 'Сохранённый список · обновляется'} · ${data.repoRoot} · ${date(data.at)}`;
+  $('#connection').textContent = `Агенты Super App ${VERSION} · ${connected ? 'Подключено' : 'Сохранённый список · обновляется'} · ${data.repoRoot} · ${date(data.at)}`;
   notice([data.issues.error ? `GitHub не обновился: ${data.issues.error}${data.issues.at ? ' Показан предыдущий список.' : ''}` : '', data.sessions.error || ''].filter(Boolean).join(' '));
   renderIssues(); renderSessions(); context();
   if (data.issues.at) {
@@ -185,6 +186,7 @@ document.modelContext?.registerTool({
   async execute({ query, priority, page }) { if (query !== undefined) $('#issueSearch').value = query; if (priority !== undefined) $('#priority').value = priority; if (page) showTab(page); renderIssues(); context(); return JSON.stringify({ issues: visibleIssues() }); },
 });
 
+$('#connection').textContent = `Агенты Super App ${VERSION} · Подключение к Codex…`;
 try { const cached = JSON.parse(localStorage.getItem(cacheKey)); if (cached?.version === 1) render(cached); } catch { /* Cache is optional. */ }
 const main = async () => {
   try {
