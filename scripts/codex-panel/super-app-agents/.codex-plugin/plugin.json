@@ -1,6 +1,6 @@
 {
   "name": "super-app-agents",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Локальная панель GitHub issues и сессий Codex для Kaluger Super App.",
   "interface": {
     "displayName": "Агенты Super App",

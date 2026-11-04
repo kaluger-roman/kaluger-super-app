@@ -42,11 +42,12 @@ export const buildPlugin = async ({ outdir = outputDirectory, portableOutdir = j
     manifest.mcpServers['super-app-agents'].env = env;
     await writeFile(file, JSON.stringify(manifest, null, 2) + '\n');
   }
-  // Codex CLI 0.166 ignores stdio servers in the portable root manifest. Keep
-  // the complete portable export separately; install the verified native overlay.
+  // Current Codex clients can prefer portable manifests over the native overlay.
+  // Keep both canonical files only in the separate portable export, so the
+  // installed package has exactly one native identity and one MCP configuration.
   await rm(portableOutdir, { recursive: true, force: true });
   await cp(outdir, portableOutdir, { recursive: true });
-  await rm(join(outdir, 'plugin.json'));
+  await Promise.all(['plugin.json', 'mcp.json'].map(name => rm(join(outdir, name))));
   return outdir;
 };
 

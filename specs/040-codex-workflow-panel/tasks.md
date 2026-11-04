@@ -20,7 +20,13 @@
   `mode: shared-daemon`, errors отсутствуют.
 - Codex 0.166 требует native install package: portable MCP config не
   загружается, `${PLUGIN_ROOT}` в native MCP не раскрывается. В native package
-  используются cwd `.` и относительный server path; portable export сохранён.
+  используются cwd `.` и относительный server path; оба canonical-файла
+  исключены из native package, portable export сохранён отдельно.
+- Полный локальный набор: 339 tests, 197 passed, 142 Linux-only skipped,
+  0 failed. CI коммита `af3685a` прошёл 13/13, включая plugin build/tests.
+- После установки версии 0.1.2 Desktop нашёл global route, прочитал HTML,
+  выполнил initializeMcpApp и super_app_state из запущенного виджета без
+  ошибки tool call. Видимость данных и создание draft ещё требуют UI-проверки.
 - Управление окном Codex через Computer Use запрещено самим инструментом.
   Отображение и действие создания draft в текущем Desktop ещё не подтверждены;
   пользователю отправлен запрос ручной проверки. Это не считается UI pass.

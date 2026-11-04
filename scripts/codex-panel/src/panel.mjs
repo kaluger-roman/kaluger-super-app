@@ -2,7 +2,7 @@ import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextp
 import { OpenAIExtensions } from '@openai/mcp-extensions/app';
 import { openIssueDraft, safeGithubUrl } from './bridge.mjs';
 
-const app = new App({ name: 'Super App agents', version: '0.1.0' }, { availableDisplayModes: ['inline', 'fullscreen'] });
+const app = new App({ name: 'Super App agents', version: '0.1.2' }, { availableDisplayModes: ['inline', 'fullscreen'] });
 const extensions = new OpenAIExtensions(app);
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));

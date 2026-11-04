@@ -83,6 +83,9 @@ test('the installed package runs over stdio outside the repository without node_
   assert.match(html, /Открыть новый черновик/);
   assert.doesNotMatch(html, /PANEL_SCRIPT|PANEL_CSS|<script[^>]+src=/);
   await assert.rejects(stat(join(installed, 'plugin.json')), { code: 'ENOENT' });
+  await assert.rejects(stat(join(installed, 'mcp.json')), { code: 'ENOENT' });
+  const portableMcp = JSON.parse(await readFile(join(directory, 'built/portable/super-app-agents/mcp.json'), 'utf8'));
+  assert.deepEqual(portableMcp.mcpServers['super-app-agents'].args, ['${PLUGIN_ROOT}/server/server.mjs']);
   const portable = JSON.parse(await readFile(join(directory, 'built/portable/super-app-agents/plugin.json'), 'utf8'));
   const compat = JSON.parse(await readFile(join(installed, '.codex-plugin/plugin.json'), 'utf8'));
   assert.equal(portable.name, compat.name);

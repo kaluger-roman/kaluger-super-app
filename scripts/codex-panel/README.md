@@ -73,7 +73,9 @@ npm --prefix scripts/codex-panel test
 `ws` и общий адаптер `scripts/vscode-agents/lib.js` в автономные сервер и HTML.
 Пакет `dist/super-app-agents` содержит нативные для Codex
 `.codex-plugin/plugin.json`/`.mcp.json`, иконку, skill и автономный runtime; внешние
-`node_modules` ему не нужны. Codex CLI 0.166 при наличии portable root `plugin.json`
+`node_modules` ему не нужны. В нативном пакете исключены оба canonical-файла
+`plugin.json` и `mcp.json`, чтобы загрузчики Codex использовали единственную пару
+нативных manifest/config. Codex CLI 0.166 при наличии portable root `plugin.json`
 не обнаруживает stdio MCP-сервер этого пакета и не подставляет `${PLUGIN_ROOT}`
 в legacy `.mcp.json`. Поэтому native manifest использует проверенные относительные
 `cwd: "."` и `./server/server.mjs`. Полная portable-сборка с
