@@ -124,8 +124,8 @@ find_feature_dir_by_prefix() {
     else
         # Multiple matches - this shouldn't happen with proper naming convention
         echo "ERROR: Multiple spec directories found with prefix '$prefix': ${matches[*]}" >&2
-        echo "Please ensure only one spec directory exists per numeric prefix." >&2
-        echo "$specs_dir/$branch_name"  # Return something to avoid breaking the script
+        echo "Set SPECIFY_FEATURE to the exact full slug." >&2
+        return 1
     fi
 }
 
@@ -138,22 +138,29 @@ get_feature_paths() {
         has_git_repo="true"
     fi
 
-    # Use prefix-based lookup to support multiple branches per spec
-    local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
+    local feature_dir
+    if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
+        # An explicit identity must never silently select another feature by prefix.
+        if [[ ! "$current_branch" =~ ^[0-9]{3}-[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+            echo "ERROR: SPECIFY_FEATURE must be an exact safe feature slug" >&2
+            return 1
+        fi
+        feature_dir="$repo_root/specs/$current_branch"
+        if [[ ! -d "$feature_dir" ]]; then
+            echo "ERROR: Explicit feature directory not found: $feature_dir" >&2
+            return 1
+        fi
+    else
+        feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch") || return 1
+    fi
 
-    cat <<EOF
-REPO_ROOT='$repo_root'
-CURRENT_BRANCH='$current_branch'
-HAS_GIT='$has_git_repo'
-FEATURE_DIR='$feature_dir'
-FEATURE_SPEC='$feature_dir/spec.md'
-IMPL_PLAN='$feature_dir/plan.md'
-TASKS='$feature_dir/tasks.md'
-RESEARCH='$feature_dir/research.md'
-DATA_MODEL='$feature_dir/data-model.md'
-QUICKSTART='$feature_dir/quickstart.md'
-CONTRACTS_DIR='$feature_dir/contracts'
-EOF
+    # Bash %q keeps paths containing spaces, quotes or dollar signs literal in eval.
+    printf 'REPO_ROOT=%q\nCURRENT_BRANCH=%q\nHAS_GIT=%q\n' "$repo_root" "$current_branch" "$has_git_repo"
+    printf 'FEATURE_DIR=%q\nFEATURE_SPEC=%q\nIMPL_PLAN=%q\nTASKS=%q\n' \
+        "$feature_dir" "$feature_dir/spec.md" "$feature_dir/plan.md" "$feature_dir/tasks.md"
+    printf 'RESEARCH=%q\nDATA_MODEL=%q\nQUICKSTART=%q\nCONTRACTS_DIR=%q\n' \
+        "$feature_dir/research.md" "$feature_dir/data-model.md" "$feature_dir/quickstart.md" "$feature_dir/contracts"
+
 }
 
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }

@@ -52,7 +52,7 @@ worktree от неё или от её проверенного коммита. `
 В Local environments в настройках Codex можно указать setup
 `bash scripts/setup-local.sh`. Полезные действия: `dev-stack.sh up`,
 `dev-stack.sh run-backend`, `dev-stack.sh run-frontend`, `npm run check`.
-Конфигурацию `.codex/` создаёт само приложение; вручную непроверенную схему не задаём.
+В `.codex/hooks.json` хранится проверка changelog перед PR. После просмотра подтвердите hook через `/hooks`; доверие не включается коммитом. Состояние оркестраторов в `.codex/workflow/` ignored. См. [workflow](codex-workflow.md).
 Docker не запускается автоматически при создании каждого чата.
 
 Перед удалением worktree остановите его серверы и `bash scripts/dev-stack.sh down`.

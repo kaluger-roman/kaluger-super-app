@@ -1,42 +1,33 @@
 ---
 name: auto-bug-fix
-description: "Diagnose and fix a Super App bug or issue end to end with a regression test, local review, relevant QA and resumable progress."
+description: "Run the full Super App bug-fix pipeline with diagnosis approval, red/green regression, resumable state, nine-role review, browser QA and draft PR delivery."
 ---
 
-# End-to-end bug fix
+# Полный pipeline исправления бага
 
-Read `AGENTS.md`, applicable conventions and the reported issue/evidence. Inputs:
-description/issue, `--new`, `--resume SLUG`, optional `--checkpoints`. Reuse the current
-local checkout/worktree; do not create nested worktrees or an empty startup PR.
+Прочитать [runtime](../auto-feature/references/runtime.md) и
+[полную процедуру](references/procedure.md). Вход: описание/issue,
+`--new <описание>`, `--resume <slug>`; пустой вызов выбирает активный state или
+запрашивает описание. `--checkpoints` совместим, но checkpoint обязателен без флага.
 
-1. Reproduce or trace the exact failure, determine root cause, impacted paths and
-   the smallest fix. Distinguish observed from inferred behavior. Under explicit
-   --checkpoints, present this concrete diagnosis/plan before modifying code; otherwise
-   proceed within the authorized fix scope and clarify only material ambiguity.
-2. Add a regression test that fails for the broken behavior, then fix it following
-   conventions. Avoid unrelated cleanup or masking the symptom.
-3. Run targeted tests and affected lint/types; use the isolated test DB for backend.
-4. Use [code-review-local](../code-review-local/SKILL.md); fix confirmed relevant
-   findings. Bound review to three passes, stopping early on convergence.
-5. For user-visible bugs use [manual-qa](../manual-qa/SKILL.md) to repeat original
-   reproduction and adjacent cases, up to three passes with recorded rechecks.
-   For tooling bugs verify the actual tool behavior rather than unrelated browser QA.
-6. Update [changelog](../changelog/SKILL.md). Follow the requested Git/PR delivery
-   scope and check CI if published. No automatic news, ready, merge or deploy.
+**После готового диагноза и плана исправления остановиться для утверждения
+пользователем.** До него worker воспроизводит и исследует, но не меняет код.
+Показать причину, файлы, способ воспроизведения, regression target и риски;
+сохранить approve/правки/cancel. Не выдавать code trace за наблюдаемое воспроизведение.
 
-For long/resumable fixes keep a compact `docs/bug-reports/<slug>-progress.md` with
-root cause, reproduction, changed files, checks, report links, open findings and next
-step. Read it and current diff on resume. No full feature-spec/mockup pipeline is
-required. Finish with root cause, result, verification, limitations and actual Git state.
+Последовательность: worktree/state + draft PR → diagnosis/checkpoint → минимальный fix
+с regression red→green → review (threshold 50, cap 3, ≥80% convergence) → тесты области
+и QA (cap 3, обязательный повтор бага + 1–2 соседних сценария) → commit/push/CI
+(до 3 исправлений CI) и отчёт. Повтор исходного бага в QA — blocker с передиагностикой.
+Чисто визуальный fix допускает исключение из regression test, но требует browser after
+screenshot. Нет speckit/mockup pipeline.
 
-## Delegated phases
+State `.codex/workflow/auto-bug-fix/<slug>/state.json` — [контракт v1](references/state.schema.json),
+включая diagnosis, iterations, verification, approvals и историю; legacy импортировать
+по runtime без удаления оригинала. Отдельные diagnosis/implementation/QA workers,
+девять review roles и независимые scorers; фиксы review/QA делает Main. Настроенная
+модель Codex, анализ/код/review/scoring — max effort.
 
-Use `docs/subagents.md`. Delegate diagnosis/root cause to an investigation worker,
-then the scoped fix/regression test to an implementation worker after validating
-the diagnosis. Give each the relevant evidence and conventions, with maximum
-supported reasoning effort. Delegate browser QA separately when relevant; QA need
-not use max effort. The parent directly dispatches the nine code-review roles and
-independent scorers rather than nesting an idle review orchestrator. Review/QA
-workers do not fix; the parent validates and repairs their confirmed findings.
-Keep dependent stages ordered, independent checks concurrent within the slot limit,
-and progress resumable. Workers do not recursively invoke auto-bug-fix or publish.
+Явный вызов включает task worktree/branch, стартовый draft PR и финальные commit/push.
+Назначенный Codex worktree не вкладывать в новый. Local-only и scope пользователя
+приоритетнее. News, ready, merge, deploy и посторонние issues — отдельные разрешения.

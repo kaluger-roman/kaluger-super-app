@@ -3,37 +3,16 @@ name: speckit-plan
 description: "Turn an approved or sufficiently clear Super App feature spec into an implementation plan and necessary data, API and verification artifacts."
 ---
 
-Read `AGENTS.md`, `.specify/memory/constitution.md`, and the exact target
-`specs/<id>-<name>/`. Prefer explicit feature id or `SPECIFY_FEATURE`; strip `codex/`
-from a feature branch only when it identifies an existing spec. Numeric prefixes
-can repeat, and detached HEAD is not a feature id. Use current local paths.
+# speckit-plan
 
-# Plan implementation
+Use the requested feature and arguments; preserve existing artifact decisions and user scope.
 
-Read the spec, relevant code/conventions and `.specify/templates/plan-template.md`.
-For a fresh plan only, `SPECIFY_FEATURE=<full-id> bash .specify/scripts/bash/setup-plan.sh --json`
-copies the template; do not run it over an existing plan because it overwrites it.
-Edit an existing plan in place, preserving established decisions and user changes.
+Read [the complete workflow](references/workflow.md) before acting. It is the
+authoritative procedure for this skill, including parameters, defaults, stages,
+validation loops, report formats and stopping conditions. Do not replace it with
+a shortened approximation. Read only the applicable code/conventions and artifacts
+that this workflow requests.
 
-Document actual stack, affected modules, integration points, constraints and a
-constitution check. Resolve important unknowns from code or authoritative research;
-record decision/rationale/alternatives in `research.md` only where useful.
-For changed persistence/API, add `data-model.md` and `contracts/` with fields,
-validation, ownership, transitions, migration/backfill and rollback considerations.
-For unchanged contracts say so rather than inventing new architecture.
-
-Provide `quickstart.md` with concrete local Mac verification steps using dev-stack
-URLs and isolated databases. Recheck the design against requirements/constitution.
-Name unresolved decisions instead of silently accepting conflicts. End with a plan
-and relevant artifacts; task generation and implementation are separate steps.
-Do not regenerate AGENTS.md from feature plans or introduce obsolete Claude tooling.
-
-## Parallel research
-
-Follow `docs/subagents.md`: extract consequential unknowns and dispatch independent
-research subagents per unknown/technology/integration, concurrently within available
-slots and with maximum supported reasoning effort. Supply feature context and raw
-source paths; require evidence plus decision/rationale/alternatives and remaining
-uncertainty. Workers do not edit the shared plan. The parent reconciles results into
-research.md and the plan; if there are no meaningful unknowns, skip research rather
-than manufacturing tasks. Report unavailable/failed research explicitly.
+Read `AGENTS.md` and `docs/codex-workflow.md` for the current Mac checkout, task-start
+and publication rules; prescribed delegation follows `docs/subagents.md`, using the
+inherited Codex model and maximum supported reasoning for analysis/coding/review.

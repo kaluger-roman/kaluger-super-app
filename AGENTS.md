@@ -19,6 +19,8 @@ the root package provides development tooling, not npm workspaces.
   for the catalog. Load only the skill relevant to the request. Use `create-issue`
   for filing, `score-issues` for priority, `changelog` and `news` for release artifacts;
   `auto-feature`, `auto-bug-fix`, review/QA and `speckit-*` cover longer workflows.
+- Legacy textual `/name`, `/project:name` and `/speckit.name` invocations map to
+  the corresponding `$name` / `$speckit-name`; preserve their documented arguments.
 - Existing `specs/` and dated reports are historical requirements/evidence, not
   current infrastructure instructions. Actual code/config and current user intent
   take precedence over stale examples in them.
@@ -50,13 +52,16 @@ the root package provides development tooling, not npm workspaces.
   barrel imports. Next.js route/config conventions have their required exceptions.
 - Add regression tests for bug fixes and behavior tests for new logic. Documentation
   edits do not need artificial tests. Verify the smallest meaningful scope while
-  iterating, then all affected checks before delivery; report anything not run.
+  iterating, then all affected checks before delivery. For changed frontend/backend
+  app code run `npm run check -- --full` before committing; report anything not run.
 - Never claim a test, browser flow or deployment passed without observing it.
 - Do not bypass hooks or weaken tests to make a check green. Root `npm ci` installs
   the worktree-aware pre-commit hook; do not edit global Git configuration.
 - Keep plans proportional: small fixes need no spec pipeline. For substantial work,
-  maintain the relevant `specs/<id>-<name>/{spec,plan,tasks}.md` with decisions and
-  verification so another chat can continue. Do not append generated histories here.
+  maintain `specs/<id>-<name>/{spec,plan,tasks}.md`. The auto-* skills also maintain
+  their full JSON state in ignored `.codex/workflow/`; preserve the original resume,
+  checkpoint and round-context contracts. Read linked skill procedures in full.
+  Generated technology context belongs only in the generator's managed block here.
 - Review the final diff for correctness, authorization boundaries, regressions,
   migration compatibility, tests and consistency with the conventions.
 - Preserve subagent workflows; read `docs/subagents.md` for dispatch and role maps.
@@ -68,20 +73,30 @@ the root package provides development tooling, not npm workspaces.
 
 ## Git and external actions
 
-- Use `codex/<short-task>` branches. A Codex-managed detached worktree is valid;
-  create a branch before publishing. Use the current worktree; never nest another
-  worktree automatically. Manual worktrees belong in ignored `.worktrees/`.
-- Local edits and verification need no repeated approval. Follow the user's requested
-  delivery scope for commits/pushes/PRs; no empty start commits or mandatory draft
-  PR at task start. Use `gh` directly when publication is requested.
-- Never force-push, merge, deploy, send messages, or create/comment on issues solely
-  because an old report or workflow says to. Report unrelated findings locally;
-  create GitHub issues when requested (including an explicitly invoked issue-filing
-  skill), deduplicate and use `docs/issue-priority.md`. Draft/report modes stay local.
+- Use `codex/<short-task>` branches. Reuse an assigned Codex worktree/task branch;
+  branch detached HEAD before publishing. A new task starting on main gets an
+  isolated local worktree under ignored `.worktrees/`; never nest another worktree.
+- Preserve the user's restored task workflow: open a draft PR at branch/task start
+  with `node scripts/start-task-pr.mjs --title ...` (and `--closes N` for a fully
+  resolved issue). It may create the original empty start commit when necessary.
+  Read-only/draft/report tasks do not publish. Explicit delivery restrictions win.
+- Once task-branch work is verified, update changelog, commit, push, wait for CI and
+  fix failures without another permission question. No commits between review/QA
+  rounds. Use the guarded PR command from `docs/codex-workflow.md` for create/ready;
+  never bypass the changelog gate or hook trust. Do not push to main, force-push,
+  mark ready, merge, publish news or deploy without an explicit user instruction.
+- Preserve the finding workflow: confirmed unrelated problems get deduplicated,
+  Russian GitHub issues through `create-issue`, scored by `score-issues`; do not
+  widen the current fix. Existing issues are reused. Draft/report/read-only modes
+  stay local. Sending messages or comments requires explicit authorization; do not
+  infer it from a historical report. Report issue links and scores in the final reply.
 - For a requested PR, use a concrete description of the final behavior, checks and
   limitations; `Closes #N` only when fully resolved. Keep secrets and local paths out.
 - Update `CHANGELOG.md` for meaningful completed changes. User-facing news JSON is
   for product changes only; local tooling/docs changes need no news or DB writes.
+- Auto-feature stops for approval after spec and mockups; auto-bug-fix stops after
+  diagnosis. These are the user's workflow checkpoints, not optional defaults.
+  Already recorded approvals remain valid unless the reviewed artifact changes.
 
 ## Infrastructure boundary (2026-11-03)
 

@@ -3,12 +3,38 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ci-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  changelog:
+    name: Changelog gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Require committed release notes before publication
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          args=(--base "$PR_BASE_SHA" --head "$PR_HEAD_SHA")
+          if [ "$PR_IS_DRAFT" = true ]; then args+=(--allow-empty-draft); fi
+          node scripts/changelog-gate.mjs "${args[@]}"
+
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -35,6 +61,8 @@ jobs:
             scripts:
               - 'scripts/**'
               - '.githooks/**'
+              - '.codex/hooks.json'
+              - '.github/workflows/ci.yml'
               - '.specify/scripts/**'
               - 'docker-compose*.yml'
               - '.nvmrc'

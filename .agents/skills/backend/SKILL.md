@@ -5,7 +5,7 @@ description: "Implement Super App Express API, services, Prisma migrations and b
 
 # Backend implementation
 
-Read `backend/AGENTS.md`, `docs/conventions/backend.md`, and the relevant spec/API
+Read `backend/AGENTS.md` and ALL conventions in `docs/conventions/backend.md`, and the relevant spec/API
 contracts. Read `docs/conventions/backend-testing.md` when changing tests.
 Keep HTTP validation in controllers, business rules in services, and persistence in
 Prisma; use the shared client, existing types and Russian errors. Check tutor/student/
@@ -17,3 +17,8 @@ Generate this checkout's Prisma client. Never migrate/reset a shared/prod DB.
 Run backend tests through `bash scripts/dev-stack.sh test-backend`; use real isolated
 Postgres rather than mocked Prisma. Run affected checks with `npm run check` and
 report migrations/tests performed, contract changes and unresolved risks.
+
+Task setup and completion follow `AGENTS.md` and `docs/codex-workflow.md`; when
+executing as a worker, the orchestrator owns publication. If delegated, inherit the
+configured Codex model with maximum supported reasoning and keep the assigned file
+boundaries from `docs/subagents.md`.

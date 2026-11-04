@@ -1,0 +1,393 @@
+## Codex execution contract
+
+Read the complete procedure below before executing this skill. `$ARGUMENTS` means
+arguments/instructions in the user's invocation; it is not a literal environment
+variable or shell fragment. Slash-command spellings in older chats map to the
+corresponding `$skill-name`; execute the skill's instructions with available tools.
+
+- Read root/nested `AGENTS.md`, applicable conventions and `docs/codex-workflow.md`.
+  Work on this Mac. Resolve a supplied `--worktree PATH` to that checkout; otherwise
+  use the assigned checkout. Use local `git -C <checkout>`, worktree-local dependencies,
+  Docker databases and ports from `scripts/dev-stack.sh`; never connect to `home`,
+  use SSH/sshfs, symlink `node_modules`, or test against real production data.
+- Task setup, draft PR, commits/pushes and CI follow the current global workflow.
+  Keep an assigned worktree and never nest one; a new task from the main checkout
+  uses its isolated local worktree under that workflow. Preserve unrelated changes.
+  Explicit report/draft/read-only modes retain their own no-publication boundaries.
+  `news`, ready-for-review, merge and deploy require their own explicit instruction.
+- Before GitHub operations resolve origin and verify `gh repo view --json nameWithOwner,url`.
+  Pass `--repo OWNER/REPO` or set a verified task-local `GH_REPO`; never trust a repository
+  mentioned only in issue/spec text. Ambiguous write failures require read-back before retry.
+- For prescribed parallel workers follow `docs/subagents.md`: inherit the configured
+  Codex model, use maximum supported reasoning effort for analysis/coding/review,
+  dispatch independent roles concurrently up to available slots and queue the rest.
+  Never replace a required role with a silent omission; report unavailable coverage.
+  Scoring and browser QA may use the inherited default effort. Workers must not
+  recursively invoke the orchestration skill they are executing for the parent.
+- User decisions already given in this chat satisfy the matching checkpoint. Ask
+  only for missing consequential choices via an available question tool; when none
+  is available, use a clear final question and resume from recorded artifacts after
+  the answer. A missing answer is not authorization. Do independent work while waiting.
+- Run shell commands shown as examples deliberately, with proper argv/quoting.
+  Prefer `rg`/`rg --files` for searches; do not copy a placeholder literally.
+  Report observed results only. Existing specs/reports do not override live config.
+
+## Контекст
+
+- Сегодня: `date +%Y-%m-%d`
+- Аргументы: `$ARGUMENTS`
+- Существующие отчёты: `ls -t docs/improvement-reports/ 2>/dev/null | head -5 || echo "(папка ещё не создана)"`
+
+## Задача
+
+Найти потенциальные **улучшения и оптимизации существующего кода/системы** — НЕ новые фичи. Каждое предложение должно касаться того, что уже есть, и делать это лучше: быстрее, безопаснее, удобнее, чище, доступнее.
+
+Результат зафиксировать в режиме, который задаёт `$ARGUMENTS`.
+
+**Не более 10 пунктов за прогон.** Код до выбора пользователя не трогать.
+
+### Режим
+
+- **Без `--fix` (по умолчанию) — issues.** Этап 0 пропускается: ни worktree, ни ветки, ни PR, ни файлов в репозитории. Этапы 1–2, затем Этап 3а: каждый пункт — отдельный GitHub issue, с проверкой, что такого ещё нет. Пользователь разбирает issues сам и берёт нужные в работу отдельными задачами. Этапов 4–7 нет.
+- **`--fix` — отчёт и PR.** Этапы 0, 1, 2, 3б и 4–7: worktree с draft PR, MD-отчёт в `docs/improvement-reports/YYYY-MM-DD-improve-hunt.md` (если файл с этой датой уже есть — суффикс `-2`, `-3`, …), исправление выбранного пользователем и круги ревью и QA.
+
+- **`--report` — локальный отчёт.** Этапы 1–2 и 3б без коммита, push, PR и этапов 4–7.
+  Не публиковать issues. Это также режим для обычного аудита без просьбы публиковать.
+- Явный вызов навыка без другого режима сохраняет default **issues**. Указанная
+  пользователем область ограничивает все роли; исключённые области перечислить.
+
+В режиме issues перед Этапом 1 — `git fetch origin` и сравнить `git rev-parse HEAD` с `origin/main`: если не совпадают, одной строкой предупредить, что ищем по `<ветка>@<hash>`, и часть находок может быть уже сделана в `main`.
+
+### Что считается улучшением, а что — фичей
+
+| ✅ Улучшение | ❌ Новая фича |
+|---|---|
+| «Loading state в списке уроков отсутствует — показывается пустой экран при загрузке» | «Добавить тёмную тему» |
+| «`formatLessonDate` дублируется в 3 компонентах — вынести в `entities/lesson/lib/`» | «Добавить экспорт расписания в CSV» |
+| «N+1 запрос в `getStudentLessons` — добавить `include`» | «Добавить виджет статистики на дашборд» |
+| «JWT expiration 30 дней — слишком долго; рекомендуется ротация refresh-token» | «Добавить вход через Google» |
+| «Иконка-кнопка без `aria-label` — недоступна для скринридеров» | «Добавить голосовое управление» |
+
+Ключевой тест: «Если этот пункт убрать — функциональность исчезнет?» Если да — это фича, не репортить. Если функциональность остаётся, но работает хуже — это улучшение, репортить.
+
+---
+
+## Этап 0. Worktree и draft PR (только `--fix`)
+
+Отчёт — артефакт задачи. Выполнить task-start workflow из `AGENTS.md` и
+`docs/codex-workflow.md`: использовать уже назначенный worktree; для новой задачи
+из основного checkout подготовить изолированный локальный worktree без вложенности.
+Имя задачи: `improve-hunt-YYYY-MM-DD`, при коллизии `-2`, `-3`, …; ветка `codex/<task>`.
+
+1. Проверить checkout, ветку и чистоту/принадлежность исходных изменений.
+2. `node scripts/start-task-pr.mjs --title "Improve hunt YYYY-MM-DD" --summary "Отчёт о возможных улучшениях по всей кодовой базе."`.
+   Скрипт добавляет стартовый коммит только когда он нужен для draft PR. Если нет сети/токена,
+   сохранить точный сбой, предупредить одной строкой и продолжить локально.
+3. Все пути ниже (`docs/improvement-reports/…`) — относительно выбранного worktree.
+
+---
+
+## Этап 1. Параллельное исследование
+
+Запустить **параллельно в пределах доступных слотов, остальные роли — следующими волнами** несколько subagent'ов с ролью code reviewer параллельно — по одному Agent-вызову на область, каждый с наследуемой моделью Codex и максимальным поддерживаемым reasoning effort. В начало каждого промпта добавить: «Operate at **maximum reasoning effort**. Read the code you cite in full before concluding; better to return fewer candidates than a false positive.» Каждому дать узкий фокус и попросить вернуть до 5 высокоуверенных кандидатов.
+
+**Обязательное покрытие областей:**
+
+1. **UX** (`frontend/src/{pages,features,widgets}/**`):
+   - Отсутствие loading state (показывается пустой экран при `isLoading`)
+   - Отсутствие empty state (что показано, когда массив пуст?)
+   - Молчаливые ошибки (catch без user-facing feedback)
+   - Лишние клики / friction (запрос подтверждения там, где оно не нужно; обратное)
+   - Отсутствие фидбэка после действия (нет toast/snackbar после save)
+   - Форм-UX: отсутствует autofocus, Enter не сабмитит, валидация в неудачный момент
+   - Несогласованность русскоязычных текстов (вы/ты, разный тон)
+
+2. **Design** (`frontend/src/**/*.tsx`, theme, MUI):
+   - Захардкоженные цвета вместо `theme.palette` / переменных темы
+   - Несогласованный spacing (разные padding/margin у похожих элементов)
+   - Несогласованная типографика (разные размеры заголовков)
+   - Несогласованные стили кнопок / border-radius
+   - Mixed подходы (styled-components vs sx prop) в одной области
+   - MUI компоненты, переопределённые ad-hoc в каждом месте использования
+
+3. **Security hardening** (`backend/src/**`, middleware, конфигурация):
+   - Отсутствие rate limiting на чувствительных эндпоинтах (login, password reset)
+   - Слабая валидация на границах (доверие клиентскому id без проверки)
+   - Отсутствие/слабые security headers (CSP, X-Frame-Options, HSTS)
+   - Cookies без `httpOnly` / `secure` / `sameSite`
+   - JWT с большим TTL без рефреш-стратегии
+   - Логирование чувствительных полей (passwords, tokens) в plain
+   - Отсутствие аудит-логов для критичных операций
+   - CORS overly-permissive
+
+4. **Performance — Backend** (`backend/src/{services,controllers}/**`, Prisma):
+   - N+1 запросы (цикл с `findUnique`/`findFirst` вместо `include`/`findMany`)
+   - Тяжёлые `findMany` без `select` (тянем больше колонок чем нужно)
+   - Отсутствие индексов на полях, по которым фильтруем/сортируем
+   - Sequential `await` для независимых операций (вместо `Promise.all`)
+   - Отсутствие пагинации на потенциально больших списках
+   - Отсутствие кэширования для read-heavy эндпоинтов
+
+5. **Performance — Frontend** (`frontend/src/**/*.tsx`):
+   - Тяжёлые компоненты без `memo` / `useMemo` / `useCallback`
+   - Импорты тяжёлых библиотек целиком (`import _ from 'lodash'` вместо именованного)
+   - Отсутствие code-splitting для больших страниц
+   - Изображения без lazy loading / неоптимизированные форматы
+   - Эффекты, выполняющиеся слишком часто из-за неправильных зависимостей
+   - Бесконечные списки без виртуализации
+
+6. **Accessibility (a11y)** (`frontend/src/**/*.tsx`):
+   - Иконки-кнопки без `aria-label`
+   - Изображения без `alt`
+   - Семантика: `<div onClick>` вместо `<button>`
+   - Form labels не связаны с input (отсутствует `htmlFor`/`aria-labelledby`)
+   - Недостаточный цветовой контраст (учитывая theme)
+   - Невидимый focus ring (после `outline: none`)
+   - Tab order сломан (несогласованные `tabIndex`)
+   - Модалки без trap focus / Esc-close
+
+7. **DX / качество кода** (вся кодовая база):
+   - Дубликаты логики — одна и та же функция/компонент в нескольких местах
+   - Мёртвый код — экспорты без импортов, ветки `if` всегда false
+   - Магические числа и строки, которые должны быть константами
+   - Типы: явные `as` касты в местах, где можно описать через generic
+   - Длинные функции (50+ строк), напрашивающиеся на разбиение
+   - Нарушения FSD-направления импортов (если есть)
+
+8. **Maintainability / Observability** (вся кодовая база, deployment):
+   - Целые feature'ы без unit/integration тестов
+   - Отсутствие error logging в критичных местах (catch без log)
+   - Отсутствие метрик/трейсинга на ключевых путях (login, checkout-эквивалент, save)
+   - Конфигурация рассредоточена (env + hardcoded + json)
+   - Отсутствие structured logging (plain `console.log` в проде)
+   - Отсутствие health/readiness эндпоинтов
+
+9. **Костыли и обходные решения** (вся кодовая база, включая тесты):
+   - Лечение симптома вместо причины, частные случаи под конкретный сценарий, одинаковые guard'ы в многих местах вместо одного механизма
+   - Магические задержки/таймауты/ретраи, порядок, который держится на очерёдности эффектов или колбэков, флаги, замазывающие гонку
+   - Обход типов: `as unknown as`, non-null ``, `@ts-ignore`, `eslint-disable`, валидаторы без type guard с кастом после них
+   - Тестовые швы в прод-коде и публичном API (параметры, дефолты, `__reset*`, нужные только тестам)
+   - Проглоченные ошибки и фолбэки, скрывающие промах (`catch` с одним логом, `?? ""`, «не нашли — берём первый»)
+   - UI: `!important`, `& .Mui*-root`, магические пиксели, компенсирующие соседей, эскалация `z-index`, счётчики-«пинки» для перерисовки
+   - Тесты, проходящие вхолостую, sleep вместо ожидания условия, утечка моков между тестами, пиксели из styled-файлов вместо поведения
+
+**Промпт для subagent (адаптировать под область):**
+
+> Тебе нужно найти до 5 **высокоуверенных** улучшений (НЕ новых фич) в области `<область — конкретный путь>` проекта. Только то, что уже есть и может работать лучше. Если предложение — это новая функциональность, отбрось.
+>
+> Для каждого кандидата:
+> 1. Прочитай связанный код, проследи реальное использование.
+> 2. Убедись, что это не subjective стилистика, а измеримое улучшение (UX-friction, перфоманс, безопасность, поддерживаемость).
+> 3. Если сомневаешься — отбрось.
+>
+> Верни список в строгом формате:
+>
+> ```
+> N. **[Impact: High|Medium|Low] [Effort: S|M|L]** Краткий заголовок
+>    Файл/место: path/to/file.ts:42 (или область, если общая)
+>    Текущее поведение: что сейчас есть и почему это субоптимально
+>    Предлагаемое улучшение: что конкретно сделать
+>    Почему это важно: измеримая выгода (быстрее на X%, защищает от Y, экономит N кликов)
+>    Это улучшение, не фича: краткое обоснование (функциональность остаётся, но работает лучше)
+> ```
+>
+> **Контекст проекта.** Tutor app для RU рынка; текущая разработка и тестовые стенды на Mac. Frontend — FSD + Effector + MUI + styled-components. Backend — Express + Prisma + PostgreSQL + WebSocket. Конвенции: no `any`, no `export default`, no `useEffect` для data fetching, no `<form>` теги, named exports, error messages на русском, UI на русском. Прежний VPS недоступен; deployment-файлы исторические, не выполнять деплой.
+
+---
+
+## Этап 2. Финальная валидация
+
+Собрать всех кандидатов от subagent'ов. Для каждого:
+
+1. Прочитать упомянутый файл (прочитать файл).
+2. Проверить, что это **не новая фича** (применить тест: если убрать — функциональность исчезнет?). Если фича — отбросить.
+3. Убедиться, что текущее поведение действительно субоптимально (а не «вкусовщина»).
+4. Отбросить **дубликаты** (один кандидат от нескольких агентов — оставить с лучшим описанием).
+5. Отбросить уже сделанное (если уже исправлено в каком-то месте — сослаться на пример или отбросить).
+
+**Если в сумме больше 10 — отобрать самые ценные** по матрице:
+- Сначала **High Impact + Small Effort** (быстрые победы)
+- Затем **High Impact + Medium/Large Effort**
+- Затем **Medium Impact + Small Effort**
+- Low Impact обычно отбрасывать
+
+---
+
+## Этап 3а. Issues (без `--fix`)
+
+### Проверка дублей
+
+Для каждого пункта — минимум два поиска: по месту (имя файла или символа) и по сути (2–4 ключевых слова на русском):
+
+```bash
+gh issue list --repo OWNER/REPO --search "<ключевые слова>" --state all --limit 20 --json number,title,state,stateReason,url
+```
+
+Если достигнут лимит 20, уточнить запросы или продолжить пагинацию: усечённый поиск не доказывает отсутствие дублей. Похожие по заголовку открыть через `gh issue view <N> --repo OWNER/REPO` и сверить суть, а не только слова. Решение:
+
+- **Открытый issue про то же** — новый не создавать. Если в находке есть то, чего в issue нет (другие места, измеренная выгода, вариант решения), — `gh issue comment <N> --repo OWNER/REPO --body-file <файл>` с этим дополнением; иначе ничего не писать.
+- **Закрыт как `NOT_PLANNED`** — не создавать: пользователь уже решил это не делать.
+- **Закрыт как `COMPLETED`, но проблема в текущем коде всё ещё есть** — новый issue, в теле первой строкой «Похоже на возврат проблемы или неполное исправление #N».
+- **Похожий, но про другое** — создавать новый, в теле ссылка «Связано с #N».
+
+### Создание
+
+1. Метки: `gh label create improve-hunt --repo OWNER/REPO --color 1D76DB --description 'Найдено $improve-hunt' --force` (идемпотентно).
+2. Порядок — как в матрице Этапа 2 (Quick Wins первыми). На каждый пункт — один issue:
+
+   ```bash
+   gh issue create --repo OWNER/REPO --title "<краткий заголовок>" --body-file <файл> --label enhancement --label improve-hunt
+   ```
+
+   Тело писать через инструмент записи во временный файл (scratchpad сессии, если есть; иначе `mktemp`), не heredoc. Заголовок — суть улучшения на русском без префиксов impact/effort.
+3. Оценить критичность всех созданных issues одним вызовом: `$score-issues <N1> <N2> …` (scorer по шкале `docs/issue-priority.md`, оценка 0–100 и метка `P0`…`P4` пишутся в issue). Impact/Effort в теле остаются как есть.
+4. Если `gh` недоступен (нет сети/токена) — не терять находки: записать тела в scratchpad, назвать путь пользователю и остановиться.
+
+**Тело issue:**
+
+```markdown
+**Impact:** High | Medium | Low
+**Effort:** S (≤2 ч) | M (полдня) | L (день+)
+**Категория:** UX / Design / Security / Performance / a11y / DX / Maintainability / Hacks
+**Файл/место:** `path/to/file.ts:42` или общая область
+
+## Текущее поведение
+
+Что сейчас есть и почему это субоптимально, с фрагментом кода.
+
+## Предлагаемое улучшение
+
+Что конкретно сделать, с примером кода.
+
+## Почему это важно
+
+Измеримая выгода.
+
+## Это улучшение, не фича
+
+Функциональность сохраняется, просто работает лучше.
+
+---
+Найдено `$improve-hunt` YYYY-MM-DD на `<ветка>@<короткий hash>`.
+```
+
+Итоговое сообщение пользователю (режим issues): сводка `N предложений: High X, Medium Y, Low Z`, затем списком — новые issues (ссылка, критичность 0–100, impact/effort, заголовок; Quick Wins пометить), комментарии к существующим (ссылка, что добавлено) и отброшенные как дубли (ссылка на существующий issue). Подсказать следующий шаг: взять issue в работу отдельной задачей или прогнать `$improve-hunt --fix`.
+
+---
+
+## Этап 3б. Отчёт (`--fix` или `--report`)
+
+1. Если папки `docs/improvement-reports/` нет — `mkdir -p docs/improvement-reports`.
+2. Имя файла: `docs/improvement-reports/YYYY-MM-DD-improve-hunt.md` (если занято — `-2`, `-3`, …).
+3. Записать отчёт по структуре ниже.
+4. **Только для `--fix`:** закоммитить и запушить отчёт в ветку worktree: `git add docs/improvement-reports/<файл>`, `git commit -m "docs(improve-hunt): report YYYY-MM-DD"`, `git push`. PR остаётся draft — что из отчёта брать в работу, решает пользователь.
+
+**Для `--report`:** после записи отчёта вернуть путь и завершить. Не выполнять пункт 4, не переходить к выбору/исправлениям, не коммитить и не пушить.
+
+**Структура отчёта:**
+
+```markdown
+# Improvement Hunt Report — YYYY-MM-DD
+
+**Всего предложений:** N
+**По impact:** High X / Medium Y / Low Z
+**По effort:** S A / M B / L C
+**Покрытые области:** UX, Design, Security, Performance, a11y, DX, Maintainability, Hacks
+
+## Резюме
+
+2–3 предложения о главных направлениях улучшений. Указать топ-3 быстрых побед (High Impact + Small Effort).
+
+## Quick Wins (High Impact + Small Effort)
+
+Быстрый список ссылок на пункты 1–3 ниже, которые стоит сделать в первую очередь.
+
+---
+
+## 1. [Заголовок улучшения]
+
+- **Impact:** High | Medium | Low
+- **Effort:** S (≤2 ч) | M (полдня) | L (день+)
+- **Категория:** UX / Design / Security / Performance / a11y / DX / Maintainability / Hacks
+- **Файл/место:** `path/to/file.ts:42` или общая область
+
+### Текущее поведение
+
+Что сейчас есть и почему это субоптимально. С конкретным примером из кода.
+
+\`\`\`ts
+// текущее
+const x = ...
+\`\`\`
+
+### Предлагаемое улучшение
+
+Конкретно что сделать. С примером кода.
+
+\`\`\`ts
+// после
+const x = ...
+\`\`\`
+
+### Почему это важно
+
+Измеримая выгода: быстрее на X%, защищает от Y, экономит N кликов, улучшает доступность для пользователей с Z, упрощает поддержку.
+
+### Это улучшение, не фича
+
+Короткое обоснование: функциональность сохраняется, просто работает лучше.
+
+---
+
+## 2. ...
+```
+
+---
+
+## Этап 4. Исправление выбранного (✋ checkpoint, только `--fix`)
+
+Аргумент области (например, `frontend --fix`) ограничивает поиск и сам по себе не одобряет ещё неизвестные находки. Если пользователь уже выбрал конкретные пункты отчёта или явно поручил исправить все подтверждённые находки в заданной области, использовать этот выбор. Иначе после готового отчёта — один вопрос пользователю через доступный инструмент вопросов с выбором нескольких пунктов: какие улучшений из отчёта исправить в этом worktree (варианты — пункты отчёта, Quick Wins первыми; плюс «Ничего, только отчёт»). Если выбрано «Ничего» — команда на этом заканчивается.
+
+Выбранное Main исправляет **сам, в основном потоке** (не в sub-agent), по тем же правилам, что Фаза 2 `$auto-bug-fix` (fix + регрессионный тест):
+
+1. Перед правкой — перечитать релевантный `docs/conventions/*.md`.
+2. На каждое исправление — регрессионный тест (frontend → vitest, backend → jest через `bash scripts/dev-stack.sh test-backend`), кроме чисто визуальных правок без логики.
+3. После правок — тесты затронутых файлов, lint затронутых пакетов, `npm --prefix backend run build`, frontend TypeScript; перед коммитом полный `npm run check -- --full` для затронутого frontend/backend кода и отдельные checks scripts/landing/E2E, если они затронуты.
+4. **Без промежуточных коммитов:** правки остаются в рабочем дереве до Этапа 7 (ревью смотрит незакоммиченные фиксы). Commit + push — в Этапе 7 без вопроса; `$news` и `gh pr ready` — только по команде пользователя.
+
+## Этап 5. Code-review loop
+
+Тот же цикл, что Фаза 5 `$auto-feature`: основной оркестратор запускает девять независимых review-ролей и отдельных scorer-агентов через `$code-review-local --base-ref HEAD --silent --threshold 50 --iter <N> --feature improve-hunt-YYYY-MM-DD --worktree <путь worktree>`, Main читает JSON и фиксит findings в основном потоке (с регрессионными тестами), затем следующая итерация. `--base-ref HEAD` обязателен: отчёт уже закоммичен (Этап 3б), фиксы нет, и с base `main` ревью видело бы только отчёт; при пустом `HEAD...HEAD` включается working-tree-режим, и в ревью попадают ровно незакоммиченные фиксы.
+
+- **До 5 итераций.** Выход раньше, если результат сошёлся: findings нет; ≥80% сигнатур (`<category>:<file>:<line_start>:<title-first-30-chars>`) совпадают с прошлой итерацией (convergence: число текущих сигнатур, входящих в предыдущий набор, / число текущих сигнатур; пустой набор — clean); или все оставшиеся findings — score 50 без конкретного вреда (мелочи, которые не стоят ещё одного круга).
+- Не удавшийся после двух попыток фикс — откатить адресным патчем только собственных правок (сохраняя исходные/чужие изменения) и записать в отчёт как оставшийся.
+
+## Этап 6. Manual QA loop
+
+Только если исправления затронули то, что видит пользователь (UI, API-ответы, тексты). Иначе — пропустить и написать почему.
+
+Тот же цикл, что Фаза 6 `$auto-feature` (прочитать её в `.agents/skills/auto-feature/references/procedure.md`): браузерный прогон делает sub-agent с наследуемой моделью Codex через `$manual-qa --context <path>` без `--fix` (тот же промпт), находки подтверждает и чинит Main в основном потоке (с регрессионными тестами), следующий круг перепроверяет исправленное и берёт непройденные сценарии. Отличия:
+
+- Контекст круга — `.qa/contexts/improve-hunt-YYYY-MM-DD-<N>.json` (`.qa/` в `.gitignore`).
+- Спеки нет: в контексте 1-го круга `must_check` = по сценарию на каждое исправление, видимое пользователю (шаги, где проявлялась проблема, и ожидаемое поведение после фикса); остальной план `$manual-qa` строит по diff ветки вместе с незакоммиченными фиксами.
+- Находки, где нужно продуктовое или дизайнерское решение, — спросить пользователя через доступный инструмент вопросов после круга (команда интерактивная), а не откладывать в остаток.
+- **До 5 кругов.** Выход раньше: новых находок нет и все перепроверки прошли (clean); непройденных сценариев нет и в круге ничего не исправлено (exhausted); или новый круг не нашёл ничего ценного (только `low` без конкретного вреда).
+
+## Этап 7. Итог
+
+Если в Этапе 4 что-то исправлено — выполнить завершение task-ветки по `AGENTS.md` и `docs/codex-workflow.md` без повторного согласования: `$changelog --worktree <путь worktree>`, `git add` правок, тестов, CHANGELOG.md и `docs/code-reviews/`/md-отчётов QA (без скриншотов), коммит `fix(improve-hunt): <суть>` (или `perf`/`refactor` по сути), `git push`, затем дождаться чеков PR (`gh pr checks`; упало — `gh run view <run-id> --log-failed`, починить, повторить).
+
+Затем одно сообщение пользователю: путь к отчёту, ссылка на draft PR, что исправлено, hash коммита и итог CI, сколько кругов ревью и QA прошло и почему остановились (чисто / сошлось / cap), что осталось. Предложить следующий шаг: `$news`, `gh pr edit`, `gh pr ready` — только после ответа пользователя.
+
+---
+
+## Ограничения
+
+- **Только улучшения существующего**. Не предлагать новые фичи. Применить тест: «Если убрать — функциональность исчезнет?»
+- **Режим issues — только чтение кода и `gh issue`/`gh label`.** Никаких файлов в репозитории, веток, коммитов и PR.
+- **`--fix`: до checkpoint Этапа 4 — только чтение и запись отчёта.** Прод-код правится только после выбора пользователя в Этапе 4. Из git-операций — локальный task-start и draft PR (Этап 0), коммит отчёта (Этап 3б), а неудавшийся фикс откатывать адресным патчем только собственных изменений; никаких `stash`/`reset`, `gh pr ready` — только по команде пользователя.
+- **Максимум 10 пунктов** за прогон. Приоритизировать по матрице Impact × Effort (Quick Wins сверху).
+- **Не репортить:** typos, чистая стилистика, личные предпочтения, проектные решения без объективных недостатков.
+- **Описания на русском.** Code-сниппеты — как в исходнике.
+- **Файл/место и обоснование выгоды обязательны** для каждого пункта.
+- В финальном текстовом сообщении пользователю (`--fix`) — путь к отчёту, ссылку на draft PR, сводка `N предложений: High X, Medium Y, Low Z` и список Quick Wins; в режиме issues — как в конце Этапа 3а.

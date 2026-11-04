@@ -3,24 +3,16 @@ name: speckit-checklist
 description: "Create a Super App requirements-quality checklist for a chosen feature or domain, rather than a runtime QA test checklist."
 ---
 
-Read `AGENTS.md`, `.specify/memory/constitution.md`, and the exact target
-`specs/<id>-<name>/`. Prefer explicit feature id or `SPECIFY_FEATURE`; strip `codex/`
-from a feature branch only when it identifies an existing spec. Numeric prefixes
-can repeat, and detached HEAD is not a feature id. Use current local paths.
+# speckit-checklist
 
-# Check the requirements themselves
+Use the requested feature and arguments; preserve existing artifact decisions and user scope.
 
-Read the spec and relevant plan/tasks, and `.specify/templates/checklist-template.md`.
-Resolve the requested domain/audience/depth from context; clarify only consequential
-missing scope. Checklist items assess completeness, clarity, consistency, measurability,
-acceptance criteria, alternate/error/recovery paths, nonfunctional requirements,
-dependencies and assumptions. Reference requirement/section IDs when available.
+Read [the complete workflow](references/workflow.md) before acting. It is the
+authoritative procedure for this skill, including parameters, defaults, stages,
+validation loops, report formats and stopping conditions. Do not replace it with
+a shortened approximation. Read only the applicable code/conventions and artifacts
+that this workflow requests.
 
-Write questions such as “Is the invitation-expiry behavior defined for both roles?”
-rather than runtime steps such as “Click invite and verify a toast.” Mark gaps,
-ambiguities and conflicts explicitly; do not presume missing requirements are satisfied.
-Use sequential `CHK001` IDs and a unique `checklists/<domain>.md` (numeric suffix if
-it already exists), unless explicitly asked to update the existing checklist.
-
-Return path, scope, item count and the important gaps. Do not implement the feature
-or mark checklist items done without checking their source requirements.
+Read `AGENTS.md` and `docs/codex-workflow.md` for the current Mac checkout, task-start
+and publication rules; prescribed delegation follows `docs/subagents.md`, using the
+inherited Codex model and maximum supported reasoning for analysis/coding/review.

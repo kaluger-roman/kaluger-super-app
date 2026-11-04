@@ -7,8 +7,9 @@ description: "Create a deduplicated GitHub issue for a confirmed bug, improvemen
 
 Work from the target checkout and read `AGENTS.md` and `docs/issue-priority.md`.
 A request to file an issue, including explicit invocation of this skill, authorizes
-filing and scoring that issue. `--draft` means prepare a local body only. Implicit
-skill selection does not authorize publishing unrelated findings.
+filing and scoring that issue. Apply the automatic finding-publication policy in
+`AGENTS.md` and `docs/codex-workflow.md` when this is a prescribed workflow stage.
+`--draft` and explicit report-only requests prepare local bodies without GitHub writes.
 
 1. Resolve the repository from `git remote get-url origin` and verify with
    `gh repo view --json nameWithOwner,url`. Pass `--repo OWNER/REPO` on issue commands.
@@ -32,6 +33,10 @@ skill selection does not authorize publishing unrelated findings.
    Match the level of detail to the finding; do not invent reproduction evidence.
 5. In draft mode, stop before writes and return the prepared body and proposed score.
    Otherwise check existing labels; use `bug`, `enhancement`, or `documentation` as appropriate.
+   For hunt provenance also preserve `bug-hunt` (B60205) or `improve-hunt`
+   (1D76DB) together with `bug`/`enhancement`; create a missing workflow label with its
+   established description, leaving unrelated labels alone. For planned tasks include
+   stable feature/task IDs and acceptance criteria instead of invented reproduction.
    Use `gh issue create --repo OWNER/REPO --title '...' --body-file PATH --label LABEL`.
    Do not force-update unrelated label definitions. On a timeout/ambiguous response,
    search for the created issue before retrying to avoid duplicates. If blocked,

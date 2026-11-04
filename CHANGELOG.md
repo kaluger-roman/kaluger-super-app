@@ -7,6 +7,9 @@
 
 ### Infrastructure
 - Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
+- Restore detailed command procedures, mandatory checkpoints, resumable JSON state, QA/review contracts, hunt limits and Spec Kit validation without simplifying the original workflow.
+- Restore local task-start PR automation, executable changelog guards, Codex quota-based QA budgets and managed agent-context generation.
+- Restore the VS Code agents and priority-issues panel with a Codex app-server adapter, safe local commands and explicit live-status availability.
 
 ## 2026-11-03
 

@@ -5,7 +5,7 @@ description: "Implement Super App React frontend behavior using its Feature-Slic
 
 # Frontend implementation
 
-Read `frontend/AGENTS.md`, `docs/conventions/frontend.md`, and relevant requirements.
+Read `frontend/AGENTS.md` and ALL conventions in `docs/conventions/frontend.md`, and relevant requirements.
 For tests also read `docs/conventions/frontend-testing.md`. Work in the existing
 FSD layers and public barrel APIs; model state in Effector using `sample`, namespace
 models and scope-bound `useUnit`. Follow established styled components, Russian copy,
@@ -16,3 +16,8 @@ Implement the requested behavior with meaningful model/component tests. Use
 changes use the local dev/QA stack to verify the actual scenario, including realtime
 or multiple roles if affected. Report checks and any browser scenarios not verified.
 Do not deploy or convert landing components to FSD/Effector.
+
+Task setup and completion follow `AGENTS.md` and `docs/codex-workflow.md`; when
+executing as a worker, the orchestrator owns publication. If delegated, inherit the
+configured Codex model with maximum supported reasoning and keep the assigned file
+boundaries from `docs/subagents.md`.

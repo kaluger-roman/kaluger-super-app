@@ -38,6 +38,11 @@ yarn-error.log*
 /landing/.next
 /landing/out
 .worktrees/
+/.codex/workflow/
+/.claude/auto-feature/
+/.claude/auto-bug-fix/
+/.claude/worktrees/
+scripts/vscode-agents/*.vsix
 AGENTS.override.md
 
 # Playwright
