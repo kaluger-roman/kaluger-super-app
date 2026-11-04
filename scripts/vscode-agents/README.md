@@ -25,12 +25,20 @@
 
 ## Подключение и границы
 
-По умолчанию используется `codex app-server proxy` — подключение к **уже работающему
-общему daemon**. Для нестандартного socket задайте `superAgents.rpcArgs`:
+По умолчанию `superAgents.rpcArgs` содержит `app-server proxy`: адаптер подключается
+по WebSocket к Unix-сокету **уже работающего общего daemon**. CLI proxy передаёт
+сырые байты, а Unix listener требует HTTP Upgrade и WebSocket frames, поэтому
+JSONL через proxy здесь не используется. Путь по умолчанию —
+`$CODEX_HOME/app-server-control/app-server-control.sock` либо
+`~/.codex/app-server-control/app-server-control.sock`.
+Для нестандартного socket задайте `superAgents.rpcArgs`:
 
 ```json
 ["app-server", "proxy", "--sock", "/absolute/path/to/app-server-control.sock"]
 ```
+
+Также поддерживается `--sock=/absolute/path.sock`; другие параметры proxy
+отклоняются с ошибкой. Остальные команды `rpcArgs` используют JSONL по stdio.
 
 Панель видит живые статусы только того сервера, к которому подключена. Отдельный
 app-server не знает о живых потоках другого процесса приложения. Если общий socket
@@ -52,8 +60,9 @@ VS Code, задайте абсолютный `superAgents.codexPath` (путь �
 
 ```bash
 cd scripts/vscode-agents
+npm ci
 npx --yes @vscode/vsce package --allow-missing-repository
-code --install-extension super-agents-0.4.0.vsix
+code --install-extension super-agents-0.4.2.vsix
 ```
 
 Либо VS Code → Extensions → Install from VSIX. Перезапустите extension host.
@@ -63,5 +72,6 @@ code --install-extension super-agents-0.4.0.vsix
 
 Проверка: `node --test scripts/__tests__/vscode-agents-lib.test.mjs
 scripts/__tests__/codex-rpc.test.mjs` из корня проекта. Unit/integration fixtures
-проверяют статусы, pagination, ошибки, shell quoting и сохранение списка issues;
+проверяют WebSocket handshake на временном Unix-сокете, stdio fallback, cleanup,
+статусы, pagination, ошибки, shell quoting и сохранение списка issues;
 живой UI VS Code требует отдельной проверки после установки.

@@ -8,6 +8,7 @@
     "test:scripts": "node --test scripts/__tests__/*.test.mjs"
   },
   "devDependencies": {
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^16.4.0",
+    "ws": "^8.22.1"
   }
 }

@@ -2,7 +2,7 @@
   "name": "super-agents",
   "displayName": "Агенты Super App",
   "description": "Сессии Codex, лента действий, уведомления и приоритетные issues Super App",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "publisher": "kalr",
   "license": "UNLICENSED",
   "private": true,
@@ -85,7 +85,7 @@
             "app-server",
             "proxy"
           ],
-          "description": "Аргументы подключения к общему Codex daemon; можно указать proxy --sock PATH"
+          "description": "app-server proxy [--sock PATH] подключается к Unix-сокету daemon по WebSocket; остальные аргументы запускают stdio app-server"
         },
         "superAgents.historyFallback": {
           "type": "boolean",
@@ -331,5 +331,8 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "ws": "^8.22.1"
   }
 }

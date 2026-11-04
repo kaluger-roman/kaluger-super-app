@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "super-app-agents": {
+      "command": "node",
+      "args": ["./server/server.mjs"],
+      "cwd": "."
+    }
+  }
+}

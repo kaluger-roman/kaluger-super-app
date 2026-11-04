@@ -84,14 +84,16 @@ class Store {
   constructor({ settings, createClient = options => new RpcClient(options) }) {
     this.settings = settings; this.createClient = createClient;
     this.tr = new Map(); this.live = []; this.liveIds = new Set(); this.polling = false; this.agentsOk = null;
-    this.client = null; this.historyOnly = false; this.error = null;
+    this.client = null; this.historyOnly = false; this.error = null; this.connectionError = null;
   }
   async connect() {
     if (this.client) return;
+    this.connectionError = null;
     const settings = this.settings();
     this.client = this.createClient({ command: settings.codexPath || 'codex', args: settings.rpcArgs || ['app-server', 'proxy'] });
     try { await this.client.connect(); this.historyOnly = (settings.rpcArgs || []).includes('stdio://'); }
     catch (error) {
+      this.connectionError = error.message;
       this.client.close(); this.client = null;
       if (!settings.historyFallback) throw error;
       this.client = this.createClient({ command: settings.codexPath || 'codex', args: ['app-server', '--listen', 'stdio://'] });
@@ -110,11 +112,19 @@ class Store {
     } while (cursor);
     return result;
   }
-  async readHistory(row) {
+  async readHistory(row, loaded = false) {
     if (row.historyMode !== 'paginated') return (await this.client.request('thread/read', { threadId: row.id, includeTurns: true })).thread;
     const turns = []; let cursor, count = 0;
     do {
-      const page = await this.client.request('thread/turns/list', { threadId: row.id, cursor, limit: 20, sortDirection: 'desc', itemsView: 'full' });
+      let page;
+      try {
+        page = await this.client.request('thread/turns/list', { threadId: row.id, cursor, limit: 20, sortDirection: 'desc', itemsView: 'full' });
+      } catch (error) {
+        // A newly loaded CLI thread has no persisted history before its first
+        // user message. Keep its real live metadata, but do not hide other errors.
+        if (loaded && !cursor && !turns.length && error.message === `thread ${row.id} is not materialized yet; thread/turns/list is unavailable before first user message`) return { ...row, turns: [] };
+        throw error;
+      }
       if (!Array.isArray(page.data)) throw new Error('Некорректный ответ thread/turns/list');
       turns.push(...page.data); count += page.data.reduce((sum, turn) => sum + turn.items.length + 1, 0);
       cursor = page.nextCursor;
@@ -128,11 +138,13 @@ class Store {
       await this.connect();
       const roots = this.settings().roots;
       const rows = await this.list({});
+      const loadedIds = new Set();
       if (!this.historyOnly) {
         let cursor;
         do {
           const loaded = await this.client.request('thread/loaded/list', { cursor, limit: 100 });
           for (const id of loaded.data || []) {
+            loadedIds.add(id);
             const { thread } = await this.client.request('thread/read', { threadId: id });
             const index = rows.findIndex(row => row.id === id);
             if (index >= 0) rows[index] = thread; else rows.push(thread);
@@ -147,7 +159,7 @@ class Store {
         const old = this.tr.get(row.id);
         let view = old;
         if (!old || old.mtime !== row.updatedAt * 1000 || (!this.historyOnly && statusOf(row.status) !== 'off')) {
-          const thread = await this.readHistory(row);
+          const thread = await this.readHistory(row, loadedIds.has(row.id));
           view = threadView(thread, selected.filter(child => child.parentThreadId === row.id));
         }
         next.set(row.id, view);
@@ -156,7 +168,8 @@ class Store {
       this.live = this.historyOnly ? [] : selected.filter(row => !row.parentThreadId && statusOf(row.status) !== 'off').map(row => ({ sessionId: row.id, cwd: row.cwd, name: row.name, status: statusOf(row.status), startedAt: row.createdAt * 1000, kind: 'codex' }));
       this.liveIds = new Set(this.live.map(row => row.sessionId));
       this.childIds = new Set(selected.filter(row => row.parentThreadId).map(row => row.id));
-      this.agentsOk = !this.historyOnly; this.error = this.historyOnly ? 'История доступна; живой статус требует подключения к общему Codex daemon.' : null;
+      this.agentsOk = !this.historyOnly;
+      this.error = this.historyOnly ? 'История доступна; живой статус требует подключения к общему Codex daemon.' + (this.connectionError ? ` Причина: ${this.connectionError}` : '') : null;
     } catch (error) {
       this.agentsOk = false; this.error = error.message;
       // Keep evidence/history, but never present stale status as a live successful poll.

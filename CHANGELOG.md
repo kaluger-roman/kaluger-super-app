@@ -3,9 +3,11 @@
 ## 2026-11-04
 
 ### Fixed
+- Connect the agents panel to the shared Codex daemon using WebSocket over its Unix socket, preserving stdio history fallback when live monitoring is unavailable.
 - Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
 
 ### Infrastructure
+- Add a local Codex plugin with an interactive issues and sessions panel, alongside the VS Code extension.
 - Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
 - Restore detailed command procedures, mandatory checkpoints, resumable JSON state, QA/review contracts, hunt limits and Spec Kit validation without simplifying the original workflow.
 - Restore local task-start PR automation, executable changelog guards, Codex quota-based QA budgets and managed agent-context generation.

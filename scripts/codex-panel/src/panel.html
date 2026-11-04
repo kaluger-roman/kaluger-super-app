@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Агенты Super App</title>
+  <style>/* PANEL_CSS */</style>
+</head>
+<body>
+  <main id="app">
+    <header class="masthead">
+      <div><p class="eyebrow">KALUGER · SUPER APP</p><h1>Работа над проектом</h1><p id="summary" class="muted">Подключение к локальным инструментам…</p></div>
+      <button id="refresh" class="btn" type="button">↻ Обновить</button>
+    </header>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <nav class="tabs" aria-label="Раздел панели">
+      <button type="button" data-tab="issues" aria-current="page">Issues <span id="issueCount">—</span></button>
+      <button type="button" data-tab="sessions">Сессии <span id="sessionCount">—</span></button>
+    </nav>
+    <section id="issuesPage">
+      <div class="toolbar"><label class="search"><span class="sr-only">Поиск issues</span><input id="issueSearch" type="search" placeholder="Номер, название или метка…"></label><label><span class="sr-only">Приоритет</span><select id="priority"><option value="all">Все приоритеты</option><option value="80">P0 · 80–100</option><option value="60">P1 · 60–79</option><option value="40">P2 · 40–59</option><option value="20">P3 · 20–39</option><option value="0">P4 · 0–19</option><option value="unscored">Без оценки</option></select></label></div>
+      <div id="issueMeta" class="meta muted"></div>
+      <div id="issues" class="issues"><div class="empty">Загружаю открытые issues…</div></div>
+    </section>
+    <section id="sessionsPage" hidden>
+      <p id="sessionBoundary" class="boundary"></p>
+      <div class="toolbar"><label class="search"><span class="sr-only">Поиск сессий</span><input id="sessionSearch" type="search" placeholder="Название, issue или ветка…"></label><label><span class="sr-only">Статус</span><select id="sessionFilter"><option value="all">Все сессии</option><option value="live">Живые · общий daemon</option><option value="needs">Нужно действие</option><option value="history">История</option></select></label></div>
+      <div class="sessionLayout"><div id="sessions"></div><section id="inspector" class="inspector"><div class="empty">Выберите сессию, чтобы увидеть ленту, ветку и PR.</div></section></div>
+    </section>
+    <footer id="connection" class="muted">Локальный плагин · только чтение GitHub и статусов Codex</footer>
+  </main>
+  <dialog id="issueDialog" aria-labelledby="issueTitle">
+    <form method="dialog"><button class="close" aria-label="Закрыть">×</button></form>
+    <p class="eyebrow">ВЗЯТЬ В РАБОТУ</p><h2 id="issueTitle"></h2>
+    <label class="form-label" for="workflow">Workflow</label><select id="workflow"><option value="plain">Обычная задача</option><option value="bug">auto-bug-fix · диагностика и исправление</option><option value="feature">auto-feature · спецификация и реализация</option></select>
+    <p class="muted small">Откроется новый редактируемый черновик. Отправьте его в Codex, чтобы начать выбранный процесс.</p>
+    <label class="form-label" for="issuePrompt">Запрос</label><textarea id="issuePrompt" rows="7" readonly></textarea>
+    <div class="row actions"><button id="copyPrompt" class="btn" type="button">Копировать</button><button id="draftIssue" class="btn btn-primary" type="button">Открыть новый черновик</button></div>
+    <p id="draftStatus" class="small" role="status"></p>
+  </dialog>
+  <script>/* PANEL_SCRIPT */</script>
+</body>
+</html>

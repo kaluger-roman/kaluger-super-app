@@ -4,6 +4,7 @@
 const vscode = require("vscode");
 const { execFileSync } = require("node:child_process");
 const path = require("path");
+const { proxySocketPath } = require("./rpc.cjs");
 const {
   STATE,
   NEEDS_YOU,
@@ -439,9 +440,9 @@ const activate = (ctx) => {
     // Opening a running shared thread attaches a TUI; no new prompt is sent.
     const s = store.session(id);
     if (!s.live) return resume(id);
-    const args = cfg().get("rpcArgs") || [];
-    const sockIndex = args.indexOf("--sock");
-    const endpoint = sockIndex >= 0 ? `unix://${args[sockIndex + 1]}` : "unix://";
+    const args = cfg().get("rpcArgs") || ["app-server", "proxy"];
+    const socketPath = proxySocketPath(args);
+    const endpoint = socketPath ? `unix://${socketPath}` : "unix://";
     const command = `${resumeCommand(id, cfg().get("codexPath"))} --remote ${shellQuote(endpoint)}`;
     sessionTerminals.set(id, terminal(one(displayName(s), 40), launchCwd(s), command));
   };

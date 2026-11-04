@@ -53,6 +53,48 @@ test('store paginates and includes old loaded threads, filters unrelated paths, 
   assert.equal(store.byIssue.get(12).id,'b'); assert.equal(store.byId('other'),null);
 });
 
+test('loaded empty paginated thread retains its live status before the first user message and loads later history',async()=>{
+  let materialized=false;
+  const empty=row('empty',{historyMode:'paginated',preview:'',name:null});
+  const archived=row('history',{status:{type:'notLoaded'},turns:[{status:'completed',items:[{id:'answer',type:'agentMessage',text:'saved answer'}]}]});
+  const client={connect:async()=>{},close(){},request:async(method,args)=>{
+    if(method==='thread/list')return {data:[archived],nextCursor:null};
+    if(method==='thread/loaded/list')return {data:['empty'],nextCursor:null};
+    if(method==='thread/read')return {thread:args.threadId==='empty'?{...empty,status:{type:materialized?'active':'idle',activeFlags:[]}}:archived};
+    if(method==='thread/turns/list'){
+      if(!materialized)throw Error('thread empty is not materialized yet; thread/turns/list is unavailable before first user message');
+      return {data:[{status:'inProgress',items:[{id:'first',type:'userMessage',content:[{type:'text',text:'first prompt'}]}]}],nextCursor:null};
+    }
+    throw Error(method);
+  }};
+  const store=new Store({settings,createClient:()=>client});await store.refresh();
+  assert.equal(store.agentsOk,true);assert.equal(store.error,null);
+  assert.deepEqual(store.liveSessions.map(session=>[session.id,stateOf(session)]),[['empty','idle']]);
+  assert.deepEqual(store.byId('empty').feed,[]);assert.equal(store.recentSessions[0].tr.lastText.text,'saved answer');
+  materialized=true;await store.refresh();
+  assert.equal(store.agentsOk,true);assert.equal(stateOf(store.liveSessions[0]),'busy');
+  assert.equal(store.byId('empty').lastPrompt,'first prompt');assert.equal(store.byId('empty').feed[0].kind,'user');
+});
+
+test('history errors other than the precise loaded-before-first-message case remain visible',async()=>{
+  for(const [loaded,message] of [
+    [true,'permission denied'],
+    [true,'disconnected'],
+    [true,'thread another is not materialized yet; thread/turns/list is unavailable before first user message'],
+    [false,'thread target is not materialized yet; thread/turns/list is unavailable before first user message'],
+  ]){
+    const thread=row('target',{historyMode:'paginated'});
+    const client={connect:async()=>{},close(){},request:async method=>{
+      if(method==='thread/list')return {data:[thread],nextCursor:null};
+      if(method==='thread/loaded/list')return {data:loaded?['target']:[],nextCursor:null};
+      if(method==='thread/read')return {thread};
+      throw Error(message);
+    }};
+    const store=new Store({settings,createClient:()=>client});await store.refresh();
+    assert.equal(store.agentsOk,false);assert.equal(store.error,message);assert.equal(store.liveSessions.length,0);
+  }
+});
+
 test('failed poll clears live status and retains known history with explicit error',async()=>{
   let fail=false;
   const client={connect:async()=>{},close(){},request:async method=>{
@@ -72,6 +114,7 @@ test('fallback exposes history only, never fabricated live sessions',async()=>{
     return {connect:async()=>{if(first)throw Error('no daemon')},close(){},request:async method=>method==='thread/list'?{data:[row('a')]}:{thread:row('a')}};
   }});
   await store.refresh();assert.equal(store.historyOnly,true);assert.equal(store.liveSessions.length,0);assert.equal(store.recentSessions.length,1);assert.match(store.error,/живой статус/);
+  assert.equal(store.connectionError,'no daemon');assert.match(store.error,/Причина: no daemon/);
 });
 
 test('issue commands preserve literal quotes, dollar, backticks and newlines as one prompt',()=>{

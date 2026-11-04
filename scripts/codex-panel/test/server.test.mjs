@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mkdtemp, readFile, rm, writeFile, cp, chmod, stat } from 'node:fs/promises';
+import { join, dirname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createPanelServer, PANEL_URI } from '../src/server.mjs';
+import { buildPlugin } from '../build.mjs';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+test('MCP discovery advertises independent global/thread entrypoints and a locked-down UI resource', async t => {
+  const calls = [];
+  const snapshot = { issues: { items: [] }, sessions: { items: [] } };
+  const data = { snapshot: () => snapshot, state: async () => snapshot, session: async id => ({ id }), prepareIssue: async args => { calls.push(args); return { prompt: 'prepared' }; } };
+  const server = createPanelServer({ data, html: '<!doctype html><title>Panel</title>', icon: '<svg/>' });
+  const client = new Client({ name: 'panel-test', version: '1' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  t.after(async () => { await client.close(); await server.close(); });
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  const { tools } = await client.listTools();
+  assert.equal(tools.length, 5);
+  assert.deepEqual(tools.find(tool => tool.name === 'super_app_home')._meta['openai/ui'].entrypoints, [{ type: 'global' }]);
+  assert.deepEqual(tools.find(tool => tool.name === 'super_app_panel')._meta['openai/ui'].entrypoints, [{ type: 'thread' }]);
+  assert.ok(tools.every(tool => tool.annotations.readOnlyHint && !tool.annotations.destructiveHint));
+  assert.equal((await client.callTool({ name: 'super_app_panel', arguments: {} })).isError, undefined);
+  const { resources } = await client.listResources();
+  assert.equal(resources[0].uri, PANEL_URI);
+  const { contents } = await client.readResource({ uri: PANEL_URI });
+  assert.equal(contents[0].mimeType, 'text/html;profile=mcp-app');
+  assert.deepEqual(contents[0]._meta.ui.csp, { connectDomains: [], resourceDomains: [] });
+  assert.equal(contents[0]._meta['openai/ui'].preferredDisplayMode, 'fullscreen');
+  assert.equal((await client.callTool({ name: 'super_app_prepare_issue', arguments: { number: 7, mode: 'feature' } })).structuredContent.prompt, 'prepared');
+  assert.deepEqual(calls, [{ number: 7, mode: 'feature' }]);
+  const invalid = await client.callTool({ name: 'super_app_prepare_issue', arguments: { number: 7, mode: 'arbitrary-command' } });
+  assert.equal(invalid.isError, true);
+  assert.equal(calls.length, 1);
+});
+
+test('the installed package runs over stdio outside the repository without node_modules', { timeout: 30000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'super-app-panel-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const built = await buildPlugin({ outdir: join(directory, 'built/super-app-agents') });
+  const installed = join(directory, 'cache/super-app-agents');
+  await cp(built, installed, { recursive: true });
+  const gh = join(directory, 'fake-gh');
+  const codex = join(directory, 'fake-codex');
+  const ghCalls = join(directory, 'gh-calls.jsonl');
+  await writeFile(gh, `#!${process.execPath}\nconst fs=require('node:fs');fs.appendFileSync(process.env.TEST_GH_CALLS,JSON.stringify(process.argv.slice(2))+'\\n');console.log(JSON.stringify([{number:7,title:'Проверка',url:'https://github.com/kaluger-roman/kaluger-super-app/issues/7',body:'Критичность: 88/100',labels:[]}]));\n`);
+  await writeFile(codex, `#!${process.execPath}\nconst rl=require('node:readline').createInterface({input:process.stdin});const now=Math.floor(Date.now()/1000);const thread={id:'test-thread',cwd:process.env.SUPER_APP_REPO_ROOT,createdAt:now,updatedAt:now,name:'Проверка issue #7',preview:'issue #7',status:{type:'notLoaded'},turns:[{status:'completed',startedAt:now,completedAt:now,items:[{id:'a',type:'agentMessage',text:'Готово: https://github.com/kaluger-roman/kaluger-super-app/pull/8'},{id:'secret',type:'reasoning',text:'PRIVATE_REASONING'}]}]};rl.on('line',line=>{const req=JSON.parse(line);if(req.id===undefined)return;let result={};if(req.method==='initialize')result={};else if(req.method==='thread/list')result={data:[thread]};else if(req.method==='thread/read')result={thread};else if(req.method==='thread/loaded/list')result={data:[]};console.log(JSON.stringify({jsonrpc:'2.0',id:req.id,result}));});\n`);
+  await Promise.all([chmod(gh, 0o755), chmod(codex, 0o755)]);
+  const client = new Client({ name: 'installed-test', version: '1' });
+  const nativeConfig = JSON.parse(await readFile(join(installed, '.mcp.json'), 'utf8')).mcpServers['super-app-agents'];
+  assert.deepEqual(nativeConfig.args, ['./server/server.mjs']);
+  assert.equal(nativeConfig.cwd, '.');
+  const transport = new StdioClientTransport({
+    command: nativeConfig.command, args: nativeConfig.args, cwd: resolve(installed, nativeConfig.cwd), stderr: 'pipe',
+    env: { ...process.env, SUPER_APP_REPO_ROOT: directory, SUPER_APP_GH_PATH: gh, SUPER_APP_CODEX_PATH: codex, SUPER_APP_CODEX_SOCKET: join(directory, 'absent.sock'), TEST_GH_CALLS: ghCalls },
+  });
+  let stderr = '';
+  transport.stderr?.on('data', data => { stderr += data; });
+  t.after(() => client.close());
+  await client.connect(transport).catch(error => { throw new Error(`${error.message}\n${stderr}`, { cause: error }); });
+  const result = await client.callTool({ name: 'super_app_state', arguments: { fresh: true } });
+  assert.equal(result.isError, undefined, stderr);
+  assert.equal(result.structuredContent.issues.items[0].score, 88);
+  assert.equal(result.structuredContent.issues.error, null);
+  assert.equal(result.structuredContent.sessions.mode, 'history');
+  assert.equal(result.structuredContent.sessions.items[0].pr.num, 8);
+  const feed = await client.callTool({ name: 'super_app_session', arguments: { id: 'test-thread' } });
+  assert.doesNotMatch(JSON.stringify(feed), /PRIVATE_REASONING/);
+  assert.match(JSON.stringify(feed), /Готово/);
+  const prepared = await client.callTool({ name: 'super_app_prepare_issue', arguments: { number: 7, mode: 'bug' } });
+  assert.match(prepared.structuredContent.prompt, /^\$auto-bug-fix --new/);
+  const calls = (await readFile(ghCalls, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 2), ['issue', 'list']);
+  const resource = await client.readResource({ uri: PANEL_URI });
+  const html = resource.contents[0].text;
+  assert.match(html, /Открыть новый черновик/);
+  assert.doesNotMatch(html, /PANEL_SCRIPT|PANEL_CSS|<script[^>]+src=/);
+  await assert.rejects(stat(join(installed, 'plugin.json')), { code: 'ENOENT' });
+  const portable = JSON.parse(await readFile(join(directory, 'built/portable/super-app-agents/plugin.json'), 'utf8'));
+  const compat = JSON.parse(await readFile(join(installed, '.codex-plugin/plugin.json'), 'utf8'));
+  assert.equal(portable.name, compat.name);
+  assert.equal(portable.version, compat.version);
+  assert.deepEqual(portable.extensions['com.openai'].interface, compat.interface);
+  assert.ok(portable.extensions['com.openai'].interface.shortDescription.length <= 30);
+  assert.equal(stderr, '');
+});

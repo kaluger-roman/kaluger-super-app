@@ -56,6 +56,7 @@ profiles снова есть в `.github/agents/`; доступность extens
 | repo-git | `scripts/repo-git.sh`: прежние Git аргументы локально; удалённое sshfs dispatch намеренно отсутствует, согласно переносу на Mac |
 | Agent context | `.specify/scripts/bash/update-agent-context.sh`: alias codex и прежние agent names, Bash3.2 wrapper, atomically updated managed block без стирания ручного текста |
 | Панель агентов | [VS Code extension](../scripts/vscode-agents/README.md): 3 views/14 commands, feed/status/notifications, issue board/start/resume; Codex app-server adapter |
+| Панель внутри Codex | [Локальный плагин](../scripts/codex-panel/README.md): MCP App с global/thread entrypoints, issues/приоритеты, сессии/лента и подготовка выбранного workflow |
 | Живой мониторинг | Нужен общий daemon/socket с наблюдаемыми threads; отдельный app-server читает историю, но не выдаётся за live monitor desktop-процесса |
 | State и артефакты | Полный state JSON, legacy import, уникальные iter/report paths, screenshots/state ignored; product specs и конвенции сохранены |
 | Worktrees | Назначенный worktree переиспользуется; новая задача из main изолируется локально. Нет SSH/home и общих node_modules |
