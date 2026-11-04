@@ -14,4 +14,6 @@
 - [x] По отдельному разрешению остановить старые dev/QA-контейнеры и obsolete cron.
 - [x] Обновить runbook, infrastructure boundary и changelog.
 - [x] Выполнить локальные scripts-проверки: 195 passed / 145 Linux-only skipped.
-- [ ] Завершить повторное review, commit/push и дождаться CI draft PR #206.
+- [x] Завершить повторное review: 9/9 ролей, 0 findings; commit/push в draft PR #206.
+- [x] Дождаться CI конфигурации: frontend и все три test shards, merge reports,
+  Linux/macOS scripts и changelog gate прошли (run 41906967238, commit a65a98a).

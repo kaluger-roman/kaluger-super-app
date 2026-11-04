@@ -106,5 +106,12 @@
       "f1"
     ],
     "verification": "Исправлена условная цепочка pg_dump/gzip/mv; девять независимых ролей повторно проверили финальный diff."
-  }
+  },
+  "post_review_changes": [
+    {
+      "file": "specs/041-home-production/tasks.md",
+      "scope": "Только отметка фактически завершённых review/publication/CI; конфигурация и исходники после review не менялись.",
+      "verification": "CI run 41906967238 для a65a98a прошёл; финальная отметка проверена оркестратором."
+    }
+  ]
 }
