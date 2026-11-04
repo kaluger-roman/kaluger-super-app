@@ -3,6 +3,7 @@
 ## 2026-11-04
 
 ### Fixed
+- Show separate plain-task, auto-bug-fix and auto-feature actions on each issue in the Codex panel.
 - Connect the agents panel to the shared Codex daemon using WebSocket over its Unix socket, preserving stdio history fallback when live monitoring is unavailable.
 - Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
 

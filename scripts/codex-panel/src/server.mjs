@@ -18,7 +18,7 @@ const handled = callback => async args => {
 
 export const createPanelServer = ({ data, html, icon }) => {
   const icons = [{ src: `data:image/svg+xml,${encodeURIComponent(icon)}`, mimeType: 'image/svg+xml' }];
-  const server = new McpServer({ name: 'super-app-agents', title: 'Агенты Super App', version: '0.1.2', icons });
+  const server = new McpServer({ name: 'super-app-agents', title: 'Агенты Super App', version: '0.1.3', icons });
   registerAppResource(server, 'super-app-panel', PANEL_URI, { title: 'Агенты Super App' }, async () => ({
     contents: [{
       uri: PANEL_URI, mimeType: RESOURCE_MIME_TYPE, text: html,

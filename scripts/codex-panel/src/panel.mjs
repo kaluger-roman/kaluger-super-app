@@ -2,7 +2,7 @@ import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextp
 import { OpenAIExtensions } from '@openai/mcp-extensions/app';
 import { openIssueDraft, safeGithubUrl } from './bridge.mjs';
 
-const app = new App({ name: 'Super App agents', version: '0.1.2' }, { availableDisplayModes: ['inline', 'fullscreen'] });
+const app = new App({ name: 'Super App agents', version: '0.1.3' }, { availableDisplayModes: ['inline', 'fullscreen'] });
 const extensions = new OpenAIExtensions(app);
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -41,7 +41,11 @@ const renderIssues = () => {
     <div><button class="issueTitle" data-open-issue="${issue.number}"><span class="number">#${issue.number}</span>${esc(issue.title)}</button>
       ${issue.why ? `<p class="issueWhy">${esc(issue.why)}</p>` : ''}<div class="row">${issue.labels.map(label => `<span class="badge">${esc(label)}</span>`).join('')}
       ${issue.sessionId ? `<button class="sessionLink" data-session="${esc(issue.sessionId)}">↗ Есть сессия</button>` : ''}</div></div>
-    <button class="btn" data-take="${issue.number}" ${connected ? '' : 'disabled'}>Взять в работу</button></article>`).join('') : `<div class="empty">${state?.issues.error && !state?.issues.at ? 'Issues пока недоступны. Подробности — выше.' : 'Issues по этому фильтру нет.'}</div>`;
+    <div class="issueActions">
+      <button class="btn" data-take="${issue.number}" data-mode="plain" ${connected ? '' : 'disabled'}>Взять в работу</button>
+      <button class="btn" data-take="${issue.number}" data-mode="bug" ${connected ? '' : 'disabled'}>Через auto-bug-fix</button>
+      <button class="btn" data-take="${issue.number}" data-mode="feature" ${connected ? '' : 'disabled'}>Через auto-feature</button>
+    </div></article>`).join('') : `<div class="empty">${state?.issues.error && !state?.issues.at ? 'Issues пока недоступны. Подробности — выше.' : 'Issues по этому фильтру нет.'}</div>`;
 };
 const visibleSessions = () => {
   const query = $('#sessionSearch').value.trim().toLocaleLowerCase('ru');
@@ -125,10 +129,10 @@ const prepare = async () => {
     if (!extensions.message) $('#draftStatus').textContent = 'Хост не поддерживает новый черновик. Скопируйте запрос и откройте новый чат.';
   } catch (error) { if (seq === prepareSequence) $('#draftStatus').textContent = error.message; }
 };
-const takeIssue = async number => {
+const takeIssue = async (number, mode = 'plain') => {
   const issue = state?.issues.items.find(row => row.number === number);
   if (!issue || !connected) return;
-  selectedIssue = number; $('#issueTitle').textContent = `#${number} ${issue.title}`; $('#workflow').value = 'plain'; $('#issuePrompt').value = '';
+  selectedIssue = number; $('#issueTitle').textContent = `#${number} ${issue.title}`; $('#workflow').value = mode; $('#issuePrompt').value = '';
   $('#issueDialog').showModal(); await prepare();
 };
 
@@ -150,7 +154,7 @@ document.addEventListener('click', event => {
   const button = event.target.closest('button');
   if (!button) return;
   if (button.dataset.tab) showTab(button.dataset.tab);
-  if (button.dataset.take) takeIssue(Number(button.dataset.take));
+  if (button.dataset.take) takeIssue(Number(button.dataset.take), button.dataset.mode);
   if (button.dataset.session) selectSession(button.dataset.session);
   if (button.dataset.pr) openUrl(button.dataset.pr).catch(error => notice(error.message));
   if (button.dataset.openIssue) {
