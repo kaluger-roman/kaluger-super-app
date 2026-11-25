@@ -1,0 +1,36 @@
+name: super-app-production-edge
+
+services:
+  caddy:
+    image: ${CADDY_IMAGE:?set the Caddy image digest}
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    environment:
+      PROD_LAN_IP: ${PROD_LAN_IP:?set the reserved LAN address}
+      PROD_PORT: ${PROD_PORT:-8080}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - ./landing:/srv/landing:ro
+      - ./state:/srv/state:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        until ip -4 addr show | grep -Fq "inet $$PROD_LAN_IP/"; do
+          sleep 2
+        done
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  caddy-data:
+  caddy-config:

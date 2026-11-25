@@ -27,6 +27,7 @@ services:
     logging: *logging
 
   backend:
+    image: ${PROD_BACKEND_IMAGE:-super-app-production-backend}
     build:
       context: backend
       dockerfile: ../infra/production/backend.Dockerfile
@@ -42,7 +43,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: [CMD, curl, -fsS, http://127.0.0.1:3001/health]
+      test: [CMD, curl, -fsS, 'http://127.0.0.1:3001/health']
       interval: 10s
       timeout: 4s
       retries: 12
@@ -50,6 +51,7 @@ services:
     logging: *logging
 
   web:
+    image: ${PROD_WEB_IMAGE:-super-app-production-web}
     build:
       context: frontend
       dockerfile: ../infra/production/frontend.Dockerfile
@@ -65,7 +67,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/health]
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1/health']
       interval: 10s
       timeout: 4s
       retries: 12

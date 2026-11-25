@@ -1,0 +1,9 @@
+turn.tutor.kaluger.ru {
+	bind {$PROD_LAN_IP}
+	respond 404
+}
+
+http://turn.tutor.kaluger.ru {
+	bind {$PROD_LAN_IP}
+	redir https://{host}{uri} 308
+}

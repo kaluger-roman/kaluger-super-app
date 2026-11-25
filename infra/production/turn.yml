@@ -1,0 +1,22 @@
+name: super-app-production-turn
+
+services:
+  turn:
+    image: ${TURN_IMAGE:?set the coturn image digest}
+    network_mode: host
+    user: '1000:1000'
+    restart: unless-stopped
+    read_only: true
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./certs:/certs:ro
+    command: ['-c', /etc/coturn/turnserver.conf]
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

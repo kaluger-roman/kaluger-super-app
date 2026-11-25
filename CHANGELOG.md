@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-24
+
+### Infrastructure
+- Serve the production app and tutor landing over HTTPS on home and provide a dedicated TURN relay configuration.
+- Replace the VPS deploy workflow with main-branch releases pulled by home, with pre-deploy backups and GitHub verification of the live revision.
+- Store encrypted PostgreSQL dumps and production environment files in a separate private backup repository.
+
 ## 2026-11-04
 
 ### Fixed

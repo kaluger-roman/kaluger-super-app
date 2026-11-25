@@ -99,14 +99,11 @@ the root package provides development tooling, not npm workspaces.
   diagnosis. These are the user's workflow checkpoints, not optional defaults.
   Already recorded approvals remain valid unless the reviewed artifact changes.
 
-## Infrastructure boundary (2026-11-04)
+## Infrastructure boundary (2026-11-24)
 
 Development runs on this Mac: checkout, worktrees, Docker, servers and browsers.
-The former VPS is unavailable. `home` is the production recovery host, restored
-from offsite backups, with private LAN/Tailscale access only. See
-`docs/ops/home-production.md`. Production operations (SSH, restore, deployment)
-require an explicit operational request; the owner authorized the initial migration
-on 2026-11-04. Routine development never connects to or changes production.
-The existing deploy workflow and older ops runbooks describe the lost VPS, not
-this Docker stack. Public DNS, TURN and offsite migration are separate stages.
+The former VPS is unavailable. `home` hosts public production and also has
+private LAN/Tailscale access. `docs/ops/home-production.md` is the active runbook.
+Production operations (SSH, restore, deployment) require an explicit operational
+request. Routine development does not connect to or change production.
 Never use real production data for tests or delete recovery copies in dev cleanup.
