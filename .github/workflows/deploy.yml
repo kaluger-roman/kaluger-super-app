@@ -37,6 +37,8 @@ jobs:
             if active=$(curl -fsS --max-time 8 "$PRODUCTION_URL/.well-known/kaluger-production-revision" 2>/dev/null) &&
                [[ "$active" == "$GITHUB_SHA" ]] &&
                curl -fsS --max-time 8 "$PRODUCTION_URL/health" >/dev/null &&
+               landing=$(curl -fsS --max-time 8 https://teacher.kaluger.ru/.well-known/kaluger-production-revision 2>/dev/null) &&
+               [[ "$landing" == "$GITHUB_SHA" ]] &&
                curl -fsS --max-time 8 https://teacher.kaluger.ru/ >/dev/null; then
               printf 'Revision %s is live on home\n' "$active"
               exit 0

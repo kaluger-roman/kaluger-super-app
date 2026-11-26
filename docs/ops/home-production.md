@@ -171,9 +171,10 @@ dc exec -T db pg_dump -U postgres -d tutor_app | gzip > "$BACKUP_FILE.tmp" &&
 
 `prepare-offsite.sh` на home берёт свежий `pg_dump` и соединяет его с `backend.env`,
 `db.env` и `compose.env` в tar-поток через `age`. В Caddy попадает только шифротекст.
-Файл выдаётся по HTTPS с отдельной учётной записью `backup`. Её пароль находится
-в секрете `BACKUP_DOWNLOAD_PASSWORD` в закрытом `kaluger-super-app-backups`, хеш в
-`caddy/app/offsite.caddy`. Шаблоны workflow и Caddy — в `infra/production/`.
+Файл выдаётся по HTTPS с учётной записью `backup`. После загрузки GitHub
+скачивает артефакт обратно, сравнивает байты и отправляет его SHA-256 через
+отдельную учётную запись `backup_receipt`. Пароли хранятся в секретах закрытого
+`kaluger-super-app-backups`, хеши в `caddy/app/offsite.caddy`.
 
 Три раза в сутки GitHub сохраняет артефакт `production.age` на 90 дней. У home
 есть только открытый ключ age, а закрытый `identity.age` и проверенный бинарник
@@ -185,9 +186,12 @@ backup_home=~/.local/share/kaluger-super-app-backups
 "$backup_home/bin/age" -d -i "$backup_home/identity.age" production.age | tar -tf -
 ```
 
-Дата последней сохранённой копии в админке берётся из подтверждения GitHub после
-успешной загрузки. Проверку расшифровки и `gzip -t` проводите на Mac. Старые отчёты
-о диске и тестовом SQL-восстановлении относятся к схеме VPS → home.
+Подтверждение GitHub связывает шифротекст с SHA-256 исходного дампа и обновляет
+дату внешней копии в админке. Один раз в сутки home сверяет тот же дамп и
+восстанавливает его во временный PostgreSQL без сети и с хранилищем в памяти.
+`check-offsite.sh` пишет результат в `.offsite-restore-check.json`.
+Приложение использует его для алертов об ошибке и просрочке проверки.
+Закрытый ключ age для восстановления внешней копии остаётся на Mac.
 В приложении включены дампы с интервалом около семи часов. Для внешней копии
 нужен дамп моложе суток; при его отсутствии workflow завершится ошибкой.
 

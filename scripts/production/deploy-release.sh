@@ -100,6 +100,8 @@ compose "$release" build backend web
 docker buildx build --output "type=local,dest=$landing" \
   -f "$release/infra/production/landing.Dockerfile" "$release/landing"
 test -s "$landing/index.html"
+mkdir -p "$landing/.well-known"
+printf '%s\n' "$revision" >"$landing/.well-known/kaluger-production-revision"
 find "$landing" -type d -exec chmod 755 {} +
 find "$landing" -type f -exec chmod 644 {} +
 if [[ ! -d $edge/landing/$revision ]]; then mv -T "$landing" "$edge/landing/$revision"; fi

@@ -2,7 +2,10 @@ name: super-app-production-turn
 
 services:
   turn:
-    image: ${TURN_IMAGE:?set the coturn image digest}
+    image: super-app-production-turn:4.19.2-r0
+    build:
+      context: ./image
+      dockerfile: turn.Dockerfile
     network_mode: host
     user: '1000:1000'
     restart: unless-stopped
@@ -14,6 +17,7 @@ services:
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
       - ./certs:/certs:ro
+    entrypoint: [/usr/local/bin/production-turnserver]
     command: ['-c', /etc/coturn/turnserver.conf]
     logging:
       driver: json-file

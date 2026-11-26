@@ -2,7 +2,7 @@
 # Home side, hourly from crontab (self-throttled to once per
 # OFFSITE_RESTORE_INTERVAL_HOURS): restore the newest intact copy into a
 # throwaway Postgres 16 container without network, check that users, students
-# and lessons are present and non-empty, and report the result to prod.
+# and lessons are present and non-empty, and report the result.
 # Usage: restore-check.sh [--force]. See docs/ops/offsite-backups.md.
 set -euo pipefail
 
@@ -209,9 +209,15 @@ check_newest_copy
 remove_container
 
 report_status=0
-# shellcheck disable=SC2029 # the report is plain words, expanded locally on purpose
-ssh "${SSH_OPTS[@]}" "$OFFSITE_HOST" report-restore-check "${report[@]}" \
-  </dev/null >/dev/null 2>"$details" || report_status=$?
+if [[ -n ${OFFSITE_RESTORE_REPORT_DIR:-} ]]; then
+  SSH_ORIGINAL_COMMAND="report-restore-check ${report[*]}" \
+    bash "$SCRIPT_DIR/prod-ssh-wrapper.sh" "$OFFSITE_RESTORE_REPORT_DIR" \
+    </dev/null >/dev/null 2>"$details" || report_status=$?
+else
+  # shellcheck disable=SC2029 # the report is plain words, expanded locally on purpose
+  ssh "${SSH_OPTS[@]}" "$OFFSITE_HOST" report-restore-check "${report[@]}" \
+    </dev/null >/dev/null 2>"$details" || report_status=$?
+fi
 if ((report_status != 0)); then
   log ERROR "could not report the result to prod (exit $report_status): $(tail -n 3 "$details" | tr '\n' ' ')"
   exit 1

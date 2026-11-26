@@ -3,8 +3,9 @@
 // Run: node --test scripts/__tests__/
 import { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -99,6 +100,46 @@ test("runs an isolated, labelled postgres 16 container and always removes it", (
   );
   assert.equal(calls.at(-1), "rm -fv cid-test");
 });
+
+test("reports directly to the production backup directory when both are on home", () => {
+  const newest = writeCopy(1);
+  const res = runCheck(["--force"], { OFFSITE_RESTORE_REPORT_DIR: fx.prod });
+
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(existsSync(fx.env.SSH_STUB_LOG), false);
+  assert.deepEqual(prodResult(), {
+    fileName: newest,
+    status: "success",
+    counts: { users: 7, students: 7, lessons: 7 },
+  });
+});
+
+for (const corrupt of [false, true]) {
+  test(corrupt ? "rejects a dump whose digest differs from the offsite receipt" : "restores the confirmed dump even when a newer local dump exists", () => {
+    const offsite = join(fx.root, "offsite");
+    mkdirSync(offsite);
+    mkdirSync(join(fx.root, "backups"));
+    for (const scriptName of ["restore-check.sh", "lib.sh", "prod-ssh-wrapper.sh"]) {
+      copyFileSync(join(SCRIPTS_DIR, scriptName), join(offsite, scriptName));
+    }
+    const name = backupName(NOW - DAY_MS);
+    const dump = gzip(DUMP_SQL);
+    writeFileSync(join(fx.root, "backups", name), dump);
+    writeFileSync(join(fx.root, "backups", backupName(NOW)), dump);
+    const digest = corrupt ? "0".repeat(64) : createHash("sha256").update(dump).digest("hex");
+    writeFileSync(join(offsite, "confirmed"), name + " " + digest + "\n");
+    const checker = join(SCRIPTS_DIR, "../production/check-offsite.sh");
+    const result = spawnSync("bash", [checker, fx.root, "--force"], {
+      env: { ...fx.env, OFFSITE_PG_READY_TIMEOUT: "2" },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, corrupt ? 1 : 0, result.stderr);
+    const report = JSON.parse(readFileSync(join(fx.root, "backups", ".offsite-restore-check.json"), "utf8"));
+    assert.equal(report.fileName, name);
+    assert.equal(report.status, corrupt ? "error" : "success");
+    assert.equal(existsSync(fx.env.DOCKER_RESTORE_INPUT), !corrupt);
+  });
+}
 
 test("creates the dump's owner roles before restoring", () => {
   writeCopy(1);
