@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,6 +9,43 @@ import { fileURLToPath } from "node:url";
 const script = fileURLToPath(new URL("../production/deploy-release.sh", import.meta.url));
 const sha = "a".repeat(40);
 const previousSha = "b".repeat(40);
+
+test("stages readable build sources inside a private release directory", { skip: process.platform !== "linux" }, (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "home-archive-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const runtime = join(root, ".production");
+  const deploy = join(runtime, "deploy");
+  const source = join(root, "source");
+  const bin = join(root, "bin");
+  for (const dir of [deploy, join(runtime, "edge", "landing"), join(source, "backend", "prisma"), bin]) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(join(runtime, "compose.env"), "PROD_LAN_IP=192.0.2.2\n");
+  writeFileSync(join(deploy, "github-deploy.sh"), "");
+  symlinkSync("previous", join(runtime, "edge", "landing", "current"));
+  writeFileSync(join(source, "backend", "package.json"), "{}\n");
+  writeFileSync(join(source, "backend", "prisma", "schema.prisma"), "");
+
+  const git = (...args) => execFileSync("git", ["-C", source, ...args], { encoding: "utf8" }).trim();
+  git("init", "-q", "--object-format=sha1");
+  git("add", "backend");
+  const revision = git("write-tree");
+  // Stop at Compose validation after the Git archive has been staged.
+  writeFileSync(join(bin, "docker"), "#!/bin/bash\nexit 47\n", { mode: 0o700 });
+  const outcome = spawnSync("bash", [script, runtime, source, revision, "9", "1"], {
+    timeout: 10_000,
+    encoding: "utf8",
+    env: { ...process.env, PATH: bin + ":" + process.env.PATH },
+  });
+  assert.equal(outcome.status, 47, outcome.stderr || String(outcome.error ?? ""));
+  const release = join(deploy, "releases", revision);
+  const mode = (...parts) => statSync(join(release, ...parts)).mode & 0o777;
+  assert.equal(mode(), 0o700);
+  assert.equal(mode(".release.env"), 0o600);
+  assert.equal(mode("backend", "prisma"), 0o755);
+  assert.equal(mode("backend", "package.json"), 0o644);
+  assert.equal(mode("backend", "prisma", "schema.prisma"), 0o644);
+});
 
 for (const migrationApplied of [false, true]) {
   const name = migrationApplied
