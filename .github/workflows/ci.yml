@@ -44,6 +44,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       landing: ${{ steps.filter.outputs.landing }}
       scripts: ${{ steps.filter.outputs.scripts }}
+      production: ${{ steps.filter.outputs.production }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -58,16 +59,34 @@ jobs:
               - '.prettierrc'
             landing:
               - 'landing/**'
+            production:
+              - 'frontend/**'
+              - 'backend/**'
+              - 'landing/**'
+              - '.github/workflows/deploy.yml'
+              - '.github/workflows/production-build.yml'
+              - 'docker-compose.production.yml'
+              - 'infra/production/**'
+              - 'scripts/production/**'
             scripts:
               - 'scripts/**'
               - '.githooks/**'
               - '.codex/hooks.json'
               - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy.yml'
+              - 'infra/production/**'
               - '.specify/scripts/**'
               - 'docker-compose*.yml'
               - '.nvmrc'
               - 'package.json'
               - 'package-lock.json'
+
+  production-build:
+    needs: changes
+    if: needs.changes.outputs.production == 'true'
+    uses: ./.github/workflows/production-build.yml
+    permissions:
+      contents: read
 
   frontend:
     needs: changes
@@ -135,7 +154,7 @@ jobs:
           retention-days: 1
 
   frontend-tests-merge:
-    needs: frontend-tests
+    needs: [changes, frontend-tests]
     if: always() && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:

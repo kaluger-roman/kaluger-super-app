@@ -1,9 +1,9 @@
 # Offsite backups (prod -> home)
 
-> Infrastructure status, 2026-11-03: the former VPS is unavailable. This runbook
-> describes the previous deployment. `home` is a future production candidate,
-> not the current development host. Development runs locally on macOS. Do not
-> execute recovery, cron installation or remote changes as part of local setup.
+> Infrastructure status, 2026-11-04: the former VPS is lost. This runbook describes
+> the previous VPS-to-home backup scheme. Production recovery now uses a separate
+> Docker stack on home: [current runbook](home-production.md). Development runs on
+> macOS; do not execute these old remote/cron procedures as part of local setup.
 
 Prod (`45.133.234.3`, `tutor.kaluger.ru`) dumps its database on its own; the
 home dev machine (`home`, Tailscale `100.67.75.106`) pulls every dump over a

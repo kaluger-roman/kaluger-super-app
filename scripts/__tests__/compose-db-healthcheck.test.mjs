@@ -15,7 +15,7 @@ const dbHealthcheck = (file) => {
   return db.match(/pg_isready[^"\n]*/)?.[0] ?? "";
 };
 
-for (const file of ["docker-compose.dev.yml", "docker-compose.qa.yml"]) {
+for (const file of ["docker-compose.dev.yml", "docker-compose.qa.yml", "docker-compose.production.yml"]) {
   test(`${file}: the db healthcheck checks Postgres over TCP, not the unix socket`, () => {
     assert.match(dbHealthcheck(file), /^pg_isready .*-h 127\.0\.0\.1 /);
   });

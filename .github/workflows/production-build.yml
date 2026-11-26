@@ -1,0 +1,31 @@
+name: Build production images
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: backend
+            dockerfile: backend.Dockerfile
+          - context: frontend
+            dockerfile: frontend.Dockerfile
+          - context: landing
+            dockerfile: landing.Dockerfile
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build production image
+        env:
+          BUILD_CONTEXT: ${{ matrix.context }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+        run: docker build --file "infra/production/$DOCKERFILE" "$BUILD_CONTEXT"

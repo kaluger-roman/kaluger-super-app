@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26
+
+### Infrastructure
+- Verify offsite backup artifacts after download from GitHub and restore the confirmed dump on home in an isolated PostgreSQL container for the existing backup alerts.
+- Run TURN with an independent TLS certificate and verify the app and landing revisions independently during deployment.
+
+## 2026-11-24
+
+### Infrastructure
+- Serve the production app and tutor landing over HTTPS on home and provide a dedicated TURN relay configuration.
+- Replace the VPS deploy workflow with main-branch releases pulled by home, with pre-deploy backups and GitHub verification of the live revision.
+- Store encrypted PostgreSQL dumps and production environment files in a separate private backup repository.
+
 ## 2026-11-04
 
 ### Fixed
@@ -9,6 +22,7 @@
 - Block local stack allocation while a legacy port registry remains populated or invalid, preventing migrations and tests from reusing an older stack's database port.
 
 ### Infrastructure
+- Add an isolated PostgreSQL 16 production recovery stack for home, private LAN/Tailscale access, compatible backup tools and a recovery runbook while keeping development on macOS.
 - Add a local Codex plugin with an interactive issues and sessions panel, alongside the VS Code extension.
 - Restore parallel subagent stages, nine independent review perspectives and separate scoring in the migrated workflows.
 - Restore detailed command procedures, mandatory checkpoints, resumable JSON state, QA/review contracts, hunt limits and Spec Kit validation without simplifying the original workflow.

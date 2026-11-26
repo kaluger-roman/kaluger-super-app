@@ -1,0 +1,87 @@
+# Install as .github/workflows/offsite.yml in the private backup repository only.
+name: Offsite backup
+
+on:
+  schedule:
+    - cron: '37 0,8,16 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-offsite
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.event.repository.private && github.repository == 'kaluger-roman/kaluger-super-app-backups'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      digest: ${{ steps.download.outputs.digest }}
+      artifact: ${{ steps.store.outputs.artifact-id }}
+    steps:
+      - name: Download the encrypted production backup
+        id: download
+        env:
+          BACKUP_DOWNLOAD_PASSWORD: ${{ secrets.BACKUP_DOWNLOAD_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$BACKUP_DOWNLOAD_PASSWORD" =~ ^[0-9a-f]{64}$ ]]
+          printf 'user = "backup:%s"\n' "$BACKUP_DOWNLOAD_PASSWORD" | curl --config - \
+            --proto '=https' --fail --silent --show-error --retry 2 --max-time 120 \
+            --dump-header response.headers --max-filesize 268435456 --output production.age \
+            https://tutor.kaluger.ru/.well-known/kaluger-offsite.age
+          test "$(head -n 1 production.age)" = 'age-encryption.org/v1'
+          modified=$(awk 'tolower($1) == "last-modified:" {sub(/^[^:]+: /, ""); sub(/\r$/, ""); print}' response.headers | tail -n 1)
+          test -n "$modified"
+          age_seconds=$(( $(date +%s) - $(date -d "$modified" +%s) ))
+          if (( age_seconds < -300 || age_seconds > 86400 )); then
+            echo 'The production dump timestamp is outside the backup window' >&2
+            exit 1
+          fi
+          printf 'digest=%s\n' "$(sha256sum production.age | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Store the ciphertext
+        id: store
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-${{ github.run_number }}-${{ github.run_attempt }}
+          path: production.age
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+    steps:
+      - name: Verify the stored bytes and acknowledge receipt
+        env:
+          BACKUP_RECEIPT_PASSWORD: ${{ secrets.BACKUP_RECEIPT_PASSWORD }}
+          EXPECTED_DIGEST: ${{ needs.backup.outputs.digest }}
+          ARTIFACT_ID: ${{ needs.backup.outputs.artifact }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          archive=$(mktemp "$RUNNER_TEMP/offsite.XXXXXX")
+          trap 'rm -f "$archive"' EXIT
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" >"$archive"
+          [[ "$(unzip -Z1 "$archive")" == production.age ]]
+          digest=$(unzip -p "$archive" production.age | sha256sum | cut -d ' ' -f1)
+          if [[ "$digest" != "$EXPECTED_DIGEST" ]]; then
+            echo 'Stored ciphertext differs from the uploaded backup' >&2
+            exit 1
+          fi
+          [[ "$BACKUP_RECEIPT_PASSWORD" =~ ^[0-9a-f]{64}$ ]]
+          status=$(printf 'user = "backup_receipt:%s"\n' "$BACKUP_RECEIPT_PASSWORD" | curl --config - \
+            --proto '=https' --fail --silent --show-error --retry 2 --max-time 30 \
+            --header "X-Backup-Sha256: $digest" \
+            --request POST --output /dev/null --write-out '%{http_code}' \
+            https://tutor.kaluger.ru/.well-known/kaluger-offsite-receipt)
+          test "$status" = 204

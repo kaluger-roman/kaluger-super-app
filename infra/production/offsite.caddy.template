@@ -1,0 +1,44 @@
+log offsite_receipt {
+	no_hostname
+	output file /config/caddy/offsite-receipts.log {
+		roll_size 1MiB
+		roll_keep 2
+	}
+	format filter {
+		wrap json
+		fields {
+			request>headers delete
+			resp_headers delete
+		}
+	}
+}
+
+@offsiteArchive {
+	method GET HEAD
+	path /.well-known/kaluger-offsite.age
+}
+handle @offsiteArchive {
+	basic_auth {
+		backup __BACKUP_PASSWORD_HASH__
+	}
+	header Cache-Control "no-store"
+	rewrite * /offsite.age
+	root /srv/state
+	file_server
+}
+
+@offsiteReceipt {
+	method POST
+	path /.well-known/kaluger-offsite-receipt
+	header_regexp backup_digest X-Backup-Sha256 "^[0-9a-f]{64}$"
+}
+handle @offsiteReceipt {
+	route {
+		basic_auth {
+			backup_receipt __BACKUP_RECEIPT_PASSWORD_HASH__
+		}
+		log_name offsite_receipt
+		log_append backup_digest {http.request.header.X-Backup-Sha256}
+		respond 204
+	}
+}

@@ -1,0 +1,63 @@
+{
+	admin unix//config/caddy/admin.sock
+	skip_install_trust
+	auto_https disable_redirects
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete token
+				}
+				request>headers>Referer delete
+			}
+		}
+	}
+	servers {
+		protocols h1 h2
+	}
+	import global/*.caddy
+}
+
+http://tutor.kaluger.ru, http://teacher.kaluger.ru {
+	bind {$PROD_LAN_IP}
+	redir https://{host}{uri} 308
+}
+
+tutor.kaluger.ru {
+	bind {$PROD_LAN_IP}
+
+	handle /.well-known/kaluger-production-revision {
+		rewrite * /revision
+		header Cache-Control "no-store"
+		root /srv/state
+		file_server
+	}
+
+	import app/*.caddy
+
+	handle {
+		reverse_proxy 127.0.0.1:{$PROD_PORT:8080}
+	}
+}
+
+teacher.kaluger.ru {
+	bind {$PROD_LAN_IP}
+	root /srv/landing/current
+	encode gzip
+	header X-Frame-Options SAMEORIGIN
+	header X-Content-Type-Options nosniff
+	header /_next/static/* Cache-Control "public, max-age=31536000, immutable"
+	header /images/* Cache-Control "public, max-age=2592000"
+	header /.well-known/kaluger-production-revision Cache-Control "no-store"
+	@assets path /_next/static/* /images/*
+	handle @assets {
+		file_server
+	}
+	handle {
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}
+
+import sites/*.caddy

@@ -55,6 +55,7 @@ AGENTS.override.md
 
 # QA Docker stack runtime env-files (generated per branch by scripts/qa-stack.sh).
 /.qa/
+/.production/
 
 # QA-report screenshots: храним локально для ревью, но в репозиторий не пушим.
 docs/**/screenshots/
