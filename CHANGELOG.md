@@ -3,6 +3,7 @@
 ## 2026-11-26
 
 ### Infrastructure
+- Preserve source permissions in home release archives so the non-root backend can run Prisma migrations.
 - Verify offsite backup artifacts after download from GitHub and restore the confirmed dump on home in an isolated PostgreSQL container for the existing backup alerts.
 - Run TURN with an independent TLS certificate and verify the app and landing revisions independently during deployment.
 

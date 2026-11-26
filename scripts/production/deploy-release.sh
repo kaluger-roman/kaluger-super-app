@@ -88,7 +88,10 @@ trap finish EXIT
 
 mkdir -p "$deploy/releases"
 if [[ ! -d $release ]]; then
-  git -C "$repo" archive --format=tar "$revision" | tar -x -C "$stage"
+  # Docker preserves these modes. The app user needs to read the build sources.
+  # The staging directory and generated release environment stay private.
+  git -C "$repo" -c tar.umask=0022 archive --format=tar "$revision" |
+    tar --extract --same-permissions --directory "$stage"
   ln -s "$runtime" "$stage/.production"
   printf 'PROD_BACKEND_IMAGE=super-app-production-backend:%s\nPROD_WEB_IMAGE=super-app-production-web:%s\n' \
     "$revision" "$revision" >"$stage/.release.env"
