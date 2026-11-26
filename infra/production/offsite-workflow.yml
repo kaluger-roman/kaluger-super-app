@@ -59,20 +59,21 @@ jobs:
     permissions:
       actions: read
     steps:
-      - name: Read back the stored ciphertext
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          artifact-ids: ${{ needs.backup.outputs.artifact }}
-          github-token: ${{ github.token }}
-          path: verified
-          merge-multiple: true
-      - name: Acknowledge verified storage
+      - name: Verify the stored bytes and acknowledge receipt
         env:
           BACKUP_RECEIPT_PASSWORD: ${{ secrets.BACKUP_RECEIPT_PASSWORD }}
           EXPECTED_DIGEST: ${{ needs.backup.outputs.digest }}
+          ARTIFACT_ID: ${{ needs.backup.outputs.artifact }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          digest=$(sha256sum verified/production.age | cut -d ' ' -f1)
+          umask 077
+          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          archive=$(mktemp "$RUNNER_TEMP/offsite.XXXXXX")
+          trap 'rm -f "$archive"' EXIT
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" >"$archive"
+          [[ "$(unzip -Z1 "$archive")" == production.age ]]
+          digest=$(unzip -p "$archive" production.age | sha256sum | cut -d ' ' -f1)
           if [[ "$digest" != "$EXPECTED_DIGEST" ]]; then
             echo 'Stored ciphertext differs from the uploaded backup' >&2
             exit 1
