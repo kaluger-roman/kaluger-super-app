@@ -65,6 +65,7 @@ jobs:
           artifact-ids: ${{ needs.backup.outputs.artifact }}
           github-token: ${{ github.token }}
           path: verified
+          merge-multiple: true
       - name: Acknowledge verified storage
         env:
           BACKUP_RECEIPT_PASSWORD: ${{ secrets.BACKUP_RECEIPT_PASSWORD }}
@@ -72,7 +73,10 @@ jobs:
         run: |
           set -euo pipefail
           digest=$(sha256sum verified/production.age | cut -d ' ' -f1)
-          [[ "$digest" == "$EXPECTED_DIGEST" ]]
+          if [[ "$digest" != "$EXPECTED_DIGEST" ]]; then
+            echo 'Stored ciphertext differs from the uploaded backup' >&2
+            exit 1
+          fi
           [[ "$BACKUP_RECEIPT_PASSWORD" =~ ^[0-9a-f]{64}$ ]]
           status=$(printf 'user = "backup_receipt:%s"\n' "$BACKUP_RECEIPT_PASSWORD" | curl --config - \
             --proto '=https' --fail --silent --show-error --retry 2 --max-time 30 \
